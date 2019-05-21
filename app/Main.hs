@@ -1,6 +1,12 @@
+{-# LANGUAGE TupleSections #-}
 module Main where
 
-import Lib
+import HashedTests
+import HashedInstances
+import HashedDerivative
+import HashedSimplify
+import HashedExpression
+import HashedFactor
 
-main :: IO ()
-main = someFunc
+-- TODO run tests? or anything really
+main = putStrLn "Hello World"

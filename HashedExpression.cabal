@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3cb1cfb6075d7d61d6f8c070b5bdba54a5ea7bb1299925283b758a031e6f5b83
+-- hash: 686efcce9992ce016c694f449c0b5efcc8a33df2d933c2cb6d33bf70658a089d
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -27,13 +27,38 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Hashed2Dot
+      HashedConstruct
+      HashedConvZip
+      HashedDerivative
+      HashedDimCheck
+      HashedDot
+      HashedExpression
+      HashedFactor
+      HashedInstances
+      HashedInterp
+      HashedMatch
+      HashedPacking
+      HashedSimplify
+      HashedTests
+      HashedTransformable
+      HashedUtils
+      LinearCombination
+      Polynomials
+      WithHoles
   other-modules:
       Paths_HashedExpression
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , array
+    , base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , process
   default-language: Haskell2010
 
 executable HashedExpression-exe
@@ -45,7 +70,14 @@ executable HashedExpression-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HashedExpression
+    , QuickCheck
+    , array
     , base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , process
   default-language: Haskell2010
 
 test-suite HashedExpression-test
@@ -58,5 +90,12 @@ test-suite HashedExpression-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HashedExpression
+    , QuickCheck
+    , array
     , base >=4.7 && <5
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , process
   default-language: Haskell2010
