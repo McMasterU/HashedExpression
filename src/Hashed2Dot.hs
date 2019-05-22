@@ -1,4 +1,5 @@
-\begin{code}
+{-
+-}
 module Hashed2Dot where
 
 import HashedExpression
@@ -19,9 +20,9 @@ expr2dot' (e,n) =
   " edge [len=\"1.9\"];"
   ] ++ snd (node2dot e Set.empty n) ++ [  -- {
   "}"]
-\end{code}
+{-
 
-\begin{code}
+-}
 nn n = "\"" ++ show n ++ "\""
 nnl n label = nn n ++ " [label=\""++label++"\"];"
 en n1 n2 = nn n1 ++ " -> " ++ nn n2 ++ ";"
@@ -43,7 +44,7 @@ node2dot e ns n = if Set.member n ns
 showOp (SCZ e) = pretty e
 showOp (MapND e input) = pretty e
 showOp x = show x 
-\end{code}
+{-
 data ExpressionEdge  = Op  Dims                          -- dims of output
                            OpId                          -- the operation
                            [Node]                        -- dims and nodes of inputs
@@ -55,3 +56,4 @@ data ExpressionEdge  = Op  Dims                          -- dims of output
                                 }                        --   length reIdx == length outDims
                      | Const {unConstDims::Dims, unConst ::Double}
 
+-}

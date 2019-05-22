@@ -1,4 +1,5 @@
-\begin{code}
+{-
+-}
 module LinearCombination where
 
 import qualified Data.Map as Map
@@ -66,4 +67,5 @@ instance (Num a, Show a, Eq a, Ord a) => Num (PositiveCombination a) where
     signum x = error $ "can't signum linear combination " ++ show x
   
 pcVar name = PC (Map.singleton [name] 1)  
-\end{code}
+{-
+-}

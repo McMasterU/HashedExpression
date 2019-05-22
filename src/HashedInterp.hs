@@ -1,5 +1,6 @@
+{-
 Interpretation of Hashed Expressions.
-\begin{code}
+-}
 {-# LANGUAGE ScopedTypeVariables,
              MultiParamTypeClasses,
              NoMonomorphismRestriction,
@@ -27,17 +28,17 @@ import Debug.Trace
 import Data.Complex as DC
 
 noWarn = trace "noWarn"
-\end{code}
+{-
 
 Collect value tables of different dimensions.
-\begin{code}
+-}
 data ValMaps = ValMaps {vm0 :: Map ByteString Double
                        ,vm1 :: Map ByteString (U.UArray Int Double)
                        ,vm2 :: Map ByteString (U.UArray (Int,Int) Double)
                        ,vm3 :: Map ByteString (U.UArray (Int,Int,Int) Double)
                        ,vm4 :: Map ByteString (U.UArray (Int,Int,Int,Int) Double)
                        } deriving (Eq,Show,Ord)
-\end{code}
+{-
 
 SubsType provides a text based interface for the variable value map,
 and subs converts those into the internal expression representations.
@@ -47,7 +48,7 @@ genSubs will generate the text based substitutions and then map subs over the li
 to becomes a generator of usable value substitutions.
 
 For now, only scalar values are provided, this will be corrected shortly.
-\begin{code}
+-}
 data SubsArray a b = SubsDense a
                    | SubsSparse [a]
 type SubsType = ([(String,Double)]
@@ -85,9 +86,9 @@ subsList (l0,l1,l2,l3,l4) =
           (Map.fromList $ map (\ (x,y) -> (C.pack x,a2b y)) l2)
           (Map.fromList $ map (\ (x,y) -> (C.pack x,a2b y)) l3)
           (Map.fromList $ map (\ (x,y) -> (C.pack x,a2b y)) l4)
-\end{code}
+{-
 Some sample values
-\begin{code}
+-}
 valx1 = [0..16^1-1] :: [Double]
 valx2 = [0..16^2-1] :: [Double]
 valx3 = [0..16^3-1] :: [Double]
@@ -95,9 +96,9 @@ valx4 = [if (i == (7^2) ) then 1 else 1 | i <- [0..16^2-1]] :: [Double]
 valy1 = (replicate (16^1) 1) :: [Double]
 valy2 = (replicate (16^2) 1) :: [Double]
 valy3 = (replicate (16^3) 1) :: [Double]
-\end{code}
+{-
 Some sample values
-\begin{code}
+-}
 subs1a = subs ([("x",1),("y",2),("z",3),("u",7),("v",11)]
    ,[("X1",U.listArray (0,15) [10000+i | i<-[0..15] ])
     ,("Y1",U.listArray (0,15) [20000+i | i<-[0..15] ])
@@ -110,12 +111,12 @@ subs2a = subs ([("x",1),("y",2),("z",3),("u",7),("v",11)],[]
     ,("U2",U.listArray ((0,0),(15,15)) [30000+i+1000*j | i<-[0..15],  j <- [0..15]])
     ,("V2",U.listArray ((0,0),(15,15)) [40000+i+1000*j | i<-[0..15],  j <- [0..15]])]
    ,[],[])
-\end{code}
+{-
 
 Generic Evaluation.
 CKA: if we want to map evaluation over a whole graph, we need a generic evaluator.
      Does this work, or do we need TypeFamilies
-\begin{code}
+-}
 --CKA:  in the SZC complex case, we probably want the relative map to have complex scalar elements, which is going to complicate the type
 class GenericEval une e | une -> e where
   eval :: ValMaps -> une -> e
@@ -185,10 +186,10 @@ instance GenericEval ThreeDCSparse (Map (Int,Int) (Array Int (DC.Complex Double)
   evalRel _ _ exprs n = error $ "HI.evalRel[ThreeDSparse] Just relMap " ++ show (Expression n exprs)
 
 
-\end{code}
+{-
 
 Evaluate a scalar expression given a map of variable values.
-\begin{code}
+-}
 evalScalar :: Scalar -> ValMaps -> Double
 evalScalar (Scalar e) eMap = evalZeroD Nothing e eMap
 
@@ -273,9 +274,9 @@ evalZeroD relEval (Expression node exprs) eMap =
           Compound _ -> 0
 
           _ -> error $ "evalZeroD haven't implemented "++show op++" yet  " ++ show (inputs,exprs)
-\end{code}
+{-
 Evaluate a complex scalar expression given a map of variable values.
-\begin{code}
+-}
 evalScalarC :: ScalarC -> ValMaps -> (DC.Complex Double)
 evalScalarC (ScalarC e) eMap = evalZeroDC Nothing e eMap
 
@@ -326,14 +327,14 @@ evalZeroDC relEval (Expression node exprs) eMap =
             [re,im] -> re :+ im
             _ -> error $ "HI.evalZeroD RealImag needs two inputs not " ++ show inputs
           _ -> error $ "evalZeroDC haven't implemented "++show op++" yet"
-\end{code}
+{-
 Evaluate a RE given a  expression given a map of variable values.
-\begin{code}
+-}
 evalRelElem :: (ExpressionEdge {-must be RelElem-} -> Double) -> ZipConvElem -> ValMaps -> Double
 evalRelElem efun (ZCE e) eMap = evalZeroD (Just efun) e eMap
-\end{code}
+{-
 Evaluate a one-dimensional expression given a map of variable values.
-\begin{code}
+-}
 evalOneD :: OneD -> ValMaps -> (U.UArray Int Double)
 evalOneD (OneD (Expression node exprs)) eMap =
   let
@@ -434,9 +435,9 @@ evalOneD (OneD (Expression node exprs)) eMap =
 
           _ -> error $ "evalOneD' implemented "++show op++" yet"
       Just e -> error $ "evalOneD found "++show e
-\end{code}
+{-
 
-\begin{code}
+-}
 evalOneDC :: OneDC -> ValMaps -> (Array Int (DC.Complex Double))
 evalOneDC (OneDC (Expression node exprs)) eMap =
   let
@@ -511,10 +512,10 @@ evalOneDC (OneDC (Expression node exprs)) eMap =
                 _ -> error $ "evalOneDC doesn't implement " ++ show (ss,exprs)
           _ -> error $ "evalOneDC't implemented "++show op++" yet"
       Just e -> error $ "evalOneDC found "++show e
-\end{code}
+{-
 
 
-\begin{code}
+-}
 evalTwoD :: TwoD -> ValMaps -> U.UArray (Int,Int) Double
 evalTwoD (TwoD (Expression node exprs)) eMap =
   let
@@ -622,11 +623,11 @@ evalTwoD (TwoD (Expression node exprs)) eMap =
            _ -> error $ "evalTwoD't implemented "++show op++" yet" ++ "\n" ++ pretty (exprs,node) ++ "\n" ++ show (exprs,node)
 
       Just e -> error $ "evalTwoD found "++show e
-\end{code}
+{-
 
 
 Evaluate 2D Sparse
-\begin{code}
+-}
 evalTwoDSparse :: TwoDSparse -> ValMaps -> Map Int (U.UArray Int Double)
 evalTwoDSparse (TwoDSparse sL@(SparseList2D _len2 _ toKeep _) (Expression node exprs)) eMap =
   let
@@ -695,11 +696,11 @@ evalTwoDSparse (TwoDSparse sL@(SparseList2D _len2 _ toKeep _) (Expression node e
 
            _ -> error $ "evalTwoD't implemented "++show op++" yet"
       Just e -> error $ "evalTwoD found "++show e
-\end{code}
+{-
 
 
 
-\begin{code}
+-}
 evalTwoDC :: TwoDC -> ValMaps -> Array (Int,Int) (DC.Complex Double)
 evalTwoDC (TwoDC (Expression node exprs)) eMap =
   let
@@ -805,10 +806,10 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
 
           _ -> error $ "evalTwoDC doesn't implemented "++show op++" yet"
       Just e -> error $ "evalTwoDC found "++show e
-\end{code}
+{-
 
 
-\begin{code}
+-}
 evalTwoDCSparse :: TwoDCSparse -> ValMaps -> Map Int (Array Int (DC.Complex Double))
 evalTwoDCSparse (TwoDCSparse sL@(SparseList2D _len2 _ toKeep _) (Expression node exprs)) eMap =
   let
@@ -868,11 +869,11 @@ evalTwoDCSparse (TwoDCSparse sL@(SparseList2D _len2 _ toKeep _) (Expression node
                  _ -> error $ "evalTwoDCSparse Project doesn't implement " ++ show (ss,exprs)
            _ -> error $ "evalTwoDCSparse doesn't implemented "++show op++" yet"
       Just e -> error $ "evalTwoDCSparse found "++show e
-\end{code}
+{-
 
 
 
-\begin{code}
+-}
 evalThreeD :: ThreeD -> ValMaps -> U.UArray (Int,Int,Int) Double
 evalThreeD (ThreeD (Expression node exprs)) eMap =
   let
@@ -1029,11 +1030,11 @@ evalThreeD (ThreeD (Expression node exprs)) eMap =
 
            _ -> error $ "evalThreeD't implemented "++show op++" yet"
       Just e -> error $ "evalThreeD found "++show e
-\end{code}
+{-
 
 
 Evaluate 3D Sparse
-\begin{code}
+-}
 evalThreeDSparse :: ThreeDSparse -> ValMaps -> Map (Int,Int) (U.UArray Int Double)
 evalThreeDSparse (ThreeDSparse sL@(SparseList3D _len2 _ toKeep1 _ toKeep2 _) (Expression node exprs)) eMap =
   let
@@ -1104,9 +1105,9 @@ evalThreeDSparse (ThreeDSparse sL@(SparseList3D _len2 _ toKeep1 _ toKeep2 _) (Ex
 
            _ -> error $ "evalThreeSparseD't implemented "++show op++" yet"
       Just e -> error $ "evalThreeSparseD found "++show e
-\end{code}
+{-
 
-\begin{code}
+-}
 evalThreeDC :: ThreeDC -> ValMaps -> Array (Int,Int,Int)  (DC.Complex Double)
 evalThreeDC (ThreeDC (Expression node exprs)) eMap =
   let
@@ -1228,9 +1229,9 @@ evalThreeDC (ThreeDC (Expression node exprs)) eMap =
 
           _ -> error $ "evalThreeDC't implemented "++show op++" yet"
       Just e -> error $ "evalThreeDC found "++show e
-\end{code}
+{-
 
-\begin{code}
+-}
 evalThreeDCSparse :: ThreeDCSparse -> ValMaps -> Map (Int,Int) (Array Int (DC.Complex Double))
 evalThreeDCSparse (ThreeDCSparse sL@(SparseList3D _len2 _ toKeep1 _ toKeep2 _) (Expression node exprs)) eMap =
   let
@@ -1294,7 +1295,7 @@ evalThreeDCSparse (ThreeDCSparse sL@(SparseList3D _len2 _ toKeep1 _ toKeep2 _) (
 
            _ -> error $ "evalThreeD't implemented "++show op++" yet"
       Just e -> error $ "evalThreeD found "++show e
-\end{code}
+{-
 
 
 
@@ -1302,9 +1303,10 @@ evalThreeDCSparse (ThreeDCSparse sL@(SparseList3D _len2 _ toKeep1 _ toKeep2 _) (
 
 
 
-\begin{code}
+-}
 acrmap f ac = U.listArray (bounds ac) [f (ac ! i) | i <- reverse (indices ac)]
 acmap f ac  = U.listArray (bounds ac) [f (ac ! i) | i <- reverse (indices ac)]
 
 
-\end{code}
+{-
+-}

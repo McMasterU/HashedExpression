@@ -1,3 +1,4 @@
+{-
 \documentclass[10pt]{amsart}
 \usepackage{fancyvrb}
 \DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\small}
@@ -7,7 +8,7 @@
 \usepackage{algpseudocode}
 \usepackage{algorithm}
 
-\begin{document}
+-}
 
 \title{HashedDerivative.lhs}
 \maketitle
@@ -15,8 +16,8 @@
 (c) 2010 Christopher Kumar Anand
 
 Caluclating Derivatives.
-\begin{comment}
-\begin{code}
+-}
+-}
 {-# LANGUAGE ScopedTypeVariables, TupleSections, MultiParamTypeClasses, NoMonomorphismRestriction, PatternGuards #-}
 module HashedDerivative where
 
@@ -37,18 +38,18 @@ import qualified Data.List as List
 --import Debug.Trace
 import HashedSimplify (isDeepZero,simplify',mkSCZ) -- containsDifferential
 import HashedTransformable ()
-\end{code}
-\end{comment}
+{-
+{-
 
 use functions to prevent warnings, but keep modules in scope for debugging
-\begin{code}
+-}
 p = C.pack
 mp = map C.pack
 lookupDebug = Map.lookup
-\end{code}
+{-
 
 Wrapper for expression with function and gradient
-\begin{code}
+-}
 data FGrad = FGrad  Internal             -- expression map
                     Node                 -- Compound node, contains compound grad and function
                     Node                 -- the function node
@@ -63,16 +64,16 @@ instance Show FGrad where
     where
       p n = pretty $ Expression n exprs
       pd ((v,ddv),_n) = "; df/d"++ p v ++" = " ++ p ddv
-\end{code}
+{-
 
 Variables for calculating gradients.
 We need to
-\begin{code}
+-}
 data Vars = Vars [(Subspace,ExpressionEdge)]  deriving (Show,Eq,Ord)
-\end{code}
+{-
 
 Apply partDiff to a list of nodes, accumulating new nodes so generated.
-\begin{code}
+-}
 class Diff a where
   partDiff :: ByteString -> a -> a
   diff :: [ByteString] -> a -> a
@@ -214,105 +215,105 @@ partDiff' (dVar,dRel) exprs node = (exprs',node')
               Exp -> gateScalar Exp $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                           (es'',result) = ((sourceNode diffN) * (sourceNode node)) es'
                                       in Expression result es''
-\end{code}
+{-
 $$\frac{d}{dx} log(f(x)) = \frac{f'(x)}{f(x)}$$
-\begin{code}
+-}
               Log -> gateScalar Log $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                           diffX = (Scalar (Expression diffN es'))
                                           x = (Scalar (Expression (head inputs) es'))
                                           Scalar e = diffX / x
                                       in e
-\end{code}
+{-
 $$\frac{d}{dx} sin(f(x)) = f'(x)cos(f(x))$$
-\begin{code}
+-}
               Sin -> gateScalar Sin $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                           diffX = (Scalar (Expression diffN es'))
                                           cosX = cos (Scalar (Expression (head inputs) es'))
                                           Scalar e = diffX * cosX
                                       in e
-\end{code}
+{-
 $$\frac{d}{dx} cos(f(x)) = f'(x)sin(f(x))$$
-\begin{code}
+-}
               Cos -> gateScalar Cos $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                           diffX = (Scalar (Expression diffN es'))
                                           negSinX = - sin (Scalar (Expression (head inputs) es'))
                                           Scalar e = diffX * negSinX
                                       in e
-\end{code}
+{-
 $$\frac{d}{dx} tan(f(x)) = f'(x)\frac{1}{(cos(x))^2}$$
-\begin{code}
+-}
               Tan -> gateScalar Tan $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                           diffX = (Scalar (Expression diffN es'))
                                           secSqrX = recip ((cos (Scalar (Expression (head inputs) es')))^2)
                                           Scalar e = diffX * secSqrX
                                 in e
-\end{code}
+{-
 $$\frac{d}{dx} acos(f(x)) = f'(x)\frac{-1}{\sqrt{1-(f(x))^2}}$$
-\begin{code}
+-}
               Acos -> gateScalar Acos $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             aCosDiffX = - recip (sqrt(1-(Scalar (Expression (head inputs) es'))^2))
                                             Scalar e = diffX * aCosDiffX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} asin(f(x)) = f'(x)\frac{1}{\sqrt{1-(f(x))^2}}$$
-\begin{code}
+-}
               Asin -> gateScalar Asin $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             aSinDiffX = recip (sqrt(1-(Scalar (Expression (head inputs) es'))^2))
                                             Scalar e = diffX * aSinDiffX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} atan(f(x)) = f'(x)\frac{1}{(f(x))^2+1}$$
-\begin{code}
+-}
               Atan -> gateScalar Atan $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             aTanDiffX = recip (1+(Scalar (Expression (head inputs) es'))^2)
                                             Scalar e = diffX * aTanDiffX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} cosh(f(x)) = f'(x)sinh(f(x))$$
-\begin{code}
+-}
               Cosh -> gateScalar Cosh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             sinhX = sinh (Scalar (Expression (head inputs) es'))
                                             Scalar e = diffX * sinhX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} sinh(f(x)) = f'(x)cosh(f(x))$$
-\begin{code}
+-}
               Sinh -> gateScalar Sinh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             coshX = cosh (Scalar (Expression (head inputs) es'))
                                             Scalar e = diffX * coshX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} tanh(f(x)) = f'(x)\frac{1}{cosh^2(f(x))}$$
-\begin{code}
+-}
               Tanh -> gateScalar Tanh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                             diffX = (Scalar (Expression diffN es'))
                                             diffTanhX = recip (cosh (Scalar (Expression (head inputs) es')))^2
                                             Scalar e = diffX * diffTanhX
                                         in e
-\end{code}
+{-
 $$\frac{d}{dx} acosh(f(x)) = f'(x)\frac{1}{\sqrt{(f(x))^2+1}}$$
-\begin{code}
+-}
               Acosh -> gateScalar Acosh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                               diffX = (Scalar (Expression diffN es'))
                                               diffAcosX = recip (sqrt((Scalar (Expression (head inputs) es'))^2 + 1))
                                               Scalar e = diffX * diffAcosX
                                           in e
-\end{code}
+{-
 $$\frac{d}{dx} asinh(f(x)) = f'(x)\frac{1}{\sqrt{(f(x))^2-1}}$$
-\begin{code}
+-}
               Asinh -> gateScalar Asinh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                               diffX = (Scalar (Expression diffN es'))
                                               diffAsinX = recip (sqrt((Scalar (Expression (head inputs) es'))^2 - 1))
                                               Scalar e = diffX * diffAsinX
                                           in e
-\end{code}
+{-
 $$\frac{d}{dx} atanh(f(x)) = f'(x)\frac{1}{1-(f(x))^2}$$
-\begin{code}
+-}
               Atanh -> gateScalar Atanh $ let (es',diffN) = partDiff' (dVar,dRel) exprs (head inputs) -- safe via getScalar
                                               diffX = (Scalar (Expression diffN es'))
                                               diffAtanX = recip (1-((Scalar (Expression (head inputs) es'))^2))
@@ -395,9 +396,9 @@ $$\frac{d}{dx} atanh(f(x)) = f'(x)\frac{1}{1-(f(x))^2}$$
                       -- the derivative of the Extracted node
                       -- fix this and Compound if we use them
               Compound _size -> error "partDiff unimplemented    Compound          "
-\end{code}
+{-
 
-\begin{code}
+-}
 mergeConstsBy :: (Double -> Double -> Double) -> (Internal,[Node]) -> (Internal,[Node])
 mergeConstsBy op (exprs,nodes@(n1:_)) = (exprs',combined ++ nonconsts)
   where
@@ -430,7 +431,7 @@ mapAccumOne fun s fstBack (b:bs) = let
   in (s'', (reverse fstBack ++ (b' : bs)) : rest)
 mapAccumOne _ s _fstBack [] = (s,[])
 testMapAccumOne = (10000,[[11,2,3],[1,102,3],[1,2,1003]]) == mapAccumOneAtATime (\ s a -> (s*10,a+s)) 10 [1..3]
-\end{code}
+{-
 
 
 To calculate the gradient, we need to normalize the expression of the differential of a function to put all
@@ -446,7 +447,7 @@ If there are, we need to recursively apply adjointess.
 Generic expression transformer.
 
 Collect a group of identical nodes into a scaled node, but don't scale by 1
-\begin{code}
+-}
 groupedToScaled  :: Internal
              -> [(Double,Node)]
              -> (Internal,Node)
@@ -464,12 +465,12 @@ groupedToScaled exprs scaledGroup =
   where
     (scalings,node:_rest) = unzip scaledGroup
     dims = getDimE exprs node
-\end{code}
+{-
 
 FIXME:  if a component of the gradient is zero we should not use it in the calculation!  Are we?
 
  $(dX\cdot W_1) + (dX\cdot W_2) + ...$ terms into $dX\cdot(W_1+W_2+...)$
-\begin{code}
+-}
 gatherDiffs :: ((Internal,Node) -> (Internal,[(Node,Node)]))
 gatherDiffs (exprsNoOne,node)
   = if isZero $ I.lookup node exprsNoOne then error $ "HD.gatherDiffs found zero gradient which isn't supported " ++ pretty' (exprsNoOne,node)
@@ -530,9 +531,9 @@ aux exprsNoOne inputs = let
         (e0,nodePairs) =  List.mapAccumR unzipDot exprs grouped
     in
         (e0,nodePairs)
-\end{code}
+{-
 
-\begin{code}
+-}
 gatherDiffs1 f (Scalar (Expression n e)) =
   let  (e1,diffGrads) = gatherDiffs (e,n)
        showDiffs e (nodeD,nodeG) = case (getDimE e nodeD,getDimE e nodeG) of
@@ -543,7 +544,7 @@ gatherDiffs1 f (Scalar (Expression n e)) =
          x -> "showDiffs not implemented" ++ show x
   in
     map (showDiffs e1) diffGrads
-\end{code}
+{-
 
 
 
@@ -553,7 +554,7 @@ gatherDiffs1 f (Scalar (Expression n e)) =
   -- only named variables can appear
 
 Find gradient of a function.
-\begin{code}
+-}
 funGrad :: Scalar -> [ByteString] -> FGrad
 funGrad fun vars = -- trace (show $ map (flip I.lookup eDiffs . fst) listDGrad) $
                    FGrad exprFinal compoundN funN params varsDiffs
@@ -593,13 +594,13 @@ funGrad fun vars = -- trace (show $ map (flip I.lookup eDiffs . fst) listDGrad) 
        _ -> error "finGrad impossible 2"
 
     varsDiffs= zipWith (\ (vN,n) ddv -> ((vN,ddv),n)) nodeVars listGradSimp
-\end{code}
+{-
 CKA:  Why not write scalar products as Dot products.  It is a natural generalization, and might simplify pattern matching.
 
 Check for extractable gradients.  Either there is only one gradient component, given by a
 single dot product with a differential, or given by a sum, in which summands either contain
 no differentials, or are dot products with differentials on the left.
-\begin{code}
+-}
 isExtractable :: Internal -> Node -> Bool
 isExtractable exprs node = isDotDiff exprs node || case I.lookup node exprs of
     Just (Op _ Sum inputs) -> List.and $ map (\ n -> isDotDiff exprs n || (not $ containsDifferential exprs n)) inputs
@@ -615,9 +616,9 @@ isDotDiff exprs n = case I.lookup n exprs of
          _ -> False
      _ -> False
   _ -> False
-\end{code}
+{-
 Sort nodes by hashes, except that differentials come first.
-\begin{code}
+-}
 sortNodes exprs nodes = List.sortBy cmpNodes nodes
   where
     cmpNodes l r = case map (flip I.lookup exprs) [l,r] of
@@ -625,6 +626,7 @@ sortNodes exprs nodes = List.sortBy cmpNodes nodes
                      [Just (DVar _ _),Just (_       )] -> LT
                      [Just (_       ),Just (DVar _ _)] -> GT
                      _                   -> compare l r
-\end{code}
+{-
 
-\end{document}
+{-
+-}

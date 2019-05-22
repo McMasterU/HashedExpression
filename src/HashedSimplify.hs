@@ -1,3 +1,4 @@
+{-
 (c) 2010-2014 Christopher Kumar Anand, Jessica LM Pavlin
 
 Simplify Expressions.
@@ -5,7 +6,7 @@ We don't know if these rules terminate, and we don't know if they are confluent.
 If they aren't we will waste a lot of time doing and undoing or computing inefficient expressions,
 but correctness should not suffer.
 But we also don't have a proof of correctness (equivalence of expressions).
-\begin{code}
+-}
 {-# LANGUAGE ScopedTypeVariables, TupleSections, MultiParamTypeClasses
            , NoMonomorphismRestriction, PatternGuards #-}
 module HashedSimplify (simplify',simplify'',simpRewrite,simpRewrite'',xMkReal,xMkImag
@@ -32,31 +33,31 @@ import qualified Data.List as List
 import Control.DeepSeq
 import Debug.Trace
 import Data.Maybe (catMaybes, fromJust)
-\end{code}
+{-
 
-\begin{code}
+-}
 tt description en = if skipDebug then en else case hasCycles en of
                           [] -> trace description $ en `seq` trace (pretty en) en
                           x -> error $ "HS.simplify found cycle at "++description++" "++show x++" "++show en
 ttall description en = case hasCycles en of
                           [] -> trace description $ en `seq` trace (pretty en) en
                           x -> error $ "HS.simplify found cycle at "++description++" "++show x++" "++show en
-\end{code}
+{-
 
 We can define the right version of mkSCZ now that we have simplify.
-\begin{code}
+-}
 mkSCZ :: Dims -> Expression -> [Node] -> ExpressionEdge
 mkSCZ dims expr args = let (Expression n e) = expr
                            (e',n') = simplify' (e,n)
                        in mkSCZ' dims (Expression n' e') args
-\end{code}
+{-
 
 Simplify rules which can be handled by WithHoles:
-\begin{itemize}
+-}
 \item These rules only work on simple cases.  For example $x+0$, but not $x+y+0$
 \item Some rules simplify when making an instance of the expression, but these rules are still necessary.  For example $e^{x-x}$ needs a rule for $e^0$.
-\end{itemize}
-\begin{code}
+{-
+-}
 simp1 :: [(GuardedPattern,WithHoles)]
 simp1 = [x *. (y *. z) |.~~> (x * y) *. z
         ,1 * x |.~~> x --added these two TB 28/05/2015
@@ -94,9 +95,9 @@ simp1 = [x *. (y *. z) |.~~> (x * y) *. z
         ,((y+z)•x) |.~~> ((x•y)+(x•z))
         ]
 
-\end{code}
+{-
 
-\begin{code}
+-}
 simplifyE dbg (Expression n e) = let (e',n') = simplify' (e,n)
   in mt (dbg++" "++pretty (e,n)++pretty (e',n')) $ Expression n' e'
 simplify' :: (Internal,Node) -> (Internal,Node)
@@ -128,10 +129,10 @@ simpRewrite' reWrite (e,n) = sub 1000 n $ simpRewrite'' reWrite (e,n)
                                         in tt ("sub recurse "++show (n',n,e)++"\n::") $ sub (iter-1) n (e',n')
 
 simplify'' (e,n) = (simpRewrite'' id) (e,n)
-\end{code}
+{-
 
 Only reachable nodes are rewritten.
-\begin{code}
+-}
 simpRewrite'' reWrite (exprs,node)
   -- check for edge which should be rewritten
   | Just edge <- I.lookup node exprs
@@ -609,21 +610,21 @@ simpRewrite'' reWrite (exprs,node)
     in tt ("simpRewrite recurse "++pretty (exprs,node)++" ") $ addEdge e $ Op dims op simpArgs
 
 simpRewrite'' _ x = tt "simpRewrite'' fallthrough" x
-\end{code}
+{-
 
-\begin{code}
+-}
 constExpr (Expression n e) = constExpr' e n
 constExpr' e n = let (e',n') = tt "simp for constExpr" $ simplify' (e,n)
   in case I.lookup n' e' of
        Just (Const _ c) -> Just c
        _ -> Nothing
-\end{code}
+{-
 
 
-\begin{code}
-\end{code}
+-}
+{-
 
-\begin{code}
+-}
 isDeepZero exprs node =
   case I.lookup node exprs of
        Just (Const _ 0) -> True
@@ -632,14 +633,14 @@ isDeepZero exprs node =
        Just (Op _ RealImag [re,im]) ->  isDeepZero exprs re && isDeepZero exprs im
        Just (Op _ op [v]) -> linearOp op && isDeepZero exprs v
        _ -> False
-\end{code}
+{-
 
-\begin{code}
+-}
 compareSnd (_,x) (_,y) = compare x y
 sndEqual (_,x) (_,y) = x == y
-\end{code}
+{-
 
-\begin{code}
+-}
 disassociateScale :: Double -> Internal -> Node -> (Internal,(Double,Node))
 disassociateScale multiplier exprs factor
   = let ttt :: Int -> (Internal,(Double,Node)) -> (Internal,(Double,Node))
@@ -662,9 +663,9 @@ disassociateScale multiplier exprs factor
           Just (Const Dim0 m) -> (exprs, (m * multiplier, b))
           _ -> (exprs,(multiplier,factor))
       _ -> ttt 1 (exprs,(multiplier,factor))
-\end{code}
+{-
 
-\begin{code}
+-}
 pushPop :: Construct -> Construct -> Internal -> (Internal,[Node])
 pushPop = pushPop' -- mt "pushPop" . pushPop'
 pushPop' left right exprs
@@ -765,10 +766,10 @@ pushPop' left right exprs
 
 pushPop' left right exprs = let (e,n) = (dot left right) exprs in e `seq` (e,[n])
 
-\end{code}
+{-
 Check that a function is linear in a subexpression (includes case of no dependence),
 we identify the subexpression with a function, since multiple RelElems can point to the same input
-\begin{code}
+-}
 isLinearIn :: Internal -> (Node -> Bool) -> Node -> Bool
 isLinearIn exprs isSubexpr head
   | isSubexpr head
@@ -804,9 +805,9 @@ isLinearIn exprs isSubexpr head
   -- otherwise this is another variable or a constant
   | True
   = True
-\end{code}
+{-
 Check that a function is linear in second node (includes case of no dependence)
-\begin{code}
+-}
 isConstIn :: Internal -> (Node -> Bool) -> Node -> Bool
 isConstIn exprs isSubexpr head
   | isSubexpr head
@@ -815,9 +816,9 @@ isConstIn exprs isSubexpr head
   = List.and $ map (isConstIn exprs isSubexpr) inputs
   | True
   = True
-\end{code}
+{-
 find nodes which are RelElems
-\begin{code}
+-}
 reNodeWithIdx idx e n
   | Just (RelElem i _ _) <- I.lookup n e
   , i == idx
@@ -826,9 +827,9 @@ reNodeWithIdx idx e n
   = concatMap (reNodeWithIdx idx e) inputs
   | True
   = []
-\end{code}
+{-
 remap array indices in relative elements
-\begin{code}
+-}
 reMapRE :: ((Int,Boundary,[Int]) -> (Int,Boundary,[Int]))
      -> (IntMap Int) -> ExpressionEdge -> ExpressionEdge
 reMapRE remapArrays remapNodes ee =
@@ -842,18 +843,18 @@ reMapRE remapArrays remapNodes ee =
                         in
                           Op d id $ map mapNode nodes
     x -> x
-\end{code}
+{-
 
 Reverse the last slot
-\begin{code}
+-}
 reflectN n (a,b,offsets) = if n == a
    then (a,b,map negate offsets)
    else (a,b,offsets)
-\end{code}
+{-
 
 Map map of expression edges over a whole expression.
 To do this we need to keep track of a map between old node numbers and new node numbers.
-\begin{code}
+-}
 eMap :: (IntMap Int -> ExpressionEdge -> ExpressionEdge) -> Expression -> Expression
 eMap fun (Expression head exprs) = Expression newHead finalExprs
   where
@@ -874,22 +875,22 @@ eMap fun (Expression head exprs) = Expression newHead finalExprs
         (newExprs, newNode) = addEdge exprs newEE
         -- add remapping for node we just created
         newNodeRemap = I.insert node newNode nodeRemap
-\end{code}
+{-
 
-\begin{code}
-\end{code}
+-}
+{-
 
 
-\begin{code}
+-}
 complexMult (r1:[]) (im1:[]) = (r1,im1)
 complexMult (r1:r2:reals) (i1:i2:imags) =
   complexMult ((r1*r2-i1*i2):reals) ((r1*i2+i1*r2):imags)
 complexMult  r i = error $ show "complexMult " ++ show (r,i)
-\end{code}
+{-
 
 
 Extract real/imag part, or project real/imag part from complex node
-\begin{code}
+-}
 xMkReal :: (Internal,[Node]) -> (Internal,[Node])
 xMkReal (exprs, nodes) = List.mapAccumR extractOrMakeReal exprs nodes
 
@@ -906,9 +907,9 @@ extractOrMakeImag es node
   | Just (_,imN) <- M.reIm es node
   = imN es
 extractOrMakeImag es n = addEdge es $ Op (getDimE es n) ImagPart [n]
-\end{code}
+{-
 
-\begin{code}
+-}
 mergeScaledConstsBy :: (Double -> Double -> Double) -> (Internal,[(Double,Node)]) -> (Internal,[(Double,Node)])
 mergeScaledConstsBy op (exprs,scaledNodes) = (exprs',combined ++ nonconsts)
   where
@@ -921,9 +922,9 @@ mergeScaledConstsBy op (exprs,scaledNodes) = (exprs',combined ++ nonconsts)
     (exprs',combined) = if null consts  then (exprs,[]) else (expr'',[(1,combinedNode)] )
 
     (expr'',combinedNode) = addEdge exprs (Const Dim0 $ foldr1 op consts)
-\end{code}
+{-
 Recursively combine all |op|s which are terms in this |op|
-\begin{code}
+-}
 collapse :: Internal -> OpId -> Node -> [Node]
 collapse exprs op term
   = case I.lookup term exprs of
@@ -931,9 +932,10 @@ collapse exprs op term
                                          then  concatMap (collapse exprs op) newTerms
                                          else [term]
       _ -> [term]
-\end{code}
+{-
 
-\begin{code}
+-}
 cartProd (l1:ls) = [i : j | i <- l1, j <- cartProd ls]
 cartProd [] = [[]]
-\end{code}
+{-
+-}

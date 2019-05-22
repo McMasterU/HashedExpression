@@ -1,7 +1,8 @@
+{-
 (c) 2010-2012 Christopher Kumar Anand, Jessica LM Pavlin
 
 Caluclating Derivatives.
-\begin{code}
+-}
 {-# LANGUAGE ScopedTypeVariables, TupleSections, MultiParamTypeClasses, FlexibleInstances
            , NoMonomorphismRestriction, PatternGuards #-}
 module HashedTransformable () where
@@ -9,10 +10,10 @@ module HashedTransformable () where
 import HashedExpression
 import HashedSimplify
 import HashedFactor
-\end{code}
+{-
 
 Class for expression types which can be simplified, differentials isolated, etc.
-\begin{code}
+-}
 instance Transformable (Internal,Node) where
   factor = factor'
   simplify = simplify'
@@ -161,5 +162,6 @@ instance Transformable ThreeDCSparse where
     where
       (exprs',n') = simplify'' (exprs, n)
 
-\end{code}
+{-
 
+-}
