@@ -1,7 +1,8 @@
+{-
 (c) 2010 Christopher Kumar Anand
 
 Experiment in common subexpressions without monads and better expression simplification.
-\begin{code}
+-}
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, FlexibleInstances, NoMonomorphismRestriction, UndecidableInstances #-}
 module HashedExpression where
 
@@ -18,18 +19,18 @@ import qualified Data.Set as Set
 import qualified Data.IntSet as IntSet
 import Control.DeepSeq
 import Debug.Trace
-\end{code}
+{-
 
 
 Here we can turn debug on and off with one variable.  mt is a function to apply a trace, but only if debug is on.
-\begin{code}
+-}
 skipDebug = True
 mt x y = if skipDebug then y else trace x y
-\end{code}
+{-
 
 Type wrappers for expressions which we will use to build expressions.
 The |Show| instances of these pretty-print a single expression (duplicating common subexpressions).
-\begin{code}
+-}
 data Scalar = Scalar {unScalar :: Expression} deriving (Eq)
 data ScalarC = ScalarC {unScalarC :: Expression} deriving (Eq)
 data OneD = OneD {unOneD :: Expression} deriving (Eq)
@@ -49,11 +50,11 @@ threeD e n = ThreeD $ Expression n e
 data ThreeDC = ThreeDC {unThreeDC :: Expression} deriving (Eq)
 data ThreeDCSparse = ThreeDCSparse !SparseList3D Expression deriving (Eq)
 threeDC e n = ThreeDC $ Expression n e
-\end{code}
+{-
 The generic case of some samples not on any grid is
-\begin{code}
+-}
 data Vector = Vector Int Expression deriving (Eq, Show)
-\end{code}
+{-
 which only encodes the number of samples.
 
 If we subsample affine subspaces of a regular k-space,
@@ -67,7 +68,7 @@ Users will construct expressions using these classes and the following classes w
 All the non-scalar types are rectangular arrays, for which some other operations makes sense,
 but in the future, we may have to make the classes more fine-grained.
 Dimensions must match and will be checked by the instances.
-\begin{code}
+-}
 class Rectangular a where
   ft :: a -> a             -- complex Fourier Transform on (real,imaginary) pair of arrays
   invFt :: a -> a          -- inverse transform
@@ -90,10 +91,10 @@ uncrop (keep,fullDims) = injectSS (SSCrop keep fullDims)
 comb list = projSS (SSNyquist list)
 uncomb list = injectSS (SSNyquist list)
   -- *** this doesn't make sense in general, only for cropping and Nyquist
-\end{code}
+{-
 
 All variables with real vector-space interpretations will implement the following class:
-\begin{code}
+-}
 infixl 8 *.
 infixl 8 `scale`
 class HasScale v s where
@@ -129,11 +130,11 @@ class RealVectorSpace v s | v -> s where
   -- FIXME don't use for SparseList, should make different proj/inject for each type of sparsity
   projSS :: Subspace -> v -> v     -- project onto a subspace as defined below (e.g. by cropping)
   injectSS :: Subspace -> v -> v   -- inject (adjoint to project) from a subspace
-\end{code}
+{-
 
 Regularization, the dimension of the discretized space determines the type of the domain kernel specifier.
 The model only contains the objective function, not the gradient.
-\begin{code}
+-}
 class Regularizable v dk where
   huber  :: dk ->           v -> Scalar
   tukey  :: dk -> Double -> v -> Scalar
@@ -141,10 +142,10 @@ class Regularizable v dk where
   l1Bi   :: dk ->           v -> Scalar
   l1l2Bi :: dk ->           v -> Scalar
   gmBi   :: dk ->           v -> Scalar
-\end{code}
+{-
 
 Sparse sampling
-\begin{code}
+-}
 data Dim12 = Dii1 | Dii2 deriving (Show,Ord,Eq)
 data SparseList2D = SparseList2D  Int                   -- number of samples
                                   Dim12                 -- dense dimension
@@ -195,10 +196,10 @@ minMax f = minMax' (1073741824,-1073741824)
 class SubsampledSpace vFull vSparse sL | vSparse -> vFull, vSparse -> sL, vFull -> vSparse where
   projSparse :: sL -> vFull -> vSparse
   injectSparse :: vSparse -> vFull
-\end{code}
+{-
 
 Define complex type with operations to insert/extract real components:
-\begin{code}
+-}
 infix 6 +:
 class Complex c r | r -> c, c -> r where
   (+:) :: r -> r -> c
@@ -206,10 +207,10 @@ class Complex c r | r -> c, c -> r where
   iIm :: r -> c
   xRe :: c -> r
   xIm :: c -> r
-\end{code}
+{-
 
 All variables with real vector-space interpretations will implement the following class:
-\begin{code}
+-}
 infix 7 .*:
 class ComplexVectorSpace v vr s sr | v -> s, v -> vr, vr -> sr where
   (.*:) :: s -> v -> v
@@ -222,22 +223,22 @@ class ComplexVectorSpace v vr s sr | v -> s, v -> vr, vr -> sr where
   magV :: v -> vr
 
   (.*:) s v = scaleC s v
-\end{code}
+{-
 
 It would be nice to have a class like this, but we would need to do type inferencing to figure out its dimensions.
 CKA:  when we wrap Mary's types, we can use this
-\begin{code}
+-}
 class HasZero v where
   zero :: v
-\end{code}
+{-
 
-\begin{code}
+-}
 class Pretty a where
   pretty :: a -> String
-\end{code}
+{-
 
 Inputs to expressions are just free variables, which can be created by these helper functions:
-\begin{code}
+-}
 var = Scalar . (varHidden Dim0)
 varc = ScalarC . (varHidden Dim0)
 var1d dim = OneD . (varHidden (Dim1 dim))
@@ -249,11 +250,11 @@ var2dc d = TwoDC . (varHidden (Dim2 d))
 var3d d = ThreeD . (varHidden (Dim3 d))
 var3ds d sL@(SparseList3D len _ _ _ _ _) = (ThreeDSparse sL) . (varHidden (Dim3SL1 d len))
 var3dc d = ThreeDC . (varHidden (Dim3 d))
-\end{code}
+{-
 
 FIXME:  change isConst to isJustConst and other function to isConst
 Is the |ExpressionEdge| lookup up into a Maybe a constant zero.
-\begin{code}
+-}
 isZero (Just (Const _ 0)) = True
 isZero _ = False
 isJustVar (Just (Var _ _)) = True
@@ -274,20 +275,20 @@ isJustInject (Just (Op _ (Inject _) _)) = True
 isJustInject _ = False
 getConst (Just (Const _ d)) = [d]
 getConst _ = []
-\end{code}
+{-
 Find SCZs in an expression:
-\begin{code}
+-}
 getSCZs (e,n) = filter isSCZ $ map (flip I.lookup e) $ topSort e n
-\end{code}
-\begin{code}
+{-
+-}
 isSCZNode e n = case I.lookup n e of
        Just (Op _ (SCZ (Expression sczN sczE)) args) -> Just ((sczE,sczN),args)
        _ -> Nothing
 justArgs (Just (_,args)) = args
 justArgs Nothing         = []
-\end{code}
+{-
 
-\begin{code}
+-}
 containsDifferential exprs node = case I.lookup node exprs of
   Just (Const _ _) -> False
   Just (RelElem _ _ _) -> error $ "containsDifferential found RelElem " ++ (take 200 $ show exprs)
@@ -308,35 +309,35 @@ containsDifferential exprs node = case I.lookup node exprs of
   Just (Var _ _) -> False
   Just (DVar _ _) -> True
   Nothing -> error $ "containsDifferential lookup failure " ++ show (node,exprs)
-\end{code}
+{-
 
 Is the |ExpressionEdge| lookup up into a Maybe a constant zero.
-\begin{code}
+-}
 isNegArg exprs node = case I.lookup node exprs of
                         Just (Op _ Neg [arg]) -> (exprs,(True,arg))
                         Just (Const dims a) ->
                           if a < 0 then let (e,n) = addEdge exprs (Const dims (-a)) in (e,(True,n))
                                    else (exprs,(False,node))
                         _ -> (exprs,(False,node))
-\end{code}
+{-
 
 Is the |ExpressionEdge| lookup up into a Maybe a constant one.
-\begin{code}
+-}
 isOne (Just (Const Dim0 1)) = True
 isOne _ = False
-\end{code}
+{-
 
 Filter out nodes from a list of |Node|s in an |Internal| expression representation, using a predicate |toExclude|.
-\begin{code}
+-}
 filterOut toExclude exprs = filter (not . toExclude . (flip I.lookup exprs))
-\end{code}
+{-
 
 Definition of subspaces:
 Required properties:  the lists in |SSCoord|, |SSDiag|, |SSList| and |SSCrop| must
 have the same length as the number of dimensions.
 |SSCrop| and |SSNyquist| the only one which will preserve rectangularity and the number of dimensions.
 Index numbering starts at 0.
-\begin{code}
+-}
 data Subspace  = SSCoord [Maybe Int]             -- project out coords which are |Just x| along coord = x
                | SSNyquist [(Int,(Int,Int))]     -- $(p,(b,e))$ keep every $p$th hyperplane
                                                  --   skipping first $b$ and last $e$
@@ -350,26 +351,26 @@ data Subspace  = SSCoord [Maybe Int]             -- project out coords which are
                           -- eg [(0,0),(0,1),(-2,1),...] in a 2d discretization
                | SSCrop [(Int,Int)] [Int]  -- keep only a box (low,high) including both endpoints
      deriving (Show, Eq, Ord)
-\end{code}
+{-
 
 Descriptor for affine subspaces (cut out by linear equations).
 We make slopes and intercepts a type parameter so we can specify diophantine equations.
 Note that we can also use this to specify Nyquist sampling.
 It would also be possible to
-\begin{code}
+-}
 data Affine num  = AAll              -- cross-section in this dimension is complete
                  | ASlopeIntercept   -- cross-section is point
                      num             --   slope of line with respect to unit change
                      num             --   position at unit=0
         deriving (Show, Ord, Eq)
-\end{code}
+{-
 
 Possibility for typing subspaces more...not worth it for now. TB
 data Subspace1 = SSCoord1 Maybe Int
                | SSNyquist1 (Int,(Int,Int))
                | SSAffine1 Affine Int
 
-\begin{code}
+-}
 projDim :: Dims -> Subspace -> Dims
 projDim (Dim1 dimIn) (SSCrop [bound] ds) = if [dimIn] == ds then Dim1 (cropDim dimIn bound) else error $ "p1Dim" ++ (show ((Dim1 dimIn), (SSCrop [bound] ds)))
 projDim (Dim2 (d1,d2)) (SSCrop bounds ds) = if length bounds == 2 && ds == [d1,d2]
@@ -392,10 +393,10 @@ projDim (Dim3 (d1,d2,d3)) (SSNyquist reductions) = if length reductions == 3
 projDim (Dim4 (d1,d2,d3,d4)) (SSNyquist reductions) = if length reductions == 4
   then let [d1',d2',d3',d4']=zipWith reduce [d1,d2,d3,d4] reductions in Dim4 (d1',d2',d3',d4')
   else error "projDim Dim4 Nyquist"
-\end{code}
+{-
 
 TB -> my projDim SSCoord implementation; I don't know if it's quite right, but it seems to work.
-\begin{code}
+-}
 projDim (Dim1 dimIn) (SSCoord [Nothing]) = Dim1 dimIn
 projDim (Dim1 _dimIn) (SSCoord [Just _int]) = Dim0
 projDim (Dim2 (d1, d2)) (SSCoord maybeInts) = if length maybeInts /= 2 then error ("HE.projDim Dim2 Coord does not match " ++ show maybeInts) else
@@ -446,9 +447,9 @@ cropDim dimIn (left,right) = let
   in
     if null err then right - left + 1
       else error $ "cropDim " ++ err ++ show (dimIn,left,right)
-\end{code}
+{-
 
-\begin{code}
+-}
 injectDim dimIn (SSCrop bounds [d1]) = checkInj dimIn bounds $ Dim1 d1
 injectDim dimIn (SSCrop bounds [d1,d2]) = checkInj dimIn bounds $ Dim2 (d1,d2)
 injectDim dimIn (SSCrop bounds [d1,d2,d3]) = checkInj dimIn bounds $ Dim3 (d1,d2,d3)
@@ -470,14 +471,14 @@ checkInj d b = if dimList d == map width b then id else trace ("checkInj "++ sho
     where width (low,high) = high-low+1
 
 injReduce dim (reduction,(skipLeft,skipRight)) = dim * reduction + skipLeft + skipRight
-\end{code}
+{-
 
-\begin{code}
+-}
 class Transformable a where
   simplify :: a -> a
   simplifyOne :: a -> a
   factor :: a -> a
-\end{code}
+{-
 
 
 *** FIXME:  still needed here: functions to help create convolutions, and regularization functions
@@ -485,25 +486,25 @@ class Transformable a where
 ------------------------------
 This is all the user should need to know about basic expressions from this module.
 The actual expressions are
-\begin{code}
+-}
 data Expression =  Expression  Node                    -- the final product of this expression
                                Internal                -- all subexpressions, including vars
    deriving (Show, Ord)
-\end{code}
+{-
 Equality instances.  Add one expression to the other and if they are equal the hashes will be the same.
 (This instance is here so we can derive it for wrapper types.)
-\begin{code}
+-}
 instance Eq Expression where
   (Expression n1 e1) == (Expression n2 e2) = recreate (e1,n1) == recreate (e2,n2)
 
 bigE (exprs,n) = Expression n exprs
-\end{code}
+{-
 
 Nodes are indexed by 32-bit |Int|s because there is an optimized map for this.
-\begin{code}
+-}
 type Node = Int
 type Internal = IntMap ExpressionEdge
-\end{code}
+{-
 
 Notes:
 *** Having reverse lookup doesn't seem very useful if hash functions are quick to calculate,
@@ -520,7 +521,7 @@ CKA:  should we require that each variable name has only one dimension?
       Or should we consider the dimension to be part of the name.
       Make names unique because that is consistent with mathematical convention.
       The problem will arrive if expressions with different variables are merged.
-\begin{code}
+-}
 data Dims  = Dim0
            | Dim1 Int
            | Dim1p Int Int -- size and order of polynomial, interval is [-1,1]
@@ -552,11 +553,11 @@ data ExpressionEdge  = Op  Dims                          -- dims of output
                                 }                        --   length reIdx == length outDims
                      | Const {unConstDims::Dims, unConst ::Double}
     deriving (Eq, Show, Ord)
-\end{code}
+{-
 *** what we can't do with |RelElem|s is make relative calculations needed to fix $N/R$
 undersampling artifacts.
 If we want to do that, we probably need to introduce size variables and expressions
-\begin{code}
+-}
 data ZipConvElem = ZCE Expression
 
 relElem :: Int -> Boundary -> [Int] -> Scalar {-always returns RelElem-}
@@ -565,9 +566,9 @@ relElem array boundary offset = Scalar $ Expression h (I.fromList [(h,e)])
     h = hash e
     e = RelElem array boundary offset
 
-\end{code}
+{-
 
-\begin{code}
+-}
 class ConvZip v s idx | v -> s, v -> idx where
   conv :: Boundary -> [(idx,s)] -> v -> v
   conv1Zip1 :: ((Boundary->idx -> s) -> s) -> v -> v
@@ -579,9 +580,9 @@ class ConvZip v s idx | v -> s, v -> idx where
   czZip :: (s -> s -> s)              -> v -> v             -> v
   czZip3 :: (s -> s -> s -> s)        -> v -> v -> v        -> v
   czZip4 :: (s -> s -> s -> s -> s)   -> v -> v -> v -> v   -> v
-\end{code}
+{-
 
-\begin{code}
+-}
 cMult u v =  let ux = xRe u; uy = xIm u; vx = xRe v; vy = xIm v in
   (conv4Zip1 (\ (ur,ui,vr,vi) -> ( (ur ZeroMargin zeroIdx) * (vr ZeroMargin zeroIdx)
                                  - (ui ZeroMargin zeroIdx) * (vi ZeroMargin zeroIdx)
@@ -592,7 +593,7 @@ cMult u v =  let ux = xRe u; uy = xIm u; vx = xRe v; vy = xIm v in
                                  + (ui ZeroMargin zeroIdx) * (vr ZeroMargin zeroIdx)
                                  )) (ux,uy,vx,vy)
   )
-\end{code}
+{-
 
 
 
@@ -604,7 +605,7 @@ Operations which we recognize in our expressions.
    A side effect of this is that if we make the expression edges Num instances, then we will get multiplication and addition and we can throw an error, so it would be better to wrap graphs in different types
 Since nodes are stored in a map (Node -> ExpressionEdge), we can handle multiple inputs to an edge/operation, but multiple outputs require that we create a compound node and then extract elements with |Extract|.
 Given the limitations of the Haskell type system, it is probably easier for us to write wrappers to generate operations with higher output airity.
-\begin{code}
+-}
 data OpId  = FT Bool      -- FT of any dimension, as long as the sizes are the same
                           -- True = forward , False = Inverse
            | PFT Bool Dir -- Partial FT with direction (same as above) and Dir of row, column or slice
@@ -654,9 +655,9 @@ data OpId  = FT Bool      -- FT of any dimension, as long as the sizes are the s
 
 prodScale dims = if null dims then Prod else ScaleV
 
-\end{code}
+{-
 For the Regularizers, we need domain weights, which are a discrete version of a kernel,
-\begin{code}
+-}
 data DomainWeights = DW1d [(Int,Double)]
                    | DW2d [((Int,Int),Double)]
                    | DW3d [((Int,Int,Int),Double)]
@@ -665,9 +666,9 @@ data DomainWeights = DW1d [(Int,Double)]
                    | DW6d [((Int,Int,Int,Int,Int,Int),Double)]
                    | DW7d [((Int,Int,Int,Int,Int,Int,Int),Double)]
    deriving (Eq, Show, Ord)
-\end{code}
+{-
 and a range kernel
-\begin{code}
+-}
 data RangeKernel = RKHuber
                  | RKTukey Double
                  | RKL2
@@ -675,23 +676,23 @@ data RangeKernel = RKHuber
                  | RKL1mL2
                  | RKGM -- Geman-McClure
    deriving (Eq, Show, Ord)
-\end{code}
+{-
 These are taken from statistics:  http://research.microsoft.com/en-us/um/people/zhang/INRIA/Publis/Tutorial-Estim/node24.html
 
 
 Direction of partial ft
-\begin{code}
+-}
 data Dir = Row
           | Column
           | Slice
       deriving (Eq, Show, Ord)
-\end{code}
+{-
 
 Use index notation
   0 = Row
   1 = Column
   2 = Slice
-\begin{code}
+-}
 data Swap =  SCR  -- 2d transpose
           | SCRS  -- swap first 2 indices of 3
           | SCSR  -- rotate forward 3 indices
@@ -709,10 +710,10 @@ transposeDims SSCR (Dim3 (r,c,s)) = Dim3 (s,c,r)
 transposeDims SRSC (Dim3 (r,c,s)) = Dim3 (r,s,c)
 transposeDims _swap DimUnknown  = DimUnknown
 transposeDims swap dims = error $ "HE.transposeDims doesn't handle " ++ show(swap,dims)
-\end{code}
+{-
 
 A reverse transpose; given the transpose of a dimension and the swap used to get it; we want the original.
-\begin{code}
+-}
 revTrDims :: Swap -> Dims -> Dims
 revTrDims SCR  (Dim2 (d1,d2)) = Dim2 (d2,d1)
 revTrDims SCRS (Dim3 (c,r,s)) = Dim3 (r,c,s)
@@ -739,7 +740,7 @@ wantOutside op = op `elem` [Neg,FT True,FT False,PFT True Row,PFT False Row,PFT 
 wantInside (Project _) = True
 wantInside (Inject _) = False
 wantInside op = op `elem` [RealPart,ImagPart]
-\end{code}
+{-
 
 |MapND| contains an function defined by an expression.
 If this function has free variables, we need to grab the values from the outside
@@ -756,7 +757,7 @@ FIXME:  put in a place-holder
 Note |mkSCZ| returns an |ExpressionEdge| but it is always |Op dims (SCZ expr) nodes|.
 The expression with be normalized, and the node order will be normalized, with commuting inputs sorted by hash.
 Type for ordering inner expressions.
-\begin{code}
+-}
 data InnerExpr = IERE Int Boundary [Int]
                | IEConst Double
                | IESum [InnerExpr]
@@ -781,7 +782,7 @@ data InnerExpr = IERE Int Boundary [Int]
                | IEAcosh InnerExpr
                | IEAtanh InnerExpr
   deriving (Show, Eq, Ord)
-\end{code}
+{-
 Conversion to |InnerExpr|, incorporating the following simplifications:
 \begin{itemize}
     \item multiply out products outside sums
@@ -791,7 +792,7 @@ Conversion to |InnerExpr|, incorporating the following simplifications:
     \item combine sums of constants
     \item sort children
 \end{itemize}
-\begin{code}
+-}
 toInner :: Expression -> InnerExpr
 toInner (Expression n exprs) = toI n
   where
@@ -821,17 +822,17 @@ toInner (Expression n exprs) = toI n
         Just (Op Dim0 Acosh [arg]) -> IEAcosh (toI arg)
         Just (Op Dim0 Atanh [arg]) -> IEAtanh (toI arg)
         x -> error $ "HE.toInner "++show x++" ~ "++pretty (Expression n exprs)
-\end{code}
+{-
 Simplify IESum
-\begin{code}
+-}
 simpSum [] = IEConst 0
 simpSum children =
           let  allArgs = concatMap (\ n -> case n of IESum subArgs -> subArgs; _ -> [n]) children
                c = sum $ concatMap (\ n -> case n of IEConst d -> [d]; _ -> []) allArgs
                nonConst = filter (\ n -> case n of IEConst _ -> False; _ -> True) allArgs
           in {-trace ("simpSum "++show (c,children,nonConst)) $-} IESum $ L.sort $ (if c == 0 then id else ((IEConst c):)) nonConst
-\end{code}
-\begin{code}
+{-
+-}
 simpProd [] = IEConst 1
 simpProd children =
           let  allArgs = concatMap (\ n -> case n of IEProd subArgs -> subArgs; _ -> [n]) children
@@ -847,8 +848,8 @@ simpProd children =
           in {-trace ("simpProd "++show (children,terms,"simpSum",simpSum [simpProd $ arg : terms | arg <- prodSums sums])) $-}
                 if null sums then IEProd $ L.sort terms
                              else simpSum [simpProd $ arg : terms | arg <- prodSums sums]
-\end{code}
-\begin{code}
+{-
+-}
 fromInner :: InnerExpr -> Expression
 fromInner ie = Expression n exprs
   where
@@ -879,10 +880,10 @@ fromInner ie = Expression n exprs
     fromI exprs (IEAsinh ie) = let (exprs',i) = fromI exprs ie in addEdge exprs' $ Op Dim0 Asinh [i]
     fromI exprs (IEAcosh ie) = let (exprs',i) = fromI exprs ie in addEdge exprs' $ Op Dim0 Acosh [i]
     fromI exprs (IEAtanh ie) = let (exprs',i) = fromI exprs ie in addEdge exprs' $ Op Dim0 Atanh [i]
-\end{code}
+{-
 Relabel |RelElems| in |InnerExpr| so that the first one you see on the left is 0, ...
 This makes these expressions unique.
-\begin{code}
+-}
 canonicalIE :: InnerExpr -> ((Int,I.IntMap Int),InnerExpr)
 canonicalIE ie = cie (0,I.empty) ie
 
@@ -923,10 +924,10 @@ cie nr (IEAtan ie) = let (nr',i) = cie nr ie in (nr',IEAtan i)
 cie nr (IEAsinh ie) = let (nr',i) = cie nr ie in (nr',IEAsinh i)
 cie nr (IEAcosh ie) = let (nr',i) = cie nr ie in (nr',IEAcosh i)
 cie nr (IEAtanh ie) = let (nr',i) = cie nr ie in (nr',IEAtanh i)
-\end{code}
+{-
 Normalize an SCZ before committing it to the graph.
 Make replace an empty expression with a zero constant, or a constant expression with that constant.
-\begin{code}
+-}
 mkSCZ' :: Dims -> Expression -> [Node] -> ExpressionEdge
 mkSCZ' dims expr args = if null newArgs
                      then case newInner of
@@ -941,7 +942,7 @@ mkSCZ' dims expr args = if null newArgs
       $ L.sort
       $ concatMap (\ (arg,idx) -> case I.lookup idx remap of Just newIdx -> [(newIdx,arg)]; _ -> [])
       $ zip args [0..]
-\end{code}
+{-
 Allowable permutations come from permutations of arguments of |Sum| and |Prod|,
 so we only need to look at those nodes to restrict the permutations.
 Permutations can be represented as 0/1 matrices, and information from nodes
@@ -976,24 +977,24 @@ which should either be in the surrounding scope,
 or be |RelElem| variables.
 For |RelElem|, |Boundary| specifies what to do if the relative index goes outside
 the boundary of the array.
-\begin{code}
+-}
 data Boundary
   = Reflective -- values are reflected in the boundaries 1/2 an element outside the array
   | Torus -- positions are calulated using modulo arithmetic in each index
   | ZeroMargin -- values at positions outside array are treated as zero
   | ConstMargin Double -- values at postions outside the array are treated as the given constant
   deriving (Eq,Show,Ord,Read)
-\end{code}
+{-
 
-\begin{code}
+-}
 class ZeroIdx a where zeroIdx :: a
 instance ZeroIdx Int where zeroIdx = 0
 instance ZeroIdx (Int,Int) where zeroIdx = (0,0)
 instance ZeroIdx (Int,Int,Int) where zeroIdx = (0,0,0)
 instance ZeroIdx (Int,Int,Int,Int) where zeroIdx = (0,0,0,0)
-\end{code}
+{-
 
-\begin{code}
+-}
 data Airity  = Natural
              | Fixed Int
              | IsMap (Airity,Airity)
@@ -1066,10 +1067,10 @@ instance HasHash OpId where
   hash (Inject _) = 41
   hash (SCZ e) = 239 + 393919 * (hash e)
   hash x = error $ "opHash unsupported op "++show x
-\end{code}
+{-
 
 Checks if a node is complex
-\begin{code}
+-}
 nodeIsComplex :: Internal -> Node -> Bool
 nodeIsComplex edges top =
        case I.lookup top edges of
@@ -1106,11 +1107,11 @@ nodeIsComplex edges top =
                                 _ -> L.or $ map (nodeIsComplex edges) args
                             Just _ -> False
 nodeIsComplex' (Expression n e) = nodeIsComplex e n
-\end{code}
+{-
 
 Compare nodes according to content, with scaling effecting ordering, but less strongly
 than the nodes being scaled.
-\begin{code}
+-}
 compareOp :: Internal -> Node -> Node -> Ordering
 compareOp exprs' left right = let (exprs,one) = addEdge exprs' $ Const Dim0 1
   in case (I.lookup left exprs, I.lookup right exprs) of
@@ -1134,22 +1135,22 @@ compareOp exprs' left right = let (exprs,one) = addEdge exprs' $ Const Dim0 1
        (_, Just (Op _ _opR _)) -> GT
        (Just (Op _ _opL _), _) -> LT
        (x,y) -> compare x y
-\end{code}
+{-
 
 Checks if a node is complex scalar
-\begin{code}
+-}
 nodeIsScalarC :: Internal -> Node -> Bool
 nodeIsScalarC edges top = (nodeIsZeroDim edges top) && (nodeIsComplex edges top)
-\end{code}
+{-
 
 Checks if a node is scalar
-\begin{code}
+-}
 nodeIsScalar :: Internal -> Node -> Bool
 nodeIsScalar edges top = (nodeIsZeroDim edges top) && (not $ nodeIsComplex edges top)
-\end{code}
+{-
 
 Checks if a node is zero
-\begin{code}
+-}
 nodeIsZeroDim :: Internal -> Node -> Bool
 nodeIsZeroDim edges top =
        case I.lookup top edges of
@@ -1159,29 +1160,29 @@ nodeIsZeroDim edges top =
                                 FT _ -> False
                                 _ -> L.and $ map (nodeIsScalar edges) args
                             Just _ -> False
-\end{code}
+{-
 
 Checks if a node is a differential
-\begin{code}
+-}
 nodeIsDifferential :: Internal -> Node -> Bool
 nodeIsDifferential edges top =
        case I.lookup top edges of
                             Nothing -> error $ "nodeIsDifferential not top "++show (top,edges)
                             Just (DVar _ _) -> True
                             Just _ -> False
-\end{code}
+{-
 
 Checks if a node is a |RelElem|
-\begin{code}
+-}
 nodeIsRelElem :: Internal -> Node -> Bool
 nodeIsRelElem edges node =
        case I.lookup node edges of
                             Nothing -> error $ "nodeIsRelElem not top "++show (node,edges)
                             Just (RelElem _ _ _) -> True
                             Just _ -> False
-\end{code}
+{-
 
-\begin{code}
+-}
 airity :: OpId -> (Airity,Airity)
 airity Sum     = (Natural, Fixed 1)
 airity SubMask = (Fixed 2, Fixed 1)
@@ -1223,7 +1224,7 @@ airity ImagPart = (Fixed 1,Fixed 1)
 airity RealImag = (Fixed 2,Fixed 1)
 airity (Transpose _) = (Fixed 1,Fixed 1)
 --airity x = error $ "airity not implemented for " ++ show x
-\end{code}
+{-
 
 *** later, we want expressions to have tuple outputs, but this probably needs a new type class.
 
@@ -1291,7 +1292,7 @@ murmur_r = 24
 %\end{code}
 ++++++++++++++++++++++++++++++++++++++++++++  MurmurHash
 
-\begin{code}
+-}
 instance HasHash ExpressionEdge where
   hash ee = case ee of
       (Var _dim name) -> C.foldr' fun 0 name
@@ -1313,28 +1314,28 @@ instance HasHash ExpressionEdge where
       fun c hash = hash * 40591 + (fromEnum c)
       argHash (arg:args) = arg + 31 * (argHash args)
       argHash [] = 0
-\end{code}
+{-
 
 
 Merge two expression graphs.
 \savecolumns
-\begin{code}
+-}
 merge :: Expression -> Expression -> (Expression,(Node,Node))
 merge e1@(Expression head0 expr0) e2@(Expression head1 expr1)
     = (Expression (error "merge Expression don't use node") expr',(h0,h1))
   where
-\end{code}
+{-
 Add edges from the smaller expression to the larger.
 \restorecolumns
-\begin{code}
+-}
     (exprs,newExprs,newHead,(h0,h1)) = if I.size expr0 > I.size expr1
        then (expr0,expr1,head1,(head0,remapIfNecessary head1))
        else (expr1,expr0,head0,(remapIfNecessary head0,head1))
-\end{code}
+{-
 Normally variables map to unique hashes, but collisions are possible in one
 expression but not the other, so we need to rewrite when this happens.
 \restorecolumns
-\begin{code}
+-}
     (allRemaps,expr') = foldr remap (I.empty,exprs)
                                                 $ reverse $ depthFirst newExprs newHead
     remap (node,edge) (rehashed,exprs) =
@@ -1347,34 +1348,34 @@ expression but not the other, so we need to rewrite when this happens.
         (vces,newHash) = addEdge exprs $ remapNodes rehashed edge
     remapIfNecessary node = let result = I.findWithDefault node node allRemaps
                         in result
-\end{code}
+{-
 
 Merge list of expression graphs.
 \savecolumns
-\begin{code}
+-}
 mergeL' ens = let (Expression _ e,ns) = mergeL (map (\ (e',n') -> Expression n' e') ens) in (e,ns)
 mergeL :: [Expression] -> (Expression,[Node])
 mergeL eList
     = (Expression (error "merge Expression don't use node") es
       ,map fst $ L.sortBy (\ (_,x) (_,y) -> compare x y) remappedNodes)
   where
-\end{code}
+{-
 Sort expressions descending by the size of the hash tables.
 \restorecolumns
-\begin{code}
+-}
     ((Expression n0 exprs,idx0):eSorted) = L.sortBy
         (\ (Expression _ e1,_) (Expression _ e2,_) -> compare (I.size e2) (I.size e1))
         $ zip eList [0..]
-\end{code}
+{-
 Add edges from the smaller expressions to the larger.
 \restorecolumns
-\begin{code}
+-}
     (remappedNodes,es) = foldr remapExpression ([(n0,idx0)],exprs) eSorted
-\end{code}
+{-
 Normally variables map to unique hashes, but collisions are possible in one
 expression but not the other, so we need to rewrite when this happens.
 \restorecolumns
-\begin{code}
+-}
     remapExpression (Expression newHead newExprs,idx) (nodes,vces)
        = let (allRemaps,vces') = foldr remap (I.empty,vces) $ reverse $ depthFirst newExprs newHead
          in  (nodes ++ [(I.findWithDefault newHead newHead allRemaps,idx)],vces')
@@ -1387,10 +1388,10 @@ expression but not the other, so we need to rewrite when this happens.
         , vces)
       where
         (vces,newHash) = addEdge exprs $ remapNodes rehashed edge
-\end{code}
+{-
 
 Change names of nodes which were renamed because of collisions with previous hashes.
-\begin{code}
+-}
 remapNodes theMap edge = {- trace (if I.size theMap  > 0 then "remapNodes " ++ show (edge,theMap) else "" ) $ -} case edge of
    (Op dim op args) -> Op dim op $ map mapNode args
    e -> e
@@ -1398,10 +1399,10 @@ remapNodes theMap edge = {- trace (if I.size theMap  > 0 then "remapNodes " ++ s
     mapNode node = case I.lookup node theMap of
                         Nothing -> node
                         Just newNode -> newNode
-\end{code}
+{-
 
 Recreate a post-simplified expression with new hashes (as if was created from scratch as simplified)
-\begin{code}
+-}
 recreate' (Expression n e) = let (e',n') = recreate (e,n) in Expression n' e'
 recreate :: (Internal,Node) -> (Internal,Node)
 recreate (eOld,headOld) = let
@@ -1431,17 +1432,17 @@ recreate (eOld,headOld) = let
     in (eNew,I.findWithDefault  (error $ "HE.recreate missing head "++ show (headOld,old2new))
                                 headOld old2new
        )
-\end{code}
+{-
 
 
 Prime numbers from \texttt{http://en.wikipedia.org/wiki/List_of_prime_numbers}.
-\begin{code}
+-}
 somePrimes = [293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 727]
 otherPrimes = [1097, 1103, 1109, 1117, 40099, 42589, 933199, 87178291199]
-\end{code}
+{-
 
 Add an edge (not necessarily the head)
-\begin{code}
+-}
 addEdge' :: Internal -> ExpressionEdge
         -> Expression
 addEdge' e edge = (\ (es,n) -> Expression n es) $ addEdge e edge
@@ -1467,9 +1468,9 @@ addEdge exprs edge'
            ((IsDuplicate h) : _) -> (exprs,h)
            ((IsNew h) : _) -> (insertNewI "addEdge.Edge" exprs (h,edge),h)
            _ -> error "addEdge everything clashed!"
-\end{code}
+{-
 Add an edge and figure out the right dimensions for it.
-\begin{code}
+-}
 addEdgeD :: Internal -> OpId -> [Node] -> (Internal,Node)
 addEdgeD exprs op@(Project ss@(SSCrop _ _)) [node]
    = addEdge exprs $ Op (projDim (getDimE exprs node) ss) op [node]
@@ -1489,9 +1490,9 @@ addEdgeD exprs op@(Transpose swap) [node]
      in addEdge exprs $ Op dims op [node]
 addEdgeD exprs op args@(arg:_) = addEdge exprs $ Op (getDimE exprs arg) op args
 addEdgeD _exprs op [] = error $ "addEdgeD doesn't handle nullary operations" ++ show op
-\end{code}
+{-
 Add a |Prod|, a |Prod| followed by a |Scale| or a |Scale| or a scalar |Const 0|.
-\begin{code}
+-}
 genProd :: Internal -> [Node] -> (Internal,Node)
 genProd expr nodes =
   case nodes of
@@ -1511,36 +1512,36 @@ genProd expr nodes =
              (_,[(dims,nonscalar)]) -> let (e1,sN) = addEdge expr $ Op Dim0 Prod $ map snd scalars
                                        in addEdge e1 $ Op dims ScaleV [sN,nonscalar]
              _ -> error $ "prodScale dimsN " ++ show (nodes,expr)
-\end{code}
-\begin{code}
+{-
+-}
 rehash :: ExpressionEdge -> Node -> [Node]
 rehash e x = x : [mt ("rehash "++show (i,x,e)) $ x + (241+x*251) * i | i <- [1..]]
 
 data IsClash = IsClash | IsDuplicate Node | IsNew Node
   deriving (Eq,Show,Ord)
-\end{code}
+{-
 
 Figure out if this edge is in the map already.
-\begin{code}
+-}
 isClash :: Internal -> ExpressionEdge -> Node -> IsClash
 isClash exprs newEdge newHash = case I.lookup newHash exprs of
                                   Nothing -> IsNew newHash
                                   Just old -> if old == newEdge
                                                 then IsDuplicate newHash
                                                 else IsClash
-\end{code}
+{-
 
 When we know that keys don't exist in maps:
-\begin{code}
+-}
 insertNew err theMap (key,val) = Map.insertWith (error err) key val theMap
 insertNewI err theMap (key,val) = I.insertWith  (\ _ _ -> error $ err ++ show (key,val,theMap))
                                                 key val theMap
-\end{code}
+{-
 
 Topologically sorted list of nodes, top is last.
 Note that this assumes it is a DAG, see https://en.wikipedia.org/wiki/Topological_sorting to use two sets to also test for this property.
 CKA:  Somebody should see if http://hackage.haskell.org/packages/archive/containers/latest/doc/html/src/Data-Graph.html#topSort is faster.
-\begin{code}
+-}
 topSort :: Internal -> Node -> [Node]
 topSort edges top = reverse $ snd $ addDependencies top (Set.empty,[])
   where
@@ -1555,10 +1556,10 @@ topSort edges top = reverse $ snd $ addDependencies top (Set.empty,[])
             else let (newVisited,newInOrder) = foldr addDependencies (visited,inOrder) dependencies
                  in (Set.insert newNode newVisited,newNode:newInOrder)
 topSort' (exprs,node) = topSort exprs node
-\end{code}
+{-
 TODO:  use IntSet instead of Set
 Compute consumers of each reachable node to make it easier to traverse expression DAG.
-\begin{code}
+-}
 type Consumers = I.IntMap (Set.Set Node)
 allConsumers (exprs,head) = allMap
   where
@@ -1592,13 +1593,13 @@ consumers (exprs,head) = I.unionWith  (Set.union)
              in
                I.insert consumed new_ccs i
 
-\end{code}
+{-
 
 Calculate depth of all edges to all the dependent variables.
 A cycle will produce an infinite list.
 If we built up an IntMap of them, we wouldn't have to worry about cycles.
 LATER: pass in an edge weight
-\begin{code}
+-}
 depthMap :: (Internal,Node)
   -> I.IntMap (Map.Map ByteString Int,I.IntMap (Map.Map ByteString Int))
 depthMap (exprs,head) = fst $ dM (error "depthMap top level") exprs I.empty head
@@ -1645,11 +1646,11 @@ opDepth (MapND _ _) = 1000
 opDepth (SCZ _) = 1000
 opDepth (ScaleV) = 1
 opDepth _ = 0
-\end{code}
+{-
 
 Depth-first list of edges in a DAG.  A cycle will produce an infinite list.
 If we built up an IntMap of them, we wouldn't have to worry about cycles.
-\begin{code}
+-}
 depthFirst :: Internal -> Node -> [(Node,ExpressionEdge)]
 depthFirst edges top = (concatMap (depthFirst edges) lower) ++ [(top,topEdge)]
   where
@@ -1657,11 +1658,11 @@ depthFirst edges top = (concatMap (depthFirst edges) lower) ++ [(top,topEdge)]
                          Nothing -> error $ "depthFirst not top "++show (top,edges)
                          Just e@(Op _dim _op args) -> (e, args)
                          Just e -> (e,[])
-\end{code}
+{-
 
 Breadth-first list of edges in a DAG.  A cycle will produce an infinite list.
 If we built up an IntMap of them, we wouldn't have to worry about cycles.
-\begin{code}
+-}
 breadthFirst :: Internal -> Node -> [(Node,ExpressionEdge)]
 breadthFirst edges top = (top,topEdge):(concatMap (breadthFirst edges) lower)
   where
@@ -1669,11 +1670,11 @@ breadthFirst edges top = (top,topEdge):(concatMap (breadthFirst edges) lower)
                          Nothing -> error $ "breadthFirst not top "++show (top,edges)
                          Just e@(Op _dim _op args) -> (e, args)
                          Just e -> (e,[])
-\end{code}
+{-
 
 
 Predicates
-\begin{code}
+-}
 isVar, isOp, isRealOp, isConstEdge :: ExpressionEdge -> Bool
 isVar (Var _ _) = True
 isVar _ = False
@@ -1694,38 +1695,38 @@ isRealOp _ = False
 isReal (Op _ RealImag _) = False
 isReal (Op _ (FT _) _) = False
 isReal _ = True
-\end{code}
+{-
 
 
 List of variables
-\begin{code}
+-}
 variables :: Internal -> Node -> [(ByteString,Node)]
 variables edges top = map nameTuple $ I.toList $ I.fromList $ filter (isVar . snd) $ depthFirst edges top
   where
     nameTuple (hash,Var _dims name) = (name,hash)
     nameTuple (hash,ee) = error $ "variables found " ++ show (hash,ee,edges)
-\end{code}
+{-
 
 List of constants
-\begin{code}
+-}
 constants :: Internal -> Node -> [(Double,Node)]
 constants edges top = map nameTuple $ I.toList $ I.fromList $ filter (isConstEdge . snd) $ depthFirst edges top
   where
     nameTuple (hash,Const _dims d) = (d,hash)
     nameTuple (hash,ee) = error $ "variables found " ++ show (hash,ee,edges)
-\end{code}
+{-
 
 List of |RelElem|s
-\begin{code}
+-}
 relElems :: Internal -> Node -> [(Int,Node)]
 relElems edges top = map nameTuple $ I.toList $ I.fromList $ filter (isRelElem . snd) $ depthFirst edges top
   where
     nameTuple (hash,RelElem inputIdx _ _) = (inputIdx,hash)
     nameTuple (hash,ee) = error $ "variables found " ++ show (hash,ee,edges)
-\end{code}
+{-
 
 List of RelElems with all Zero offsets.
-\begin{code}
+-}
 relElemZeroOffsets :: Internal -> Node -> [(Int,Node)]
 relElemZeroOffsets edges top = L.sort
     $ map unique
@@ -1741,10 +1742,10 @@ relElemZeroOffsets edges top = L.sort
 
     unique [(i,Just hash)] = (i,hash)
     unique x = error $ "relElemZeroOffsets found two kinds of non-zero offsets " ++ pretty (edges,top) ++ (show (x,edges))
-\end{code}
+{-
 
 
-\begin{code}
+-}
 zeroOffsets dims = case dims of
                      Dim0   ->  []
                      Dim1 _ -> [0]
@@ -1752,31 +1753,31 @@ zeroOffsets dims = case dims of
                      Dim3 _ -> [0,0,0]
                      Dim4 _ -> [0,0,0,0]
                      _ -> error $ "zeroOffsets "++ show dims
-\end{code}
+{-
 
 
 Generic function we don't plan to expose:
-\begin{code}
+-}
 varHidden :: Dims -> String -> Expression
 varHidden dim name = Expression  h
                                  (I.fromList [(h,Var dim packedName)])
   where
     packedName = C.pack name
     h = hash $ Var dim packedName
-\end{code}
+{-
 
 Generic function we don't plan to expose:
-\begin{code}
+-}
 dvarHidden :: Dims -> String -> Expression
 dvarHidden dim name = Expression  h
                                  (I.fromList [(h,DVar dim packedName)])
   where
     packedName = C.pack name
     h = hash $ DVar dim packedName
-\end{code}
+{-
 
 Create appropriately wrapped zero array objects.
-\begin{code}
+-}
 zero1d dim = OneD $ (zeroHidden (Dim1 dim))
 zero2d dim = TwoD $ (zeroHidden (Dim2 dim))
 zero3d dim = ThreeD $ (zeroHidden (Dim3 dim))
@@ -1784,10 +1785,10 @@ zero3d dim = ThreeD $ (zeroHidden (Dim3 dim))
 zeroHidden dim = Expression h (I.fromList [(h,Const dim 0)])
   where
     h = hash $ Const dim 0
-\end{code}
+{-
 
 Create appropriately wrapped constant array objects.
-\begin{code}
+-}
 const1d dim k = OneD $ (constHidden (Dim1 dim) k)
 const2d dim k = TwoD $ (constHidden (Dim2 dim) k)
 const3d dim k = ThreeD $ (constHidden (Dim3 dim) k)
@@ -1795,84 +1796,84 @@ const3d dim k = ThreeD $ (constHidden (Dim3 dim) k)
 constHidden dim k = Expression h (I.fromList [(h,Const dim k)])
   where
     h = hash $ Const dim k
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |OneD|.
-\begin{code}
+-}
 mkOneD exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim1 _d,Just True) -> (OneD $ Expression n exprs)
                     (dims,ri) -> error $ "mkOneD dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |OneDC|.
-\begin{code}
+-}
 mkOneDC exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim1 _d,Just False) -> (OneDC $ Expression n exprs)
                     (dims,ri) -> error $ "mkOneDC dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |TwoD|.
-\begin{code}
+-}
 mkTwoD exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim2 _,Just True) -> TwoD $ Expression n exprs
                     (dims,ri) -> error $ "mkTwoD dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |TwoDSparse|.
-\begin{code}
+-}
 mkTwoDSparse exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim2SL1 _ _,Just True) -> let (sL,_dims) = sL2Dims exprs n
                                          in TwoDSparse sL $ Expression n exprs
                     (dims,ri) -> error $ "mkTwoDSparse dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 Helper function to wrap node in |Expression| and |TwoDCSparse|.
-\begin{code}
+-}
 mkTwoDCSparse exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim2SL1 _ _,Just True) -> let (sL,_dims) = sL2Dims exprs n
                                          in TwoDCSparse sL $ Expression n exprs
                     (dims,ri) -> error $ "mkTwoDCSparse dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 
 
 Helper function to wrap node in |Expression| and |TwoDC|.
-\begin{code}
+-}
 mkTwoDC exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim2 _,Just False) -> TwoDC $ Expression n exprs
                     (dims,ri) -> error $ "mkTwoDC dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |ThreeD|.
-\begin{code}
+-}
 mkThreeD exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim3 _,Just True) -> ThreeD $ Expression n exprs
                     (dims,ri) -> error $ "mkThreeD dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |ThreeDSparse|.
-\begin{code}
+-}
 mkThreeDSparse exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim3SL1 _ _,Just True) -> let (sL,_dims) = sL3Dims exprs n
                                          in ThreeDSparse sL $ Expression n exprs
                     (dims,ri) -> error $ "mkThreeDSparse dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 Helper function to wrap node in |Expression| and |ThreeDCSparse|.
-\begin{code}
+-}
 mkThreeDCSparse exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim3SL1 _ _,Just True) -> let (sL,_dims) = sL3Dims exprs n
                                          in ThreeDCSparse sL $ Expression n exprs
                     (dims,ri) -> error $ "mkThreeDCSparse dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Helper function to wrap node in |Expression| and |ThreeDC|.
-\begin{code}
+-}
 mkThreeDC exprs n = case (getDimE exprs n, I.lookup n exprs >>= (Just . isReal)) of
                     (Dim3 _,Just False) -> (ThreeDC $ Expression n exprs)
                     (dims,ri) -> error $ "mkThreeDC dims " ++ show (dims,ri,n,exprs)
-\end{code}
+{-
 
 Go back in DAG looking for projection to find out what the current sparse list lives in.
-\begin{code}
+-}
 sL2Dims exprs n = case I.lookup n exprs of
                    Just (Op _ (Project (SSList2D sL)) [n1]) ->
                      case getDimE exprs n1 of
@@ -1894,12 +1895,12 @@ sL4Dims exprs n = case I.lookup n exprs of
                        d -> error $ "sL4Dims expected 4d "++show d
                    Just (Op _ _ (n1:_)) -> sL4Dims exprs n1
                    x -> error $ "sl4Dims " ++ show (n,x,exprs)
-\end{code}
+{-
 
 
 
 Display dimensions for pretty-printing.
-\begin{code}
+-}
 dispDims (Dim0) = ""
 dispDims (Dim1 d) = "(" ++ show d ++ ")"
 dispDims (Dim1p size polyOrd) = "(" ++ show size ++ "^{"++show polyOrd++"})"
@@ -1919,10 +1920,10 @@ dispDims (Dim4SL3 d l) = "("++show l ++ "of" ++show d ++")"
 dispDims (Dim4SL4 d l) = "("++show l ++ "of" ++show d ++")"
 dispDims DimUnknown    = if skipDebug then "" else "DimUnknown"
 dispDims (CDims dims) = concat ["(",L.intercalate "," $ map dispDims dims,")"]
-\end{code}
+{-
 
 Extract dimensions from |ExpressionEdges| and a |node| in an expression.
-\begin{code}
+-}
 getDim (Var dims _) = dims
 getDim (DVar dims _) = dims
 getDim (Op dims _ _) = dims
@@ -1941,38 +1942,38 @@ cDims dim          = error ("cDims applied to " ++ show dim)
 
 trDims SCR (Dim2 (d1,d2)) = Dim2 (d2,d1)  -- FIXME possible duplicate of transposeDims 626; this function is called in HashedInstances 1218;1248
 trDims swap dims = error $ "trDims not implemented for " ++ show (swap,dims)
-\end{code}
+{-
 
 Make scalar constants.  Usually we don't need this because of the
 |Num| class for |Scalar|, which makes |3| an expression in |x + 3|
 if |x| is a |Scalar| expression.
-\begin{code}
+-}
 fromDbl :: Double -> Scalar
 fromDbl d = Scalar $ Expression h (I.fromList [(h,Const Dim0 d)])
   where
     h = hash $ Const Dim0 d
-\end{code}
+{-
 
 For |case| matching expressions to constants.
-\begin{code}
+-}
 maybeConst :: Expression -> Maybe Double
 maybeConst (Expression n exprs) = case I.lookup n exprs of
   Just (Const Dim0 x) -> Just x
   _ -> Nothing
 
 maybeConstS (Scalar e) = maybeConst e
-\end{code}
+{-
 
-\begin{code}
+-}
 nodeSort :: (Internal,[Node]) -> (Internal,[Node])
 nodeSort (exprs, nodes) = (exprs, nodeSort' exprs nodes)
 nodeSort' exprs nodes = L.sortBy (compareOp exprs) nodes
 nodeSortE = flip nodeSort'
-\end{code}
+{-
 
 Check for cycles in DAG (which should not have cycles).
 Do a depth-first traversal, checking for re-occurence of an ancestor as a descendant.
-\begin{code}
+-}
 hasCycles (e,n) = hC IntSet.empty n
   where
     hC seen n = case I.lookup n e of
@@ -1980,10 +1981,10 @@ hasCycles (e,n) = hC IntSet.empty n
                                  else concatMap (hC $IntSet.insert n seen) inputs
       _ -> filter (flip IntSet.member seen) [n]
 hasCyclesTest = [0] == hasCycles (I.fromList [(0,Op Dim0 Neg [1]),(1,Op Dim0 Neg [0])],0)
-\end{code}
+{-
 
 Need to put Pretty instance here if we want to debug with it.
-\begin{code}
+-}
 instance Pretty (Internal,Node) where
   pretty (e,n) = pretty $ Expression n e
 
@@ -2156,10 +2157,10 @@ prettySepHex :: forall a. PrettyHex a => [Char] -> [a] -> [Char]
 prettySepHex _ [] = []
 prettySepHex _ [a] = prettyHex a
 prettySepHex sep (b:bs) = concat [prettyHex b, sep, prettySepHex sep bs]
-\end{code}
+{-
 
 Returns the list of the dimensions for non-subspace expressions
-\begin{code}
+-}
 dimList :: Dims -> [Int]
 dimList Dim0                 = []
 dimList (Dim1 i)             = [i]
@@ -2168,10 +2169,10 @@ dimList (Dim3 (i1,i2,i3))    = [i1,i2,i3]
 dimList (Dim4 (i1,i2,i3,i4)) = [i1,i2,i3,i4]
 dimList DimUnknown           = []
 dimList _ = error "HE.dimList not defined for subspace lists"
-\end{code}
+{-
 
 Returns the product of the dimensions for non-subspace expressions
-\begin{code}
+-}
 dimProd :: Dims -> Int
 dimProd Dim0                 = 1
 dimProd (Dim1 i)             = i
@@ -2184,33 +2185,33 @@ dimProd x = error ("HE.dimProd not defined for subspace lists with dims: " ++ sh
 
 dimProdE :: (Internal,Node) -> Int
 dimProdE (exprs,n) = dimProd (getDimE exprs n)
-\end{code}
+{-
 Returns the appropriate zero element for 2D,3D or 4D
-\begin{code}
+-}
 relZero :: Dims -> [Int]
 relZero (Dim1  _) = [0]
 relZero (Dim2  _) = [0,0]
 relZero (Dim3  _) = [0,0,0]
 relZero (Dim4  _) = [0,0,0,0]
 relZero _ = error "HE.relZero only defined for real and complex OneD, TwoD, ThreeD and FourD"
-\end{code}
+{-
 
-\begin{code}
+-}
 class ShowHex a where
   showHex :: a -> String
-\end{code}
+{-
 
-\begin{code}
+-}
 dimLength :: Dims -> Int
 dimLength (Dim1 _) = 1
 dimLength (Dim2 _) = 2
 dimLength (Dim3 _) = 3
 dimLength (Dim4 _) = 4
 dimLength _ = error "HE.dimLength not defined for subspace lists"
-\end{code}
+{-
 
 Instances to enable DeepSeq full evaluation.
-\begin{code}
+-}
 instance NFData ExpressionEdge where
   rnf (Var dim name) = C.length name `seq` rnf dim
   rnf (DVar dim name) = C.length name `seq` rnf dim
@@ -2287,9 +2288,9 @@ instance NFData OpId where
 instance NFData Expression where
   rnf (Expression n exprs) = rnf exprs `seq` rnf n
 
-\end{code}
+{-
 
-\begin{code}
+-}
 class SimilarSum m where
   decompose :: m -> (Internal,[Node])
 
@@ -2299,28 +2300,29 @@ class All3D m where
 class All4D m where
 class All5D m where
 class All6D m where
-\end{code}
+{-
 
 Other issues:
   in-place operations
   units
 
 Returns the third element of a triple
-\begin{code}
+-}
 fst3 :: forall t t1 t2. (t, t1, t2) -> t
 fst3  (x,_y,_z) = x
 snd3 :: forall t t1 t2. (t, t1, t2) -> t1
 snd3  (_x,y,_z) = y
 thrd3 :: forall t t1 t2. (t, t1, t2) -> t2
 thrd3 (_x,_y,z) = z
-\end{code}
+{-
 
 A sum function which returns an error for an empty list.
-\begin{code}
+-}
 sum1 :: forall a. Num a => [a] -> a
 sum1 [] = error "sum1"
 sum1 (a:b:rest) = (a+ (sum1 (b:rest)))
 sum1 [a] = a
-\end{code}
+{-
 
 
+-}

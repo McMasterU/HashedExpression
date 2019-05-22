@@ -1,7 +1,8 @@
+{-
 (c) 2010 Christopher Kumar Anand
 
 Experiment in common subexpressions without monads and better expression simplification.
-\begin{code}
+-}
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances, UndecidableInstances #-}
 module HashedConvZip where
 
@@ -11,10 +12,10 @@ import Data.ByteString ()
 --import qualified Data.IntMap as I
 
 --import Debug.Trace
-\end{code}
+{-
 
 
-\begin{code}
+-}
 instance ConvZip OneD Scalar Int where
   conv bndry pairs (OneD (Expression n es)) = let
       Scalar expr = sum [c * (relElem 0 bndry [idx]) | (idx,c) <- pairs]
@@ -68,7 +69,7 @@ instance ConvZip OneD Scalar Int where
     in if getDimE' e1 == getDimE' e2 && getDimE' e1 == getDimE' e3 && getDimE' e1 == getDimE' e4
           then OneD $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1,n2,n3,n4]
           else error $ "conv4Zip1 OneD don't match " ++ show (arg1,arg2,arg3,arg4)
-\end{code}
+{-
 %\begin{code}
 instance ConvZip OneDC ScalarC Int where
   conv bndry pairs (OneDC (Expression n es)) = let
@@ -126,7 +127,7 @@ instance ConvZip OneDC ScalarC Int where
           else error $ "conv4Zip1 OneDC don't match " ++ show (arg1,arg2,arg3,arg4)
 %\end{code}
 
-\begin{code}
+-}
 instance ConvZip TwoD Scalar (Int,Int) where
   conv bndry pairs (TwoD (Expression n es)) = let
       Scalar expr = sum [c * (relElem 0 bndry [i,j]) | ((i,j),c) <- pairs]
@@ -181,8 +182,8 @@ instance ConvZip TwoD Scalar (Int,Int) where
     in if getDimE' e1 == getDimE' e2 && getDimE' e1 == getDimE' e3 && getDimE' e1 == getDimE' e4
           then TwoD $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1,n2,n3,n4]
           else error $ "conv4Zip1 TwoDs don't match " ++ show (arg1,arg2,arg3,arg4)
-\end{code}
-\begin{code}
+{-
+-}
 instance ConvZip TwoDC Scalar (Int,Int) where
   conv bndry pairs (TwoDC (Expression n es)) = let
       Scalar expr = sum [c * (relElem 0 bndry [i,j]) | ((i,j),c) <- pairs]
@@ -237,8 +238,8 @@ instance ConvZip TwoDC Scalar (Int,Int) where
     in if getDimE' e1 == getDimE' e2 && getDimE' e1 == getDimE' e3 && getDimE' e1 == getDimE' e4
           then TwoDC $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1,n2,n3,n4]
           else error $ "conv4Zip1 TwoDC (dima,dimb)s don't match " ++ show (arg1,arg2,arg3,arg4)
-\end{code}
-\begin{code}
+{-
+-}
 instance ConvZip ThreeD Scalar (Int,Int,Int) where
   conv bndry pairs (ThreeD (Expression n es)) = let
       Scalar expr = sum [c * (relElem 0 bndry [i,j,k]) | ((i,j,k),c) <- pairs]
@@ -293,8 +294,8 @@ instance ConvZip ThreeD Scalar (Int,Int,Int) where
     in if getDimE' e1 == getDimE' e2 && getDimE' e1 == getDimE' e3 && getDimE' e1 == getDimE' e4
           then ThreeD $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1,n2,n3,n4]
           else error $ "conv4Zip1 ThreeDs don't match " ++ show (arg1,arg2,arg3,arg4)
-\end{code}
-\begin{code}
+{-
+-}
 instance ConvZip ThreeDC Scalar (Int,Int,Int) where
   conv bndry pairs (ThreeDC (Expression n es)) = let
       Scalar expr = sum [c * (relElem 0 bndry [i,j,k]) | ((i,j,k),c) <- pairs]
@@ -349,10 +350,11 @@ instance ConvZip ThreeDC Scalar (Int,Int,Int) where
     in if getDimE' e1 == getDimE' e2 && getDimE' e1 == getDimE' e3 && getDimE' e1 == getDimE' e4
           then ThreeDC $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1,n2,n3,n4]
           else error $ "conv4Zip1 ThreeDC dims don't match " ++ show (arg1,arg2,arg3,arg4)
-\end{code}
+{-
 
-\begin{code}
+-}
 
 
-\end{code}
+{-
 
+-}
