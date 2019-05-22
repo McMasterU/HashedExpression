@@ -57,7 +57,9 @@ type SubsType = ([(String,Double)]
                 ,[(String,U.UArray (Int,Int,Int) Double)]
                 ,[(String,U.UArray (Int,Int,Int,Int) Double)])
 type SubsListType = ([(String,Double)],[(String,[Double])],[(String,[[Double]])],[(String,[[[Double]]])],[(String,[[[[Double]]]])])
-class Convert a b | a -> b, b -> a where a2b :: a -> b ; b2a :: b -> a
+class Convert a b | a -> b, b -> a where
+    a2b :: a -> b
+    b2a :: b -> a
 instance Convert [Double] (U.UArray Int Double) where
   a2b list = listArray (0,length list - 1) list
   b2a array = elems array

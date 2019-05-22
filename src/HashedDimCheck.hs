@@ -12,7 +12,7 @@
         language=Haskell,
         basicstyle=\small\ttfamily,
         breaklines=true,
-        literate={•}{{$\bullet$}}1  %special characters need to be specified here; see tex.stackexchange.com/questions/24528 for more information
+        literate={<.>}{{$\bullet$}}1  %special characters need to be specified here; see tex.stackexchange.com/questions/24528 for more information
         }
   }{}
 
@@ -659,7 +659,7 @@ dimCheck3_9 = exprDimCheck (Expression 100 (I.fromList [(100, Op DimUnknown (Ext
 
 
 \subsection{Dot Product}
-x2•y2 with x2 know and everything else unknown.
+x2<.>y2 with x2 know and everything else unknown.
 -}
 dimCheck4_0 = exprDimCheck (Expression 206990703776 (I.fromList [(2029638,Var (Dim2 (3,4)) (p "X2")),(2029639,Var DimUnknown (p "Y2")),(206990703776,Op DimUnknown Dot [2029638,2029639])])) == Expression 206990703776 (I.fromList [(2029638,Var (Dim2 (3,4)) (p "X2")),(2029639,Var (Dim2 (3,4)) (p "Y2")),(206990703776,Op Dim0 Dot [2029638,2029639])])
 dimCheck4_0_0 = I.difference (I.fromList [(2029638,Var (Dim2 (3,4)) (p "X2")),(2029639,Var DimUnknown (p "Y2")),(206990703776,Op DimUnknown Dot [2029638,2029639])]) (I.fromList [(2029638,Var (Dim2 (3,4)) (p "X2")),(2029639,Var (Dim2 (3,4)) (p "Y2")),(206990703776,Op Dim0 Dot [2029638,2029639])])
@@ -667,7 +667,7 @@ dimCheck4_0_0 = I.difference (I.fromList [(2029638,Var (Dim2 (3,4)) (p "X2")),(2
 
 Just checking that this doesn't raise an error.  Also, making sure that DVars work.
 -}
-dimCheck4_1 = exprDimCheck (unScalar (diff [p "X1"] (x1•x1))) == unScalar (diff [p "X1"] (x1•x1))
+dimCheck4_1 = exprDimCheck (unScalar (diff [p "X1"] (x1<.>x1))) == unScalar (diff [p "X1"] (x1<.>x1))
 {-
 
 \subsection{SCZ Expression}

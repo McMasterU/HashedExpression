@@ -6,13 +6,13 @@
 \usepackage{algpseudocode}
 \usepackage{algorithm}
 \usepackage{titletoc}        %for making a list of the sections; not used yet
-\usepackage{listingsutf8}    %package for code environment; use this instead of verbatim to get automatic line break; use this instead of listings to get (•)
+\usepackage{listingsutf8}    %package for code environment; use this instead of verbatim to get automatic line break; use this instead of listings to get (<.>)
 \lstnewenvironment{code}     %defining the code environment
   {\lstset{
     language=Haskell,
     basicstyle=\scriptsize\ttfamily,
     breaklines=true,             % for code to break at end of line
-    literate={•}{{$\bullet$}}1,  % defining the bullet
+    literate={<.>}{{$\bullet$}}1,  % defining the bullet
     }}
   {}
 
@@ -374,7 +374,7 @@ Adding the zero vectors follows the same pattern as adding the zero scalar.  It 
 simpTest5_1 = simplify(x1 + zero1) == x1
 {-
 
-Dot product using (•)
+Dot product using (<.>)
 \begin{itemize}
 \item infix for dot
 \item Mac Option 8; Windows Alt 7; Linux Ctrl Shift u 2022
@@ -387,12 +387,12 @@ Dot product using (•)
 
 Dot products with the zero vector simplify in simp1.
 -}
-simpTest5_2 = simplify(zero1 • x1) == 0
-simpTest5_3 = simplify(x1 • zero1) == 0
-simpTest5_4 = simplify(x2 • zero2) == 0
-simpTest5_5 = simplify(zero2 • x2) == 0
-simpTest5_6 = simplify(x3 • zero3) == 0
-simpTest5_7 = simplify(zero3 • x3) == 0
+simpTest5_2 = simplify(zero1 <.> x1) == 0
+simpTest5_3 = simplify(x1 <.> zero1) == 0
+simpTest5_4 = simplify(x2 <.> zero2) == 0
+simpTest5_5 = simplify(zero2 <.> x2) == 0
+simpTest5_6 = simplify(x3 <.> zero3) == 0
+simpTest5_7 = simplify(zero3 <.> x3) == 0
 {-
 
 Scaling a vector using (*.) 
@@ -420,30 +420,30 @@ simpTest5_13 = simplify(x2 - 2*.x2) == simplify(-1*.x2)
 
 Scaling and dot product together simplify with simp1.
 -}
-simpTest5_14 = simplify((x*.x1) • y1) == (x1 • y1)*x
-simpTest5_15 = simplify(y1 • (x*.x1)) == (x1 • y1)*x
+simpTest5_14 = simplify((x*.x1) <.> y1) == (x1 <.> y1)*x
+simpTest5_15 = simplify(y1 <.> (x*.x1)) == (x1 <.> y1)*x
 {-
 
 Dot product and scaling both have precedence 8 and are left associative, so they can sometimes mix without parentheses.
 -}
---simpTest5_16 = simplify(y1 • x*.x1) == (x1 • y1)*x
-simpTest5_17 = simplify(x*.x1 • y1) == (x1 • y1)*x
+--simpTest5_16 = simplify(y1 <.> x*.x1) == (x1 <.> y1)*x
+simpTest5_17 = simplify(x*.x1 <.> y1) == (x1 <.> y1)*x
 simpTest5_18 = simplify(x*.(y*.z1)) == ((x*y)*.z1)
 simpTest5_19 = simplify(x*.(y*.(z*.z1))) == simplify((x*y*z)*.z1)
 {-
 
 Putting different things together, it works.
 -}
-simpTest5_20 = simplify ((x1 • zero1)*x) == 0
-simpTest5_21 = simplify ((zero1 • x1)*x) == 0
-simpTest5_22 = simplify (x*(x1 • zero1)) == 0
-simpTest5_23 = simplify (x*(zero1 • x1)) == 0
-simpTest5_24 = simplify((x1 • y1)*1) == (x1 • y1)
-simpTest5_25 = simplify(x1 • y1*1) == (x1 • y1)
-simpTest5_26 = simplify(1*x1 • y1) == (x1 • y1)
-simpTest5_27 = simplify((x1 • y1)+0) == (x1 • y1)
-simpTest5_28 = simplify(x1 • y1+0) == (x1 • y1)
-simpTest5_29 = simplify(0+x1 • y1) == (x1 • y1)
+simpTest5_20 = simplify ((x1 <.> zero1)*x) == 0
+simpTest5_21 = simplify ((zero1 <.> x1)*x) == 0
+simpTest5_22 = simplify (x*(x1 <.> zero1)) == 0
+simpTest5_23 = simplify (x*(zero1 <.> x1)) == 0
+simpTest5_24 = simplify((x1 <.> y1)*1) == (x1 <.> y1)
+simpTest5_25 = simplify(x1 <.> y1*1) == (x1 <.> y1)
+simpTest5_26 = simplify(1*x1 <.> y1) == (x1 <.> y1)
+simpTest5_27 = simplify((x1 <.> y1)+0) == (x1 <.> y1)
+simpTest5_28 = simplify(x1 <.> y1+0) == (x1 <.> y1)
+simpTest5_29 = simplify(0+x1 <.> y1) == (x1 <.> y1)
 {-
 
 \subsection{simpTest6} Distribution
@@ -493,22 +493,22 @@ simpTest6_11 = pretty (simplifyE "" (simplifyE "" (unScalar (((x+y)*(w+z)*(u+v))
 
 Let's move on to vectors.
 -}
-simpTest6_12 = simplify(x1 • (y1+z1)) == ((x1 • y1)+(x1 • z1))
-simpTest6_13 = simplify((y1+z1) • x1) == ((x1 • y1)+(x1 • z1))
+simpTest6_12 = simplify(x1 <.> (y1+z1)) == ((x1 <.> y1)+(x1 <.> z1))
+simpTest6_13 = simplify((y1+z1) <.> x1) == ((x1 <.> y1)+(x1 <.> z1))
 {-
 We need to use simplify in second arguments because the instance of sum groups the sums
 -}
-simpTest6_14 = simplify(x1 • (y1+z1+w1)) == simplify((x1 • w1)+(x1 • y1)+(x1 • z1))
-simpTest6_15 = simplify((y1+z1+w1) • x1) == simplify((x1 • w1)+(x1 • y1)+(x1 • z1))
-simpTest6_16 = simplify((y1+z1) • (x1+w1)) == simplify((w1 • y1)+(w1 • z1)+(x1 • y1)+(x1 • z1))
+simpTest6_14 = simplify(x1 <.> (y1+z1+w1)) == simplify((x1 <.> w1)+(x1 <.> y1)+(x1 <.> z1))
+simpTest6_15 = simplify((y1+z1+w1) <.> x1) == simplify((x1 <.> w1)+(x1 <.> y1)+(x1 <.> z1))
+simpTest6_16 = simplify((y1+z1) <.> (x1+w1)) == simplify((w1 <.> y1)+(w1 <.> z1)+(x1 <.> y1)+(x1 <.> z1))
 
-simpTest6_17 = simplify((x1 • y1)*.(z1+w1)) == (((x1 • y1)*.w1)+((x1 • y1)*.z1))
+simpTest6_17 = simplify((x1 <.> y1)*.(z1+w1)) == (((x1 <.> y1)*.w1)+((x1 <.> y1)*.z1))
 {-
 
 At what point is distribution no longer a simplification?  I don't know; I'm just asking. TB
 Both the rule in simp1 and the more complicated one below will distribute this.
 -}
-simpTest6_18 = simplify(((x3 • y3)+(z3 • w3))*.(x1+y1+z1+w1+v1+u1)) == simplify((((w3 • z3)+(x3 • y3))*.u1)+(((w3 • z3)+(x3 • y3))*.v1)+(((w3 • z3)+(x3 • y3))*.w1)+(((w3 • z3)+(x3 • y3))*.x1)+(((w3 • z3)+(x3 • y3))*.y1)+(((w3 • z3)+(x3 • y3))*.z1))
+simpTest6_18 = simplify(((x3 <.> y3)+(z3 <.> w3))*.(x1+y1+z1+w1+v1+u1)) == simplify((((w3 <.> z3)+(x3 <.> y3))*.u1)+(((w3 <.> z3)+(x3 <.> y3))*.v1)+(((w3 <.> z3)+(x3 <.> y3))*.w1)+(((w3 <.> z3)+(x3 <.> y3))*.x1)+(((w3 <.> z3)+(x3 <.> y3))*.y1)+(((w3 <.> z3)+(x3 <.> y3))*.z1))
 {-
 
 \subsection{simpTest7} Complex scalars and vectors 
@@ -552,7 +552,7 @@ But these don't, because z has type Scalar and the type does not change for the 
 
 Putting a number of rules together.  Everything seems to work so far
 -}
-simpTest7_14 = simplify(xRe((x1 • zero1) +: y)) == 0
+simpTest7_14 = simplify(xRe((x1 <.> zero1) +: y)) == 0
 simpTest7_15 = simplify(xRe((x+y)+:(z+w))) == (x+y)
 simpTest7_16 = simplify(xRe((x+y+u)+:(z+w+v))) == simplify(x+y+u)
 simpTest7_17 = simplify(xRe((x1+y1+u1)+:(z1+w1+v1))) == simplify(x1+y1+u1)
@@ -571,7 +571,7 @@ simpTest7_25 = simplify(xIm(x +: 0)*x) == 0
 simpTest7_26 = simplify(xRe(x +: 0)*y) == (x*y)
 simpTest7_27 = simplify(xRe(x +: 0)*y+0) == (x*y)
 simpTest7_28 = simplify(1*xRe(x +: 0)*y+0) == (x*y)
-simpTest7_29 = simplify((((x1 • zero1)*.y1)•z1)+x) == x
+simpTest7_29 = simplify((((x1 <.> zero1)*.y1)<.>z1)+x) == x
 simpTest7_30 = simplify(1*.(xRe(x1 +: y1)+xIm(z1 +: zero1))) == x1
 {-
 Just messing around; this should not work.
@@ -591,8 +591,8 @@ simpTest7_33_1 = [simplify((x+0*y) +: x*y), (x +: x*y)]
 
 {-
 -}
-simpTest7_34 = simplify (ft(y3+:x3)•ft(z3+:y3)+(y3•zero3)) == ft(y3+:x3)•ft(z3+:y3)
-simpTest7_35 = simplify (x*(x+zero1•z1)+(z1•zero1)+x) == x*x+x
+simpTest7_34 = simplify (ft(y3+:x3)<.>ft(z3+:y3)+(y3<.>zero3)) == ft(y3+:x3)<.>ft(z3+:y3)
+simpTest7_35 = simplify (x*(x+zero1<.>z1)+(z1<.>zero1)+x) == x*x+x
 
 {-
 
@@ -622,19 +622,19 @@ simpTest8_4 = pretty (unScalarC (simplify((x+:y)*(z+:w)*(u+:v)))) == "(((-((u*w*
 
 Dot products of complex vectors.  Some things happen in HashedComplexInstances.lhs
 -}
-simpTest8_5 = ((x1 +: y1)•(z1 +: w1)) == ((xRe(x1 +: y1)•xRe(z1 +: w1)) + (xIm(x1 +: y1)•xIm(z1 +: w1)))
+simpTest8_5 = ((x1 +: y1)<.>(z1 +: w1)) == ((xRe(x1 +: y1)<.>xRe(z1 +: w1)) + (xIm(x1 +: y1)<.>xIm(z1 +: w1)))
 {-
 
 Simplifying does more.
 -}
-simpTest8_6 = simplify((x1 +: y1) • (z1 +: w1)) == ((w1 • y1) + (x1 • z1))
-simpTest8_7 = simplify((x1 +: y1) • (zero1 +: w1)) == (w1 • y1)
+simpTest8_6 = simplify((x1 +: y1) <.> (z1 +: w1)) == ((w1 <.> y1) + (x1 <.> z1))
+simpTest8_7 = simplify((x1 +: y1) <.> (zero1 +: w1)) == (w1 <.> y1)
 {-
 
 -}
-simpTest8_8 = simplify((x1+:w1)•((y1+:v1)+(z1+:u1))) == simplify (((u1•w1)+(v1•w1)+(x1•y1)+(x1•z1)))
-simpTest8_9 = pretty ( unScalar (simplify((x1+y1)•(z1+w1)))) == "((W1(4)•X1(4))+(W1(4)•Y1(4))+(X1(4)•Z1(4))+(Y1(4)•Z1(4)))"
-simpTest8_10 = simplify((y1+z1+u1)•(x1+w1+v1)) == simplify((u1•v1)+(u1•w1)+(u1•x1)+(v1•y1)+(v1•z1)+(w1•y1)+(w1•z1)+(x1•y1)+(x1•z1))
+simpTest8_8 = simplify((x1+:w1)<.>((y1+:v1)+(z1+:u1))) == simplify (((u1<.>w1)+(v1<.>w1)+(x1<.>y1)+(x1<.>z1)))
+simpTest8_9 = pretty ( unScalar (simplify((x1+y1)<.>(z1+w1)))) == "((W1(4)<.>X1(4))+(W1(4)<.>Y1(4))+(X1(4)<.>Z1(4))+(Y1(4)<.>Z1(4)))"
+simpTest8_10 = simplify((y1+z1+u1)<.>(x1+w1+v1)) == simplify((u1<.>v1)+(u1<.>w1)+(u1<.>x1)+(v1<.>y1)+(v1<.>z1)+(w1<.>y1)+(w1<.>z1)+(x1<.>y1)+(x1<.>z1))
 {-
 
 \subsection{simpTest9}Scaling complex scalars and vectors
@@ -1790,7 +1790,7 @@ partDiffTest1_7_1 n =
 
 {-
 
-%funGrad (x1•x1) [p "X1"]
+%funGrad (x1<.>x1) [p "X1"]
 Declare a dvar.
 -}
 dx1 = dvar1d 4 "X1"
@@ -1798,25 +1798,25 @@ dx1 = dvar1d 4 "X1"
 
 $$\nabla x1\bullet x1 = dx1 \bullet 2x1$$
 -}
-gradDiffTest0_0 = simplify (diff [p "X1"] (x1 • x1+x)) == dx1 • x1*2
+gradDiffTest0_0 = simplify (diff [p "X1"] (x1 <.> x1+x)) == dx1 <.> x1*2
 {-
 
 $$\nabla sin(x1\bullet x1) = cos(x1\bullet x1)dx1 \bullet 2x1$$
 -}
-gradDiffTest0_1 = simplify (diff [p "X1"] (sin(x1 • x1))) == simplify (cos(x1 • x1)*dx1 • x1*2)
+gradDiffTest0_1 = simplify (diff [p "X1"] (sin(x1 <.> x1))) == simplify (cos(x1 <.> x1)*dx1 <.> x1*2)
 {-
 
 $$\nabla (x1\bullet x1+y1\bullet y1) = dx1 \bullet 2x1$$
 -}
-gradDiffTest0_2 = simplify (diff [p "X1"] (x1 • x1 + y1 • y1)) == dx1 • x1*2
+gradDiffTest0_2 = simplify (diff [p "X1"] (x1 <.> x1 + y1 <.> y1)) == dx1 <.> x1*2
 {-
 
 
 -}
-gradDiffTest0_3 = simplify (diff [p "X1"] (x1 • x1*sin(x1 • x1))) == simplify (sin(x1 • x1)*dx1 • x1*2+cos(x1 • x1)*x1 • x1*dx1 • x1*2)
+gradDiffTest0_3 = simplify (diff [p "X1"] (x1 <.> x1*sin(x1 <.> x1))) == simplify (sin(x1 <.> x1)*dx1 <.> x1*2+cos(x1 <.> x1)*x1 <.> x1*dx1 <.> x1*2)
 gradDiffTest0_4 = simplify (diff [p "X1"] x) == 0
-gradDiffTest0_5 = simplify (diff [p "X1"] (y1 • y1)) == 0
-gradDiffTest0_6 = simplify (diff [p "X1"] ((sin(x1 • x1))*(cos(x1 • x1))))
+gradDiffTest0_5 = simplify (diff [p "X1"] (y1 <.> y1)) == 0
+gradDiffTest0_6 = simplify (diff [p "X1"] ((sin(x1 <.> x1))*(cos(x1 <.> x1))))
 {-
 
 \section{Topological Sort}

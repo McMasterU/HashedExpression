@@ -104,14 +104,14 @@ instance (RealVectorSpace v s) => HasScale v s where
   (*.) s v = scale s v -- deprecate scale
 
 -- RF: Changed to 8 to give higher prec. than |*| |+| etc.
--- May cause problems with something like x1*.1 • y1*.1
--- To solve: use parentheses: (x1*.1) • (y1*.1)
--- but: Is there a simplification rule x*.1 • y*.1 ~~> x • y *.1  ?
+-- May cause problems with something like x1*.1 <.> y1*.1
+-- To solve: use parentheses: (x1*.1) <.> (y1*.1)
+-- but: Is there a simplification rule x*.1 <.> y*.1 ~~> x <.> y *.1  ?
 -- If so, this may not cause it to happen (unsure, must investigate).
 -- 2015/06/04.
-infixl 8 •  -- on MacOS use option-8, Windows Alt-7, Linux Ctrl-Shift-u 2022
+infixl 8 <.>  -- on MacOS use option-8, Windows Alt-7, Linux Ctrl-Shift-u 2022
 infixl 8 `dot`
-(•) = dot
+(<.>) = dot
 
 class RealVectorSpace v s | v -> s where
   scale :: s -> v -> v
@@ -2015,7 +2015,7 @@ hidden subsLst node exprs
       Just (Op _dims (PFT False dir) [n]) -> "(" ++ show dir ++ "PInvFT(" ++ showIn n ++ "))"
       Just (Op _dims (Transpose swp) [n]) -> "(Transpose" ++ show swp ++ "(" ++ showIn n ++ "))"
       Just (Op _dims Div [a,b]) -> "(" ++ showIn a ++"/"++ showIn b ++ ")"
-      Just (Op _dims Dot [a,b]) -> "(" ++ showIn a ++"•"++ showIn b ++ ")"
+      Just (Op _dims Dot [a,b]) -> "(" ++ showIn a ++"<.>"++ showIn b ++ ")"
       Just (Op _dims ScaleV [a,b]) -> "(" ++ showIn a ++"*."++ showIn b ++ ")"
       Just (Op _dims Neg [a]) -> "(-" ++ showIn a ++ ")"
       Just (Op _dims RealPart [a]) -> "(Re" ++ showIn a ++ ")"

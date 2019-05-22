@@ -190,7 +190,7 @@ apply dims found e0 (WHOp op xs) = addEdge e1 (Op dims op ns)
 
                 Dot -> case catMaybes $ map (dimWH found e0) xs of
                          (newDim : _) -> L.mapAccumL (apply newDim found) e0 xs
-                         _            -> error $ "WH.apply unknown • dim "++show (dims,found,e0,op,xs)
+                         _            -> error $ "WH.apply unknown <.> dim "++show (dims,found,e0,op,xs)
 
                 Transpose _ -> error "WithHoles.apply confused by Transpose"
 

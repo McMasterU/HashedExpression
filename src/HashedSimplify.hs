@@ -81,18 +81,18 @@ simp1 = [x *. (y *. z) |.~~> (x * y) *. z
         ,(x +: y) * (z +: w) |.~~> (x*z - y*w) +: (x*w + y*z)
         ,exp 0 |.~~> 1  --exp(0) simplifies with the instance, but this rule is necessary for exp(x-x)
         --,0 / x |.~~> 0   FIXME we can only do this if we can prove x /= 0
-        ,x • 0 |.~~> 0
-        ,0 • x |.~~> 0
-        ,(s *. x) • y |.~~> s * (x • y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-        ,x • (s *. y) |.~~> s * (x • y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-        ,x • y |. (WithHoles.containsDifferential y
-                   &&. WithHoles.containsDifferential x) ~~> error "HS.simp1 dx • dx"
-        ,x • y |. WithHoles.containsDifferential y ~~> y • x
+        ,x <.> 0 |.~~> 0
+        ,0 <.> x |.~~> 0
+        ,(s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+        ,x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+        ,x <.> y |. (WithHoles.containsDifferential y
+                   &&. WithHoles.containsDifferential x) ~~> error "HS.simp1 dx <.> dx"
+        ,x <.> y |. WithHoles.containsDifferential y ~~> y <.> x
         ,x*(y + z) |.~~> (x*y + x*z)
         ,(y + z)*x |.~~> (x*y + x*z)
         ,x*.(y + z) |.~~> (x*.y + x*.z)
-        ,(x•(y+z)) |.~~> ((x•y)+(x•z))
-        ,((y+z)•x) |.~~> ((x•y)+(x•z))
+        ,(x<.>(y+z)) |.~~> ((x<.>y)+(x<.>z))
+        ,((y+z)<.>x) |.~~> ((x<.>y)+(x<.>z))
         ]
 
 {-
@@ -327,13 +327,13 @@ simpRewrite'' reWrite (exprs,node)
 
 --
   -- * pull sum out of left dot
-  -- - (x + y) • z -> Sum(x • z, y • z)
+  -- - (x + y) <.> z -> Sum(x <.> z, y <.> z)
   | Just (left,right) <- M.dot exprs node
   , Just inputsL <- M.sum exprs (snd $ left exprs)
   = tt "sum `dot` ..." $ (sumE $ [dot l right| l <- inputsL]) exprs
 
   -- * pull sum out of right dot
-  -- - x • ( y + z) -> Sum(x • y, x • z)
+  -- - x <.> ( y + z) -> Sum(x <.> y, x <.> z)
   | Just (left,right) <- M.dot exprs node
   , Just inputsR <- M.sum exprs (snd $ right exprs)
   = tt "... `dot` sum" $ (sumE $ [dot left r| r <- inputsR]) exprs
