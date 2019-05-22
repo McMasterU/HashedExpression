@@ -109,7 +109,7 @@ instance (RealVectorSpace v s) => HasScale v s where
 -- but: Is there a simplification rule x*.1 <.> y*.1 ~~> x <.> y *.1  ?
 -- If so, this may not cause it to happen (unsure, must investigate).
 -- 2015/06/04.
-infixl 8 <.>  -- on MacOS use option-8, Windows Alt-7, Linux Ctrl-Shift-u 2022
+infixl 8 <.>
 infixl 8 `dot`
 (<.>) = dot
 
