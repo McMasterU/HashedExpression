@@ -1,6 +1,5 @@
-{-
 \section{Polynomials:  Data Structures and Basic Algorithms}
--}
+\begin{code}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
 module Polynomials where
 
@@ -12,33 +11,33 @@ import qualified Data.IntMap.Strict as I
 import qualified Data.Map.Strict as M
 --import qualified Data.ByteString.Char8 as C
 import qualified Data.List as L
-{-
+\end{code}
 
 Names of variables and node numbers in source expression.
 Invariant:  the IntMap and Map should be inverses of each other.
--}
+\begin{code}
 data PolyEnv varLabel environment = PolyEnv (I.IntMap varLabel,M.Map varLabel Int) environment
   deriving (Show,Eq)
-{-
+\end{code}
 
 A polynomial is defined by an environment and a list of Terms.
 The Terms must be sorted in descending order (leading first).
--}
+\begin{code}
 data Poly a b = Poly (PolyEnv a b) [Term]  deriving (Show,Eq)
-{-
+\end{code}
 
 A Term is defined by a coefficient, total power and a map of variable number
 (from environment) to powers, with all powers in the map being positive.
 Invariant:  |I.foldr (+) $ snd $ snd m == fst $ snd m|.
--}
+\begin{code}
 
 type Monomial = I.IntMap Int
 type Term = (Rational,(Int,Monomial))
 
 
-{-
+\end{code}
 
--}
+\begin{code}
 instance Num [Term] where
   (+) t1s t2s = concatMap combineCoeffs
               $ L.groupBy (\ a b -> EQ == grevlex a b)
@@ -106,10 +105,10 @@ instance HashedExpression.Complex (Term,Term) Term where
 
 pAbs2 [] = 0
 pAbs2 (t:prest) = (fromRational (fst t)) ** 2 + (pAbs2 prest)
-{-
+\end{code}
 
 Printing.
--}
+\begin{code}
 
 pTerm (c,(totalDeg,degrees)) = concat $ [if I.foldr (+) 0 degrees == totalDeg then ""
                                            else "****TOTAL DEGREE MISMATCH****\n"
@@ -143,7 +142,7 @@ printPolys npolys = if length (L.nub $ map (\ (_,Poly polyEnv _) -> polyEnv) npo
 
 
 printPoly terms = L.foldr (++) "" (map pTerm terms)
-{-
+\end{code}
 
 --------------------------------------------
 Term ordering function (grevlex).
@@ -152,7 +151,7 @@ Term ordering function (grevlex).
 Order defined in (https://en.wikipedia.org/wiki/Term_order).
 Graded reverse lexicographic order (grevlex) compares the total degree first,
 then compares exponents of the variables in reverse order, reversing the outcome (so the Term with smaller exponent is larger in the ordering).
--}
+\begin{code}
 grevlex (_,(t1,mon1)) (_,(t2,mon2)) = case compare t1 t2 of
                                         EQ -> fstNE $ map cmp allKeys
                                         x  -> x
@@ -168,7 +167,7 @@ grevlex (_,(t1,mon1)) (_,(t2,mon2)) = case compare t1 t2 of
                 (Just x, Just y ) -> compare x y -- reversed
 
       allKeys = reverse $ L.nub $ L.sort $ concatMap I.keys [mon1,mon2]
-{-
+\end{code}
 
 
 --------------------------------------------
@@ -178,13 +177,13 @@ Leading term of a polynomial (lt).
 Requires: Terms of poly input is ORDERED (descending, by term power)
 (Could build this into function, but would be slightly less efficient).
 '
--}
+\begin{code}
 
 lt :: [Term] -> Either [Char] Term
 lt [] = Left "Error:  zero polynomial in ..."
 lt (t1:_ts) = Right t1
 
-{-
+\end{code}
 
 --------------------------------------------
 Leading coefficient (lc).
@@ -192,13 +191,13 @@ Leading coefficient (lc).
 
 (Requires: Term terms of poly input is ordered.)
 (Could build this into function, but would be slightly less efficient).
--}
+\begin{code}
 
 lc p = case lt p of
   (Left err) -> Left $ err ++ " lc"
   (Right t) -> Right (fst t)
 
-{-
+\end{code}
 
 --------------------------------------------
 Leading Term (lm).
@@ -206,20 +205,20 @@ Leading Term (lm).
 
 (Requires: Term terms of poly input is ordered.)
 (Could build this into function, but would be slightly less efficient).
--}
+\begin{code}
 
 lm p = case lt p of
   (Left err) -> Left $ err ++ " lm"
   (Right t) -> Right (snd t)
 
-{-
+\end{code}
 
 
 --------------------------------------------
 Term Least Common Multiple (mlcm).
 --------------------------------------------
 
--}
+\begin{code}
 --mlcm m1 m2 = I.unionWith max m1 m2
 
 mlcm (_,(_,t1mon)) (_,(_,t2mon)) = I.unionWith max t1mon t2mon
@@ -232,7 +231,7 @@ mlcm' f g = case f of
                         where mlcmfg = mlcm okf okg
 
 
-{-
+\end{code}
 
 
 --------------------------------------------
@@ -240,25 +239,25 @@ Helper functions.
 --------------------------------------------
 
 Find difference in power numbers of Terms.
--}
+\begin{code}
 
 powDiff (_c1,(_d1,m1)) (_c2,(_d2,m2)) = I.filter (/=0) $ I.unionWith (+) (I.map negate m1) m2
 
-{-
+\end{code}
 
 Predicate: Input reflects no negative powers?
--}
+\begin{code}
 
 noNegPow aMb = (I.foldr min 0 aMb) >= 0
 
-{-
+\end{code}
 
 Predicate: Does this Term divide that Term?
--}
+\begin{code}
 
 termDiv t1 t2 = noNegPow $ powDiff t1 t2
 
-{-
+\end{code}
 
 
 --------------------------------------------
@@ -268,7 +267,7 @@ m is a Term of f, where g dif m, and
 m = q * lm(g).
 
 Used for red1(f, g) = f - (c/lc(g)) * q * lm(g).
--}
+\begin{code}
 
 -- FIXME: Currently, code calls "term" what is a "monomial."  Must therefore use
 -- lt instead of lm to find lm.
@@ -290,7 +289,7 @@ findqcDivlc (ft1:termsfr) g = case lt g of  -- ensuring lt(g) can be found, with
                             else findqcDivlc termsfr g
 
 addTotDeg im = (I.foldr (+) 0 im, im)
-{-
+\end{code}
 
 --------------------------------------------
 redBasis and red1.
@@ -298,7 +297,7 @@ redBasis and red1.
 red1: (initially) For Buchberger (used in polynomial reduction) -- https://en.wikipedia.org/wiki/Gröbner_basis#Reduction
 redBasis: Perform red1 (iteratively) until result is irreducible by G = some set of gs.
 
--}
+\begin{code}
 
 -- Perhaps use neighbouhood instead of ==.
 redBasis f gs eps = let f1 = foldr (flip red1) f gs -- Q:look at this (with flip) more carefully.
@@ -318,7 +317,7 @@ red1 f g = case findqcDivlc f g of
 
 
 --kredBasis k f gs
-{-
+\end{code}
 
 
 --------------------------------------------
@@ -327,18 +326,18 @@ Term and Polynomial products.
 
 (Still needed?-->)Requires: Ordered [t] by fst t.
 
--}
+\begin{code}
 sortTerms terms = L.sortBy (flip grevlex) terms
 termProd (c1,(d1,m1)) (c2,(d2,m2)) = (c1*c2, (d1+d2,I.unionWith (+) m1 m2))
 --monoPolyProd mono (Poly env monos) = Poly env $ sortMonos $ map (monoProd mono) monos
-{-
+\end{code}
 
 
 --------------------------------------------
 Helper Functions: Buchberger's Algorithm.
 --------------------------------------------
 
--}
+\begin{code}
 --S-polynomial of two polynomials.
 
 spol :: [Term] -> [Term] -> Either [Char] [Term]
@@ -353,7 +352,7 @@ spol f g = let  eltf = lt f
                                 (Left msg) -> Left (msg ++ " lt g")
                                 (Right ltg) -> Right ([mlcmp/ltf] * f - [mlcmp/ltg] * g)
 
-{-
+\end{code}
 
 
 --------------------------------------------
@@ -361,7 +360,7 @@ Buchberger's Algorithm.
 (http://www.scholarpedia.org/article/Buchberger's_algorithm)
 --------------------------------------------
 
--}
+\begin{code}
 
 --buchberger' :: [([Term],[Term])] -> [[Term]] -> [[Term]]
 
@@ -387,5 +386,4 @@ polyFromTriples [] = []
 polyFromTriples (t:rest) = (termFromTriple t):(polyFromTriples rest)
 
 globalEps = 0.0000001
-{-
--}
+\end{code}

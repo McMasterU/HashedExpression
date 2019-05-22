@@ -1,4 +1,3 @@
-{-
 In addition to the somewhat type-safe wrapped expressions with Num and other
 instances,
 we have an unsafe instance which lazily constructs an constructor for
@@ -8,7 +7,7 @@ since the expression map doesn't have to be threaded through line by line,
 and |Op|s don't appear explicity,
 but the result still has to be applied to the right expression map,
 or hard-to-pointpoint errors will occur.
--}
+\begin{code}
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, NoMonomorphismRestriction, TypeSynonymInstances, FlexibleInstances #-}
 module HashedConstruct where
 
@@ -19,7 +18,7 @@ import Data.IntMap ()
 import qualified Data.IntMap as I
 import qualified Data.List as L
 import Debug.Trace
-{-
+\end{code}
 
 FIXME:  with a different type
 data ConstructNew = ConstructZero
@@ -28,36 +27,36 @@ data ConstructNew = ConstructZero
 we would be able to propagate zeros and ones in type-generic form
 
 The type of subexpressions will be
--}
+\begin{code}
 type Construct = Internal -> (Internal,Node)
 comp :: ((Internal,Node) -> (Internal,Node)) -> Construct -> Construct
 comp fun c = \e -> fun $ c e
-{-
+\end{code}
 
 Concatenate constructors of lists:
--}
+\begin{code}
 concatC :: [Internal -> (Internal,[Node])] -> Internal -> (Internal,[Node])
 concatC (c1:cs) e = let  (e1,ns1) = c1 e
                          (e2,ns2) = concatC cs e1
                     in (e2,ns1 ++ ns2)
 concatC [] e = (e,[])
-{-
+\end{code}
 
 Map this over nodes found in the existing graph.  Used by HashedMatch.
--}
+\begin{code}
 sourceNode n e = case I.lookup n e of
   Just _ -> (e,n)
   Nothing -> error $ "sourceNode " ++ show n ++ " not found in " ++ show e
-{-
+\end{code}
 
--}
+\begin{code}
 instance Show Construct where
   show _ = error "can't show Constructor because we don't know its context"
 instance Eq Construct where
   _a == _b = error "can't compare Constructor because we don't know its context"
-{-
+\end{code}
 
--}
+\begin{code}
 instance Num Construct where
   negate x = \ e -> let (e',x') = x e
                     in addEdge e' $ Op (getDimE e' x') Neg [x']
@@ -77,9 +76,9 @@ instance Num Construct where
 
   signum x = \ e -> let (e',x') = x e
                     in addEdge e' $ Op Dim0 Signum [x']
-{-
+\end{code}
 
--}
+\begin{code}
 instance Fractional Construct where
   x / y = \ e -> let  (e',x') = x e
                       (e'',y') = y e'
@@ -87,9 +86,9 @@ instance Fractional Construct where
                       else error $ "Construct.div bad dims " ++ show (x',y',e)
 
   fromRational i = \ e -> addEdge e $ Const Dim0 $ fromRational i
-{-
+\end{code}
 
--}
+\begin{code}
 fun1 op x = \ e ->  let (e',x') = x e
                     in if Dim0 == getDimE e' x' then addEdge e' $ Op Dim0 Sqrt [x']
                        else error $ "Construct."++show op++" bad dims " ++ show (x',e)
@@ -114,11 +113,11 @@ instance Floating Construct where
 getDimC x exprs = getDimE exprs (snd $ x exprs)
 scaleX d x = \e -> let (e1,dN) = addEdge e $ Const Dim0 d; in genProd e1 [dN,snd $ x e]
 mkConst dims d = \ e -> addEdge e $ Const dims d
-{-
+\end{code}
 
 We can avoid a lot of simplifying later by using |sumE| instead of |sum|,
 and |prodE| instead of |prod|.
--}
+\begin{code}
 sumE, prodE :: [Construct] -> Construct
 sumE [] = error "HashedConstruct: Can't sumE empty list."
 sumE xs = \ e -> let (e',xs'@(x':_)) = L.mapAccumR (\ e' x -> x e') e xs
@@ -150,9 +149,9 @@ prodN (e,ns@(n1:_)) = case ns of
                        [x] -> (e,x)
                        _ -> addEdge e $ Op (getDimE e n1) Prod $ nodeSort' e ns
 prodN (e,[]) = addEdge e $ Const Dim0 1
-{-
+\end{code}
 
--}
+\begin{code}
 instance Complex Construct Construct where
   x +: y = \ e ->  let  (e',x') = x e
                         (e'',y') = y e'
@@ -179,9 +178,9 @@ reImC (x,y) = x +: y
 xReImC z = (xRe z, xIm z)
 mapP f (x,y) = (f x, f y)
 mapCplx f = reImC . mapP f . xReImC
-{-
+\end{code}
 
--}
+\begin{code}
 instance RealVectorSpace Construct Construct where
   scale s v = \ e ->   let  (e',s') = s e
                             (e'',v') = v e'
@@ -216,9 +215,9 @@ instance RealVectorSpace Construct Construct where
 
   injectSS ss v =  \ e -> let (e',v') = v e
                           in addEdge e' $ Op (injectDim (getDimE e' v') ss) (Inject ss) [v']
-{-
+\end{code}
 
--}
+\begin{code}
 instance ComplexVectorSpace Construct Construct Construct Construct where
   scaleC s v = \ e ->  let  (e',s') = s e
                             (e'',v') = v e'
@@ -256,7 +255,7 @@ instance Rectangular Construct where
                   in addEdge e' $ Op (getDimE e' x') (PFT False Slice) [x']
   transp swap x = \e -> let (e',x') = x e
                      in addEdge e' $ Op (trDims swap $ getDimE e' x') (Transpose swap) [x']
-{-
+\end{code}
 
 This only works for one dimension at a time
 %\begin{code}
@@ -302,8 +301,7 @@ instance ConvZip Construct Construct (Int,Int) where
     in addEdge e4 $ mkSCZ dims expr [n1,n2,n3,n4]
 %\end{code}
 
--}
+\begin{code}
 
-{-
+\end{code}
 
--}

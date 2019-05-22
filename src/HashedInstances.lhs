@@ -1,8 +1,7 @@
-{-
 (c) 2010 Christopher Kumar Anand
 
 Experiment in common subexpressions without monads and better expression simplification.
--}
+\begin{code}
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances, UndecidableInstances, TupleSections #-}
 module HashedInstances where
 
@@ -18,10 +17,10 @@ import qualified Data.List as L
 
 --import Debug.Trace
 
-{-
+\end{code}
 
 Instances which build scalar expressions.
--}
+\begin{code}
 instance Num Scalar where
     negate (Scalar (Expression n exprs)) = Scalar $ addEdge' exprs' (Op Dim0 Prod [neg,n])
       where
@@ -53,10 +52,10 @@ instance Num Scalar where
 
     abs (Scalar (Expression n exprs)) = Scalar $ addEdge' exprs (Op Dim0 Abs [n])
     signum (Scalar (Expression n exprs)) = Scalar $ addEdge' exprs (Op Dim0 Signum [n])
-{-
+\end{code}
 
 Instances which build complex scalar expressions.
--}
+\begin{code}
 instance Num ScalarC where
     negate (ScalarC (Expression n exprs)) = ScalarC $ addEdge' exprs' (Op Dim0 Prod [neg,n])
       where
@@ -88,11 +87,11 @@ instance Num ScalarC where
 
     abs (ScalarC (Expression n exprs)) = ScalarC $ addEdge' exprs (Op Dim0 Abs [n])
     signum (ScalarC (Expression n exprs)) = ScalarC $ addEdge' exprs (Op Dim0 Signum [n])
-{-
+\end{code}
 
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex ScalarC Scalar where
   (Scalar reExpr) +: (Scalar imExpr) = let
       (Expression _ es,(reN,imN)) =  merge reExpr imExpr
@@ -108,11 +107,11 @@ instance Complex ScalarC Scalar where
         ScalarC $ addEdge' exprs1 (Op Dim0 RealImag [n0,n])
   xRe (ScalarC (Expression n exprs)) = Scalar $ addEdge' exprs (Op Dim0 RealPart [n])
   xIm (ScalarC (Expression n exprs)) = Scalar $ addEdge' exprs (Op Dim0 ImagPart [n])
-{-
+\end{code}
 
 FIXME:  should we be simplifying as expressions are being created?
 Float-valued expressions for now:
--}
+\begin{code}
 instance Fractional Scalar where
     (Scalar expr1) / (Scalar expr2) =
          let (Expression _ es,(n1,n2)) = merge expr1 expr2
@@ -124,10 +123,10 @@ instance Fractional Scalar where
            (_,_) -> Scalar (addEdge' es (Op Dim0 Div [n1,n2]))
     recip x = 1 / x
     fromRational i = fromDbl $ fromRational i
-{-
+\end{code}
 
 Float-valued expressions for now:
--}
+\begin{code}
 instance Fractional ScalarC where
     (ScalarC expr1) / (ScalarC expr2) =
          let (Expression _ es,(n1,n2)) = merge expr1 expr2
@@ -139,10 +138,10 @@ instance Fractional ScalarC where
            (_,_) -> ScalarC (addEdge' es (Op Dim0 Div [n1,n2]))
     recip x = 1 / x
     fromRational i = (fromDbl $ fromRational i) +: (fromDbl 0)
-{-
+\end{code}
 
 
--}
+\begin{code}
 instance Floating Scalar where
     sqrt (Scalar expr1@(Expression n es)) = Scalar $ case maybeConst expr1 of
            Just x -> addEdge' es (Const Dim0 $ sqrt x)
@@ -208,10 +207,10 @@ instance Floating Scalar where
     asinh (Scalar expr1@(Expression n es)) = Scalar $ case maybeConst expr1 of
            Just x -> addEdge' es (Const Dim0 $ asinh x)
            _ -> addEdge' es (Op Dim0 Asinh [n])
-{-
+\end{code}
 
 Instances of a complex scalar expression.
--}
+\begin{code}
 instance Floating ScalarC where
     sqrt (ScalarC (Expression n es)) = ScalarC $ addEdge' es (Op Dim0 Sqrt [n])
 
@@ -242,10 +241,10 @@ instance Floating ScalarC where
     acosh x = error $ "HInst. acosh not defined for Complex Scalar "++ show x
 
     asinh x = error $ "HInst. asinh not defined for Complex Scalar "++ show x
-{-
+\end{code}
 
 
--}
+\begin{code}
 instance RealVectorSpace OneD Scalar where
   scale (Scalar s) (OneD v) = let (Expression _ es,(n1,n2)) = merge s v
     in OneD $ addEdge' es $ Op (getDimE es n2) ScaleV [n1,n2]
@@ -277,9 +276,9 @@ instance RealVectorSpace OneD Scalar where
     where
       eOut = addEdge' e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n]
       Scalar mapOut = fun $ var "anonymous"
-{-
+\end{code}
 
--}
+\begin{code}
 instance RealVectorSpace TwoD Scalar where
   scale (Scalar s) (TwoD v) = let (Expression _ es,(n1,n2)) = merge s v
     in TwoD $ addEdge' es (Op (getDimE es n2) ScaleV [n1,n2])
@@ -298,14 +297,14 @@ instance RealVectorSpace TwoD Scalar where
     in  if getDimE es n1 == getDimE es n2
         then TwoD $ addEdge' es (Op (getDimE es n1) NegMask [n1,n2])
         else error $ "negMask 1D sizes differ "
-{-
+\end{code}
 
 The simpler version (copied from OneD) seems to work and doesn't print out stuff.  What's the difference?
 
 If the dimensions line up, then there is no difference in what the function does; however, if there is an SSCrop and the dimensions do not line up, then there is an error.  I've replaced the trace with an mt so that it only traces in debug.
 
 HashedExamples, line 587, ft2d, raises this error, so it's useful
--}
+\begin{code}
 {--
   projSS ss (TwoD (Expression n e)) = TwoD eOut
     where
@@ -328,9 +327,9 @@ HashedExamples, line 587, ft2d, raises this error, so it's useful
     where
       eOut = addEdge' e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n]
       Scalar mapOut = fun $ var "anonymous"
-{-
+\end{code}
 
--}
+\begin{code}
 instance RealVectorSpace TwoDSparse Scalar where
   scale (Scalar s) (TwoDSparse sL@(SparseList2D _ _ _ _) v) = let (Expression _ es,(n1,n2)) = merge s v
     in TwoDSparse sL $ addEdge' es (Op (getDimE es n2) ScaleV [n1,n2])
@@ -353,9 +352,9 @@ instance RealVectorSpace TwoDSparse Scalar where
     where
       eOut = addEdge' e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n]
       Scalar mapOut = fun $ var "anonymous"
-{-
+\end{code}
 
--}
+\begin{code}
 instance SubsampledSpace TwoD TwoDSparse SparseList2D where
   projSparse sL@(SparseList2D len skipDim _sL2 (min2,max2)) (TwoD (Expression n e))
     =  let (ok,outDims) = case (skipDim,getDimE e n) of
@@ -371,14 +370,14 @@ instance SubsampledSpace TwoD TwoDSparse SparseList2D where
              dd -> error $ "injectSparse expected two dimensions " ++ show dd
        in if ok then TwoD $ addEdge' e $ Op outDims (Inject (SSList2D sL)) [n]
           else error $ "injectSparse bad sampleList "++show (outDims,sL)
-{-
+\end{code}
 
 instance (Complex vc v, SubsampledSpace v vs sl, Complex vcs vs) => SubsampledSpace vc vcs sl where
   projSparse sL v = (projSparse sL $ xRe v) +: (projSparse sL $ xIm v)
   injectSparse v = (injectSparse $ xRe v) +: (injectSparse $ xIm v)
 %\end{code}
 
--}
+\begin{code}
 instance SubsampledSpace ThreeD ThreeDSparse SparseList3D where
   projSparse sL@(SparseList3D len skipDim _sL2 (min2,max2) _sL3 (min3,max3)) (ThreeD (Expression n e))
     =  let (ok,outDims) = case (skipDim,getDimE e n) of
@@ -396,9 +395,9 @@ instance SubsampledSpace ThreeD ThreeDSparse SparseList3D where
              dd -> error $ "injectSparse expected three dimensions " ++ show dd
        in if ok then ThreeD $ addEdge' e $ Op outDims (Inject (SSList3D sL)) [n]
           else error $ "injectSparse bad sampleList "++show (outDims,sL)
-{-
+\end{code}
 
--}
+\begin{code}
 instance RealVectorSpace ThreeD Scalar where
   scale (Scalar s) (ThreeD v) = let (Expression _ es,(n1,n2)) = merge s v
     in ThreeD $ addEdge' es (Op (getDimE es n2) ScaleV [n1,n2])
@@ -431,8 +430,8 @@ instance RealVectorSpace ThreeD Scalar where
     where
       eOut = addEdge' e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n]
       Scalar mapOut = fun $ var "anonymous"
-{-
--}
+\end{code}
+\begin{code}
 instance RealVectorSpace OneDC Scalar where
   scale s v
     = (s `scale` (xRe v)) +: (s `scale` (xIm v))
@@ -466,8 +465,8 @@ instance RealVectorSpace ThreeDC Scalar where
   projSS ss v = (projSS ss (xRe v)) +: (projSS ss (xIm v))
   injectSS ss v = (injectSS ss (xRe v)) +: (injectSS ss (xIm v))
   mapR fun v = (mapR fun (xRe v)) +: (mapR fun (xIm v))
-{-
--}
+\end{code}
+\begin{code}
 instance (RealVectorSpace v s, Num s) => RealVectorSpace (v,v) s where
   scale s (x,y) = (scale s x, scale s y)
   subMask (a',a'') (b',b'') = (subMask a' b', subMask a'' b'')
@@ -487,8 +486,8 @@ instance (RealVectorSpace v s, Num s, Show v) => RealVectorSpace [v] s where
              else error $ "dotL length mismatch " ++ show (xs,ys)
              -- *** infinite list will cause infinite recursion
   mapR fun = map (mapR fun)
-{-
--}
+\end{code}
+\begin{code}
 instance RealVectorSpace ThreeDSparse Scalar where
   scale (Scalar s) (ThreeDSparse sL v) = let (Expression _ es,(n1,n2)) = merge s v
     in ThreeDSparse sL $ addEdge' es (Op (getDimE es n2) ScaleV [n1,n2])
@@ -512,11 +511,11 @@ instance RealVectorSpace ThreeDSparse Scalar where
     where
       eOut = addEdge' e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n] -- JLMP switch to SCZ
       Scalar mapOut = fun $ var "anonymous"
-{-
+\end{code}
 
 
 Instances which build 1D expressions.
--}
+\begin{code}
 instance Num OneD where
   negate (OneD (Expression n exprs)) = OneD $ addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
       where
@@ -530,10 +529,10 @@ instance Num OneD where
   _ * _ = error "can't multiply 1d vectors"
   abs _ = error "can't abs 1d vectors"
   signum _ = error "can't signum 1d vectors"
-{-
+\end{code}
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex OneDC OneD where
   reO@(OneD reExpr) +: imO@(OneD imExpr) =  let
       (Expression _ es,(reN,imN)) = merge reExpr imExpr
@@ -557,10 +556,10 @@ instance Complex OneDC OneD where
   xIm (OneDC (Expression n exprs)) = OneD $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
 
 
-{-
+\end{code}
 
 Instances which build 1D Complex expressions.
--}
+\begin{code}
 instance Num OneDC where
   negate (OneDC (Expression n exprs)) =  OneDC $ addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
       where
@@ -574,10 +573,10 @@ instance Num OneDC where
   _ * _ = error "can't multiply 1d complex vectors"
   abs _ = error "can't abs 1d complex vectors"
   signum _ = error "can't signum 1d complex vectors"
-{-
+\end{code}
 
 Instances which build 2D expressions.
--}
+\begin{code}
 instance Num TwoD where
   negate (TwoD (Expression n exprs)) =  TwoD $ addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
       where
@@ -591,10 +590,10 @@ instance Num TwoD where
   _ * _ = error "can't multiply 2d vectors"
   abs _ = error "can't abs 2d vectors"
   signum _ = error "can't signum 2d vectors"
-{-
+\end{code}
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex TwoDC TwoD where
   reO@(TwoD reExpr) +: imO@(TwoD imExpr) =  let
       (Expression _ es,(reN,imN)) = merge reExpr imExpr
@@ -612,10 +611,10 @@ instance Complex TwoDC TwoD where
         TwoDC $ addEdge' exprs1 (Op (getDimE exprs n) RealImag [n0,n])
   xRe (TwoDC (Expression n exprs)) = TwoD $ addEdge' exprs (Op (getDimE exprs n) RealPart [n])
   xIm (TwoDC (Expression n exprs)) = TwoD $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
-{-
+\end{code}
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex TwoDCSparse TwoDSparse where
   reO@(TwoDSparse sLre@(SparseList2D _len _ _ _) reExpr)
     +: imO@(TwoDSparse sLim imExpr) =  let
@@ -636,8 +635,8 @@ instance Complex TwoDCSparse TwoDSparse where
     = TwoDSparse sL $ addEdge' exprs (Op (getDimE exprs n) RealPart [n])
   xIm (TwoDCSparse sL@(SparseList2D _len _ _ _) (Expression n exprs))
     = TwoDSparse sL $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
-{-
--}
+\end{code}
+\begin{code}
 instance Complex ThreeDCSparse ThreeDSparse where
   reO@(ThreeDSparse sLre@(SparseList3D _len _ _ _ _ _) reExpr)
         +: imO@(ThreeDSparse sLim imExpr) =  let
@@ -658,10 +657,10 @@ instance Complex ThreeDCSparse ThreeDSparse where
     = ThreeDSparse sL $ addEdge' exprs (Op (getDimE exprs n) RealPart [n])
   xIm (ThreeDCSparse sL@(SparseList3D _len _ _ _ _ _) (Expression n exprs))
     = ThreeDSparse sL $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
-{-
+\end{code}
 
 Instances which build 1D Complex expressions.
--}
+\begin{code}
 instance ComplexVectorSpace OneDC OneD ScalarC Scalar where
   scaleC (ScalarC se) (OneDC oe) =
     let (Expression _ es,(ns,no)) = merge se oe
@@ -681,10 +680,10 @@ instance ComplexVectorSpace OneDC OneD ScalarC Scalar where
   imagPartV (OneDC (Expression n exprs)) = OneD $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
 
   magV _ = error "magV not implemented"
-{-
+\end{code}
 
 Instances which build 2D Complex expressions.
--}
+\begin{code}
 instance ComplexVectorSpace TwoDC TwoD ScalarC Scalar where
   scaleC (ScalarC se) (TwoDC oe) =
     let (Expression _ es,(ns,no)) = merge se oe
@@ -708,10 +707,10 @@ instance ComplexVectorSpace TwoDC TwoD ScalarC Scalar where
         (exprs2,im) = addEdge exprs1 $ Op (getDimE exprs n) ImagPart [n]
         Scalar sczE = sqrt $ (relElem 0 ZeroMargin [0,0])^2 + (relElem 1 ZeroMargin [0,0])^2
     in TwoD $ addEdge' exprs2 $ mkSCZ' (getDimE exprs n) sczE [re,im]
-{-
+\end{code}
 
 Instances which build 2D Complex expressions.
--}
+\begin{code}
 instance ComplexVectorSpace TwoDCSparse TwoDSparse ScalarC Scalar where
   scaleC (ScalarC se) (TwoDCSparse sL oe) =
     let (Expression _ es,(ns,no)) = merge se oe
@@ -733,11 +732,11 @@ instance ComplexVectorSpace TwoDCSparse TwoDSparse ScalarC Scalar where
     $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
 
   magV _ = error "magV not implemented"
-{-
+\end{code}
 
 
 Instances which build 3D Complex expressions.
--}
+\begin{code}
 instance ComplexVectorSpace ThreeDCSparse ThreeDSparse ScalarC Scalar where
   scaleC (ScalarC se) (ThreeDCSparse sL@(SparseList3D _len _ _ _ _ _) oe) =
     let (Expression _ es,(ns,no)) = merge se oe
@@ -760,10 +759,10 @@ instance ComplexVectorSpace ThreeDCSparse ThreeDSparse ScalarC Scalar where
       = ThreeDSparse sL $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
 
   magV _ = error "magV not implemented"
-{-
+\end{code}
 
 Instance which build 2D Complex expressions
--}
+\begin{code}
 instance Num TwoDCSparse where
     negate (TwoDCSparse sL (Expression n exprs)) = TwoDCSparse sL $
       addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
@@ -778,10 +777,10 @@ instance Num TwoDCSparse where
     _ * _ = error "can't multiply 2d complex vectors"
     abs _ = error "can't abs 2d complex vectors"
     signum _ = error "can't signum 2d complex vectors"
-{-
+\end{code}
 
 Instance which build 2D Complex expressions
--}
+\begin{code}
 instance Num TwoDC where
     negate (TwoDC (Expression n exprs)) = TwoDC $
       addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
@@ -797,10 +796,10 @@ instance Num TwoDC where
     abs _ = error "can't abs 2d complex vectors"
     signum _ = error "can't signum 2d complex vectors"
 
-{-
+\end{code}
 
 Instances which build 3D expressions.
--}
+\begin{code}
 instance Num ThreeD where
     negate (ThreeD (Expression n exprs)) = let
           (exprs',neg) = addEdge exprs (Const Dim0 (-1))
@@ -814,10 +813,10 @@ instance Num ThreeD where
     _ * _ = error "can't multiply 3d vectors"
     abs _ = error "can't abs 3d vectors"
     signum _ = error "can't signum 3d vectors"
-{-
+\end{code}
 
 Instance which build 3D Complex Sparse expressions
--}
+\begin{code}
 instance Num ThreeDCSparse where
     negate (ThreeDCSparse sL (Expression n exprs)) = ThreeDCSparse sL
         $ addEdge' exprs' (Op (getDimE exprs n) ScaleV [neg,n])
@@ -832,13 +831,13 @@ instance Num ThreeDCSparse where
     _ * _ = error "can't multiply 3d complex vectors"
     abs _ = error "can't abs 3d complex vectors"
     signum _ = error "can't signum 3d complex vectors"
-{-
+\end{code}
 
 
 
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex ThreeDC ThreeD where
   reO@(ThreeD reExpr) +: imO@(ThreeD imExpr) =  let
       (Expression _ es,(reN,imN)) = merge reExpr imExpr
@@ -856,12 +855,12 @@ instance Complex ThreeDC ThreeD where
         ThreeDC $ addEdge' exprs1 (Op (getDimE exprs n) RealImag [n0,n])
   xRe (ThreeDC (Expression n exprs)) = ThreeD $ addEdge' exprs (Op (getDimE exprs n) RealPart [n])
   xIm (ThreeDC (Expression n exprs)) = ThreeD $ addEdge' exprs (Op (getDimE exprs n) ImagPart [n])
-{-
+\end{code}
 
 
 
 Instances which build 3D complex expressions.
--}
+\begin{code}
 instance Num ThreeDC where
     negate (ThreeDC (Expression n exprs)) = let
         (exprs',neg) = addEdge exprs (Const Dim0 (-1))
@@ -875,12 +874,12 @@ instance Num ThreeDC where
     _ * _ = error "can't multiply 3d complex vectors"
     abs _ = error "can't abs 3d complex vectors"
     signum _ = error "can't signum 3d complex vectors"
-{-
+\end{code}
 
 
 
 Instances for pairs
--}
+\begin{code}
 instance (Num v) => Num (v,v) where
     (x,y) + (u,v) = (x+u,y+v)
     negate (x,y) = (negate x, negate y)
@@ -888,9 +887,9 @@ instance (Num v) => Num (v,v) where
     _ * _ = error "can't multiply pairs"
     abs _ = error "can't abs pairs"
     signum _ = error "can't signum pairs"
-{-
+\end{code}
 
--}
+\begin{code}
 instance (Integral a, Show a) => ShowHex (LinearCombination a) where
   showHex (LC c combos) = let nonConst = concatMap dispPair $ Map.toList combos
                               dispPair (_,0) = ""
@@ -900,9 +899,9 @@ instance (Integral a, Show a) => ShowHex (LinearCombination a) where
                                (0,True) -> "0"
                                (0,_)    -> drop 3 nonConst
                                _        -> Numeric.showHex c (" + " ++ nonConst)
-{-
+\end{code}
 
--}
+\begin{code}
 instance (Integral a, Show a) => ShowHex (PositiveCombination a) where
  showHex (PC combos) = if null nonZero then "0" else nonZero
     where
@@ -914,7 +913,7 @@ instance (Integral a, Show a) => ShowHex (PositiveCombination a) where
 
       showNeg c = if c < 0 then "(-" ++ Numeric.showHex (-c) ")" else Numeric.showHex c ""
       showNames names = concat $ L.intersperse " * " names
-{-
+\end{code}
 instance (Show a, Eq a, Num a, Ord a) => Show (PositiveCombination a) where
   show (PC combos) = if null nonZero then "0" else nonZero
     where
@@ -929,7 +928,7 @@ instance (Show a, Eq a, Num a, Ord a) => Show (PositiveCombination a) where
       showNames names = concat $ L.intersperse " * " names
 
 
--}
+\begin{code}
 instance ShowHex Scalar where
   showHex (Scalar e@(Expression node exprs)) = case I.lookup node exprs of
     Nothing -> "showHex Scalar found no node " ++ (take 1000 $ show (node,exprs))
@@ -946,9 +945,9 @@ instance ShowHex Scalar where
       Dim0 -> Numeric.showHex (round d) ""
       _ -> error $ "showHex Scalar has dims ! "++show dims
     Just _ -> prettyHex e
-{-
+\end{code}
 
--}
+\begin{code}
 instance Show Scalar where
   show (Scalar e@(Expression node exprs)) = case I.lookup node exprs of
     Nothing -> "show Scalar found no node " ++ (take 1000 $ show (node,exprs))
@@ -1192,10 +1191,10 @@ prettyAll (e,n) = unlines $ pa [] [n]
                                      _ -> pa (next : visited) tovisit
                                  )
 --  TODO ?? Show instance should do dynamic dim typechecking ***
-{-
+\end{code}
 
 invFt takes scaling into account, but not ft.  Probably whatever we do should mean that ft(invft(x)) = x.  Leave the older version of the invFt which scales, but use the new one.
--}
+\begin{code}
 instance Rectangular OneDC where
   ft (OneDC (Expression n exprs)) = OneDC $
       addEdge' exprs (Op (getDimE exprs n) (FT True) [n])
@@ -1223,9 +1222,9 @@ instance Rectangular OneDC where
   invColumnPFT _e = error "partial ft not defined for OneDC"
   invSlicePFT _e = error "partial ft not defined for OneDC"
   transp swap = error $ "transpose "++show swap++" not defined for OneDC"
-{-
+\end{code}
 
--}
+\begin{code}
 instance Rectangular TwoDC where
   ft (TwoDC (Expression n exprs)) = TwoDC $
       addEdge' exprs (Op (getDimE exprs n) (FT True) [n])
@@ -1252,9 +1251,9 @@ instance Rectangular TwoDC where
   invSlicePFT _e = error "invSlicePFT not defined for TwoDC"
   transp swap (TwoDC (Expression n exprs)) = TwoDC $
     addEdge' exprs (Op (trDims swap $ getDimE exprs n) (Transpose swap) [n])
-{-
+\end{code}
 
--}
+\begin{code}
 instance Rectangular ThreeDC where
   ft (ThreeDC (Expression n exprs)) = ThreeDC $ addEdge' exprs (Op (getDimE exprs n) (FT True) [n])
   invFt (ThreeDC (Expression n exprs)) =
@@ -1282,9 +1281,9 @@ instance Rectangular ThreeDC where
     addEdge' exprs (Op (getDimE exprs n) (PFT False Slice) [n])
   transp swap (ThreeDC (Expression n exprs)) = ThreeDC $
     addEdge' exprs (Op (trDims swap $ getDimE exprs n) (Transpose swap) [n])
-{-
+\end{code}
 
--}
+\begin{code}
 instance SimilarSum [ThreeD] where
   decompose lst = let exprs = map unThreeD lst
                       dims = map getDimE' exprs
@@ -1292,14 +1291,14 @@ instance SimilarSum [ThreeD] where
                   in if 1 == (length $ L.nub dims)
                      then (allExprs,nodes)
                      else error $ "HI.decompose [ThreeD] "++show (map pretty exprs)
-{-
+\end{code}
 
--}
+\begin{code}
 instance SimilarSum ThreeD where
   decompose (ThreeD (Expression n exprs)) = (exprs,[n])
-{-
+\end{code}
 
--}
+\begin{code}
 instance SimilarSum [ThreeDC] where
   decompose lst = let exprs = map unThreeDC lst
                       allC = L.all nodeIsComplex' exprs
@@ -1308,18 +1307,18 @@ instance SimilarSum [ThreeDC] where
                   in if 1 == (length $ L.nub dims) && allC
                      then (allExprs,nodes)
                      else error $ "HI.decompose [ThreeDC] "++show (map pretty exprs)
-{-
+\end{code}
 
--}
+\begin{code}
 instance All1D OneD where
 instance All1D OneDC where
 instance All2D TwoD where
 instance All2D TwoDC where
 instance All3D ThreeD where
 instance All3D ThreeDC where
-{-
+\end{code}
 
--}
+\begin{code}
 instance (SimilarSum a,SimilarSum b) => SimilarSum (a,b) where
   decompose (a,b) = let (ea,as) = decompose a
                         (eb,bs) = decompose b
@@ -1329,18 +1328,18 @@ instance (SimilarSum a,SimilarSum b) => SimilarSum (a,b) where
                   in if map (uncurry getDimE) (take 1 pas) == map (uncurry getDimE) (take 1 pbs)
                      then (allExprs,nodes)
                      else error $ "HI.decompose (a,b) "++show (map pretty pas,map pretty pbs)
-{-
+\end{code}
 
--}
+\begin{code}
 instance (All1D a,All1D b) => All1D (a,b) where
 instance (All2D a,All2D b) => All2D (a,b) where
 instance (All3D a,All3D b) => All3D (a,b) where
 instance (All4D a,All4D b) => All4D (a,b) where
 instance (All5D a,All5D b) => All5D (a,b) where
 instance (All6D a,All6D b) => All6D (a,b) where
-{-
+\end{code}
 
--}
+\begin{code}
 instance (SimilarSum a, All1D a) => Regularizable a [((Int),Double)] where
   huber  dk vs = helpROneD RKHuber dk $ decompose vs
   tukey  dk c vs = helpROneD (RKTukey c) dk $ decompose vs
@@ -1353,9 +1352,9 @@ helpROneD :: RangeKernel -> [((Int),Double)] -> (Internal,[Node]) -> Scalar
 helpROneD rk dk (exprs,nodes) = case map (getDimE exprs) nodes of
     (Dim1 _):_ -> Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW1d dk) rk) nodes)
     dims   -> error $ "HI."++show rk++" OneD applied to " ++ show (dims,map (pretty . (exprs,)) nodes)
-{-
+\end{code}
 
--}
+\begin{code}
 instance (SimilarSum a, All2D a) => Regularizable a [((Int,Int),Double)] where
   huber  dk vs = helpRTwoD RKHuber dk $ decompose vs
   tukey  dk c vs = helpRTwoD (RKTukey c) dk $ decompose vs
@@ -1368,9 +1367,9 @@ helpRTwoD :: RangeKernel -> [((Int,Int),Double)] -> (Internal,[Node]) -> Scalar
 helpRTwoD rk dk (exprs,nodes) = case map (getDimE exprs) nodes of
     (Dim2 _):_ -> Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW2d dk) rk) nodes)
     dims   -> error $ "HI."++show rk++" TwoD applied to " ++ show (dims,map (pretty . (exprs,)) nodes)
-{-
+\end{code}
 
--}
+\begin{code}
 instance (SimilarSum a, All3D a) => Regularizable a [((Int,Int,Int),Double)] where
   huber  dk vs = helpRThreeD RKHuber dk $ decompose vs
   tukey  dk c vs = helpRThreeD (RKTukey c) dk $ decompose vs
@@ -1383,11 +1382,10 @@ helpRThreeD :: RangeKernel -> [((Int,Int,Int),Double)] -> (Internal,[Node]) -> S
 helpRThreeD rk dk (exprs,nodes) = case map (getDimE exprs) nodes of
     (Dim3 _):_ -> Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW3d dk) rk) nodes)
     dims   -> error $ "HI."++show rk++" ThreeD applied to " ++ show (dims,map (pretty . (exprs,)) nodes)
-{-
+\end{code}
 
--}
+\begin{code}
 
 
-{-
+\end{code}
 
--}

@@ -1,5 +1,4 @@
-{-
--}
+\begin{code}
 module HashedDot where
 
 import Polynomials
@@ -48,9 +47,9 @@ sczInputs e n = case I.lookup n e of
                                              (map (sczInputs e) inputs) )
                  Just (Op _ _ inputs) -> Set.unions $ map (sczInputs e) inputs
                  _ -> Set.empty
-{-
+\end{code}
 
--}
+\begin{code}
 nn n = "\"" ++ show n ++ "\""
 nnl n label = nn n ++ " [label=\""++label++"\"];"
 en n1 n2 = nn n1 ++ " -> " ++ nn n2 ++ ";"
@@ -80,10 +79,10 @@ showOp (FT True) _ = "FT"
 showOp (FT False) _ = "InvFT"
 showOp (MapND e _input) _ = pretty e
 showOp x _ = show x
-{-
+\end{code}
 
 Rewriting SCZ search from scratch
--}
+\begin{code}
 scalarSCZSearch (Scalar (Expression n e)) =
   let
     sczNodes = L.nub $ L.sort $ sczSearch e n
@@ -116,10 +115,10 @@ sczsToIndexedInputs e n = case I.lookup n e of
                     in relElems sczN
                   x -> error $ "sczsToIndexedInputs found "++show(x,n,e)
 
-{-
+\end{code}
 
 Print search results
--}
+\begin{code}
 printSCZPolys scalar@(Scalar (Expression n e))
   = (printPolys $ map (\ (n,Just p) -> (show n,p)) polys)
    ++ (unlines $ map printSCZ nonpolys)
@@ -141,12 +140,12 @@ printSCZPolys scalar@(Scalar (Expression n e))
           Just (Op _ (SCZ sczExpr) _) -> pretty sczExpr
           _                      -> "!!!! unknown node !!!!"
        )
-{-
+\end{code}
 
 Convert SCZ to Poly
 Extract a polynomial from an expression, or return Nothing if it is not a polynomial.
 The polynomial is of the form of a list of monomials [(Map(varName->power),coeff)]
--}
+\begin{code}
 extractPoly pe@(PolyEnv (_,nbidx2varIdx) _envExpr) inputs e n = case I.lookup n e of
                     Just (Op _ Sum summands)
                       -> case catMaybes $ map extractMonomial summands of
@@ -173,8 +172,7 @@ extractPoly pe@(PolyEnv (_,nbidx2varIdx) _envExpr) inputs e n = case I.lookup n 
               _                 -> Nothing
         monoFromTerms (vars,c) [] = Just (c,(I.foldr (+) 0 vars -- total degree of all variables
                                             ,vars))
-{-
+\end{code}
 
 
 
--}

@@ -1,8 +1,7 @@
-{-
 (c) 2010-2012 Christopher Kumar Anand, Jessica LM Pavlin
 
 Calculating Derivatives.
--}
+\begin{code}
 {-# LANGUAGE ScopedTypeVariables, TupleSections, MultiParamTypeClasses
            , NoMonomorphismRestriction, PatternGuards #-}
 module HashedFactor   (factor',commonTop, linOpDepth, floatNeg, floatNeg', newFloatNeg, newFloatNeg', factorNeg
@@ -23,20 +22,20 @@ import qualified Data.IntMap as I
 import qualified Data.List as L
 import Debug.Trace
 import Data.Maybe (catMaybes)
-{-
+\end{code}
 
 
--}
+\begin{code}
 tf description en = if skipDebug then en else case hasCycles en of
                           [] -> trace description $ en `seq` trace (pretty' en) en
                           x -> error $ "HS.simplify found cycle at "++description++" "++show x++" "++show en
 
-{-
+\end{code}
 
 New recursive negative pulling.
 Do depth-first pulling.  If there is no Neg, then nothing will happen.
 |fn| returns (newExpressions,(trueIfNegIsBeingFloated,newNode)).
--}
+\begin{code}
 newFloatNeg' (exprs,node) = newFloatNeg exprs node
 newFloatNeg exprs node = let (e1,(looseNeg,n1)) = fn exprs node
                          in if looseNeg then error "newFloatNeg floated Neg up to top"
@@ -118,10 +117,10 @@ fn exprs node
 
   | True
   = error $ "HF.fn unhandled " ++ pretty' (exprs,node)
-{-
+\end{code}
 
 
--}
+\begin{code}
 floatNeg' (exprs,node) = floatNeg exprs node
 floatNeg exprs node
   | Just (Op dims (Compound l) args) <- I.lookup node exprs
@@ -202,10 +201,10 @@ canPull (PFT _ _) = True
 canPull (Transpose _) = True
 canPull (Compound _) = True
 canPull x = mt ("couldn't pull "++show x) False
-{-
+\end{code}
 
 
--}
+\begin{code}
 factorNeg (exprs,node)
   | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
   , negArgs <- catMaybes $ map (M.negate exprs) args
@@ -219,9 +218,9 @@ factorNeg (exprs,node)
   = addEdge newExprs $ Op dims op newArgs
 
   | True = (exprs,node)
-{-
+\end{code}
 
--}
+\begin{code}
 pushNegIntoConst (exprs,node)
   | Just (Op Dim0 Neg [arg]) <- I.lookup node exprs
   , Just (Const Dim0 d) <- I.lookup arg exprs
@@ -240,10 +239,10 @@ pushNegIntoConst (exprs,node)
   = addEdge newExprs $ Op dims op newArgs
 
   | True = (exprs,node)
-{-
+\end{code}
 
 
--}
+\begin{code}
 factor' (exprs,node)
   -- * factor out common factors in sums of products
   -- - Sum(x*y,x*z) -> Prod(x,Sum(y+z))
@@ -370,7 +369,7 @@ factor' (exprs,node)
 
   | True
   = tf "True" $ (exprs,node)
-{-
+\end{code}
 
 FIXME : fails with
 
@@ -397,7 +396,7 @@ FIXME : this doesn't optimize for fmas
 
 
 FIXME:  This comment copied with code from HS:  if we ever want to use this, make sure it doesn't push sums into nonlinear SCZs and other nonlinear operations
--}
+\begin{code}
 commonTop :: Internal -> [Node] -> Maybe(Internal,Node)
 commonTop exprs summands = mt "preCommonTop" $
   let
@@ -459,7 +458,7 @@ commonTop exprs summands = mt "preCommonTop" $
              )
       else
         mt (unlines $ ("nonCommon "++ show (newSummands,summands,map (getOp . dS) summands)) :(map (pretty' . (exprs1,)) newSummands)) Nothing
-{-
+\end{code}
 
 %\begin{code}
 simplifySCZ (exprs,node)
@@ -489,7 +488,7 @@ simplifySCZ (exprs,node)
   = tf "True" $ (exprs,node)
 %\end{code}
 
--}
+\begin{code}
 linOpDepth exprs node = lOD 0 node
   where
     lOD d n
@@ -499,13 +498,13 @@ linOpDepth exprs node = lOD 0 node
 
       | True
       = d
-{-
+\end{code}
 
 Rewrite SCZs into a standard form (so we don't generate redundant code).
 Since we can reorder the arguments of the SCZ, we can rename the |RelElem|s.
 The normal form will the be the one with the smallest hash value,
 and if values are the same, then the one with the smaller expression map.
--}
+\begin{code}
 normalizeSCZ :: ExpressionEdge -> (Expression,[Node])
 normalizeSCZ (Op _dims (SCZ (Expression sczN sczE)) args) =
     let  -- map relElems to compressed subset, otherwise don't remap
@@ -528,10 +527,10 @@ normalizeSCZ (Op _dims (SCZ (Expression sczN sczE)) args) =
     in (Expression newN newE, newArgs)
 
 normalizeSCZ x = error $ "HF.normalizeSCZ not implemented: " ++ show x
-{-
+\end{code}
 
 
--}
+\begin{code}
 normalizeSCZs (exprs0,node)
   -- * remove unused inputs from SCZs expressions and normalize
   -- - SCZ( f r0 r2 )[x,y,z] -> SCZ( f r1 r0 )[z,x]
@@ -550,7 +549,7 @@ normalizeSCZs (exprs0,node)
     in addEdge e $ Op dims op simpArgs
 
 normalizeSCZs (exprs,node) = (exprs,node)
-{-
+\end{code}
 
 
 -- find a linear combination of RelElems, and look for a common top of _linear_ operations
@@ -608,4 +607,3 @@ sczOps = [Op (Dim2 (64,64)) (mkSCZ {convDims = Dim2 (64,64), convExtentconvExpr 
 scz12Ops = map (\(i,op@(Op _ (mkSCZ _ e) _)) -> ( normalizeSCZ op,i,e)) $ zip [0..] sczOps
 scz12OpsReducedTo6 = putStrLn $ unlines $ map (\((e,args),i,f) -> pretty e ++ show (args,i) ++ pretty f) $ L.nubBy (\((e,_),_,_) ((f,_),_,_) -> e==f) $ L.sortBy (\((e,_),_,_) ((f,_),_,_) -> compare e f) scz12Ops
 %\end{code}
--}

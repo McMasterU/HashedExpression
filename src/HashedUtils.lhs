@@ -1,8 +1,7 @@
-{-
 (c) 2010 Christopher Kumar Anand
 
 Utility functions for Hashed Expresson
--}
+\begin{code}
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, NoMonomorphismRestriction #-}
 module HashedUtils where
 
@@ -11,10 +10,10 @@ import HashedExpression
 import qualified Data.List as L
 import qualified System.Exit
 import qualified System.Process
-{-
+\end{code}
 
 Save data to files.
--}
+\begin{code}
 saveFloats :: (Show a) => String -> [a] -> IO System.Exit.ExitCode
 saveFloats fileName l = do
     saveInDataFile fileName l
@@ -37,11 +36,11 @@ saveFloats fileName l = do
             ,"fclose(fp_in);"
             ,"fclose(fp_out);"
             ,"exit(0);\n}\n"]
-{-
+\end{code}
 
 
 Create a binary data file out of a list.  Data is recorded in fileName.
--}
+\begin{code}
 saveInC fileName l dims = do
     saveInDataFile fileName l
     writeFile "genData.c" (concat $ L.intersperse "\n" lines)
@@ -73,11 +72,10 @@ saveInC fileName l dims = do
 
 saveInDataFile fileName l = do
   writeFile (fileName ++ ".dat") (concat $ L.intersperse "\n" (map show l))
-{-
+\end{code}
 
--}
+\begin{code}
 mate name = System.Process.system $ "open -a ~/Downloads/TextMate.app "++name++".lhs"
 search string = System.Process.system $ "fgrep \""++string++"\" *.lhs"
-{-
+\end{code}
 	
--}

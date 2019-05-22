@@ -1,4 +1,3 @@
-{-
 (c) 2014 Christopher Kumar Anand
 
 Helper functions/instances to make pattern gaurds involving Expressions easier to read.
@@ -6,7 +5,7 @@ Helper functions/instances to make pattern gaurds involving Expressions easier t
             ,TupleSections, FlexibleInstances, FunctionalDependencies
             ,TypeFamilies, GADTs, FlexibleContexts #-}
 
--}
+\begin{code}
 {-# LANGUAGE GADTs, TypeFamilies, FlexibleContexts, MultiParamTypeClasses #-}
 module WithHoles where
 
@@ -24,7 +23,7 @@ data WithHoles  = WHOp OpId [WithHoles]
                 | WHHole Int              -- like a variable in a regex
                 | WHList Int              -- list variable
   deriving (Show,Eq,Ord)
-{-
+\end{code}
 FIXME:  figure these out later:
   - to support Sum and Prod types, we need WHList and then we will need predicates
     or we need to recognize Sum as (+) similarly to List and (:)
@@ -48,16 +47,16 @@ FIXME:  figure these out later:
                            }                        --   length reIdx == length outDims
 
 Return a list of all wholes in a pattern-matching expression.
--}
+\begin{code}
 definedHoles (WHHole i) = [i]
 definedHoles (WHOp _ subs) = concatMap definedHoles subs
 definedHoles _ = []
 
 isHoleInPattern i pattern = i `elem` (definedHoles pattern)
-{-
+\end{code}
 
 Instances which help us build expressions.
--}
+\begin{code}
 instance Num WithHoles where
     negate x = WHOp Prod [WHConst (-1),x]
     fromInteger i = WHConst $ fromInteger i
@@ -65,27 +64,27 @@ instance Num WithHoles where
     x * y = WHOp Prod [x,y]
     abs x = WHOp Abs [x]
     signum x = WHOp Signum [x]
-{-
+\end{code}
 
 Instance to convert back and forth between real and complex nodes.
--}
+\begin{code}
 instance Complex WithHoles WithHoles where
   x +: y = WHOp RealImag [x,y]
   iRe x = WHOp RealImag [x,WHConst 0]
   iIm y = WHOp RealImag [WHConst 0,y]
   xRe z = WHOp RealPart [z]
   xIm z = WHOp ImagPart [z]
-{-
+\end{code}
 
 Float-valued expressions for now:
--}
+\begin{code}
 instance Fractional WithHoles where
     x / y = WHOp Div [x,y]
     recip x = WHOp Div [WHConst 1, x]
     fromRational x = WHConst $ fromRational x
-{-
+\end{code}
 
--}
+\begin{code}
 instance Floating WithHoles where
     sqrt x = WHOp Sqrt [x]
     pi = WHConst pi
@@ -103,9 +102,9 @@ instance Floating WithHoles where
     atanh x = WHOp Atanh [x]
     acosh x = WHOp Acosh [x]
     asinh x = WHOp Asinh [x]
-{-
+\end{code}
 
--}
+\begin{code}
 instance RealVectorSpace WithHoles WithHoles where
   scale n1 n2 = WHOp ScaleV [n1,n2]
   dot n1 n2 = WHOp Dot [n1,n2]
@@ -114,11 +113,11 @@ instance RealVectorSpace WithHoles WithHoles where
   projSS ss n = WHOp (Project ss) [n]
   injectSS ss n = WHOp (Inject ss) [n]
   mapR _fun _n = error $ "WithHoles.cannot match maps  FIXME:  switch over to sczs"
-{-
+\end{code}
 
 FIXME support instance SubsampledSpase, ComplexVectorSpace
 
--}
+\begin{code}
 instance Rectangular WithHoles where
   ft n = WHOp (FT True) [n]
   invFt n = WHOp (FT False) [n]  -- FIXME think about where the normalizing factor should go
@@ -130,11 +129,11 @@ instance Rectangular WithHoles where
   invColumnPFT _e = error "partial ft not defined for WithHoles"
   invSlicePFT _e = error "partial ft not defined for WithHoles"
   transp swap = error $ "transpose "++show swap++" not defined for WithHoles"
-{-
+\end{code}
 
 Check for a match, and collect a list of identified holes.
 --FIXME  this allows for finding the same hole twice and doesn't check that the matchings agree
--}
+\begin{code}
 isMatch :: Internal -> WithHoles -> Node -> Maybe [(Int,Node)]
 isMatch exprs (WHOp opW xs) n
   | Just (Op _ opE ns) <- I.lookup n exprs
@@ -152,10 +151,10 @@ isMatch exprs (WHConst c) n
 isMatch _exprs (WHHole idx) n = Just [(idx,n)]
 
 isMatch _ _ _ = Nothing
-{-
+\end{code}
 
 Find dims
--}
+\begin{code}
 dimWH :: [(Int,Node)] -> Internal -> WithHoles -> Maybe Dims
 dimWH found e0 (WHOp op xs@(_x1:_)) =
   case op of
@@ -178,10 +177,10 @@ dimWH found e0 (WHHole idx)
       Nothing -> error $ "WH.dimWH hole not found "++show (idx,found,e0)
 
 dimWH _found _e0 (WHList _hs) = error "WH.dimWH List unfinished"
-{-
+\end{code}
 
 Apply transformation
--}
+\begin{code}
 apply :: Dims -> [(Int,Node)] -> Internal -> WithHoles ->(Internal,Node)
 apply dims found e0 (WHOp op xs) = addEdge e1 (Op dims op ns)
   where
@@ -208,11 +207,11 @@ apply _dims found e0 (WHHole idx)
       Nothing -> error $ "WH.apply hole not found "++show (idx,found,e0)
 
 apply _dims _found _e0 (WHList _hs) = error "WH.apply List unfinished"
-{-
+\end{code}
 
 Apply the first rule from a list which applies to the head node.
 -- FIXME  this is recursive, so we better know it is confluent or at least that it terminates.
--}
+\begin{code}
 applyOne :: (Internal,Node) -> [(GuardedPattern,WithHoles)]
          -> Maybe (Internal,Node)
 applyOne (e,n) ((GP pattern condition,replacement):rules)
@@ -222,10 +221,10 @@ applyOne (e,n) ((GP pattern condition,replacement):rules)
   | otherwise
   = applyOne (e,n) rules
 applyOne _ [] = Nothing
-{-
+\end{code}
 
 Guards for pattern matching
--}
+\begin{code}
 containsDifferential :: WithHoles -> WithHoles -> Internal -> [(Int,Node)] -> Bool
 containsDifferential (WHHole i) pattern =
   if i `isHoleInPattern` pattern
@@ -234,14 +233,14 @@ containsDifferential (WHHole i) pattern =
                           _ -> error $ "WH.containsDifferential "++show(i,pattern,exprs)
   else error $ "WH.containsDifferential applied to hole "++show i++" not defined in "++show pattern
 containsDifferential x _ = error $ "WH.containsDifferential can only be given a hole not a "++show x
-{-
+\end{code}
 
--}
+\begin{code}
 always :: WithHoles -> Internal -> [(Int,Node)] -> Bool
 always _ = \ _ _ -> True
-{-
+\end{code}
 
--}
+\begin{code}
 infixl 2 ||.
 infixl 3 &&.
 
@@ -254,10 +253,10 @@ mergeWith op c1 c2 = \ pattern -> let c1Ok = c1 pattern
                                       c2Ok = c2 pattern
                                   in \ exprs filled -> (c1Ok exprs filled) `op`
                                                        (c2Ok exprs filled)
-{-
+\end{code}
 
 Add condition to pattern.
--}
+\begin{code}
 infixl 1 |.
 
 data GuardedPattern = GP WithHoles (Internal -> [(Int,Node)] -> Bool)
@@ -265,10 +264,10 @@ data GuardedPattern = GP WithHoles (Internal -> [(Int,Node)] -> Bool)
 
 (|.) :: WithHoles -> Condition -> GuardedPattern
 (|.) pattern condition = GP pattern $ condition pattern
-{-
+\end{code}
 
 Syntactic sugar for defining rules.
--}
+\begin{code}
 infix 0 ~~>
 infix 0 |.~~>
 
@@ -277,11 +276,10 @@ infix 0 |.~~>
 
 (~~>) :: GuardedPattern -> WithHoles -> (GuardedPattern, WithHoles)
 (~~>) gPattern replacement = (gPattern,replacement)
-{-
+\end{code}
 
--}
+\begin{code}
 [p,q,r,s,t,u,v,w,x,y,z] = map WHHole [1..11]
-{-
+\end{code}
 
 
--}
