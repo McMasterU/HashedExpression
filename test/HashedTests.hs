@@ -294,7 +294,7 @@ Passing the one to the simplify function causes an error because there is no ins
 
 This won't run, but it will compile.
 -}
-simpTest3_3 = simplify (1) -- == 1
+simpTest3_3 = simplify 1 -- == 1
 
 {-
 This won't even compile.
