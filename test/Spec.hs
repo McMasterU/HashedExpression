@@ -1,4 +1,3 @@
-import HashedTests (regressionTestSimp)
+import HashedTests (regressionTestAll)
 
-main :: IO [[()]]
-main = regressionTestSimp
+main = regressionTestAll
