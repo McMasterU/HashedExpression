@@ -30,44 +30,44 @@ Compile with
 
 \begin{comment}
 -}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NoMonomorphismRestriction  #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module HashedTests where
 
-import HashedDerivative
-import HashedExpression
-import HashedInstances
-import HashedInterp
+import           HashedDerivative
+import           HashedExpression
+import           HashedInstances
+import           HashedInterp
 
 -- import HashedComplexInstances
-import HashedSimplify
+import           HashedSimplify
 
 -- import HashedMRI --for the R2Star tests
-import HashedConvZip
-import HashedDot
-import qualified Polynomials as P
+import           HashedConvZip
+import           HashedDot
+import qualified Polynomials           as P
 
 -- import R2Star
 --import Maybe (isJust)
 --import Data.IntMap (IntMap)
-import Control.Monad
-import Data.Array.Unboxed as U
+import           Control.Monad
+import           Data.Array.Unboxed    as U
 import qualified Data.ByteString.Char8 as C
-import Data.Complex
-import qualified Data.IntMap as I
-import qualified Data.List as List
-import qualified Data.Map as Map
-import qualified Data.Map.Strict as M
-import Data.Maybe
-import Test.QuickCheck hiding (scale)
+import           Data.Complex
+import qualified Data.IntMap           as I
+import qualified Data.List             as List
+import qualified Data.Map              as Map
+import qualified Data.Map.Strict       as M
+import           Data.Maybe
+import           Test.QuickCheck       hiding (scale)
 
 --import System.IO.Unsafe
 --import HashedExamples
-import Debug.Trace
+import           Debug.Trace
 
 {-
 \end{comment}
@@ -1102,7 +1102,7 @@ First, applyOne, the function which applies the simp1 rules.  It only applies si
 scalarApplyOne (Scalar (Expression n e)) =
     case applyOne (e, n) simp1 of
         Nothing -> pretty $ Expression n e
-        _ -> pretty $ fromJust $ applyOne (e, n) simp1
+        _       -> pretty $ fromJust $ applyOne (e, n) simp1
 
 {-
 
@@ -1688,7 +1688,7 @@ subs2 =
 
 -}
 replist 0 _l = []
-replist i l = l ++ (replist (i - 1) l)
+replist i l  = l ++ (replist (i - 1) l)
 
 {-
 
