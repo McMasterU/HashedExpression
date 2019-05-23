@@ -3,33 +3,57 @@
 
 Calculating Derivatives.
 -}
-{-# LANGUAGE ScopedTypeVariables, TupleSections, MultiParamTypeClasses
-           , NoMonomorphismRestriction, PatternGuards #-}
-module HashedFactor   (factor',commonTop, linOpDepth, floatNeg, floatNeg', newFloatNeg, newFloatNeg', factorNeg
-                      , pushNegIntoConst, normalizeSCZs, normalizeSCZ) where
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE PatternGuards             #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TupleSections             #-}
 
-import HashedExpression
-import HashedInstances (pretty')
-import HashedConstruct
-import HashedSimplify (simplify',simpRewrite,mkSCZ)
+module HashedFactor
+    ( factor'
+    , commonTop
+    , linOpDepth
+    , floatNeg
+    , floatNeg'
+    , newFloatNeg
+    , newFloatNeg'
+    , factorNeg
+    , pushNegIntoConst
+    , normalizeSCZs
+    , normalizeSCZ
+    ) where
+
+import           HashedConstruct
+import           HashedExpression
+import           HashedInstances  (pretty')
+import           HashedSimplify   (mkSCZ, simpRewrite, simplify')
+
 --import HashedMatch (o)
-import qualified HashedMatch as M
+import qualified HashedMatch      as M
 
 --import Data.ByteString (ByteString)
 --import qualified Data.ByteString.Char8 as C
-import qualified Data.IntMap as I
+import qualified Data.IntMap      as I
+
 --import Data.Map (Map)
 --import qualified Data.Map as Map
-import qualified Data.List as L
-import Debug.Trace
-import Data.Maybe (catMaybes)
+import qualified Data.List        as L
+import           Data.Maybe       (catMaybes)
+import           Debug.Trace
+
 {-
 
 
 -}
-tf description en = if skipDebug then en else case hasCycles en of
-                          [] -> trace description $ en `seq` trace (pretty' en) en
-                          x -> error $ "HS.simplify found cycle at "++description++" "++show x++" "++show en
+tf description en =
+    if skipDebug
+        then en
+        else case hasCycles en of
+                 [] -> trace description $ en `seq` trace (pretty' en) en
+                 x ->
+                     error $
+                     "HS.simplify found cycle at " ++
+                     description ++ " " ++ show x ++ " " ++ show en
 
 {-
 
@@ -37,339 +61,377 @@ New recursive negative pulling.
 Do depth-first pulling.  If there is no Neg, then nothing will happen.
 |fn| returns (newExpressions,(trueIfNegIsBeingFloated,newNode)).
 -}
-newFloatNeg' (exprs,node) = newFloatNeg exprs node
-newFloatNeg exprs node = let (e1,(looseNeg,n1)) = fn exprs node
-                         in if looseNeg then error "newFloatNeg floated Neg up to top"
-                                        else (e1,n1)
-fn :: Internal -> Node -> (Internal,(Bool,Node))
+newFloatNeg' (exprs, node) = newFloatNeg exprs node
+
+newFloatNeg exprs node =
+    let (e1, (looseNeg, n1)) = fn exprs node
+     in if looseNeg
+            then error "newFloatNeg floated Neg up to top"
+            else (e1, n1)
+
+fn :: Internal -> Node -> (Internal, (Bool, Node))
 fn exprs node
-  | Just (Op _dims Neg [arg]) <- I.lookup node exprs
-  , (expr1,(isNeg,node1)) <- fn exprs arg
-  = (expr1,(not isNeg,node1))
-
-  | Just (Op dims (Compound l) args) <- I.lookup node exprs
-  , (expr1,negNodes) <- L.mapAccumR fn exprs args
-  = case L.nub $ map fst negNodes of
-      [loose] -> let (e2,n2) = addEdge expr1 $ Op dims (Compound l) $ map snd negNodes in (e2,(loose,n2))
-      _ -> error $ "HF.newFloatNeg differing signs for compound " ++ show negNodes
-
+    | Just (Op _dims Neg [arg]) <- I.lookup node exprs
+    , (expr1, (isNeg, node1)) <- fn exprs arg = (expr1, (not isNeg, node1))
+    | Just (Op dims (Compound l) args) <- I.lookup node exprs
+    , (expr1, negNodes) <- L.mapAccumR fn exprs args =
+        case L.nub $ map fst negNodes of
+            [loose] ->
+                let (e2, n2) =
+                        addEdge expr1 $ Op dims (Compound l) $ map snd negNodes
+                 in (e2, (loose, n2))
+            _ ->
+                error $
+                "HF.newFloatNeg differing signs for compound " ++ show negNodes
   -- if all the signs are the floated signs are the same in a |Sum| keep floating, otherwise construct SCZ
-  | Just (Op dims Sum args) <- I.lookup node exprs
-  , (expr1,negNodes) <- L.mapAccumR fn exprs args
-  = case L.nub $ map fst negNodes of
-      [loose] -> let (e2,n2) = addEdge expr1 $ Op dims Sum $ map snd negNodes in (e2,(loose,n2))
-      _ -> let  Scalar (Expression nN nE) =
-                  sum $ zipWith3 (\ idx a nn -> (if fst nn then id else negate) $ relElem0 idx a)
-                                 [0..]
-                                 args
-                                 negNodes
-                (sE,sN) = simplify' (nE,nN)
-
-                relElem0 idx arg = relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
-
-                (newE,newN) = addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
-
-           in mt ("fn.sum" ++ show negNodes) $ (newE,(False,newN))
-
+    | Just (Op dims Sum args) <- I.lookup node exprs
+    , (expr1, negNodes) <- L.mapAccumR fn exprs args =
+        case L.nub $ map fst negNodes of
+            [loose] ->
+                let (e2, n2) = addEdge expr1 $ Op dims Sum $ map snd negNodes
+                 in (e2, (loose, n2))
+            _ ->
+                let Scalar (Expression nN nE) =
+                        sum $
+                        zipWith3
+                            (\idx a nn ->
+                                 (if fst nn
+                                      then id
+                                      else negate) $
+                                 relElem0 idx a)
+                            [0 ..]
+                            args
+                            negNodes
+                    (sE, sN) = simplify' (nE, nN)
+                    relElem0 idx arg =
+                        relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
+                    (newE, newN) =
+                        addEdge expr1 $
+                        mkSCZ dims (Expression sN sE) $ map snd negNodes
+                 in mt ("fn.sum" ++ show negNodes) $ (newE, (False, newN))
   -- insert negations into SCZ from floated negatives, and them simplify
-  | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs
-  , (expr1,negNodes) <- L.mapAccumR fn exprs args
-  = let  (sE,sN) = simplify' $ rewrite se sn
-
-         (e2,n2) = addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
-
-         xchSign idx = if idx < 0 || idx >= length negNodes
-                       then error $ "HF.fn scz idx " ++ show (idx,negNodes)
-                       else fst $ negNodes !! idx
-
-         rewrite e0 head
-           | Just (Op dims op args) <- I.lookup head e0
-           = let (e1,newAs) = L.mapAccumR rewrite e0 args
-             in addEdge e1 $ Op dims op newAs
-
-           | Just (RelElem idx _bnd _off) <- I.lookup head e0
-           = if xchSign idx
-             then addEdge e0 $ Op Dim0 Neg [head]
-             else (e0,head)
-
-           | True     = (e0,head)
-
-    in mt ("fn.scz" ++ (show negNodes)) $ (e2,(False,n2))
-
+    | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs
+    , (expr1, negNodes) <- L.mapAccumR fn exprs args =
+        let (sE, sN) = simplify' $ rewrite se sn
+            (e2, n2) =
+                addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
+            xchSign idx =
+                if idx < 0 || idx >= length negNodes
+                    then error $ "HF.fn scz idx " ++ show (idx, negNodes)
+                    else fst $ negNodes !! idx
+            rewrite e0 head
+                | Just (Op dims op args) <- I.lookup head e0 =
+                    let (e1, newAs) = L.mapAccumR rewrite e0 args
+                     in addEdge e1 $ Op dims op newAs
+                | Just (RelElem idx _bnd _off) <- I.lookup head e0 =
+                    if xchSign idx
+                        then addEdge e0 $ Op Dim0 Neg [head]
+                        else (e0, head)
+                | True = (e0, head)
+         in mt ("fn.scz" ++ (show negNodes)) $ (e2, (False, n2))
   -- either an operation allows the sign to pull through, or there are no negative signs to worry about
-  | Just (Op dims op args) <- I.lookup node exprs
-  , (expr1,negNodes) <- L.mapAccumR fn exprs args
-  , canPull op || not (L.or (map fst negNodes))
-  = case L.nub $ map fst negNodes of
-      [loose] -> let (e2,n2) = addEdge expr1 $ Op dims op $ map snd negNodes in (e2,(loose,n2))
-      _ -> error $ "HF.newFloatNeg differing signs for " ++ show (op,negNodes)
+    | Just (Op dims op args) <- I.lookup node exprs
+    , (expr1, negNodes) <- L.mapAccumR fn exprs args
+    , canPull op || not (L.or (map fst negNodes)) =
+        case L.nub $ map fst negNodes of
+            [loose] ->
+                let (e2, n2) = addEdge expr1 $ Op dims op $ map snd negNodes
+                 in (e2, (loose, n2))
+            _ ->
+                error $
+                "HF.newFloatNeg differing signs for " ++ show (op, negNodes)
+    | Just (Var _ _) <- I.lookup node exprs = (exprs, (False, node))
+    | Just (DVar _ _) <- I.lookup node exprs = (exprs, (False, node))
+    | Just (Const _ _) <- I.lookup node exprs = (exprs, (False, node))
+    | Just (RelElem _ _ _) <- I.lookup node exprs =
+        error $ "HF.fn found RelElem " ++ (take 200 $ show exprs)
+    | True = error $ "HF.fn unhandled " ++ pretty' (exprs, node)
 
-  | Just (Var _ _) <- I.lookup node exprs
-  = (exprs,(False,node))
-
-  | Just (DVar _ _) <- I.lookup node exprs
-  = (exprs,(False,node))
-
-  | Just (Const _ _) <- I.lookup node exprs
-  = (exprs,(False,node))
-
-  | Just (RelElem _ _ _) <- I.lookup node exprs
-  = error $ "HF.fn found RelElem " ++ (take 200 $ show exprs)
-
-  | True
-  = error $ "HF.fn unhandled " ++ pretty' (exprs,node)
 {-
 
 
 -}
-floatNeg' (exprs,node) = floatNeg exprs node
+floatNeg' (exprs, node) = floatNeg exprs node
+
 floatNeg exprs node
-  | Just (Op dims (Compound l) args) <- I.lookup node exprs
-  = let  (exprTry,tryPull) = L.mapAccumR floatNeg exprs args
-    in mt ("~~compound~~~" ++ (show $ zip args tryPull)) $ if tryPull == args then mt "no" (exprs,node)
-       else addEdge exprTry $ Op dims (Compound l) tryPull
-
-  | Just (Op dims Sum args) <- I.lookup node exprs
-  = let  (exprTry,tryPull) = L.mapAccumR pullNeg exprs args
-
-         Scalar (Expression nN nE) =
-           sum $ zipWith3 (\ idx a b -> (if a == b then id else negate) $ relElem0 idx a)
-                                     [0..]
-                                     args
-                                     tryPull
-         (sE,sN) = simplify' (nE,nN)
-
-         relElem0 idx arg = relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
-
-
-    in mt ("~~sum~~~" ++ (show $ zip args tryPull)) $ if tryPull == args then mt "no" (exprs,node)
-       else addEdge exprTry $ mkSCZ dims (Expression sN sE) tryPull
-
-  | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs
-  = let  (fltdE,fltdArgs) = L.mapAccumR floatNeg exprs args
-
-         (exprTry,tryPull) = L.mapAccumR pullNeg fltdE fltdArgs
-
-         xchSign 0 (try:_) (arg:_) = try == arg
-         xchSign idx (_:trys) (_:rest) = xchSign (idx-1) trys rest
-         xchSign a b c = error $ "F.floatNeg.xchSign "++show(a,b,c) ++ (pretty (exprs, node))
-
-         (newE,newN) = rewrite se sn
-
-         rewrite e0 head
-           | Just (Op dims op args) <- I.lookup head e0
-           = let (e1,newAs) = L.mapAccumR rewrite e0 args
-             in addEdge e1 $ Op dims op newAs
-
-           | Just (RelElem idx _bnd _off) <- I.lookup head e0
-           = if xchSign idx tryPull fltdArgs
-             then addEdge e0 $ Op Dim0 Neg [head]
-             else (e0,head)
-
-           | True     = (e0,head)
-
-    in mt ("~~~scz~~~" ++ (show $ zip args tryPull)) $ if tryPull == args then mt "no" (exprs,node)
-       else addEdge exprTry $ mkSCZ dims (Expression newN newE) tryPull
-
+    | Just (Op dims (Compound l) args) <- I.lookup node exprs =
+        let (exprTry, tryPull) = L.mapAccumR floatNeg exprs args
+         in mt ("~~compound~~~" ++ (show $ zip args tryPull)) $
+            if tryPull == args
+                then mt "no" (exprs, node)
+                else addEdge exprTry $ Op dims (Compound l) tryPull
+    | Just (Op dims Sum args) <- I.lookup node exprs =
+        let (exprTry, tryPull) = L.mapAccumR pullNeg exprs args
+            Scalar (Expression nN nE) =
+                sum $
+                zipWith3
+                    (\idx a b ->
+                         (if a == b
+                              then id
+                              else negate) $
+                         relElem0 idx a)
+                    [0 ..]
+                    args
+                    tryPull
+            (sE, sN) = simplify' (nE, nN)
+            relElem0 idx arg =
+                relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
+         in mt ("~~sum~~~" ++ (show $ zip args tryPull)) $
+            if tryPull == args
+                then mt "no" (exprs, node)
+                else addEdge exprTry $ mkSCZ dims (Expression sN sE) tryPull
+    | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs =
+        let (fltdE, fltdArgs) = L.mapAccumR floatNeg exprs args
+            (exprTry, tryPull) = L.mapAccumR pullNeg fltdE fltdArgs
+            xchSign 0 (try:_) (arg:_) = try == arg
+            xchSign idx (_:trys) (_:rest) = xchSign (idx - 1) trys rest
+            xchSign a b c =
+                error $
+                "F.floatNeg.xchSign " ++
+                show (a, b, c) ++ (pretty (exprs, node))
+            (newE, newN) = rewrite se sn
+            rewrite e0 head
+                | Just (Op dims op args) <- I.lookup head e0 =
+                    let (e1, newAs) = L.mapAccumR rewrite e0 args
+                     in addEdge e1 $ Op dims op newAs
+                | Just (RelElem idx _bnd _off) <- I.lookup head e0 =
+                    if xchSign idx tryPull fltdArgs
+                        then addEdge e0 $ Op Dim0 Neg [head]
+                        else (e0, head)
+                | True = (e0, head)
+         in mt ("~~~scz~~~" ++ (show $ zip args tryPull)) $
+            if tryPull == args
+                then mt "no" (exprs, node)
+                else addEdge exprTry $ mkSCZ dims (Expression newN newE) tryPull
   -- keep looking for SCZs lower down
-  | Just (Op dims op args) <- I.lookup node exprs
-  = let (newE,newArgs) = L.mapAccumR floatNeg exprs args
-    in mt ("~~op~~" ++ (show $ zip args newArgs)) $ if newArgs == args then (exprs,node)
-       else addEdge newE $ Op dims op newArgs
-
+    | Just (Op dims op args) <- I.lookup node exprs =
+        let (newE, newArgs) = L.mapAccumR floatNeg exprs args
+         in mt ("~~op~~" ++ (show $ zip args newArgs)) $
+            if newArgs == args
+                then (exprs, node)
+                else addEdge newE $ Op dims op newArgs
   -- nothing more to look for
-  | True = (exprs,node)
+    | True = (exprs, node)
 
 pullNeg exprs node
-  | Just (Op _ Neg [arg]) <- I.lookup node exprs
-  = mt "neg" $ (exprs,arg)
+    | Just (Op _ Neg [arg]) <- I.lookup node exprs = mt "neg" $ (exprs, arg)
+    | Just (Op dims op args) <- I.lookup node exprs
+    , canPull op
+    , (pulledE, pulledArgs) <- L.mapAccumR pullNeg exprs args =
+        if L.or $ zipWith (==) args pulledArgs
+            then mt ("not " ++ (show op)) $ (exprs, node) -- couldn't pull negate out of all args
+            else mt ("pulled " ++ show (op, args, pulledArgs)) $
+                 addEdge pulledE $ Op dims op pulledArgs
+    | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ (show x)) (exprs, node)
 
-  | Just (Op dims op args) <- I.lookup node exprs
-  , canPull op
-  , (pulledE,pulledArgs) <- L.mapAccumR pullNeg exprs args
-  = if L.or $ zipWith (==) args pulledArgs
-    then mt ("not "++(show op)) $ (exprs,node) -- couldn't pull negate out of all args
-    else mt ("pulled "++show (op,args,pulledArgs)) $ addEdge pulledE $ Op dims op pulledArgs
-
-  | x <- I.lookup node exprs = mt ("@@@@@@@@"++(show x)) (exprs,node)
-
-canPull RealPart = True
-canPull ImagPart = True
-canPull RealImag = True
-canPull (Project _) = True
-canPull (Inject _) = True
-canPull (PFT _ _) = True
+canPull RealPart      = True
+canPull ImagPart      = True
+canPull RealImag      = True
+canPull (Project _)   = True
+canPull (Inject _)    = True
+canPull (PFT _ _)     = True
 canPull (Transpose _) = True
-canPull (Compound _) = True
-canPull x = mt ("couldn't pull "++show x) False
+canPull (Compound _)  = True
+canPull x             = mt ("couldn't pull " ++ show x) False
+
 {-
 
 
 -}
-factorNeg (exprs,node)
-  | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
-  , negArgs <- catMaybes $ map (M.negate exprs) args
-  , length negArgs == length args
-  = tf "factor Neg out of sum" $
-    pushNegIntoConst $ factor' $ (sumE negArgs) exprs
+factorNeg (exprs, node)
+    | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
+    , negArgs <- catMaybes $ map (M.negate exprs) args
+    , length negArgs == length args =
+        tf "factor Neg out of sum" $
+        pushNegIntoConst $ factor' $ (sumE negArgs) exprs
+    | Just (Op dims op args) <- I.lookup node exprs
+    , (newExprs, newArgs) <- L.mapAccumR (curry factorNeg) exprs args
+    , newArgs /= args = addEdge newExprs $ Op dims op newArgs
+    | True = (exprs, node)
 
-  | Just (Op dims op args) <- I.lookup node exprs
-  , (newExprs,newArgs) <- L.mapAccumR (curry factorNeg) exprs args
-  , newArgs /= args
-  = addEdge newExprs $ Op dims op newArgs
-
-  | True = (exprs,node)
 {-
 
 -}
-pushNegIntoConst (exprs,node)
-  | Just (Op Dim0 Neg [arg]) <- I.lookup node exprs
-  , Just (Const Dim0 d) <- I.lookup arg exprs
-  = addEdge exprs $ Const Dim0 (-d)
+pushNegIntoConst (exprs, node)
+    | Just (Op Dim0 Neg [arg]) <- I.lookup node exprs
+    , Just (Const Dim0 d) <- I.lookup arg exprs =
+        addEdge exprs $ Const Dim0 (-d)
+    | Just (Op Dim0 Neg [arg]) <- I.lookup node exprs
+    , Just (Op Dim0 Prod args) <- I.lookup arg exprs
+    , consts <- concatMap getConst $ map (flip I.lookup exprs) args
+    , nonConsts <-
+         map sourceNode $ filter (not . isConst . flip I.lookup exprs) args
+    , not $ null consts =
+        (prodE
+             ((\e -> addEdge e $ Const Dim0 $ L.product $ (-1) : consts) :
+              nonConsts))
+            exprs
+    | Just (Op dims op args) <- I.lookup node exprs
+    , (newExprs, newArgs) <- L.mapAccumR (curry pushNegIntoConst) exprs args
+    , newArgs /= args = addEdge newExprs $ Op dims op newArgs
+    | True = (exprs, node)
 
-  | Just (Op Dim0 Neg [arg]) <- I.lookup node exprs
-  , Just (Op Dim0 Prod args) <- I.lookup arg exprs
-  , consts <- concatMap getConst $ map (flip I.lookup exprs) args
-  , nonConsts <- map sourceNode $ filter (not . isConst . flip I.lookup exprs) args
-  , not $ null consts
-  = (prodE ((\ e-> addEdge e $ Const Dim0 $ L.product $ (-1):consts):nonConsts)) exprs
-
-  | Just (Op dims op args) <- I.lookup node exprs
-  , (newExprs,newArgs) <- L.mapAccumR (curry pushNegIntoConst) exprs args
-  , newArgs /= args
-  = addEdge newExprs $ Op dims op newArgs
-
-  | True = (exprs,node)
 {-
 
 
 -}
-factor' (exprs,node)
+factor' (exprs, node)
   -- * factor out common factors in sums of products
   -- - Sum(x*y,x*z) -> Prod(x,Sum(y+z))
-  | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
-  , L.or $ map ((Nothing /= ) . M.prod exprs) args
-  = tf "factor prod out of sum" $
-    let  prodArgsOrSelf arg = case I.lookup arg exprs of
-                                Just (Op _ Prod argArgs) -> argArgs
-                                _ -> [arg]
-
+    | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
+    , L.or $ map ((Nothing /=) . M.prod exprs) args =
+        tf "factor prod out of sum" $
+        let prodArgsOrSelf arg =
+                case I.lookup arg exprs of
+                    Just (Op _ Prod argArgs) -> argArgs
+                    _                        -> [arg]
          -- factor the products greedily, factoring out the most common factor each time
-         f [] = []
-         f [[]] = []
-         f argSets = case (ones,hasNot) of
-                      ([],[]) -> mostCommon' : had
-                      _ -> [sumE $ notNull $ possibleConst ++ [hadProd] ++ possibleNot]
-           where
-             mostCommon' = sourceNode mostCommon
-             mostCommon = fst
-                        $ L.maximumBy (\ x y -> compare (snd x) (snd y))
-                        $ I.toList
-                        $ I.fromListWith (+) $ zip (concat argSets) (repeat 1)
-             (ones,proper) = L.partition null argSets
-             possibleConst = case ones of [] -> []; _ -> [fromRational $ fromIntegral $ length ones]
-             (has,hasNot) = L.partition (mostCommon `L.elem`) proper
-             possibleNot = case f hasNot of [] -> []; something -> [prodE something]
-             had = f $ map (L.delete mostCommon) has
-             hadProd = case had of
-                         [] -> mostCommon'
-                         _ -> mostCommon' * (prodE had)
-             notNull x = if null x then error $ "factor null" ++ show (ones,map (L.delete mostCommon) has,hasNot)
-                           else x
-
-    in tf "distribute prod inside sum" $ prodE (f $ map prodArgsOrSelf args) exprs
-
+            f [] = []
+            f [[]] = []
+            f argSets =
+                case (ones, hasNot) of
+                    ([], []) -> mostCommon' : had
+                    _ ->
+                        [ sumE $
+                          notNull $ possibleConst ++ [hadProd] ++ possibleNot
+                        ]
+              where
+                mostCommon' = sourceNode mostCommon
+                mostCommon =
+                    fst $
+                    L.maximumBy (\x y -> compare (snd x) (snd y)) $
+                    I.toList $
+                    I.fromListWith (+) $ zip (concat argSets) (repeat 1)
+                (ones, proper) = L.partition null argSets
+                possibleConst =
+                    case ones of
+                        [] -> []
+                        _  -> [fromRational $ fromIntegral $ length ones]
+                (has, hasNot) = L.partition (mostCommon `L.elem`) proper
+                possibleNot =
+                    case f hasNot of
+                        []        -> []
+                        something -> [prodE something]
+                had = f $ map (L.delete mostCommon) has
+                hadProd =
+                    case had of
+                        [] -> mostCommon'
+                        _  -> mostCommon' * (prodE had)
+                notNull x =
+                    if null x
+                        then error $
+                             "factor null" ++
+                             show (ones, map (L.delete mostCommon) has, hasNot)
+                        else x
+         in tf "distribute prod inside sum" $
+            prodE (f $ map prodArgsOrSelf args) exprs
   --FIXME this catches sums of |RelElem|s but not general linear combinations (or maybe not)
   --FIXME this catches maps but not SCZs with non-zero offsets
   --FIXME extract garbage-collection function from simplify and apply it here for unused args
-  | Just (Op dims (SCZ (Expression sn se)) args) <- mt "preSCZ" $ I.lookup node exprs
-  = let  (sczE,sczN) = factor' (se,sn)
+    | Just (Op dims (SCZ (Expression sn se)) args) <-
+         mt "preSCZ" $ I.lookup node exprs =
+        let (sczE, sczN) = factor' (se, sn)
+            offset =
+                case dims of
+                    Dim1 _ -> [0]
+                    Dim2 _ -> [0, 0]
+                    Dim3 _ -> [0, 0, 0]
+                    _      -> error "factor SCZ dims"
+            replacements =
+                zipWith
+                    (\(oldN, cs) newIdx -> (oldN, (cs, newIdx)))
+                    (L.nub $ L.sort $ commonSummands sczN)
+                    [(length args) ..]
+            rewrite newE head
+                | Just (_cs, newIdx) <- lookup head replacements =
+                    tf "." $ addEdge newE (RelElem newIdx ZeroMargin offset) {-doesn't matter-}
+                | Just (Op dims op args) <- I.lookup head sczE =
+                    let (e1, newAs) = L.mapAccumR rewrite newE args
+                     in tf ("rewrite op" ++ show op) $
+                        addEdge e1 $ Op dims op newAs
+                | Just x <- I.lookup head sczE = tf (show x) $ addEdge newE x
+                | True = error "factor rewrite can't happen"
+            (rewrittenE, rewrittenN) = rewrite I.empty sczN
+            (newExprs, argsToAdd) =
+                mt ("replacements " ++ show replacements) $
+                L.mapAccumR addCommon exprs replacements
+            usedIdxs = map fst $ L.nub $ L.sort $ relElems rewrittenE rewrittenN
+            usedArgs =
+                map snd $
+                filter ((`elem` usedIdxs) . fst) $
+                zip [0 ..] $ args ++ (map snd argsToAdd)
+            (newSCZe, newSCZn) =
+                let remap = I.fromList $ zip usedIdxs [0 ..]
+                    rewrite newE head
+                        | Just (RelElem idx _bdy offset) <-
+                             I.lookup head rewrittenE =
+                            case I.lookup idx remap of
+                                Just newIdx ->
+                                    tf "." $
+                                    addEdge
+                                        newE
+                                        (RelElem newIdx ZeroMargin offset) {-doesn't matter-}
+                                _ ->
+                                    error $
+                                    "factor newSCZ found idx we shouln't have " ++
+                                    show (idx, remap)
+                        | Just (Op dims op as) <- I.lookup head rewrittenE =
+                            let (e1, nargs) = L.mapAccumR rewrite newE as
+                             in tf (show op) $ addEdge e1 $ Op dims op nargs
+                        | Just x <- I.lookup head rewrittenE =
+                            tf (show x) $ addEdge newE x
+                        | True = error "factor rewrite can't happen2"
+                 in tf ("rewrite2" ++ show usedIdxs) $
+                    rewrite I.empty rewrittenN
+            addCommon es (_oldN, (cs, newIdx)) =
+                case commonTop es cs of
+                    Just (ec, en) -> (ec, (newIdx, en))
+                    _ ->
+                        error $
+                        ("HF.factor.addCommon " ++) $
+                        (show (commonSummands sczN) ++) $
+                        ("\n" ++) $
+                        (pretty (sczE, sczN) ++) $
+                        (show (sczE, sczN) ++) $
+                        ("\n" ++) $
+                        (show es ++) $
+                        ("\n" ++) $
+                        (show cs ++) $
+                        ("\n" ++) $ unlines $ map (curry pretty' es) cs
+            commonSummands node
+                | Just (Op _dims Sum summands) <- I.lookup node sczE
+                , L.and $ map (nodeIsRelElem sczE) summands =
+                    let idxNs = relElemZeroOffsets sczE node
+                        argMap = I.fromList $ zip [0 ..] args
+                        toSum =
+                            map
+                                (\(i, _) ->
+                                     I.findWithDefault
+                                         (error "factor' commonSummands idx")
+                                         i
+                                         argMap)
+                                idxNs
+                     in [(node, toSum)]
+                | Just (Op _ _op opArgs) <- I.lookup node sczE =
+                    mt "=" $ concatMap commonSummands opArgs
+                | True = []
+         in tf (unlines
+                    [ "SCZ"
+                    , pretty (rewrittenE, rewrittenN)
+                    , pretty (sczE, sczN)
+                    , show replacements
+                    , show $ L.nub $ L.sort $ relElems rewrittenE rewrittenN
+                    ]) $
+            addEdge newExprs $
+            mkSCZ
+                dims
+                (Expression newSCZn newSCZe)
+                (mt (show $ usedArgs) $ usedArgs)
+    | Just (Op dims op args) <- mt "preOp" $ I.lookup node exprs
+    , (exprs1, newArgs) <- L.mapAccumR (curry factor') exprs args
+    , args /= newArgs = tf "Op" $ addEdge exprs1 $ Op dims op newArgs
+    | True = tf "True" $ (exprs, node)
 
-         offset = case dims of Dim1 _ -> [0]; Dim2 _ -> [0,0]; Dim3 _ -> [0,0,0]; _ -> error "factor SCZ dims"
-
-         replacements = zipWith  (\ (oldN,cs) newIdx -> (oldN,(cs,newIdx)))
-                                 (L.nub $ L.sort $ commonSummands sczN)
-                                 [(length args) ..]
-
-         rewrite newE head
-           | Just (_cs,newIdx) <- lookup head replacements
-           = tf "." $ addEdge newE (RelElem newIdx ZeroMargin {-doesn't matter-} offset)
-
-           | Just (Op dims op args) <- I.lookup head sczE
-           = let (e1,newAs) = L.mapAccumR rewrite newE args
-             in tf ("rewrite op" ++ show op) $ addEdge e1 $ Op dims op newAs
-
-           | Just x <- I.lookup head sczE
-           = tf (show x) $ addEdge newE x
-
-           | True
-           = error "factor rewrite can't happen"
-
-         (rewrittenE,rewrittenN) = rewrite I.empty sczN
-
-         (newExprs,argsToAdd) = mt ("replacements "++ show replacements) $ L.mapAccumR addCommon exprs replacements
-
-         usedIdxs = map fst $ L.nub $ L.sort $ relElems rewrittenE rewrittenN
-         usedArgs = map snd $ filter ((`elem` usedIdxs) . fst)
-                            $ zip [0..]
-                            $ args ++ (map snd argsToAdd)
-         (newSCZe,newSCZn) =
-           let
-             remap = I.fromList $ zip usedIdxs [0..]
-             rewrite newE head
-               | Just (RelElem idx _bdy offset) <- I.lookup head rewrittenE
-               = case I.lookup idx remap of
-                   Just newIdx -> tf "." $ addEdge newE (RelElem newIdx ZeroMargin {-doesn't matter-} offset)
-                   _ -> error $ "factor newSCZ found idx we shouln't have "++show(idx,remap)
-
-               | Just (Op dims op as) <- I.lookup head rewrittenE
-               = let (e1,nargs) = L.mapAccumR rewrite newE as
-                 in tf (show op) $ addEdge e1 $ Op dims op nargs
-
-               | Just x <- I.lookup head rewrittenE
-               = tf (show x) $ addEdge newE x
-
-               | True
-               = error "factor rewrite can't happen2"
-           in
-             tf ("rewrite2"++show usedIdxs) $ rewrite I.empty rewrittenN
-
-         addCommon es (_oldN,(cs,newIdx)) = case commonTop es cs of
-                                                Just (ec,en) -> (ec,(newIdx,en))
-                                                _ -> error $ ("HF.factor.addCommon "++)
-                                                           $ (show (commonSummands sczN)++)
-                                                           $ ("\n"++) $ (pretty (sczE,sczN)++) $ (show (sczE,sczN)++)
-                                                           $ ("\n"++) $ (show es++)
-                                                           $ ("\n"++) $ (show cs++)
-                                                           $ ("\n"++) $ unlines $ map (curry pretty' es) cs
-
-         commonSummands node
-           | Just (Op _dims Sum summands) <- I.lookup node sczE
-           , L.and $ map (nodeIsRelElem sczE) summands
-           = let
-               idxNs = relElemZeroOffsets sczE node
-               argMap = I.fromList $ zip [0..] args
-               toSum = map
-                 (\ (i,_) -> I.findWithDefault (error "factor' commonSummands idx") i argMap) idxNs
-             in
-               [(node,toSum)]
-
-           | Just (Op _ _op opArgs) <- I.lookup node sczE
-           = mt "=" $ concatMap commonSummands opArgs
-
-           | True       = []
-
-    in tf (unlines ["SCZ",pretty (rewrittenE,rewrittenN),pretty (sczE,sczN),show replacements
-                   ,show $ L.nub $ L.sort $ relElems rewrittenE rewrittenN]) $
-      addEdge newExprs $ mkSCZ dims (Expression newSCZn newSCZe) (mt (show $ usedArgs) $ usedArgs)
-
-  | Just (Op dims op args) <- mt "preOp" $ I.lookup node exprs
-  , (exprs1,newArgs) <- L.mapAccumR (curry factor') exprs args
-  , args /= newArgs
-  = tf "Op" $ addEdge exprs1 $ Op dims op newArgs
-
-  | True
-  = tf "True" $ (exprs,node)
 {-
 
 FIXME : fails with
@@ -398,67 +460,80 @@ FIXME : this doesn't optimize for fmas
 
 FIXME:  This comment copied with code from HS:  if we ever want to use this, make sure it doesn't push sums into nonlinear SCZs and other nonlinear operations
 -}
-commonTop :: Internal -> [Node] -> Maybe(Internal,Node)
-commonTop exprs summands = mt "preCommonTop" $
-  let
-    (exprs1,newSummands) = L.mapAccumR pushSum exprs $ L.groupBy sameOp
-                                $ L.sort $ map (getOp . dS) summands
-    pushSum :: Internal -> [(Maybe (OpId,Node),(Bool,Either Node Double,Node),Node)] -> (Internal,Node)
-    pushSum _ [] = error "pushSum"
-    pushSum e [(_,_,origNode)] = (e,origNode)
-    pushSum e twoOrMore@((Just (op,_),_,_):_) = let
-        (e1,newSum) = case commonTop e $ map (snd . ($e)) (zipWith makeNeg twoOrMore $ map scaleBy twoOrMore) of
-                          Just x -> x
-                          _ -> simplify' $ ( sumE $ zipWith makeNeg twoOrMore $ map scaleBy twoOrMore ) e
-        makeNeg (_,(True,_,_),_) c = negate c
-        makeNeg (_,(False,_,_),_) c = c
-
-        scaleBy :: (Maybe (OpId,Node),(Bool,Either Node Double,Node),Node) -> (Internal -> (Internal,Node))
-        scaleBy (Just (_,arg),(_,Left sn,_),_) = (sourceNode sn) `scale` (sourceNode arg)
-        scaleBy (Just (_,arg),(_,Right 1,_),_) = sourceNode arg
-        scaleBy (Just (_,arg),(_,Right d,_),_) = (mkConst Dim0 d) `scale` (sourceNode arg)
-        scaleBy _ = error "commonTop.scaleBy impossible"
-
-      in
-        addEdgeD e1 op [newSum]
+commonTop :: Internal -> [Node] -> Maybe (Internal, Node)
+commonTop exprs summands =
+    mt "preCommonTop" $
+    let (exprs1, newSummands) =
+            L.mapAccumR pushSum exprs $
+            L.groupBy sameOp $ L.sort $ map (getOp . dS) summands
+        pushSum ::
+               Internal
+            -> [(Maybe (OpId, Node), (Bool, Either Node Double, Node), Node)]
+            -> (Internal, Node)
+        pushSum _ [] = error "pushSum"
+        pushSum e [(_, _, origNode)] = (e, origNode)
+        pushSum e twoOrMore@((Just (op, _), _, _):_) =
+            let (e1, newSum) =
+                    case commonTop e $
+                         map
+                             (snd . ($e))
+                             (zipWith makeNeg twoOrMore $ map scaleBy twoOrMore) of
+                        Just x -> x
+                        _ ->
+                            simplify' $
+                            (sumE $
+                             zipWith makeNeg twoOrMore $ map scaleBy twoOrMore)
+                                e
+                makeNeg (_, (True, _, _), _) c  = negate c
+                makeNeg (_, (False, _, _), _) c = c
+                scaleBy ::
+                       ( Maybe (OpId, Node)
+                       , (Bool, Either Node Double, Node)
+                       , Node)
+                    -> (Internal -> (Internal, Node))
+                scaleBy (Just (_, arg), (_, Left sn, _), _) =
+                    (sourceNode sn) `scale` (sourceNode arg)
+                scaleBy (Just (_, arg), (_, Right 1, _), _) = sourceNode arg
+                scaleBy (Just (_, arg), (_, Right d, _), _) =
+                    (mkConst Dim0 d) `scale` (sourceNode arg)
+                scaleBy _ = error "commonTop.scaleBy impossible"
+             in addEdgeD e1 op [newSum]
         -- FIXME Op (getDimE e1 newSum) op [newSum] is dangerous, because dimensions change
-    pushSum _ _ = error "commonTop pushSum"
-
-    sameOp (Just (op1,_),_,_) (Just (op2,_),_,_) = op1 == op2
-    sameOp _ _ = False
-
+        pushSum _ _ = error "commonTop pushSum"
+        sameOp (Just (op1, _), _, _) (Just (op2, _), _, _) = op1 == op2
+        sameOp _ _                                         = False
     -- find the nodes which come from linear operations
-    getOp :: ((a,b,Node),c) -> (Maybe (OpId,Node),(a,b,Node),c)
-    getOp ((a,b,n),c)
-      | Just (Op _ op [arg]) <- I.lookup n exprs
-      , linearOp op
-      = (Just (op,arg), (a,b,n), c)
-
-      | True
-      = (Nothing, (a,b,n), c)
-
-    dS :: Node -> ((Bool,Either Node Double,Node),Node)
-    dS n = disassociateScale False n n
-
-    disassociateScale :: Bool -> Node -> Node -> ((Bool,Either Node Double,Node),Node)
-    disassociateScale isNeg origFactor factor
-      = case I.lookup factor exprs of
-          Just (Op _dims Neg [newFactor]) -> disassociateScale (not isNeg) origFactor newFactor
+        getOp :: ((a, b, Node), c) -> (Maybe (OpId, Node), (a, b, Node), c)
+        getOp ((a, b, n), c)
+            | Just (Op _ op [arg]) <- I.lookup n exprs
+            , linearOp op = (Just (op, arg), (a, b, n), c)
+            | True = (Nothing, (a, b, n), c)
+        dS :: Node -> ((Bool, Either Node Double, Node), Node)
+        dS n = disassociateScale False n n
+        disassociateScale ::
+               Bool -> Node -> Node -> ((Bool, Either Node Double, Node), Node)
+        disassociateScale isNeg origFactor factor =
+            case I.lookup factor exprs of
+                Just (Op _dims Neg [newFactor]) ->
+                    disassociateScale (not isNeg) origFactor newFactor
           -- from earlier rules we know we cannot get zeros, and we only have one const @ end
-          Just (Op _dims ScaleV [a,b]) ->
-            case I.lookup a exprs of
-              Just (Const Dim0 m) -> ((isNeg,Right m, b),origFactor)
-              _ -> ((isNeg,Left a,factor),origFactor)
-          _ -> ((isNeg,Right 1,factor),origFactor)
+                Just (Op _dims ScaleV [a, b]) ->
+                    case I.lookup a exprs of
+                        Just (Const Dim0 m) -> ((isNeg, Right m, b), origFactor)
+                        _ -> ((isNeg, Left a, factor), origFactor)
+                _ -> ((isNeg, Right 1, factor), origFactor)
+     in if length summands /= length newSummands
+            then mt ("Common " ++ show (newSummands, summands)) $
+                 Just
+                     (case newSummands of
+                          [x] -> (exprs1, x)
+                          _   -> (sumE $ map sourceNode newSummands) exprs1)
+            else mt (unlines $
+                     ("nonCommon " ++
+                      show (newSummands, summands, map (getOp . dS) summands)) :
+                     (map (pretty' . (exprs1, )) newSummands))
+                     Nothing
 
-  in
-    if length summands /= length newSummands then
-        mt ("Common "++ show (newSummands,summands))  $ Just (case newSummands of
-                [x] -> (exprs1,x)
-                _ -> (sumE $ map sourceNode newSummands) exprs1
-             )
-      else
-        mt (unlines $ ("nonCommon "++ show (newSummands,summands,map (getOp . dS) summands)) :(map (pretty' . (exprs1,)) newSummands)) Nothing
 {-
 
 %\begin{code}
@@ -493,12 +568,10 @@ simplifySCZ (exprs,node)
 linOpDepth exprs node = lOD 0 node
   where
     lOD d n
-      | Just (Op _ op args) <- I.lookup n exprs
-      , linearOp op
-      = L.maximum $ map (lOD (d+1)) args
+        | Just (Op _ op args) <- I.lookup n exprs
+        , linearOp op = L.maximum $ map (lOD (d + 1)) args
+        | True = d
 
-      | True
-      = d
 {-
 
 Rewrite SCZs into a standard form (so we don't generate redundant code).
@@ -506,51 +579,59 @@ Since we can reorder the arguments of the SCZ, we can rename the |RelElem|s.
 The normal form will the be the one with the smallest hash value,
 and if values are the same, then the one with the smaller expression map.
 -}
-normalizeSCZ :: ExpressionEdge -> (Expression,[Node])
-normalizeSCZ (Op _dims (SCZ (Expression sczN sczE)) args) =
-    let  -- map relElems to compressed subset, otherwise don't remap
-         reMapVar remap (RelElem idx b o)
-           | Just newIdx <- L.lookup (-idx-1) remap
-           = RelElem newIdx b o
-         reMapVar _ x = x
-
-         inputIdxs = L.nub $ L.sort $ map fst $ relElems sczE sczN
-         idxInputPairs = filter (\ (a,_b) -> a `elem` inputIdxs) $ zip [0..] args
-
-
-         ((newN,newE),newArgs):_ = L.sort
-               [((\ (e,n) -> (n,e)) $ recreate $ factor' $ simplify' $
-                   simpRewrite (reMapVar $ zip (map fst iip) [0..]) (sczE,sczN)
-                ,map snd iip
-                )
-               | iip <- L.permutations idxInputPairs]
-
-    in (Expression newN newE, newArgs)
-
+normalizeSCZ :: ExpressionEdge -> (Expression, [Node])
+normalizeSCZ (Op _dims (SCZ (Expression sczN sczE)) args)
+         -- map relElems to compressed subset, otherwise don't remap
+ =
+    let reMapVar remap (RelElem idx b o)
+            | Just newIdx <- L.lookup (-idx - 1) remap = RelElem newIdx b o
+        reMapVar _ x = x
+        inputIdxs = L.nub $ L.sort $ map fst $ relElems sczE sczN
+        idxInputPairs =
+            filter (\(a, _b) -> a `elem` inputIdxs) $ zip [0 ..] args
+        ((newN, newE), newArgs):_ =
+            L.sort
+                [ ( (\(e, n) -> (n, e)) $
+                    recreate $
+                    factor' $
+                    simplify' $
+                    simpRewrite
+                        (reMapVar $ zip (map fst iip) [0 ..])
+                        (sczE, sczN)
+                  , map snd iip)
+                | iip <- L.permutations idxInputPairs
+                ]
+     in (Expression newN newE, newArgs)
 normalizeSCZ x = error $ "HF.normalizeSCZ not implemented: " ++ show x
+
 {-
 
 
 -}
-normalizeSCZs (exprs0,node)
+normalizeSCZs (exprs0, node)
   -- * remove unused inputs from SCZs expressions and normalize
   -- - SCZ( f r0 r2 )[x,y,z] -> SCZ( f r1 r0 )[z,x]
-  | Just (Op dims (SCZ (Expression sczN sczE)) oldInputs) <- I.lookup node exprs0
-  , (exprs,inputs) <- L.mapAccumR (curry $ normalizeSCZs) exprs0 oldInputs
-  , (newSCZE,newInputs) <- normalizeSCZ (mkSCZ dims (Expression sczN sczE) inputs)
-  = trace ("normalsizeSCZ "++show (zip oldInputs inputs) ++ show newInputs) $ addEdge exprs $ mkSCZ dims newSCZE newInputs
-
+    | Just (Op dims (SCZ (Expression sczN sczE)) oldInputs) <-
+         I.lookup node exprs0
+    , (exprs, inputs) <- L.mapAccumR (curry $ normalizeSCZs) exprs0 oldInputs
+    , (newSCZE, newInputs) <-
+         normalizeSCZ (mkSCZ dims (Expression sczN sczE) inputs) =
+        trace
+            ("normalsizeSCZ " ++ show (zip oldInputs inputs) ++ show newInputs) $
+        addEdge exprs $ mkSCZ dims newSCZE newInputs
   -- * if no simplification was applied to this node, then simplify args
   -- - f x, f \in [+,*] -> f (simplify x)
-  | Just (Op dims op args) <- I.lookup node exprs0
+    | Just (Op dims op args) <- I.lookup node exprs0
     -- and sort the args for |Sum|s and |Prod|s
-  = trace ("normalize op "++show op)
-  $ let (e,simpArgs) = (if op `elem` [Sum,Prod] then nodeSort else id)
-                          $ L.mapAccumR (curry $ normalizeSCZs) exprs0 args
-    in addEdge e $ Op dims op simpArgs
-
-normalizeSCZs (exprs,node) = (exprs,node)
-{-
+     =
+        trace ("normalize op " ++ show op) $
+        let (e, simpArgs) =
+                (if op `elem` [Sum, Prod]
+                     then nodeSort
+                     else id) $
+                L.mapAccumR (curry $ normalizeSCZs) exprs0 args
+         in addEdge e $ Op dims op simpArgs
+normalizeSCZs (exprs, node) = (exprs, node){-
 
 
 -- find a linear combination of RelElems, and look for a common top of _linear_ operations
