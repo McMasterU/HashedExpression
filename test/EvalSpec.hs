@@ -877,84 +877,79 @@ Things which should be zero.  Taking derivative with respect to variables not pr
 -}
 {-
 -}
-
-regressionTestEval1 =
-    sequence
-        [ putStrLn "evalTest0_0"
-        , quickCheck evalTest0_0
-        , putStrLn "evalTest0_1"
-        , quickCheck evalTest0_1
-        , putStrLn "evalTest0_2"
-        , quickCheck evalTest0_2
-        , putStrLn "evalTest0_3"
-        , quickCheck evalTest0_3
-        , putStrLn "evalTest0_4"
-        , quickCheck evalTest0_4
-        , putStrLn "evalTest0_5"
-        , quickCheck evalTest0_5
-        , putStrLn "evalTest0_1b"
-        , quickCheck evalTest0_1b
-        , putStrLn "evalTest0_7"
-        , quickCheck evalTest0_7
-        , putStrLn "evalTest0_8"
-        , quickCheck evalTest0_8
-        , putStrLn "evalTest1_0"
-        , quickCheck evalTest1_0
-        , putStrLn "evalTest1_1"
-        , quickCheck evalTest1_1
-        , putStrLn "evalTest1_2"
-        , quickCheck evalTest1_2
-        , putStrLn "evalTest1_3"
-        , quickCheck evalTest1_3
-        , putStrLn "evalTest1_4"
-        , quickCheck evalTest1_4
-        , putStrLn "evalTest1_5"
-        , quickCheck evalTest1_5
-        , putStrLn "evalTest1_6"
-        , quickCheck evalTest1_6
-        , putStrLn "evalTest1_7"
-        , quickCheck evalTest1_7
-        , putStrLn "evalTest1_8"
-        , quickCheck evalTest1_8
-        , putStrLn "evalTest2_0"
-        , quickCheck evalTest2_0
-        , putStrLn "evalTest2_1"
-        , quickCheck evalTest2_1
-        , putStrLn "evalTest2_2"
-        , quickCheck evalTest2_2
-        , putStrLn "evalTest2_3"
-        , quickCheck evalTest2_3
-        , putStrLn "evalTest2_4"
-        , quickCheck evalTest2_4
-    --                      , putStrLn "evalTest2_6", quickCheck evalTest2_6
-        , putStrLn "evalTest2_7"
-        , quickCheck evalTest2_7
-        , putStrLn "evalTest2_8"
-        , quickCheck evalTest2_8
-        , putStrLn "evalTest3_0"
-        , quickCheck evalTest3_0
-        , putStrLn "evalTest3_1"
-        , quickCheck evalTest3_1
-        , putStrLn "evalTest3_2"
-        , quickCheck evalTest3_2
-        , putStrLn "evalTest3_3"
-        , quickCheck evalTest3_3
-        , putStrLn "evalTest3_4"
-        , quickCheck evalTest3_4
-        , putStrLn "evalTest3_5"
-        , quickCheck evalTest3_5
-        , putStrLn "evalTest3_6"
-        , quickCheck evalTest3_6
-        , putStrLn "evalTest3_7"
-        , quickCheck evalTest3_7
-        , putStrLn "evalTest3_8"
-        , quickCheck evalTest3_8
-        , putStrLn "evalTest4_1"
-        , quickCheck evalTest4_1
-        ]
-
 spec :: Spec
 spec =
-    describe "eval tests" $ do
-        specify "test 0" $ do
+    describe "eval test" $ do
+        specify "evalTest0_0" $
             property evalTest0_0
+        specify "evalTest0_1" $
+            property evalTest0_1
+        specify "evalTest0_2" $
+            property evalTest0_2
+        specify "evalTest0_3" $
+            property evalTest0_3
+        specify "evalTest0_4" $
+            property evalTest0_4
+        specify "evalTest0_5" $
+            property evalTest0_5
+        specify "evalTest0_1b" $
+            property evalTest0_1b
+        specify "evalTest0_7" $
+            property evalTest0_7
+        specify "evalTest0_8" $
+            property evalTest0_8
+        specify "evalTest1_0" $
+            property evalTest1_0
+        specify "evalTest1_1" $
+            property evalTest1_1
+        specify "evalTest1_2" $
+            property evalTest1_2
+        specify "evalTest1_3" $
+            property evalTest1_3
+        specify "evalTest1_4" $
+            property evalTest1_4
+        specify "evalTest1_5" $
+            property evalTest1_5
+        specify "evalTest1_6" $
+            property evalTest1_6
+        specify "evalTest1_7" $
+            property evalTest1_7
+        specify "evalTest1_8" $
+            property evalTest1_8
+        specify "evalTest2_0" $
+            property evalTest2_0
+        specify "evalTest2_1" $
+            property evalTest2_1
+        specify "evalTest2_2" $
+            property evalTest2_2
+        specify "evalTest2_3" $
+            property evalTest2_3
+        specify "evalTest2_4" $
+            property evalTest2_4
+        {-specify "evalTest2_6" $
+            property evalTest2_6-}
+        specify "evalTest2_7" $
+            property evalTest2_7
+        specify "evalTest2_8" $
+            property evalTest2_8
+        specify "evalTest3_0" $
+            property evalTest3_0
+        specify "evalTest3_1" $
+            property evalTest3_1
+        specify "evalTest3_2" $
+            property evalTest3_2
+        specify "evalTest3_3" $
+            property evalTest3_3
+        specify "evalTest3_4" $
+            property evalTest3_4
+        specify "evalTest3_5" $
+            property evalTest3_5
+        specify "evalTest3_6" $
+            property evalTest3_6
+        specify "evalTest3_7" $
+            property evalTest3_7
+        specify "evalTest3_8" $
+            property evalTest3_8
+        specify "evalTest4_1" $
+            property evalTest4_1
+        
