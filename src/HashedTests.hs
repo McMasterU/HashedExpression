@@ -2385,52 +2385,6 @@ evalTestC3_2 = evalThreeDC (ft (z3 +: y3)) $ subs ([],[],[],[("Z3", U.listArray 
 Show functions
 
 -}
-display1d :: U.UArray Int Double -> IO ()
-display1d a =
-    let (_0, b) = bounds a
-        l = [a ! i | i <- [0 .. b]]
-     in putStrLn (concat $ List.intersperse "\t" $ map show l)
-
-display2d :: U.UArray (Int, Int) Double -> IO ()
-display2d a =
-    let ((_0, _0'), (b1, b2)) = bounds a
-        l = [[a ! (i, j) | j <- [0 .. b2]] | i <- [0 .. b1]]
-     in putStrLn
-            (concat $
-             concat $
-             List.intersperse (["\n"]) $
-             map (List.intersperse "\t") $ map (map show) l)
-
-display3d :: U.UArray (Int, Int, Int) Double -> IO ()
-display3d a =
-    let ((_0, _0', _0''), (b1, b2, b3)) = bounds a
-        l =
-            [ [[a ! (i, j, k) | k <- [0 .. b3]] | j <- [0 .. b2]]
-            | i <- [0 .. b1]
-            ]
-     in putStrLn
-            (concat $
-             concat $
-             List.intersperse (["\n\n"]) $
-             concat $
-             List.intersperse ([["\n"]]) $
-             map (map (List.intersperse "\t")) $ map (map (map show)) l)
-
-display3dc :: Array (Int, Int, Int) (Data.Complex.Complex Double) -> IO ()
-display3dc a =
-    let ((_0, _0', _0''), (b1, b2, b3)) = bounds a
-        l =
-            [ [[a ! (i, j, k) | k <- [0 .. b3]] | j <- [0 .. b2]]
-            | i <- [0 .. b1]
-            ]
-     in putStrLn
-            (concat $
-             concat $
-             List.intersperse (["\n\n"]) $
-             concat $
-             List.intersperse ([["\n"]]) $
-             map (map (List.intersperse "\t")) $ map (map (map show)) l)
-
 {-
 
 \begin{comment}
