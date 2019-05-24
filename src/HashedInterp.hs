@@ -1,32 +1,34 @@
 {-
 Interpretation of Hashed Expressions.
 -}
-{-# LANGUAGE AllowAmbiguousTypes       #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module HashedInterp where
 
-import           HashedDerivative      ()
-import           HashedExpression
-import           HashedInstances       ()
+import HashedDerivative ()
+import HashedExpression
+import HashedInstances ()
 
-import           Data.Array.Unboxed    as U
+import Data.Array.Unboxed as U
+
 --import Maybe (isJust)
-import           Data.ByteString       (ByteString)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as C
-import           Data.IntMap           (IntMap)
-import qualified Data.IntMap           as I
-import qualified Data.List             as List
-import           Data.Map              (Map)
-import qualified Data.Map              as Map
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as I
+import qualified Data.List as List
+import Data.Map (Map)
+import qualified Data.Map as Map
 
-import           Data.Complex          as DC
+import Data.Complex as DC
+
 --import qualified Data.Array.IArray as IA
-import           Debug.Trace
+import Debug.Trace
 
 noWarn = trace "noWarn"
 
@@ -313,7 +315,7 @@ evalZeroD relEval (Expression node exprs) eMap =
             Just (Var Dim0 name) ->
                 case Map.lookup name (vm0 eMap) of
                     Nothing -> error $ "evalZeroD didn't find var " {-++ show (var,eMap)-}
-                    Just x  -> x
+                    Just x -> x
             Just e@(Var _dims _name) ->
                 error $ "evalZeroD found nonscalar " ++ show e
             Just e@(DVar _ _) -> error $ "evalZeroD found nonscalar " ++ show e
@@ -713,7 +715,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                              | idx <- [0 .. dim - 1]
                                              ]
                     RealPart ->
-                        let
+                        let 
                          in case inputs of
                                 [x] ->
                                     let v =
@@ -727,7 +729,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                             ]
                                 _ -> error $ "evalOneD " ++ show inputs
                     ImagPart ->
-                        let
+                        let 
                          in case inputs of
                                 [x] ->
                                     let v =
@@ -1320,7 +1322,7 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                          List.transpose $
                                          map
                                              (case dir of
-                                                  True  -> error "FFT.fft"
+                                                  True -> error "FFT.fft"
                                                   False -> error "FFT.ifft")
                                              xList)
                             _ -> error $ "evalTwoDC " ++ show inputs

@@ -3,7 +3,7 @@
 module LinearCombination where
 
 import qualified Data.List as L
-import qualified Data.Map  as Map
+import qualified Data.Map as Map
 
 data LinearCombination a =
     LC a (Map.Map String a)
@@ -13,15 +13,15 @@ instance (Show a, Eq a, Num a, Ord a) => Show (LinearCombination a) where
     show (LC c combos) =
         case (c, null nonConst) of
             (0, True) -> "0"
-            (0, _)    -> drop 3 nonConst
-            _         -> show c ++ " + " ++ nonConst
+            (0, _) -> drop 3 nonConst
+            _ -> show c ++ " + " ++ nonConst
       where
         nonConst = concatMap dispPair $ Map.toAscList combos
         showNeg c =
             if c < 0
                 then "(" ++ show c ++ ")"
                 else show c
-        dispPair (_, 0)    = ""
+        dispPair (_, 0) = ""
         dispPair (name, 1) = " + " ++ name
         dispPair (name, c) = " + " ++ showNeg c ++ " * " ++ name
 
@@ -54,7 +54,7 @@ instance (Show a, Eq a, Num a, Ord a) => Show (PositiveCombination a) where
         nonZero =
             concat $
             L.intersperse " + " $ concatMap dispPair $ Map.toAscList combos
-        dispPair (_, 0)     = []
+        dispPair (_, 0) = []
         dispPair (names, 1) = [showNames names]
         dispPair (names, c) = [showNames (showNeg c : names)]
         showNeg c =

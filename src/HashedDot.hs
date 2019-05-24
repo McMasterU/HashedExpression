@@ -2,22 +2,23 @@
 -}
 module HashedDot where
 
-import           Polynomials
+import Polynomials
 
-import           HashedExpression
-import           HashedInstances       ()
+import HashedExpression
+import HashedInstances ()
 
-import           Control.Monad         (liftM)
+import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as C
---import HashedSimplify
-import qualified Data.IntMap           as I
-import qualified Data.IntSet           as Set
-import qualified Data.List             as L
-import qualified Data.Map              as M
-import           Data.Maybe            (catMaybes)
-import           Data.Ratio
 
-import           Debug.Trace
+--import HashedSimplify
+import qualified Data.IntMap as I
+import qualified Data.IntSet as Set
+import qualified Data.List as L
+import qualified Data.Map as M
+import Data.Maybe (catMaybes)
+import Data.Ratio
+
+import Debug.Trace
 
 threeDC2dot name (ThreeDC (Expression n e)) =
     writeFile (addDot name) $ snd $ expr2dot' name (e, n)
@@ -33,7 +34,7 @@ scalar2polys name (Scalar (Expression n e)) = fst $ expr2dot' name (e, n)
 addDot fileName =
     case reverse fileName of
         't':'o':'d':'.':_ -> fileName
-        _                 -> fileName ++ ".dot"
+        _ -> fileName ++ ".dot"
 
 expr2dot' name (e, n) =
     ( sczs
@@ -112,10 +113,10 @@ extractSczs (SCZ (Expression subN subE)) inputs =
 extractSczs op inputs = trace (show (op, inputs)) []
 
 showOp (SCZ (Expression n e)) nodeSubs = prettySubsRE e nodeSubs n
-showOp (FT True) _                     = "FT"
-showOp (FT False) _                    = "InvFT"
-showOp (MapND e _input) _              = pretty e
-showOp x _                             = show x
+showOp (FT True) _ = "FT"
+showOp (FT False) _ = "InvFT"
+showOp (MapND e _input) _ = pretty e
+showOp x _ = show x
 
 {-
 
@@ -138,8 +139,8 @@ scalarSCZSearch (Scalar (Expression n e)) =
 sczSearch e n =
     case I.lookup n e of
         Just (Op _ (SCZ _) _) -> [n]
-        Just (Op _ _ inputs)  -> concatMap (sczSearch e) inputs
-        _                     -> []
+        Just (Op _ _ inputs) -> concatMap (sczSearch e) inputs
+        _ -> []
 
 sczsToIndexedInputs e n =
     case I.lookup n e of
@@ -167,7 +168,7 @@ printSCZPolys scalar@(Scalar (Expression n e)) =
     maybeList = scalarSCZSearch scalar
     (polys, nonpolys) = span isPoly maybeList
     isPoly (_, Nothing) = False
-    isPoly _            = True
+    isPoly _ = True
     tvars =
         case polys of
             (_n, Just (Poly (PolyEnv (fwdLookup, _) _) _)):_ ->
@@ -188,7 +189,7 @@ printSCZPolys scalar@(Scalar (Expression n e)) =
         " = " ++
         (case I.lookup n e of
              Just (Op _ (SCZ sczExpr) _) -> pretty sczExpr
-             _                           -> "!!!! unknown node !!!!")
+             _ -> "!!!! unknown node !!!!")
 
 {-
 
@@ -200,7 +201,7 @@ extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
     case I.lookup n e of
         Just (Op _ Sum summands) ->
             case catMaybes $ map extractMonomial summands of
-                []          -> Nothing
+                [] -> Nothing
                 listOfMonos -> Just $ Poly pe listOfMonos
         _ -> liftM ((Poly pe) . (: [])) $ extractMonomial n
   where
@@ -219,7 +220,7 @@ extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
     extractMonomial n =
         case I.lookup n e of
             Just (Op _ Prod terms) -> monoFromTerms (I.empty, 1) terms
-            _                      -> monoFromTerms (I.empty, 1) [n]
+            _ -> monoFromTerms (I.empty, 1) [n]
       where
         monoFromTerms (vars, c) (term:terms) =
             case I.lookup term e of
@@ -234,8 +235,9 @@ extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
             Just
                 ( c
                 , ( I.foldr (+) 0 vars -- total degree of all variables
-                  , vars)){-
+                  , vars {-
 
 
 
 -}
+                   ))

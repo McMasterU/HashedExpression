@@ -7,11 +7,11 @@ If they aren't we will waste a lot of time doing and undoing or computing ineffi
 but correctness should not suffer.
 But we also don't have a proof of correctness (equivalence of expressions).
 -}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE PatternGuards             #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedSimplify
     ( simplify'
@@ -33,27 +33,28 @@ module HashedSimplify
     , mkConst -- for testing
     ) where
 
-import           HashedExpression
-import           HashedInstances  ()
+import HashedExpression
+import HashedInstances ()
 
 --import HashedComplexInstances   --this might be helpful for some complex things which aren't working, but causes overlapping instances
-import           HashedConstruct
-import           HashedMatch      (o)
-import qualified HashedMatch      as M
-import           WithHoles
+import HashedConstruct
+import HashedMatch (o)
+import qualified HashedMatch as M
+import WithHoles
 
 --import HashedTransformable
 --import Data.ByteString (ByteString)
 --import qualified Data.ByteString.Char8 as C
-import           Data.IntMap      (IntMap)
-import qualified Data.IntMap      as I
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as I
 
-import           Control.DeepSeq
+import Control.DeepSeq
+
 --import Data.Map (Map)
 --import qualified Data.Map as Map
-import qualified Data.List        as List
-import           Data.Maybe       (catMaybes, fromJust)
-import           Debug.Trace
+import qualified Data.List as List
+import Data.Maybe (catMaybes, fromJust)
+import Debug.Trace
 
 {-
 
@@ -232,7 +233,7 @@ simpRewrite'' reWrite (exprs, node)
                     ((\x ->
                           case x of
                               (Just (c, _)) -> c
-                              _             -> error "spm") .
+                              _ -> error "spm") .
                      M.const exprs)
                     consts
          in tt "2 consts in prod" $
@@ -261,7 +262,7 @@ simpRewrite'' reWrite (exprs, node)
         let isSum arg =
                 case I.lookup arg exprs of
                     Just (Op _ Sum _) -> True
-                    _                 -> False
+                    _ -> False
             getArgs arg =
                 case I.lookup arg exprs of
                     Just (Op _ Sum sArgs) -> sArgs
@@ -295,7 +296,7 @@ simpRewrite'' reWrite (exprs, node)
                     (\(x, _) ->
                          case x of
                              Just u -> u
-                             _      -> error "simp reim")
+                             _ -> error "simp reim")
                     fromReImConstructor
             [reSum, imSum] {-mt (show $ length reals)
                  $-}
@@ -365,7 +366,7 @@ simpRewrite'' reWrite (exprs, node)
                     ((\x ->
                           case x of
                               (Just (c, _)) -> c
-                              _             -> error "spm2") .
+                              _ -> error "spm2") .
                      M.const exprs)
                     consts
          in (sumE (newC : (map sourceNode nonconsts))) exprs
@@ -445,7 +446,7 @@ simpRewrite'' reWrite (exprs, node)
   -- differential is not isolated
     , case I.lookup (snd $ left exprs) exprs of
          Just (DVar _ _) -> False
-         _               -> True =
+         _ -> True =
         tt "pushPop 1" $
         let (e1, left') = simplify' (left exprs)
             (e2, right') = simplify' (right e1)
@@ -565,11 +566,11 @@ simpRewrite'' reWrite (exprs, node)
                 findNegRelElem (node, RelElem idx _b _o) =
                     case lookup idx assocNegOldIdxNewN of
                         Just newN -> [(node, newN)]
-                        Nothing   -> []
+                        Nothing -> []
                 findNegRelElem _ = []
             (newSCZE, newSCZN) = simpRewrite' subsSubSCZs (mergeE, newTopN)
             subsSubSCZs (Op dims op args) = Op dims op $ map rewriteArgs args
-            subsSubSCZs x                 = x
+            subsSubSCZs x = x
          -- map an input to its new index, or to a negative number
          -- if the old RelElem will be replaced by an newly included subexpression
             reRemap args (RelElem idx b o) =
@@ -580,19 +581,19 @@ simpRewrite'' reWrite (exprs, node)
             inputToNewIdx oldNode =
                 case lookup oldNode (replacedInputs ++ (zip keptInputs [0 ..])) of
                     Just idx -> idx
-                    _        -> error "...sczs... node not found"
+                    _ -> error "...sczs... node not found"
          -- the inputs which are not folded RelElems in the top-level and all lower inputs
             keptInputs =
                 List.nub $
                 List.sort $ concat $ zipWith kI justReplaceable inputs
               where
-                kI (_idx, Nothing) arg      = [arg]
+                kI (_idx, Nothing) arg = [arg]
                 kI (_idx, Just (_, args)) _ = args
          -- the inputs which are replaced by the SCZ Expressions referenced by RelElems in the top-level
             replacedInputs = concat $ zipWith kI justReplaceable inputs
               where
                 kI (idx, Just (_, _args)) arg = [(arg, idx + maxUsed)]
-                kI _ _                        = []
+                kI _ _ = []
          -- *** unchecked assumption that inputs are all the same size as output
          in tt "SCZ [...sczs...]" $
             addEdge exprs $ mkSCZ dims (Expression newSCZN newSCZE) keptInputs
@@ -616,7 +617,7 @@ simpRewrite'' reWrite (exprs, node)
             oldIdxToNew args idx =
                 case lookup (args !! idx) allArgs of
                     Just new -> new
-                    Nothing  -> error "HS..Sum SCZ"
+                    Nothing -> error "HS..Sum SCZ"
             reRemap args (RelElem idx b o) =
                 if idx < 0
                     then RelElem (oldIdxToNew args (-idx - 1)) b o
@@ -711,7 +712,7 @@ constExpr' e n =
     let (e', n') = tt "simp for constExpr" $ simplify' (e, n)
      in case I.lookup n' e' of
             Just (Const _ c) -> Just c
-            _                -> Nothing
+            _ -> Nothing
 
 {-
 
@@ -767,7 +768,7 @@ disassociateScale multiplier exprs factor =
             Just (Op _dims ScaleV [a, b]) ->
                 case I.lookup a exprs of
                     Just (Const Dim0 m) -> (exprs, (m * multiplier, b))
-                    _                   -> (exprs, (multiplier, factor))
+                    _ -> (exprs, (multiplier, factor))
             _ -> ttt 1 (exprs, (multiplier, factor))
 
 {-
@@ -842,7 +843,7 @@ pushPop' left right exprs
          (\n ->
               case I.lookup n sczE of
                   Just (RelElem i _ _) -> i == (length inputs - 1)
-                  _                    -> False)
+                  _ -> False)
          sczN
      -- *** for now all the dims are the same, but this doesn't allow folding
      =
@@ -1048,14 +1049,14 @@ mergeScaledConstsBy op (exprs, scaledNodes) = (exprs', combined ++ nonconsts)
             (\(m, n) ->
                  case I.lookup n exprs of
                      Just (Const Dim0 x) -> [m * x]
-                     _                   -> [])
+                     _ -> [])
             scaledNodes
     nonconsts =
         filter
             (\(_m, n) ->
                  case I.lookup n exprs of
                      Just (Const Dim0 _) -> False
-                     _                   -> True)
+                     _ -> True)
             scaledNodes
     (exprs', combined) =
         if null consts
@@ -1079,5 +1080,5 @@ collapse exprs op term =
 
 -}
 cartProd (l1:ls) = [i : j | i <- l1, j <- cartProd ls]
-cartProd []      = [[]]{-
+cartProd [] = [[]] {-
 -}

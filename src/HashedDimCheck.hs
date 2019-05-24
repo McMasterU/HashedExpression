@@ -22,20 +22,20 @@
 -}
 module HashedDimCheck where
 
-import           HashedDerivative
-import           HashedExpression
-import           HashedInstances
-import           HashedSimplify
-import           HashedTransformable
+import HashedDerivative
+import HashedExpression
+import HashedInstances
+import HashedSimplify
+import HashedTransformable
 
 -- import HashedMRI
 -- import R2Star
-import           Control.DeepSeq
+import Control.DeepSeq
 import qualified Data.ByteString.Char8 as C
-import qualified Data.IntMap           as I
-import qualified Data.List             as L
-import           Data.Maybe            (fromJust)
-import           Test.QuickCheck
+import qualified Data.IntMap as I
+import qualified Data.List as L
+import Data.Maybe (fromJust)
+import Test.QuickCheck
 
 {-
 \end{comment}
@@ -315,15 +315,15 @@ downDims node internal (input:inputs) dims =
   where
     newDim =
         case currChild of
-            Var DimUnknown _    -> []
-            DVar DimUnknown _   -> []
-            Const DimUnknown _  -> []
-            Op DimUnknown _ _   -> []
+            Var DimUnknown _ -> []
+            DVar DimUnknown _ -> []
+            Const DimUnknown _ -> []
+            Op DimUnknown _ _ -> []
             RelElem reA reB reI -> [Dim0] --see HE.getDim 1830
-            Var dim _           -> [dim]
-            DVar dim _          -> [dim]
-            Const dim _         -> [dim]
-            Op dim _ _          -> [dim]
+            Var dim _ -> [dim]
+            DVar dim _ -> [dim]
+            Const dim _ -> [dim]
+            Op dim _ _ -> [dim]
     currChild = fromJust (I.lookup input internal)
 
 {-
@@ -409,7 +409,8 @@ upEdge node internal = newEdge
                                        [dim] ++
                                        map
                                            ((!!) dims)
-                                           [int + 1 .. (length dims - 1)]) --take of a list
+                                           [int + 1 .. (length dims - 1)] --take of a list
+                                       )
                              else error
                                       ("HDC.upEdge found " ++
                                        show (fromJust (I.lookup par internal)) ++
@@ -566,7 +567,7 @@ getChildren :: Internal -> Node -> [Node]
 getChildren internal node =
     case fromJust (I.lookup node internal) of
         Op _ _ inputs -> inputs
-        _             -> []
+        _ -> []
 
 {-
 
@@ -579,7 +580,7 @@ isParent :: Node -> ExpressionEdge -> Bool
 isParent node edge =
     case edge of
         Op _ _ inputs -> L.elem node inputs
-        _             -> False
+        _ -> False
 
 {-
 
@@ -595,7 +596,7 @@ isDotParent :: Node -> ExpressionEdge -> Bool
 isDotParent node edge =
     case edge of
         Op _ Dot inputs -> L.elem node inputs
-        _               -> False
+        _ -> False
 
 {-
 
@@ -605,11 +606,11 @@ This function could potentially be useful somewhere
 putDims :: ExpressionEdge -> Dims -> ExpressionEdge
 putDims edge newDim =
     case edge of
-        Op _ opId inputs                 -> Op newDim opId inputs
-        Var _ name                       -> Var newDim name
-        DVar _ name                      -> DVar newDim name
+        Op _ opId inputs -> Op newDim opId inputs
+        Var _ name -> Var newDim name
+        DVar _ name -> DVar newDim name
         RelElem reArray reBoundary reIdx -> RelElem reArray reBoundary reIdx --getDimE says RelElem has Dim0, but it's not stated in the constructor
-        Const _ num                      -> Const newDim num
+        Const _ num -> Const newDim num
 
 {-
 
@@ -1831,7 +1832,7 @@ dimCheck9_0 =
                   [ (120, Var DimUnknown (p "x"))
                   , (8185171, Op DimUnknown Sum [120, 121])
                   , (121, Var Dim0 (p "x"))
-                  ])){-
+                  ])) {-
 \end{document}
 
 

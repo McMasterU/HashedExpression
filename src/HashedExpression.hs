@@ -3,30 +3,30 @@
 
 Experiment in common subexpressions without monads and better expression simplification.
 -}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module HashedExpression where
 
-import qualified Data.Array.Unboxed    as U
-import           Data.ByteString       (ByteString)
+import qualified Data.Array.Unboxed as U
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as C
-import           Data.IntMap           (IntMap)
-import qualified Data.IntMap           as I
-import qualified Data.List             as L
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as I
+import qualified Data.List as L
 import qualified Numeric
 
 --import Data.Map (Map)
-import           Control.DeepSeq
-import qualified Data.IntSet           as IntSet
-import qualified Data.Map              as Map
-import qualified Data.Set              as Set
-import           Debug.Trace
+import Control.DeepSeq
+import qualified Data.IntSet as IntSet
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Debug.Trace
 
 {-
 
@@ -407,40 +407,40 @@ FIXME:  change isConst to isJustConst and other function to isConst
 Is the |ExpressionEdge| lookup up into a Maybe a constant zero.
 -}
 isZero (Just (Const _ 0)) = True
-isZero _                  = False
+isZero _ = False
 
 isJustVar (Just (Var _ _)) = True
-isJustVar _                = False
+isJustVar _ = False
 
 isConst (Just (Const _ _)) = True
-isConst _                  = False
+isConst _ = False
 
 isScalarConst (Just (Const Dim0 _)) = True
-isScalarConst _                     = False
+isScalarConst _ = False
 
 extractScalarConsts =
     concatMap
         (\x ->
              case x of
                  Just (Const Dim0 d) -> [d]
-                 _                   -> [])
+                 _ -> [])
 
 isJustSCZ = isSCZ
 
 isSCZ (Just (Op _ (SCZ _) _)) = True
-isSCZ _                       = False
+isSCZ _ = False
 
 isJustDot (Just (Op _ Dot _)) = True
-isJustDot _                   = False
+isJustDot _ = False
 
 isJustProj (Just (Op _ (Project _) _)) = True
-isJustProj _                           = False
+isJustProj _ = False
 
 isJustInject (Just (Op _ (Inject _) _)) = True
-isJustInject _                          = False
+isJustInject _ = False
 
 getConst (Just (Const _ d)) = [d]
-getConst _                  = []
+getConst _ = []
 
 {-
 Find SCZs in an expression:
@@ -456,7 +456,7 @@ isSCZNode e n =
         _ -> Nothing
 
 justArgs (Just (_, args)) = args
-justArgs Nothing          = []
+justArgs Nothing = []
 
 {-
 
@@ -511,7 +511,7 @@ isNegArg exprs node =
 Is the |ExpressionEdge| lookup up into a Maybe a constant one.
 -}
 isOne (Just (Const Dim0 1)) = True
-isOne _                     = False
+isOne _ = False
 
 {-
 
@@ -658,7 +658,7 @@ reduce dim (reduction, (skipLeft, skipRight)) =
                  show (dim, (reduction, (skipLeft, skipRight), trimmed))
 
 mapAnd (fun:funs) list = (L.and $ map fun list) && mapAnd funs list
-mapAnd [] _list        = True
+mapAnd [] _list = True
 
 cropDim dimIn (left, right) =
     let err =
@@ -805,13 +805,13 @@ data ExpressionEdge
     | Var Dims ByteString -- variable X
     | DVar Dims ByteString -- differential variable dX
     | RelElem
-          { reArray    :: Int -- array number
+          { reArray :: Int -- array number
           , reBoundary :: Boundary -- how to treat boundary elements
-          , reIdx      :: [Int] -- offsets in array indices
+          , reIdx :: [Int] -- offsets in array indices
           } --   length reIdx == length outDims
     | Const
           { unConstDims :: Dims
-          , unConst     :: Double
+          , unConst :: Double
           }
     deriving (Eq, Show, Ord)
 
@@ -924,7 +924,7 @@ data OpId
                  -- JLMP: check that this is consistent with all uses of Dot
            -- JLMP:  eliminate this and convert uses to SCZ
     | MapND
-          { mapExpr  :: Expression -- Scalar; not explict due to circular Show instances
+          { mapExpr :: Expression -- Scalar; not explict due to circular Show instances
           , mapInput :: ByteString -- CKA: why can't we use SCZ?
           }
     | SCZ Expression -- WARNING:  use for pattern matching, not construction, use |mkSCZ|
@@ -1036,14 +1036,14 @@ linearOps =
     , PFT False Slice
     ]
 
-linearOp SubMask     = True
-linearOp NegMask     = True
+linearOp SubMask = True
+linearOp NegMask = True
 linearOp (Project _) = True
-linearOp (Inject _)  = True
-linearOp op          = op `elem` linearOps
+linearOp (Inject _) = True
+linearOp op = op `elem` linearOps
 
 linearOpNoProj (Inject _) = True
-linearOpNoProj op         = op `elem` (RealImag : linearOps)
+linearOpNoProj op = op `elem` (RealImag : linearOps)
 
 wantOutside (Project _) = False
 wantOutside (Inject _) = True
@@ -1061,8 +1061,8 @@ wantOutside op =
     ]
 
 wantInside (Project _) = True
-wantInside (Inject _)  = False
-wantInside op          = op `elem` [RealPart, ImagPart]
+wantInside (Inject _) = False
+wantInside op = op `elem` [RealPart, ImagPart]
 
 {-
 
@@ -1161,7 +1161,7 @@ simpSum children =
                 (\n ->
                      case n of
                          IESum subArgs -> subArgs
-                         _             -> [n])
+                         _ -> [n])
                 children
         c =
             sum $
@@ -1169,14 +1169,14 @@ simpSum children =
                 (\n ->
                      case n of
                          IEConst d -> [d]
-                         _         -> [])
+                         _ -> [])
                 allArgs
         nonConst =
             filter
                 (\n ->
                      case n of
                          IEConst _ -> False
-                         _         -> True)
+                         _ -> True)
                 allArgs
      in IESum $
         L.sort $
@@ -1194,7 +1194,7 @@ simpProd children =
                 (\n ->
                      case n of
                          IEProd subArgs -> subArgs
-                         _              -> [n])
+                         _ -> [n])
                 children
         c =
             product $
@@ -1202,21 +1202,21 @@ simpProd children =
                 (\n ->
                      case n of
                          IEConst d -> [d]
-                         _         -> [])
+                         _ -> [])
                 allArgs
         nonConst =
             filter
                 (\n ->
                      case n of
                          IEConst _ -> False
-                         _         -> True)
+                         _ -> True)
                 allArgs
         (sums, nonSums) =
             L.partition
                 (\n ->
                      case n of
                          IESum _ -> True
-                         _       -> False)
+                         _ -> False)
                 nonConst
         terms =
             if c == 1
@@ -1318,7 +1318,7 @@ canonicalIE ie = cie (0, I.empty) ie
 cie (next, remap) (IERE idx bdy off) =
     let (newIdx, (newNext, newRemap)) =
             case I.lookup idx remap of
-                Nothing     -> (next, (next + 1, I.insert idx next remap))
+                Nothing -> (next, (next + 1, I.insert idx next remap))
                 Just newIdx -> (newIdx, (next, remap))
      in ((newNext, newRemap), IERE newIdx bdy off)
 cie (next, remap) ie@(IEConst _) = ((next, remap), ie)
@@ -1412,7 +1412,7 @@ mkSCZ' dims expr args =
             (\(arg, idx) ->
                  case I.lookup idx remap of
                      Just newIdx -> [(newIdx, arg)]
-                     _           -> []) $
+                     _ -> []) $
         zip args [0 ..]
 
 {-
@@ -1615,20 +1615,20 @@ compareOp exprs' left right =
             (Just (Op _ ScaleV [sL, nL]), Just (Op _ ScaleV [sR, nR])) ->
                 case compareOp exprs nL nR of
                     EQ -> compareOp exprs sL sR
-                    x  -> x
+                    x -> x
             (Just (Op _ ScaleV [sL, nL]), _) ->
                 case compareOp exprs nL right of
                     EQ -> compareOp exprs sL one
-                    x  -> x
+                    x -> x
             (_, Just (Op _ ScaleV [sR, nR])) ->
                 case compareOp exprs left nR of
                     EQ -> compareOp exprs one sR
-                    x  -> x
+                    x -> x
             (Just (Op _ opL nL), Just (Op _ opR nR)) ->
                 case compare opL opR of
                     EQ ->
                         case dropWhile (== EQ) $ zipWith (compareOp exprs) nL nR of
-                            []    -> EQ
+                            [] -> EQ
                             (c:_) -> c
                     c -> c
             (_, Just (Op _ _opR _)) -> GT
@@ -1660,9 +1660,9 @@ nodeIsZeroDim edges top =
         Nothing -> error $ "nodeIsScalar not top " ++ show (top, edges)
         Just (Op _dim op args) ->
             case op of
-                Dot  -> True
+                Dot -> True
                 FT _ -> False
-                _    -> L.and $ map (nodeIsScalar edges) args
+                _ -> L.and $ map (nodeIsScalar edges) args
         Just _ -> False
 
 {-
@@ -1691,45 +1691,45 @@ nodeIsRelElem edges node =
 
 -}
 airity :: OpId -> (Airity, Airity)
-airity Sum              = (Natural, Fixed 1)
-airity SubMask          = (Fixed 2, Fixed 1)
-airity NegMask          = (Fixed 2, Fixed 1)
-airity (Reglzr _ _)     = (Natural, Fixed 1)
+airity Sum = (Natural, Fixed 1)
+airity SubMask = (Fixed 2, Fixed 1)
+airity NegMask = (Fixed 2, Fixed 1)
+airity (Reglzr _ _) = (Natural, Fixed 1)
 airity (GradReglzr _ _) = (Natural, Fixed 1)
-airity Prod             = (Natural, Fixed 1)
-airity Div              = (Fixed 2, Fixed 1)
-airity Neg              = (Fixed 1, Fixed 1)
-airity Abs              = (Fixed 1, Fixed 1)
-airity Signum           = (Fixed 1, Fixed 1)
-airity Sin              = (Fixed 1, Fixed 1)
-airity Cos              = (Fixed 1, Fixed 1)
-airity Tan              = (Fixed 1, Fixed 1)
-airity Exp              = (Fixed 1, Fixed 1)
-airity Log              = (Fixed 1, Fixed 1)
-airity Sinh             = (Fixed 1, Fixed 1)
-airity Cosh             = (Fixed 1, Fixed 1)
-airity Tanh             = (Fixed 1, Fixed 1)
-airity Asin             = (Fixed 1, Fixed 1)
-airity Acos             = (Fixed 1, Fixed 1)
-airity Atan             = (Fixed 1, Fixed 1)
-airity Asinh            = (Fixed 1, Fixed 1)
-airity Acosh            = (Fixed 1, Fixed 1)
-airity Atanh            = (Fixed 1, Fixed 1)
-airity Sqrt             = (Fixed 1, Fixed 1)
-airity Dot              = (Fixed 2, Fixed 1)
-airity (MapND _ _)      = (Fixed 1, Fixed 1)
-airity ScaleV           = (Fixed 2, Fixed 1)
-airity (FT _)           = (Fixed 1, Fixed 1) -- takes complex input node and produces complex (compound) node
-airity (PFT _ _)        = (Fixed 1, Fixed 1)
-airity (SCZ _)          = (Natural, Fixed 1)
-airity (Compound _)     = (Natural, Fixed 1)
-airity (Extract _)      = (Fixed 1, Fixed 1)
-airity (Project _)      = (Fixed 1, Fixed 1)
-airity (Inject _)       = (Fixed 1, Fixed 1)
-airity RealPart         = (Fixed 1, Fixed 1)
-airity ImagPart         = (Fixed 1, Fixed 1)
-airity RealImag         = (Fixed 2, Fixed 1)
-airity (Transpose _)    = (Fixed 1, Fixed 1)
+airity Prod = (Natural, Fixed 1)
+airity Div = (Fixed 2, Fixed 1)
+airity Neg = (Fixed 1, Fixed 1)
+airity Abs = (Fixed 1, Fixed 1)
+airity Signum = (Fixed 1, Fixed 1)
+airity Sin = (Fixed 1, Fixed 1)
+airity Cos = (Fixed 1, Fixed 1)
+airity Tan = (Fixed 1, Fixed 1)
+airity Exp = (Fixed 1, Fixed 1)
+airity Log = (Fixed 1, Fixed 1)
+airity Sinh = (Fixed 1, Fixed 1)
+airity Cosh = (Fixed 1, Fixed 1)
+airity Tanh = (Fixed 1, Fixed 1)
+airity Asin = (Fixed 1, Fixed 1)
+airity Acos = (Fixed 1, Fixed 1)
+airity Atan = (Fixed 1, Fixed 1)
+airity Asinh = (Fixed 1, Fixed 1)
+airity Acosh = (Fixed 1, Fixed 1)
+airity Atanh = (Fixed 1, Fixed 1)
+airity Sqrt = (Fixed 1, Fixed 1)
+airity Dot = (Fixed 2, Fixed 1)
+airity (MapND _ _) = (Fixed 1, Fixed 1)
+airity ScaleV = (Fixed 2, Fixed 1)
+airity (FT _) = (Fixed 1, Fixed 1) -- takes complex input node and produces complex (compound) node
+airity (PFT _ _) = (Fixed 1, Fixed 1)
+airity (SCZ _) = (Natural, Fixed 1)
+airity (Compound _) = (Natural, Fixed 1)
+airity (Extract _) = (Fixed 1, Fixed 1)
+airity (Project _) = (Fixed 1, Fixed 1)
+airity (Inject _) = (Fixed 1, Fixed 1)
+airity RealPart = (Fixed 1, Fixed 1)
+airity ImagPart = (Fixed 1, Fixed 1)
+airity RealImag = (Fixed 2, Fixed 1)
+airity (Transpose _) = (Fixed 1, Fixed 1)
 
 --airity x = error $ "airity not implemented for " ++ show x
 {-
@@ -1832,7 +1832,7 @@ instance HasHash ExpressionEdge where
         fun :: Char -> Int -> Int
         fun c hash = hash * 40591 + (fromEnum c)
         argHash (arg:args) = arg + 31 * (argHash args)
-        argHash []         = 0
+        argHash [] = 0
 
 -- CKA many clashes, use for testing confluence        + (sum $ zipWith (\ i off -> 181 * (i + 191 * (off )) ) [1..] idxs)
 {-
@@ -1941,11 +1941,11 @@ remapNodes theMap edge =
     case edge {- trace (if I.size theMap  > 0 then "remapNodes " ++ show (edge,theMap) else "" ) $ -}
           of
         (Op dim op args) -> Op dim op $ map mapNode args
-        e                -> e
+        e -> e
   where
     mapNode node =
         case I.lookup node theMap of
-            Nothing      -> node
+            Nothing -> node
             Just newNode -> newNode
 
 {-
@@ -2113,7 +2113,7 @@ addEdge exprs edge'
                   of
                 (Op Dim0 Sum []) -> Const Dim0 0
                 (Op dims Sum []) -> Const dims 0
-                x                -> x
+                x -> x
      in case dropWhile (== IsClash) $
              map (isClash exprs edge) $ rehash edge' $ hash edge of
             ((IsDuplicate h):_) -> (exprs, h)
@@ -2223,7 +2223,7 @@ topSort edges top = reverse $ snd $ addDependencies top (Set.empty, [])
         let dependencies =
                 case I.lookup newNode edges of
                     Just (Op _ _ args) -> args
-                    _                  -> []
+                    _ -> []
          in if newNode `Set.member` visited
                 then (visited, inOrder)
                 else let (newVisited, newInOrder) =
@@ -2263,7 +2263,7 @@ allConsumers (exprs, head) = allMap
     err2 x =
         case x of
             Just x' -> x'
-            _       -> error "allConsumers 2"
+            _ -> error "allConsumers 2"
 
 consumers :: (Internal, Node) -> I.IntMap (Set.Set Node)
 consumers (exprs, head) =
@@ -2278,7 +2278,7 @@ consumers (exprs, head) =
     consumeds =
         case I.lookup head exprs of
             Just (Op _ _ args) -> args
-            _                  -> []
+            _ -> []
     add_node ::
            Node -> Node -> I.IntMap (Set.Set Node) -> I.IntMap (Set.Set Node)
     add_node consumer consumed i =
@@ -2362,17 +2362,17 @@ depthMap (exprs, head) =
                         error $
                         "P.depthMap node not found " ++ show (node, dMap, exprs)
 
-opDepth (FT _)        = 10000
-opDepth (PFT _ _)     = 100 * 8
+opDepth (FT _) = 10000
+opDepth (PFT _ _) = 100 * 8
 opDepth (Transpose _) = 100
-opDepth (Sum)         = 100
-opDepth (SubMask)     = 100
-opDepth (NegMask)     = 100
-opDepth (Dot)         = 100
-opDepth (MapND _ _)   = 1000
-opDepth (SCZ _)       = 1000
-opDepth (ScaleV)      = 1
-opDepth _             = 0
+opDepth (Sum) = 100
+opDepth (SubMask) = 100
+opDepth (NegMask) = 100
+opDepth (Dot) = 100
+opDepth (MapND _ _) = 1000
+opDepth (SCZ _) = 1000
+opDepth (ScaleV) = 1
+opDepth _ = 0
 
 {-
 
@@ -2409,31 +2409,31 @@ Predicates
 -}
 isVar, isOp, isRealOp, isConstEdge :: ExpressionEdge -> Bool
 isVar (Var _ _) = True
-isVar _         = False
+isVar _ = False
 
 maybeVarNode e n =
     case I.lookup n e of
-        Nothing           -> error $ "HE.isVarNode no node " ++ show (n, e)
+        Nothing -> error $ "HE.isVarNode no node " ++ show (n, e)
         Just (Var _ name) -> Just name
-        _                 -> Nothing
+        _ -> Nothing
 
 isConstEdge (Const _ _) = True
-isConstEdge _           = False
+isConstEdge _ = False
 
 isRelElem (RelElem _ _ _) = True
-isRelElem _               = False
+isRelElem _ = False
 
 isOp (Op _ _ _) = True
-isOp _          = False
+isOp _ = False
 
 isRealOp (Op _ RealImag _) = False
-isRealOp (Op _ (FT _) _)   = False
-isRealOp (Op _ _ _)        = True
-isRealOp _                 = False
+isRealOp (Op _ (FT _) _) = False
+isRealOp (Op _ _ _) = True
+isRealOp _ = False
 
 isReal (Op _ RealImag _) = False
-isReal (Op _ (FT _) _)   = False
-isReal _                 = True
+isReal (Op _ (FT _) _) = False
+isReal _ = True
 
 {-
 
@@ -2502,12 +2502,12 @@ relElemZeroOffsets edges top =
 -}
 zeroOffsets dims =
     case dims of
-        Dim0   -> []
+        Dim0 -> []
         Dim1 _ -> [0]
         Dim2 _ -> [0, 0]
         Dim3 _ -> [0, 0, 0]
         Dim4 _ -> [0, 0, 0, 0]
-        _      -> error $ "zeroOffsets " ++ show dims
+        _ -> error $ "zeroOffsets " ++ show dims
 
 {-
 
@@ -2667,7 +2667,7 @@ sL2Dims exprs n =
         Just (Op _ (Project (SSList2D sL)) [n1]) ->
             case getDimE exprs n1 of
                 Dim2 d -> (sL, d)
-                d      -> error $ "sL2Dims expected 2d " ++ show d
+                d -> error $ "sL2Dims expected 2d " ++ show d
         Just (Op _ _ (n1:_)) -> sL2Dims exprs n1
         x -> error $ "sl2Dims " ++ show (n, x, exprs)
 
@@ -2676,7 +2676,7 @@ sL3Dims exprs n =
         Just (Op _ (Project (SSList3D sL)) [n1]) ->
             case getDimE exprs n1 of
                 Dim3 d -> (sL, d)
-                d      -> error $ "sL3Dims expected 3d " ++ show d
+                d -> error $ "sL3Dims expected 3d " ++ show d
         Just (Op _ _ (n1:_)) -> sL3Dims exprs n1
         x -> error $ "sl3Dims " ++ show (n, x, exprs)
 
@@ -2685,7 +2685,7 @@ sL4Dims exprs n =
         Just (Op _ (Project (SSList4D sL)) [n1]) ->
             case getDimE exprs n1 of
                 Dim4 d -> (sL, d)
-                d      -> error $ "sL4Dims expected 4d " ++ show d
+                d -> error $ "sL4Dims expected 4d " ++ show d
         Just (Op _ _ (n1:_)) -> sL4Dims exprs n1
         x -> error $ "sl4Dims " ++ show (n, x, exprs)
 
@@ -2722,10 +2722,10 @@ dispDims (CDims dims) = concat ["(", L.intercalate "," $ map dispDims dims, ")"]
 
 Extract dimensions from |ExpressionEdges| and a |node| in an expression.
 -}
-getDim (Var dims _)    = dims
-getDim (DVar dims _)   = dims
-getDim (Op dims _ _)   = dims
-getDim (Const dims _)  = dims
+getDim (Var dims _) = dims
+getDim (DVar dims _) = dims
+getDim (Op dims _ _) = dims
+getDim (Const dims _) = dims
 getDim (RelElem _ _ _) = Dim0
 
 getDimE' (Expression n e) = getDimE e n
@@ -2733,12 +2733,12 @@ getDimE' (Expression n e) = getDimE e n
 getDimE :: Internal -> Node -> Dims
 getDimE exprs node =
     case I.lookup node exprs of
-        Just x  -> getDim x
+        Just x -> getDim x
         Nothing -> error $ "getDimE missing Edge " ++ show (node, exprs)
 
 cDims :: Dims -> [Dims]
 cDims (CDims dims) = dims
-cDims dim          = error ("cDims applied to " ++ show dim)
+cDims dim = error ("cDims applied to " ++ show dim)
 
 trDims SCR (Dim2 (d1, d2)) = Dim2 (d2, d1) -- FIXME possible duplicate of transposeDims 626; this function is called in HashedInstances 1218;1248
 trDims swap dims = error $ "trDims not implemented for " ++ show (swap, dims)
@@ -2762,7 +2762,7 @@ maybeConst :: Expression -> Maybe Double
 maybeConst (Expression n exprs) =
     case I.lookup n exprs of
         Just (Const Dim0 x) -> Just x
-        _                   -> Nothing
+        _ -> Nothing
 
 maybeConstS (Scalar e) = maybeConst e
 
@@ -2809,8 +2809,8 @@ prettySubsRE e subsRE n = hidden subsRE n e
 
 hidden subsLst node exprs =
     let showIn n = hidden subsLst n exprs
-        prettySep _ []       = []
-        prettySep _ [a]      = showIn a
+        prettySep _ [] = []
+        prettySep _ [a] = showIn a
         prettySep sep (b:bs) = concat [showIn b, sep, prettySep sep bs]
      in case I.lookup node exprs of
             Nothing ->
@@ -2822,7 +2822,7 @@ hidden subsLst node exprs =
             Just (RelElem num bndry idx) ->
                 (case I.lookup num subsLst of
                      Just called -> called
-                     Nothing     -> rectNum num bndry) ++
+                     Nothing -> rectNum num bndry) ++
                 "[" ++ (showSep "," idx) ++ "]"
             Just (Const dims d) ->
                 if d < 0
@@ -2919,7 +2919,7 @@ widths ::
     => [(a, a)]
     -> [a]
 widths ((low, high):rest) = (high - low + 1) : (widths rest)
-widths []                 = []
+widths [] = []
 
 fc :: [Char] -> Subspace -> [Char]
 fc err (SSCrop ((low, high):list) (dim:dims)) =
@@ -2929,22 +2929,22 @@ fc err (SSCrop ((low, high):list) (dim:dims)) =
 fc _ _ = ""
 
 nice :: OpId -> [Char]
-nice Sqrt  = "sqrt"
-nice Exp   = "exp"
-nice Cos   = "cos"
-nice Sin   = "sin"
-nice Tan   = "tan"
-nice Log   = "log"
-nice Asin  = "asin"
-nice Acos  = "acos"
-nice Atan  = "atan"
-nice Sinh  = "sinh"
-nice Cosh  = "cosh"
-nice Tanh  = "tanh"
+nice Sqrt = "sqrt"
+nice Exp = "exp"
+nice Cos = "cos"
+nice Sin = "sin"
+nice Tan = "tan"
+nice Log = "log"
+nice Asin = "asin"
+nice Acos = "acos"
+nice Atan = "atan"
+nice Sinh = "sinh"
+nice Cosh = "cosh"
+nice Tanh = "tanh"
 nice Atanh = "atanh"
 nice Acosh = "acosh"
 nice Asinh = "asinh"
-nice op    = show op
+nice op = show op
 
 printComp0 :: (IntMap ExpressionEdge, Node) -> IO ()
 printComp0 = printComp (\_ -> [])
@@ -2971,7 +2971,7 @@ printCompInt xtra (e, n) nodeLists =
             (\x ->
                  case I.lookup x e of
                      Just (Var _ _) -> False
-                     _              -> True)
+                     _ -> True)
     nodes = noVars $ topSort e n
     shortNumMap = I.fromList $ zip nodes [(0 :: Int) ..]
     shortNum m =
@@ -3068,9 +3068,9 @@ rectNum ::
     => a
     -> Boundary
     -> [Char]
-rectNum num ZeroMargin      = "z" ++ show num
-rectNum num Reflective      = "r" ++ show num
-rectNum num Torus           = "t" ++ show num
+rectNum num ZeroMargin = "z" ++ show num
+rectNum num Reflective = "r" ++ show num
+rectNum num Torus = "t" ++ show num
 rectNum num (ConstMargin c) = "c_" ++ show c ++ "?" ++ show num
 
 showSep ::
@@ -3078,8 +3078,8 @@ showSep ::
     => [Char]
     -> [a]
     -> [Char]
-showSep _ []       = []
-showSep _ [a]      = show a
+showSep _ [] = []
+showSep _ [a] = show a
 showSep sep (b:bs) = concat [show b, sep, showSep sep bs]
 
 prettySepHex ::
@@ -3087,8 +3087,8 @@ prettySepHex ::
     => [Char]
     -> [a]
     -> [Char]
-prettySepHex _ []       = []
-prettySepHex _ [a]      = prettyHex a
+prettySepHex _ [] = []
+prettySepHex _ [a] = prettyHex a
 prettySepHex sep (b:bs) = concat [prettyHex b, sep, prettySepHex sep bs]
 
 {-
@@ -3148,34 +3148,34 @@ dimLength (Dim1 _) = 1
 dimLength (Dim2 _) = 2
 dimLength (Dim3 _) = 3
 dimLength (Dim4 _) = 4
-dimLength _        = error "HE.dimLength not defined for subspace lists"
+dimLength _ = error "HE.dimLength not defined for subspace lists"
 
 {-
 
 Instances to enable DeepSeq full evaluation.
 -}
 instance NFData ExpressionEdge where
-    rnf (Var dim name)       = C.length name `seq` rnf dim
-    rnf (DVar dim name)      = C.length name `seq` rnf dim
+    rnf (Var dim name) = C.length name `seq` rnf dim
+    rnf (DVar dim name) = C.length name `seq` rnf dim
     rnf (RelElem a bnd idxs) = rnf a `seq` rnf bnd `seq` rnf idxs
-    rnf (Const dim d)        = rnf dim `seq` rnf d
-    rnf (Op dims op args)    = rnf dims `seq` rnf op `seq` rnf args
+    rnf (Const dim d) = rnf dim `seq` rnf d
+    rnf (Op dims op args) = rnf dims `seq` rnf op `seq` rnf args
 
 instance NFData Boundary where
-    rnf Reflective      = ()
-    rnf Torus           = ()
-    rnf ZeroMargin      = ()
+    rnf Reflective = ()
+    rnf Torus = ()
+    rnf ZeroMargin = ()
     rnf (ConstMargin d) = rnf d
 
 instance NFData Dims where
-    rnf Dim0         = ()
-    rnf (Dim1 d)     = rnf d
-    rnf (Dim2 d)     = rnf d
-    rnf (Dim3 d)     = rnf d
-    rnf (Dim4 d)     = rnf d
-    rnf DimUnknown   = ()
+    rnf Dim0 = ()
+    rnf (Dim1 d) = rnf d
+    rnf (Dim2 d) = rnf d
+    rnf (Dim3 d) = rnf d
+    rnf (Dim4 d) = rnf d
+    rnf DimUnknown = ()
     rnf (CDims dims) = rnf dims
-    rnf x            = error $ "HE.NFData not implemented: " ++ show x
+    rnf x = error $ "HE.NFData not implemented: " ++ show x
 
 instance NFData OpId where
     rnf Sum = ()
@@ -3272,9 +3272,9 @@ sum1 ::
        forall a. Num a
     => [a]
     -> a
-sum1 []         = error "sum1"
+sum1 [] = error "sum1"
 sum1 (a:b:rest) = (a + (sum1 (b : rest)))
-sum1 [a]        = a
+sum1 [a] = a
 {-
 
 

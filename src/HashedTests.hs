@@ -30,44 +30,45 @@ Compile with
 
 \begin{comment}
 -}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoMonomorphismRestriction  #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module HashedTests where
 
-import           HashedDerivative
-import           HashedExpression
-import           HashedInstances
-import           HashedInterp
+import HashedDerivative
+import HashedExpression
+import HashedInstances
+import HashedInterp
 
 -- import HashedComplexInstances
-import           HashedSimplify
+import HashedSimplify
 
 -- import HashedMRI --for the R2Star tests
-import           HashedConvZip
-import           HashedDot
-import qualified Polynomials           as P
+import HashedConvZip
+import HashedDot
+import qualified Polynomials as P
 
-import           Control.Monad
-import           Data.Array.Unboxed    as U
+import Control.Monad
+import Data.Array.Unboxed as U
 import qualified Data.ByteString.Char8 as C
-import           Data.Complex
+import Data.Complex
+
 -- import R2Star
 --import Maybe (isJust)
 --import Data.IntMap (IntMap)
-import qualified Data.IntMap           as I
-import qualified Data.List             as List
-import qualified Data.Map              as Map
-import qualified Data.Map.Strict       as M
-import           Data.Maybe
-import           Test.QuickCheck       hiding (scale)
+import qualified Data.IntMap as I
+import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Map.Strict as M
+import Data.Maybe
+import Test.QuickCheck hiding (scale)
 
 --import System.IO.Unsafe
 --import HashedExamples
-import           Debug.Trace
+import Debug.Trace
 
 {-
 \end{comment}
@@ -1102,7 +1103,7 @@ First, applyOne, the function which applies the simp1 rules.  It only applies si
 scalarApplyOne (Scalar (Expression n e)) =
     case applyOne (e, n) simp1 of
         Nothing -> pretty $ Expression n e
-        _       -> pretty $ fromJust $ applyOne (e, n) simp1
+        _ -> pretty $ fromJust $ applyOne (e, n) simp1
 
 {-
 
@@ -1688,7 +1689,7 @@ subs2 =
 
 -}
 replist 0 _l = []
-replist i l  = l ++ (replist (i - 1) l)
+replist i l = l ++ (replist (i - 1) l)
 
 {-
 
@@ -2183,7 +2184,7 @@ evalTest3_8 = evalThreeD (xIm (x3 +: x3)) (subs ([],[],[], [("X3", U.listArray (
 --\end{code}
 
 -}
-evalTest4_1 str = "0.0" == (show $ simplify $ 0 * (var $ "x" ++ str))-- FIXME broken as of 12May2015
+evalTest4_1 str = "0.0" == (show $ simplify $ 0 * (var $ "x" ++ str)) -- FIXME broken as of 12May2015
 
 evalTest3_0 n a1 a2 a3 a4 a5 a6 =
     let x3 = var3d (size, size, size) "X3"

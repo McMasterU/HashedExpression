@@ -3,22 +3,31 @@
 
 Helper functions/instances to make pattern gaurds involving Expressions easier to read.
 -}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module WithHoles where
 
-import qualified Data.IntMap      as I
-import qualified Data.List        as L
-import           Data.Maybe
-import           HashedExpression (Complex, Dims (..), Dir (..),
-                                   ExpressionEdge (..), Internal, Node,
-                                   OpId (..), RealVectorSpace, Rectangular,
-                                   addEdge, getDimE)
+import qualified Data.IntMap as I
+import qualified Data.List as L
+import Data.Maybe
+import HashedExpression
+    ( Complex
+    , Dims(..)
+    , Dir(..)
+    , ExpressionEdge(..)
+    , Internal
+    , Node
+    , OpId(..)
+    , RealVectorSpace
+    , Rectangular
+    , addEdge
+    , getDimE
+    )
 import qualified HashedExpression
-import           HashedInstances  ()
+import HashedInstances ()
 
 data WithHoles
     = WHOp OpId [WithHoles]
@@ -52,9 +61,9 @@ FIXME:  figure these out later:
 
 Return a list of all wholes in a pattern-matching expression.
 -}
-definedHoles (WHHole i)    = [i]
+definedHoles (WHHole i) = [i]
 definedHoles (WHOp _ subs) = concatMap definedHoles subs
-definedHoles _             = []
+definedHoles _ = []
 
 isHoleInPattern i pattern = i `elem` (definedHoles pattern)
 
@@ -171,12 +180,12 @@ dimWH found e0 (WHOp op xs@(_x1:_)) =
         ScaleV ->
             case xs of
                 (_:x2:[]) -> dimWH found e0 x2
-                _         -> error "WH.dimWH ScaleV needs 2 args"
+                _ -> error "WH.dimWH ScaleV needs 2 args"
         Transpose _ -> error "WH.dimWH transpose"
         _ ->
             case catMaybes $ map (dimWH found e0) xs of
                 (newDim:_) -> Just newDim
-                _          -> Nothing
+                _ -> Nothing
 dimWH _found _e0 (WHOp _op []) = Nothing -- FIXME should we check for errors
 dimWH _found _e0 (WHConst _c) = Nothing
 dimWH found e0 (WHHole idx) =
@@ -311,7 +320,7 @@ infix 0 |.~~>
 {-
 
 -}
-[p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11]{-
+[p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11] {-
 
 
 -}
