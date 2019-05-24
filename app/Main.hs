@@ -1,7 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 module Main where
 
-import HashedTests
 import HashedInstances
 import HashedDerivative
 import HashedSimplify
