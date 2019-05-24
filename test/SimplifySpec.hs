@@ -24,6 +24,53 @@ import Test.QuickCheck hiding (scale)
 --import HashedExamples
 import Debug.Trace
 
+{-
+\end{comment}
+
+\section{Simplify Tests}
+Expressions can simplify in:
+\begin{enumerate}
+- the instance of an expression in HashedInstances.lhs
+- a matching rule in simp1 in HashedSimplify.lhs
+- a matching rule below simp1 in HashedSimplify.lhs
+\end{enumerate}
+
+So far, only a few simplify rules have been implemented in their instances.  Most rules are in simp1 (WithHoles), but some more complicated cases do not work using only these rules, so there are the original, more complicated rules below simp1.
+
+Some tests are commented out because otherwise they will not compile.
+
+\begin{description}
+-[simpTest0] Scalar multiplication, with simplifications for products containing zero or one
+-[simpTest1] Scalar addition, with simplifications for sums containing zero
+-[simpTest2] Scalar addition and multiplication together, with simplifications for repeated values
+-[simpTest3] Exponents and logarithms
+-[simpTest4] Division, rule for zero divided by non-zero, which is not implemented yet
+-[simpTest5] One, two and three dimensional vectors, with simplifications for addition, dot products and scaling
+-[simpTest6] Distribution for scalars and vectors
+-[simpTest7] Complex scalars and vectors, with simplifications for extracting real and imaginary and parts and addition
+-[simpTest8] Complex scalars and vectors, with simplifications for scalar  multiplication and dot products
+-[simpTest9] Scaling complex scalars and vectors
+-[simpTest10] Projections, injections and Fourier transforms
+\end{description}
+
+\subsection{simpTest0}Multiplication
+
+Multiplication with (*)
+
+- defined in GHC.Num
+- precedence 7
+- left associative
+- takes two instances of the Num class
+
+
+Multiplication with product
+
+- defined in Data.List
+- takes a list of instances of the Num class
+
+
+Begin by defining some variables of type Scalar.
+-}
 [x, y, z, u, v, w] = map var ["x", "y", "z", "u", "v", "w"]
 
 [x1, y1, z1, u1, v1, w1] = map (var1d 4) ["X1", "Y1", "Z1", "U1", "V1", "W1"]
@@ -48,7 +95,7 @@ spec =
     describe "simplify expression tests" $ do
         specify "TODO" $ do
             pendingWith
-                "Don't have below simplifying rules, need implementations"
+                "These tests belows fails, need fix or add implementations"
             {-
             FIXME add the rule for log(exp x) but for exp(log x) we need undefined and piecewise functions
             -}
@@ -63,6 +110,22 @@ spec =
             This, for example, should be safe to simplify.
             -}
             simplify (0 / (x ^ 2 + 1)) `shouldBe` 0
+            {-
+
+            FIXME This simplifies, but the result causes a type error.
+            -}
+--            simplify (2 .*: (x1 +: y1)) `shouldBe` ((2 +: 0).*x1 +: (2 +: 0).*y1)
+--            simplify ((x +: 0) .*: (x1 +: y1)) -- `shouldBe` ((x +: 0)*.x1 +: (x +: 0)*.y1)
+--            (x +: y) .*: (x1 +: y1) -- `shouldBe` ((x +: y)*.(x1 +: y1))
+--            simplify ((x +: y) .*: (x1 +: y1)) -- `shouldBe` (((x +: y)*.x1)+:((x +: y)*.y1
+            {-
+
+            This does work but it is annoying to check because of all the parentheses and negatives.
+            -}
+            simplify ((x +: y) * (z +: w) * (u +: v)) `shouldBe`
+                (((-((u * w * y) + (v * w * x))) + ((-(v * y)) * z) +
+                  (u * x * z)) +:
+                 (((-(v * y)) * w) + (u * w * x) + (u * y * z) + (v * x * z)))
         specify "simplify 0" $ do
             simplify (x * 1) `shouldBe` x
             simplify (1 * x) `shouldBe` x
@@ -120,10 +183,10 @@ spec =
             {-
             \subsection{simpTest3} Exponentiation and logarithms
             $e^x$ with exp
-            \begin{itemize}
-            \item defined in GHC.Float
-            \item takes an instance of the Fractional class
-            \end{itemize}
+            
+            - defined in GHC.Float
+            - takes an instance of the Fractional class
+            
 
             $e^0$ evaluates right away to 1.
             -}
@@ -162,34 +225,34 @@ spec =
 
             The instance of  is as multiplication.  There are no rules for simplifying a product containing repeated values.
             Exponents with \^{}
-            \begin{itemize}
-            \item Instance as repeated multiplication
-            \item Defined in GHC.Real
-            \item Right associative
-            \item precedence 8
-            \item takes an instance of the Num class and the Integral class
-            \item does not take negative exponents
-            \item only takes integer exponents
-            \end{itemize}
+            
+            - Instance as repeated multiplication
+            - Defined in GHC.Real
+            - Right associative
+            - precedence 8
+            - takes an instance of the Num class and the Integral class
+            - does not take negative exponents
+            - only takes integer exponents
+            
 
             Exponents with ^^
-            \begin{itemize}
-            \item Instance as repeated multiplication or division
-            \item Defined in GHC.Real
-            \item Right associative
-            \item precedence 8
-            \item takes an instance of the Fractional class and the Integral class
-            \item only takes integer exponents
-            \end{itemize}
+            
+            - Instance as repeated multiplication or division
+            - Defined in GHC.Real
+            - Right associative
+            - precedence 8
+            - takes an instance of the Fractional class and the Integral class
+            - only takes integer exponents
+            
 
             Exponents with **
-            \begin{itemize}
-            \item Instance as exp(log(base)*power)
-            \item Defiend in GHC.Float
-            \item \item Right associative
-            \item precedence 8
-            \item takes two instances of the Floating class
-            \end{itemize}
+            
+            - Instance as exp(log(base)*power)
+            - Defiend in GHC.Float
+            - - Right associative
+            - precedence 8
+            - takes two instances of the Floating class
+            
 
             -}
             x ^ 2 `shouldBe` x * x
@@ -239,15 +302,15 @@ spec =
             {-
 
             Dot product using (<.>)
-            \begin{itemize}
-            \item infix for dot
-            \item Mac Option 8; Windows Alt 7; Linux Ctrl Shift u 2022
-            \item defined in HashedExpression.lhs
-            \item precedence 8
-            \item left associative
-            \item takes two instances of the Rectangular Class
-            \item defined in HashedExpression.lhs
-            \end{itemize}
+            
+            - infix for dot
+            - Mac Option 8; Windows Alt 7; Linux Ctrl Shift u 2022
+            - defined in HashedExpression.lhs
+            - precedence 8
+            - left associative
+            - takes two instances of the Rectangular Class
+            - defined in HashedExpression.lhs
+            
 
             Dot products with the zero vector simplify in simp1.
             -}
@@ -260,13 +323,13 @@ spec =
             {-
 
             Scaling a vector using (*.)
-            \begin{itemize}
-            \item infix for scale
-            \item precedence 8
-            \item left associative
-            \item takes an instance of the Scalar class and the Rectangular class
-            \item defined in HashedExpression.lhs
-            \end{itemize}
+            
+            - infix for scale
+            - precedence 8
+            - left associative
+            - takes an instance of the Scalar class and the Rectangular class
+            - defined in HashedExpression.lhs
+            
 
             These tests simplify with simp1
             -}
@@ -412,10 +475,10 @@ spec =
             \subsection{simpTest7} Complex scalars and vectors
 
             Forming complex numbers with (+:)  Note that this is different from (:+), which is defined in Data.Complex and does a similar thing
-            \begin{itemize}
-            \item defined in HashedExpression.lhs
-            \item predecence 6
-            \end{itemize}
+            
+            - defined in HashedExpression.lhs
+            - predecence 6
+            
 
             Extracting the real or imaginary part of a complex number.  This does not happen in HashedComplexInstances.lhs, but in simp1 in HashedSimplify.lhs
             -}
@@ -513,3 +576,114 @@ spec =
                 "((x*.W1(4))+(x*.Y1(4))+(x*.Z1(4)))"
             pretty (unOneD (simplify (x *. (y1 + z1 - w1)))) `shouldBe`
                 "(((x*(-1.0))*.W1(4))+(x*.Y1(4))+(x*.Z1(4)))"
+        specify "simplify 8" $
+            {-
+
+            \subsection{simpTest8} Complex scalar and vectors cont.
+
+            This works, the rule is in simp1
+            -}
+         do
+            simplify ((x +: y) * (z +: w)) `shouldBe`
+                simplify ((-y * w + x * z) +: (x * w + y * z))
+            simplify ((x +: y) * (0 +: w)) `shouldBe`
+                simplify ((-y * w) +: (x * w))
+            simplify ((x +: y) * (1 +: w)) `shouldBe`
+                simplify ((-y * w + x) +: (x * w + y))
+            pretty (unScalarC (simplify ((x +: y) * (z +: w) * (u +: v)))) `shouldBe`
+                "(((-((u*w*y)+(v*w*x)))+((-(v*y))*z)+(u*x*z))+:(((-(v*y))*w)+(u*w*x)+(u*y*z)+(v*x*z)))"
+            {-
+
+            Dot products of complex vectors.  Some things happen in HashedComplexInstances.lhs
+            -}
+            ((x1 +: y1) <.> (z1 +: w1)) `shouldBe`
+                ((xRe (x1 +: y1) <.> xRe (z1 +: w1)) +
+                 (xIm (x1 +: y1) <.> xIm (z1 +: w1)))
+            {-
+
+            Simplifying does more.
+            -}
+            simplify ((x1 +: y1) <.> (z1 +: w1)) `shouldBe`
+                ((w1 <.> y1) + (x1 <.> z1))
+            simplify ((x1 +: y1) <.> (zero1 +: w1)) `shouldBe` (w1 <.> y1)
+            {-
+
+            -}
+            simplify ((x1 +: w1) <.> ((y1 +: v1) + (z1 +: u1))) `shouldBe`
+                simplify
+                    (((u1 <.> w1) + (v1 <.> w1) + (x1 <.> y1) + (x1 <.> z1)))
+            pretty (unScalar (simplify ((x1 + y1) <.> (z1 + w1)))) `shouldBe`
+                "((W1(4)<.>X1(4))+(W1(4)<.>Y1(4))+(X1(4)<.>Z1(4))+(Y1(4)<.>Z1(4)))"
+            simplify ((y1 + z1 + u1) <.> (x1 + w1 + v1)) `shouldBe`
+                simplify
+                    ((u1 <.> v1) + (u1 <.> w1) + (u1 <.> x1) + (v1 <.> y1) +
+                     (v1 <.> z1) +
+                     (w1 <.> y1) +
+                     (w1 <.> z1) +
+                     (x1 <.> y1) +
+                     (x1 <.> z1))
+        specify "simplify 9" $
+            {-
+
+            \subsection{simpTest9}Scaling complex scalars and vectors
+
+            A complex scalar can only be scaled using (*).  Since (*) requires two of the same type, there is no multiplying Scalar by ScalarC. See simpTest8 for more examples.
+
+            This works because 2 is an instance of the Num class, and from the context, it is inferred to be ScalarC, which is a type in the Num class.  However, z is of type Scalar, and does not convert to ScalarC.
+            -}
+         do
+            simplify (2 * (x +: y)) `shouldBe` (x * 2 +: y * 2)
+            --simplify(z*(3 +: 4)) `shouldBe` (3*z +: 4*z)
+            --simplify(z*(x +: y)) `shouldBe` (x*z +: y*z)
+            simplify (2 * ((x +: y) + (z +: w) + (v +: u))) `shouldBe`
+                simplify
+                    (((2 * x) + (2 * z) + (2 * v)) +:
+                     ((2 * y) + (2 * w) + (2 * u)))
+            {-
+
+            Scale a complex vector using (*.)
+            -}
+            simplify (x *. (x1 +: y1)) `shouldBe` ((x *. x1) +: (x *. y1))
+            (x *. (x1 +: y1)) `shouldBe`
+                ((x *. xRe (x1 +: y1)) +: (x *. xIm (x1 +: y1)))
+            simplify (2 *. ((x1 +: y1) + (z1 +: w1))) `shouldBe`
+                (2 *. x1 + 2 *. z1) +:
+                (2 *. w1 + 2 *. y1)
+            simplify (2 *. ((x1 +: y1) + (z1 +: w1) + (u1 +: v1))) `shouldBe`
+                simplify
+                    ((2 *. u1 + 2 *. x1 + 2 *. z1) +:
+                     (2 *. v1 + 2 *. w1 + 2 *. y1))
+            pretty (unOneDC (simplify (2 .*: (x1 +: y1)))) `shouldBe`
+                "(((2.0+:0.0)*.X1(4))+:((2.0+:0.0)*.Y1(4)))"
+            pretty (unOneDC (simplify ((x +: 0) .*: (x1 +: y1)))) `shouldBe`
+                "(((x+:0.0)*.X1(4))+:((x+:0.0)*.Y1(4)))"
+            {-
+
+            scaleR does not have an infix operator; but its instance is as (*.); so it does the same thing as scale
+            -}
+            pretty (unOneDC (scaleR x (x1 +: y1))) `shouldBe`
+                "(x*.(X1(4)+:Y1(4)))"
+            pretty (unOneDC (scale x (x1 +: y1))) `shouldBe`
+                "((x*.(Re(X1(4)+:Y1(4))))+:(x*.(Im(X1(4)+:Y1(4)))))"
+            simplify (scaleR x (x1 +: y1)) `shouldBe` ((x *. x1) +: (x *. y1))
+            {-
+            FIXME This doesn't work because there is no instance for it.  There should be an instance for this in HashedInstances (see 600-800); unless we scrap scaleR altogether
+            -}
+            --scaleR x (x3 +: y3)
+            {-
+
+            (.*:) = scaleC
+            The instance of scaleC makes a scale (*.), like this, but that raises a type error.  FIXME the results of a simplify should probably be a valid expression.
+            -}
+            pretty (unOneDC ((x +: y) .*: (x1 +: y1))) `shouldBe`
+                "((x+:y)*.(X1(4)+:Y1(4)))"
+            {-
+
+            Anyways, the rule under simp1 for scaling a complex vector using *. simplifies this expression
+            -}
+            pretty (unOneDC (simplify ((x +: y) .*: (x1 +: y1)))) `shouldBe`
+                "(((x+:y)*.X1(4))+:((x+:y)*.Y1(4)))"
+            pretty (unOneDC (simplify ((x +: y) .*: ((x1 + w1) +: (y1 + z1))))) `shouldBe`
+                "((((x+:y)*.W1(4))+((x+:y)*.X1(4)))+:(((x+:y)*.Y1(4))+((x+:y)*.Z1(4))))"
+            pretty (unOneDC (simplify ((x +: y) .*: ((z +: w) .*: (x1 +: y1))))) `shouldBe`
+                "(((((w*y*(-1.0))+(x*z))+:((w*x)+(y*z)))*.X1(4))+:((((w*y*(-1.0))+(x*z))+:((w*x)+(y*z)))*.Y1(4)))"
