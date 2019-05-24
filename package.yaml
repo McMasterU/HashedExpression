@@ -29,6 +29,7 @@ dependencies:
 - process
 - binary
 
+
 library:
   source-dirs: src
 
@@ -53,3 +54,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - HashedExpression
+    - hspec
