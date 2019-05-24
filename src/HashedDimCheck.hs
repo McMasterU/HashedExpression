@@ -87,7 +87,7 @@ intDimCheck internal =
         "intDimCheck' ran out of iterations without reaching fixed point " ++
         show internal
     sub iter oldIn internal =
-        mt ("sub " ++ L.intercalate " " [show iter, take 100 (show internal)]) $
+        mt ("sub " ++ unwords [show iter, take 100 (show internal)]) $
         if internal == oldIn
             then mt ("intDimCheck done " ++ show internal) internal
             else sub (iter - 1) internal $ intDimCheck' internal
@@ -124,16 +124,12 @@ downEdge node internal =
         case currEdge of
             Op (CDims dims) (Compound int) inputs ->
                 Op
-                    (CDims (zipWith inputDims (map (\x -> [x]) inputs) dims))
+                    (CDims (zipWith inputDims (map (: []) inputs) dims))
                     (Compound int)
                     inputs
             Op DimUnknown (Compound int) inputs ->
                 Op
-                    (CDims
-                         (zipWith
-                              inputDims
-                              (map (\x -> [x]) inputs)
-                              (repeat DimUnknown)))
+                    (CDims $ map ((`inputDims` DimUnknown) . (: [])) inputs)
                     (Compound int)
                     inputs
             Op oldEDim (Extract int) [input] ->
@@ -237,7 +233,7 @@ downEdge node internal =
     projInp :: [Node] -> Dims -> Subspace -> Dims
     projInp inputs olDim ss = projDim (inputDims inputs (injectDim olDim ss)) ss
     injInp inputs olDim ss = injectDim (inputDims inputs (projDim olDim ss)) ss
-    newDim inputs olDim = inputDims inputs olDim
+    newDim = inputDims
     inputDims :: [Node] -> Dims -> Dims
     inputDims inputs olDim =
         case L.filter
@@ -250,9 +246,7 @@ downEdge node internal =
                     ("HDC.downEdge found: " ++
                      show currEdge ++
                      " has child(ren) " ++
-                     show
-                         (map fromJust
-                              (zipWith I.lookup inputs (repeat internal))) ++
+                     show (map fromJust (map (`I.lookup` internal) inputs)) ++
                      ", which does not match.")
     currEdge = fromJust (I.lookup node internal)
 
@@ -388,9 +382,7 @@ upEdge node internal = newEdge
                     ("HDC.upEdge found " ++
                      show currEdge ++
                      " has parent(s) " ++
-                     show
-                         (map fromJust
-                              (zipWith I.lookup parents (repeat internal))) ++
+                     show (map fromJust (map (`I.lookup` internal) parents)) ++
                      ", which does not match.")
     newCDims :: Node -> Internal -> [Node] -> [Dims] -> [Dims]
     newCDims node internal [] dims = dims
@@ -461,13 +453,13 @@ upDims node internal (par:pars) dims =
                     [inDims !! (fromJust (L.elemIndex node inputs))]
             Op dim (Extract int) [input] ->
                 error
-                    ("HDC.upDims found Extract; Extract should not make it through upDims")
+                    "HDC.upDims found Extract; Extract should not make it through upDims"
             Op dim (Extract int) inputs ->
                 error ("HDC.upDims found Extract with children " ++ show inputs)
             Op dim opId inputs ->
                 case opId of
                     Dot ->
-                        if length sibDims == 1 || length sibDims == 0
+                        if length sibDims <= 1
                             then sibDims
                             else error
                                      ("Dot product with input dims " ++
@@ -588,14 +580,14 @@ A function to find the siblings of a node; useful for finding dimensions of the 
 -}
 getSiblings :: Internal -> Node -> [Node]
 getSiblings internal node =
-    concat
-        (map (getChildren internal)
-             (I.keys (I.filter (isDotParent node) internal)))
+    concatMap
+        (getChildren internal)
+        (I.keys (I.filter (isDotParent node) internal))
 
 isDotParent :: Node -> ExpressionEdge -> Bool
 isDotParent node edge =
     case edge of
-        Op _ Dot inputs -> L.elem node inputs
+        Op _ Dot inputs -> node `elem` inputs
         _ -> False
 
 {-

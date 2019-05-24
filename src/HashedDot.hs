@@ -15,7 +15,7 @@ import qualified Data.IntMap as I
 import qualified Data.IntSet as Set
 import qualified Data.List as L
 import qualified Data.Map as M
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Data.Ratio
 
 import Debug.Trace
@@ -39,15 +39,14 @@ addDot fileName =
 expr2dot' name (e, n) =
     ( sczs
     , unlines $
-      [ "digraph " ++ name ++ " {" -- }
+      [ "digraph " ++ name ++ " {"
       , " nslimit=\"100\";"
       , " mclimit=\"100\";"
       , " ranksep=\"0.4\";"
       , " node [shape=\"none\",width=\"1\",height=\"1\",fontsize=\"30\"];"
       , " edge [len=\"1.9\"];"
       ] ++
-      dotDefs ++ -- {
-      ["}"])
+      dotDefs ++ ["}"])
   where
     nodes = Set.toList $ sczInputs e n
     nodesWithVars = zip nodes $ map (maybeVarNode e) nodes
@@ -200,10 +199,10 @@ The polynomial is of the form of a list of monomials [(Map(varName->power),coeff
 extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
     case I.lookup n e of
         Just (Op _ Sum summands) ->
-            case catMaybes $ map extractMonomial summands of
+            case mapMaybe extractMonomial summands of
                 [] -> Nothing
                 listOfMonos -> Just $ Poly pe listOfMonos
-        _ -> liftM ((Poly pe) . (: [])) $ extractMonomial n
+        _ -> fmap ((Poly pe) . (: [])) $ extractMonomial n
   where
     num2Node = I.fromList $ zip [0 ..] inputs
     varLkup num bnd idxs =
@@ -235,9 +234,4 @@ extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
             Just
                 ( c
                 , ( I.foldr (+) 0 vars -- total degree of all variables
-                  , vars {-
-
-
-
--}
-                   ))
+                  , vars))

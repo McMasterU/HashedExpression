@@ -6,7 +6,6 @@ Experiment in common subexpressions without monads and better expression simplif
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -183,7 +182,7 @@ class HasScale v s where
     (*.) :: s -> v -> v
 
 instance (RealVectorSpace v s) => HasScale v s where
-    (*.) s v = scale s v -- deprecate scale
+    (*.) = scale -- deprecate scale
 
 -- RF: Changed to 8 to give higher prec. than |*| |+| etc.
 -- May cause problems with something like x1*.1 <.> y1*.1
@@ -357,7 +356,7 @@ class ComplexVectorSpace v vr s sr | v -> s, v -> vr, vr -> sr where
     realPartV :: v -> vr -- JLMP:  change to xReV and xImV
     imagPartV :: v -> vr
     magV :: v -> vr
-    (.*:) s v = scaleC s v
+    (.*:) = scaleC
 
 {-
 
@@ -479,9 +478,8 @@ containsDifferential exprs node =
                     error $
                     "containsDifferential SCZ no inputs" ++
                     (pretty $ Expression node exprs)
-        Just (Op _dims _op inputs) ->
-            L.or $ map (containsDifferential exprs) inputs
-    {- case L.or $ map (containsDifferential exprs) inputs of
+        Just (Op _dims _op inputs) -> any (containsDifferential exprs) inputs
+    {- case any (containsDifferential exprs) inputs of
                                  [True] -> True
                                  [False] -> False
                                  _ -> error $ "containsDifferential Op["++show op++
@@ -657,7 +655,7 @@ reduce dim (reduction, (skipLeft, skipRight)) =
                  "projDim SSNyquist " ++
                  show (dim, (reduction, (skipLeft, skipRight), trimmed))
 
-mapAnd (fun:funs) list = (L.and $ map fun list) && mapAnd funs list
+mapAnd (fun:funs) list = all fun list && mapAnd funs list
 mapAnd [] _list = True
 
 cropDim dimIn (left, right) =
@@ -1313,7 +1311,7 @@ Relabel |RelElems| in |InnerExpr| so that the first one you see on the left is 0
 This makes these expressions unique.
 -}
 canonicalIE :: InnerExpr -> ((Int, I.IntMap Int), InnerExpr)
-canonicalIE ie = cie (0, I.empty) ie
+canonicalIE = cie (0, I.empty)
 
 cie (next, remap) (IERE idx bdy off) =
     let (newIdx, (newNext, newRemap)) =
@@ -1564,41 +1562,41 @@ nodeIsComplex edges top =
         Just (Op _dim op args) ->
             case op of
                 Sqrt ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Sqrt on complex number node"
                         else False
                 Asin ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Asin on complex number node"
                         else False
                 Acos ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Acos on complex number node"
                         else False
                 Atan ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Atan on complex number node"
                         else False
                 Asinh ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Asinh on complex number node"
                         else False
                 Acosh ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Acosh on complex number node"
                         else False
                 Atanh ->
-                    if (L.or $ map (nodeIsComplex edges) args)
+                    if (any (nodeIsComplex edges) args)
                         then error "Atanh on complex number node"
                         else False
-                Dot -> L.or $ map (nodeIsComplex edges) args
+                Dot -> any (nodeIsComplex edges) args
                 FT _ -> True
                 RealPart -> False
                 ImagPart -> False
                 Reglzr _ _ -> False
                 GradReglzr _ _ -> False -- FIXME it could be complex if there all the inputs are complex
                 RealImag -> True
-                _ -> L.or $ map (nodeIsComplex edges) args
+                _ -> any (nodeIsComplex edges) args
         Just _ -> False
 
 nodeIsComplex' (Expression n e) = nodeIsComplex e n

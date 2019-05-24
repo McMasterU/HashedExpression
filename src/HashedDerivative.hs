@@ -731,7 +731,7 @@ pickOne (b:bs) cs = (b, cs ++ bs) : (pickOne bs (b : cs))
 pickOne [] _cs = []
 
 -- map over one element of a list at a time, and return the whole list in the same order
-mapOneAtATime fun bs = mapOne' fun [] bs
+mapOneAtATime fun = mapOne' fun []
 
 mapOne' fun fstBack (b:bs) =
     (reverse fstBack ++ ((fun b) : bs)) : (mapOne' fun (b : fstBack) bs)
@@ -742,7 +742,7 @@ testMapOne =
 
 -- map over one element of a list at a time, and  an accumulator
 mapAccumOneAtATime :: (s -> b -> (s, b)) -> s -> [b] -> (s, [[b]])
-mapAccumOneAtATime fun state bs = mapAccumOne fun state [] bs
+mapAccumOneAtATime fun state = mapAccumOne fun state []
 
 mapAccumOne fun s fstBack (b:bs) =
     let (s', b') = fun s b
@@ -961,8 +961,7 @@ isExtractable exprs node =
     isDotDiff exprs node ||
     case I.lookup node exprs of
         Just (Op _ Sum inputs) ->
-            List.and $
-            map
+            all
                 (\n -> isDotDiff exprs n || (not $ containsDifferential exprs n))
                 inputs
         _ -> False
@@ -985,14 +984,11 @@ isDotDiff exprs n =
 {-
 Sort nodes by hashes, except that differentials come first.
 -}
-sortNodes exprs nodes = List.sortBy cmpNodes nodes
+sortNodes exprs = List.sortBy cmpNodes
   where
     cmpNodes l r =
         case map (flip I.lookup exprs) [l, r] of
             [Just (DVar _ _), Just (DVar _ _)] -> compare l r
-            [Just (DVar _ _), Just (_)] -> LT
-            [Just (_), Just (DVar _ _)] -> GT
-            _ -> compare l r {-
-
-\end{document}
--}
+            [Just (DVar _ _), Just _] -> LT
+            [Just _, Just (DVar _ _)] -> GT
+            _ -> compare l r

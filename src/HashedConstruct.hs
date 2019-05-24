@@ -13,7 +13,6 @@ or hard-to-pointpoint errors will occur.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module HashedConstruct where
 
@@ -38,7 +37,7 @@ The type of subexpressions will be
 type Construct = Internal -> (Internal, Node)
 
 comp :: ((Internal, Node) -> (Internal, Node)) -> Construct -> Construct
-comp fun c = \e -> fun $ c e
+comp fun c e = fun $ c e
 
 {-
 
@@ -74,29 +73,24 @@ instance Eq Construct where
 
 -}
 instance Num Construct where
-    negate x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') Neg [x']
-    x + y =
-        \e ->
-            let (e', x') = x e --FIXME why not sumE [x,y]
-                (e'', y') = y e'
-             in addEdge e'' $ Op (getDimE e'' y') Sum [x', y']
-    x * y =
-        \e ->
-            let (e', x') = x e
-                (e'', y') = y e'
-             in addEdge e'' $ Op (getDimE e'' y') Prod [x', y']
-    fromInteger i = \e -> addEdge e $ Const Dim0 $ fromIntegral i
-    abs x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op Dim0 Abs [x']
-    signum x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op Dim0 Signum [x']
+    negate x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') Neg [x']
+    (+) x y e =
+        let (e', x') = x e --FIXME why not sumE [x,y]
+            (e'', y') = y e'
+         in addEdge e'' $ Op (getDimE e'' y') Sum [x', y']
+    (*) x y e =
+        let (e', x') = x e
+            (e'', y') = y e'
+         in addEdge e'' $ Op (getDimE e'' y') Prod [x', y']
+    fromInteger i e = addEdge e $ Const Dim0 $ fromIntegral i
+    abs x e =
+        let (e', x') = x e
+         in addEdge e' $ Op Dim0 Abs [x']
+    signum x e =
+        let (e', x') = x e
+         in addEdge e' $ Op Dim0 Signum [x']
 
 {-
 
@@ -109,22 +103,20 @@ instance Fractional Construct where
              in if Dim0 == getDimE e'' y'
                     then addEdge e'' $ Op Dim0 Div [x', y']
                     else error $ "Construct.div bad dims " ++ show (x', y', e)
-    fromRational i = \e -> addEdge e $ Const Dim0 $ fromRational i
+    fromRational i e = addEdge e $ Const Dim0 $ fromRational i
 
 {-
 
 -}
-fun1 op x =
-    \e ->
-        let (e', x') = x e
-         in if Dim0 == getDimE e' x'
-                then addEdge e' $ Op Dim0 Sqrt [x']
-                else error $
-                     "Construct." ++ show op ++ " bad dims " ++ show (x', e)
+fun1 op x e =
+    let (e', x') = x e
+     in if Dim0 == getDimE e' x'
+            then addEdge e' $ Op Dim0 Sqrt [x']
+            else error $ "Construct." ++ show op ++ " bad dims " ++ show (x', e)
 
 instance Floating Construct where
     sqrt = fun1 Sqrt
-    pi = \e -> addEdge e $ Const Dim0 pi
+    pi e = addEdge e $ Const Dim0 pi
     exp = fun1 Exp
     cos = fun1 Cos
     sin = fun1 Sin
@@ -142,12 +134,11 @@ instance Floating Construct where
 
 getDimC x exprs = getDimE exprs (snd $ x exprs)
 
-scaleX d x =
-    \e ->
-        let (e1, dN) = addEdge e $ Const Dim0 d
-         in genProd e1 [dN, snd $ x e]
+scaleX d x e =
+    let (e1, dN) = addEdge e $ Const Dim0 d
+     in genProd e1 [dN, snd $ x e]
 
-mkConst dims d = \e -> addEdge e $ Const dims d
+mkConst dims d e = addEdge e $ Const dims d
 
 {-
 
@@ -207,30 +198,26 @@ instance Complex Construct Construct where
             let (e', x') = x e
                 (e'', y') = y e'
              in addEdge e'' $ Op (getDimE e' x') RealImag [x', y']
-    iRe x =
-        \e ->
-            let (e', x') = x e
-                (e'', zero) =
-                    case getDimE e' x' of
-                        Dim0 -> 0 e'
-                        dims -> addEdge e' $ Const dims 0
-             in addEdge e'' $ Op (getDimE e' x') RealImag [x', zero]
-    iIm x =
-        \e ->
-            let (e', x') = x e
-                (e'', zero) =
-                    case getDimE e' x' of
-                        Dim0 -> 0 e'
-                        dims -> addEdge e' $ Const dims 0
-             in addEdge e'' $ Op (getDimE e' x') RealImag [zero, x']
-    xRe z =
-        \e ->
-            let (e', z') = z e
-             in addEdge e' $ Op (getDimE e' z') RealPart [z']
-    xIm z =
-        \e ->
-            let (e', z') = z e
-             in addEdge e' $ Op (getDimE e' z') ImagPart [z']
+    iRe x e =
+        let (e', x') = x e
+            (e'', zero) =
+                case getDimE e' x' of
+                    Dim0 -> 0 e'
+                    dims -> addEdge e' $ Const dims 0
+         in addEdge e'' $ Op (getDimE e' x') RealImag [x', zero]
+    iIm x e =
+        let (e', x') = x e
+            (e'', zero) =
+                case getDimE e' x' of
+                    Dim0 -> 0 e'
+                    dims -> addEdge e' $ Const dims 0
+         in addEdge e'' $ Op (getDimE e' x') RealImag [zero, x']
+    xRe z e =
+        let (e', z') = z e
+         in addEdge e' $ Op (getDimE e' z') RealPart [z']
+    xIm z e =
+        let (e', z') = z e
+         in addEdge e' $ Op (getDimE e' z') ImagPart [z']
 
 reImC (x, y) = x +: y
 
@@ -244,116 +231,96 @@ mapCplx f = reImC . mapP f . xReImC
 
 -}
 instance RealVectorSpace Construct Construct where
-    scale s v =
-        \e ->
-            let (e', s') = s e
-                (e'', v') = v e'
-             in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
-    subMask m v =
-        \e ->
-            let (e', m') = m e
-                (e'', v') = v e'
-             in addEdge e'' $ Op (getDimE e'' v') SubMask [m', v']
-    negMask m v =
-        \e ->
-            let (e', m') = m e
-                (e'', v') = v e'
-             in addEdge e'' $ Op (getDimE e'' v') NegMask [m', v']
-    dot s v =
-        \e ->
-            let (e', s') = s e
-                (e'', v') = v e'
-             in addEdge e'' $ Op Dim0 Dot [s', v']
+    scale s v e =
+        let (e', s') = s e
+            (e'', v') = v e'
+         in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
+    subMask m v e =
+        let (e', m') = m e
+            (e'', v') = v e'
+         in addEdge e'' $ Op (getDimE e'' v') SubMask [m', v']
+    negMask m v e =
+        let (e', m') = m e
+            (e'', v') = v e'
+         in addEdge e'' $ Op (getDimE e'' v') NegMask [m', v']
+    dot s v e =
+        let (e', s') = s e
+            (e'', v') = v e'
+         in addEdge e'' $ Op Dim0 Dot [s', v']
     mapR _fun _n = error "mapR not implemented for unsafe interface"
      -- CKA we can't use a function :: Construct -> Construct to make the mapping function
      {- \ e -> addEdge e $ Op (getDimE e n) (MapND mapOut $ C.pack "anonymous") [n]
       where
         Scalar mapOut = fun $ var "anonymous"
      -}
-    projSS ss v =
-        \e ->
-            let (e', v') = v e
-                inDim@(Dim2 (d1, d2)) = getDimE e' v'
-                outDims =
-                    case ss of
-                        SSCrop _bounds dims ->
-                            if dims == [d1, d2]
-                                then projDim inDim ss
-                                else error $
-                                     "HC.projSS adding " ++
-                                     show (d1, d2, ss) ++
-                                     "\n" ++ pretty (e', v')
-                        _ ->
-                            trace ("projSS ok " ++ show (d1, d2, ss)) $
-                            projDim inDim ss
-             in addEdge e' $ Op outDims (Project ss) [v']
+    projSS ss v e =
+        let (e', v') = v e
+            inDim@(Dim2 (d1, d2)) = getDimE e' v'
+            outDims =
+                case ss of
+                    SSCrop _bounds dims ->
+                        if dims == [d1, d2]
+                            then projDim inDim ss
+                            else error $
+                                 "HC.projSS adding " ++
+                                 show (d1, d2, ss) ++ "\n" ++ pretty (e', v')
+                    _ ->
+                        trace ("projSS ok " ++ show (d1, d2, ss)) $
+                        projDim inDim ss
+         in addEdge e' $ Op outDims (Project ss) [v']
                        --addEdge e' $ Op (projDim (getDimE e' v') ss) (Project ss) [v']
-    injectSS ss v =
-        \e ->
-            let (e', v') = v e
-             in addEdge e' $ Op (injectDim (getDimE e' v') ss) (Inject ss) [v']
+    injectSS ss v e =
+        let (e', v') = v e
+         in addEdge e' $ Op (injectDim (getDimE e' v') ss) (Inject ss) [v']
 
 {-
 
 -}
 instance ComplexVectorSpace Construct Construct Construct Construct where
-    scaleC s v =
-        \e ->
-            let (e', s') = s e
-                (e'', v') = v e'
-             in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
-    scaleR s v =
-        \e ->
-            let (e', s') = s e
-                (e'', v') = v e'
-             in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
+    scaleC s v e =
+        let (e', s') = s e
+            (e'', v') = v e'
+         in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
+    scaleR s v e =
+        let (e', s') = s e
+            (e'', v') = v e'
+         in addEdge e'' $ Op (getDimE e'' v') ScaleV [s', v']
     mapC _ = error "mapC not implemented for unsafe interface"
     realPartV = xRe
     imagPartV = xIm
     magV _ = error "magV not implemented"
 
 instance Rectangular Construct where
-    ft x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (FT True) [x']
-    invFt x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (FT False) [x']
-    rowPFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT True Row) [x']
-    colPFT dir x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT dir Column) [x']
-    columnPFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT True Column) [x']
-    slicePFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT True Slice) [x']
-    invRowPFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT False Row) [x']
-    invColumnPFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT False Column) [x']
-    invSlicePFT x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $ Op (getDimE e' x') (PFT False Slice) [x']
-    transp swap x =
-        \e ->
-            let (e', x') = x e
-             in addEdge e' $
-                Op (trDims swap $ getDimE e' x') (Transpose swap) [x']
+    ft x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (FT True) [x']
+    invFt x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (FT False) [x']
+    rowPFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT True Row) [x']
+    colPFT dir x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT dir Column) [x']
+    columnPFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT True Column) [x']
+    slicePFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT True Slice) [x']
+    invRowPFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT False Row) [x']
+    invColumnPFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT False Column) [x']
+    invSlicePFT x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (getDimE e' x') (PFT False Slice) [x']
+    transp swap x e =
+        let (e', x') = x e
+         in addEdge e' $ Op (trDims swap $ getDimE e' x') (Transpose swap) [x']
 {-
 
 This only works for one dimension at a time
