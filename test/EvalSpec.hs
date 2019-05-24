@@ -358,13 +358,6 @@ evalTest1_8 n a1 a2 a3 a4 a5 a6 =
                  , [])) ==
         U.listArray (0, size - 1) (a1 : a2 : a3 : a4 : a5 : (replicate size a6))
 
---evalTest1_9 = evalOneD (xRe (ft (x1 +: y1))) subs1
---evalTest1_10 = evalOneD (xIm (ft (x1 +: y1))) subs1
-{-
-
-
-
--}
 evalTest2_0 n a1 a2 a3 a4 a5 a6 =
     let size = 2 + (n `mod` 10)
         x2 = var2d (size, size) "X2"
@@ -564,7 +557,7 @@ evalTest3_8 = evalThreeD (xIm (x3 +: x3)) (subs ([],[],[], [("X3", U.listArray (
 --\end{code}
 
 -}
-evalTest4_1 str = "0.0" == (show $ simplify $ 0 * (var $ "x" ++ str))-- FIXME broken as of 12May2015
+evalTest4_1 str = "0.0" == (show $ simplify $ 0 * (var $ "x" ++ str)) -- FIXME broken as of 12May2015
 
 evalTest3_0 n a1 a2 a3 a4 a5 a6 =
     let x3 = var3d (size, size, size) "X3"
@@ -765,7 +758,6 @@ evalTestC3_2 = evalThreeDC (ft (z3 +: y3)) $ subs ([],[],[],[("Z3", U.listArray 
 Show functions
 
 -}
-
 {-
 
 \begin{comment}
@@ -813,76 +805,40 @@ Things which should be zero.  Taking derivative with respect to variables not pr
 spec :: Spec
 spec =
     describe "eval test" $ do
-        specify "evalTest0_0" $
-            property evalTest0_0
-        specify "evalTest0_1" $
-            property evalTest0_1
-        specify "evalTest0_2" $
-            property evalTest0_2
-        specify "evalTest0_3" $
-            property evalTest0_3
-        specify "evalTest0_4" $
-            property evalTest0_4
-        specify "evalTest0_5" $
-            property evalTest0_5
-        specify "evalTest0_1b" $
-            property evalTest0_1b
-        specify "evalTest0_7" $
-            property evalTest0_7
-        specify "evalTest0_8" $
-            property evalTest0_8
-        specify "evalTest1_0" $
-            property evalTest1_0
-        specify "evalTest1_1" $
-            property evalTest1_1
-        specify "evalTest1_2" $
-            property evalTest1_2
-        specify "evalTest1_3" $
-            property evalTest1_3
-        specify "evalTest1_4" $
-            property evalTest1_4
-        specify "evalTest1_5" $
-            property evalTest1_5
-        specify "evalTest1_6" $
-            property evalTest1_6
-        specify "evalTest1_7" $
-            property evalTest1_7
-        specify "evalTest1_8" $
-            property evalTest1_8
-        specify "evalTest2_0" $
-            property evalTest2_0
-        specify "evalTest2_1" $
-            property evalTest2_1
-        specify "evalTest2_2" $
-            property evalTest2_2
-        specify "evalTest2_3" $
-            property evalTest2_3
-        specify "evalTest2_4" $
-            property evalTest2_4
+        specify "evalTest0_0" $ property evalTest0_0
+        specify "evalTest0_1" $ property evalTest0_1
+        specify "evalTest0_2" $ property evalTest0_2
+        specify "evalTest0_3" $ property evalTest0_3
+        specify "evalTest0_4" $ property evalTest0_4
+        specify "evalTest0_5" $ property evalTest0_5
+        specify "evalTest0_1b" $ property evalTest0_1b
+        specify "evalTest0_7" $ property evalTest0_7
+        specify "evalTest0_8" $ property evalTest0_8
+        specify "evalTest1_0" $ property evalTest1_0
+        specify "evalTest1_1" $ property evalTest1_1
+        specify "evalTest1_2" $ property evalTest1_2
+        specify "evalTest1_3" $ property evalTest1_3
+        specify "evalTest1_4" $ property evalTest1_4
+        specify "evalTest1_5" $ property evalTest1_5
+        specify "evalTest1_6" $ property evalTest1_6
+        specify "evalTest1_7" $ property evalTest1_7
+        specify "evalTest1_8" $ property evalTest1_8
+        specify "evalTest2_0" $ property evalTest2_0
+        specify "evalTest2_1" $ property evalTest2_1
+        specify "evalTest2_2" $ property evalTest2_2
+        specify "evalTest2_3" $ property evalTest2_3
+        specify "evalTest2_4" $ property evalTest2_4
         {-specify "evalTest2_6" $
             property evalTest2_6-}
-        specify "evalTest2_7" $
-            property evalTest2_7
-        specify "evalTest2_8" $
-            property evalTest2_8
-        specify "evalTest3_0" $
-            property evalTest3_0
-        specify "evalTest3_1" $
-            property evalTest3_1
-        specify "evalTest3_2" $
-            property evalTest3_2
-        specify "evalTest3_3" $
-            property evalTest3_3
-        specify "evalTest3_4" $
-            property evalTest3_4
-        specify "evalTest3_5" $
-            property evalTest3_5
-        specify "evalTest3_6" $
-            property evalTest3_6
-        specify "evalTest3_7" $
-            property evalTest3_7
-        specify "evalTest3_8" $
-            property evalTest3_8
-        specify "evalTest4_1" $
-            property evalTest4_1
-        
+        specify "evalTest2_7" $ property evalTest2_7
+        specify "evalTest2_8" $ property evalTest2_8
+        specify "evalTest3_0" $ property evalTest3_0
+        specify "evalTest3_1" $ property evalTest3_1
+        specify "evalTest3_2" $ property evalTest3_2
+        specify "evalTest3_3" $ property evalTest3_3
+        specify "evalTest3_4" $ property evalTest3_4
+        specify "evalTest3_5" $ property evalTest3_5
+        specify "evalTest3_6" $ property evalTest3_6
+        specify "evalTest3_7" $ property evalTest3_7
+        specify "evalTest3_8" $ property evalTest3_8
+        specify "evalTest4_1" $ property evalTest4_1
