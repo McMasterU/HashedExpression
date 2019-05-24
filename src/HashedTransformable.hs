@@ -3,20 +3,20 @@
 
 Caluclating Derivatives.
 -}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE PatternGuards             #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedTransformable
     (
     ) where
 
-import           HashedExpression
-import           HashedFactor
-import           HashedSimplify
+import HashedExpression
+import HashedFactor
+import HashedSimplify
 
 {-
 

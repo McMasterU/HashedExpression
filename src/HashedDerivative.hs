@@ -18,34 +18,36 @@
 Caluclating Derivatives.
 \begin{comment}
 -}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE PatternGuards             #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedDerivative where
 
-import           HashedConstruct
-import           HashedExpression
-import           HashedInstances       (pretty')
+import HashedConstruct
+import HashedExpression
+import HashedInstances (pretty')
 
-import           Data.ByteString       (ByteString)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as C
+
 --import HashedMatch (o)
 --import qualified HashedMatch as M
-import           Data.Maybe            (catMaybes)
+import Data.Maybe (catMaybes)
 
 --import Data.IntMap (IntMap)
-import qualified Data.IntMap           as I
+import qualified Data.IntMap as I
 
-import qualified Data.List             as List
+import qualified Data.List as List
+
 --import Data.Map (Map)
-import qualified Data.Map              as Map
+import qualified Data.Map as Map
 
 --import Debug.Trace
-import           HashedSimplify        (isDeepZero, mkSCZ, simplify')
-import           HashedTransformable   ()
+import HashedSimplify (isDeepZero, mkSCZ, simplify')
+import HashedTransformable ()
 
 {-
 \end{comment}
@@ -708,14 +710,14 @@ mergeConstsBy op (exprs, nodes@(n1:_)) = (exprs', combined ++ nonconsts)
             (\n ->
                  case I.lookup n exprs of
                      Just (Const _ x) -> [x]
-                     _                -> [])
+                     _ -> [])
             nodes
     nonconsts =
         filter
             (\n ->
                  case I.lookup n exprs of
                      Just (Const _ _) -> False
-                     _                -> True)
+                     _ -> True)
             nodes
     (exprs', combined) =
         if null consts
@@ -726,7 +728,7 @@ mergeConstsBy _ (exprs, []) = (exprs, [])
 
 -- list of singleton and rest of list
 pickOne (b:bs) cs = (b, cs ++ bs) : (pickOne bs (b : cs))
-pickOne [] _cs    = []
+pickOne [] _cs = []
 
 -- map over one element of a list at a time, and return the whole list in the same order
 mapOneAtATime fun bs = mapOne' fun [] bs
@@ -782,7 +784,7 @@ groupedToScaled exprs scaledGroup =
                     (Op dims
                          (case dims of
                               Dim0 -> Prod
-                              _    -> ScaleV)
+                              _ -> ScaleV)
                          [n, node])
   where
     (scalings, node:_rest) = unzip scaledGroup
@@ -803,7 +805,7 @@ gatherDiffs (exprsNoOne, node) =
         else aux exprsNoOne
                  (case I.lookup node exprsNoOne of
                       Just (Op Dim0 Sum inputs) -> inputs
-                      _                         -> [node])
+                      _ -> [node])
 
 aux exprsNoOne inputs =
     let (exprs, one) = addEdge exprsNoOne $ Const Dim0 1
@@ -970,13 +972,13 @@ isDotDiff exprs n =
         Just (Op _ Dot [left, _right]) ->
             case I.lookup left exprs of
                 Just (DVar _ _) -> True
-                _               -> False
+                _ -> False
         Just (Op _ Prod [const, dot]) ->
             case map (flip I.lookup exprs) [const, dot] of
                 [Just (Const Dim0 _), Just (Op _ Dot [left, _right])] ->
                     case I.lookup left exprs of
                         Just (DVar _ _) -> True
-                        _               -> False
+                        _ -> False
                 _ -> False
         _ -> False
 
@@ -988,9 +990,9 @@ sortNodes exprs nodes = List.sortBy cmpNodes nodes
     cmpNodes l r =
         case map (flip I.lookup exprs) [l, r] of
             [Just (DVar _ _), Just (DVar _ _)] -> compare l r
-            [Just (DVar _ _), Just (_)]        -> LT
-            [Just (_), Just (DVar _ _)]        -> GT
-            _                                  -> compare l r{-
+            [Just (DVar _ _), Just (_)] -> LT
+            [Just (_), Just (DVar _ _)] -> GT
+            _ -> compare l r {-
 
 \end{document}
 -}

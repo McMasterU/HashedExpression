@@ -5,7 +5,7 @@ module HashedPacking where
 
 --import HashedExpression
 --import HashedInstances
-import           Data.ByteString (ByteString)
+import Data.ByteString (ByteString)
 
 --import qualified Data.ByteString.Char8 as C
 {-
@@ -40,7 +40,7 @@ data PackOne =
 List of layout of variables in memory.  Assume we get one pointer to all variables.
 This is a temporary scheme which will need to be revised to take multiple cores into account.
 -}
-type Packing = [(ByteString, PackOne)]{-
+type Packing = [(ByteString, PackOne)] {-
 -}
 {-
 -}

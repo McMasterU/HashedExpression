@@ -3,22 +3,22 @@
 
 Experiment in common subexpressions without monads and better expression simplification.
 -}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module HashedInstances where
 
-import           Data.ByteString       ()
+import Data.ByteString ()
 import qualified Data.ByteString.Char8 as C
-import           Data.IntMap           ()
-import qualified Data.IntMap           as I
-import qualified Data.List             as L
-import qualified Data.Map              as Map
-import           HashedExpression
-import           LinearCombination
+import Data.IntMap ()
+import qualified Data.IntMap as I
+import qualified Data.List as L
+import qualified Data.Map as Map
+import HashedExpression
+import LinearCombination
 import qualified Numeric
 
 --import Debug.Trace
@@ -160,7 +160,7 @@ instance Floating Scalar where
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ sqrt x)
-            _      -> addEdge' es (Op Dim0 Sqrt [n])
+            _ -> addEdge' es (Op Dim0 Sqrt [n])
     pi = Scalar $ Expression h (I.fromList [(h, i'')])
       where
         h = hash i''
@@ -169,72 +169,72 @@ instance Floating Scalar where
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ exp x)
-            _      -> addEdge' es (Op Dim0 Exp [n])
+            _ -> addEdge' es (Op Dim0 Exp [n])
     cos (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ cos x)
-            _      -> addEdge' es (Op Dim0 Cos [n])
+            _ -> addEdge' es (Op Dim0 Cos [n])
     sin (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ sin x)
-            _      -> addEdge' es (Op Dim0 Sin [n])
+            _ -> addEdge' es (Op Dim0 Sin [n])
     tan (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ tan x)
-            _      -> addEdge' es (Op Dim0 Tan [n])
+            _ -> addEdge' es (Op Dim0 Tan [n])
     log (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ log x)
-            _      -> addEdge' es (Op Dim0 Log [n])
+            _ -> addEdge' es (Op Dim0 Log [n])
     asin (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ asin x)
-            _      -> addEdge' es (Op Dim0 Asin [n])
+            _ -> addEdge' es (Op Dim0 Asin [n])
     acos (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ acos x)
-            _      -> addEdge' es (Op Dim0 Acos [n])
+            _ -> addEdge' es (Op Dim0 Acos [n])
     atan (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ atan x)
-            _      -> addEdge' es (Op Dim0 Atan [n])
+            _ -> addEdge' es (Op Dim0 Atan [n])
     sinh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ sinh x)
-            _      -> addEdge' es (Op Dim0 Sinh [n])
+            _ -> addEdge' es (Op Dim0 Sinh [n])
     cosh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ cosh x)
-            _      -> addEdge' es (Op Dim0 Cosh [n])
+            _ -> addEdge' es (Op Dim0 Cosh [n])
     tanh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ atanh x)
-            _      -> addEdge' es (Op Dim0 Tanh [n])
+            _ -> addEdge' es (Op Dim0 Tanh [n])
     atanh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ atanh x)
-            _      -> addEdge' es (Op Dim0 Atanh [n])
+            _ -> addEdge' es (Op Dim0 Atanh [n])
     acosh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ acosh x)
-            _      -> addEdge' es (Op Dim0 Acosh [n])
+            _ -> addEdge' es (Op Dim0 Acosh [n])
     asinh (Scalar expr1@(Expression n es)) =
         Scalar $
         case maybeConst expr1 of
             Just x -> addEdge' es (Const Dim0 $ asinh x)
-            _      -> addEdge' es (Op Dim0 Asinh [n])
+            _ -> addEdge' es (Op Dim0 Asinh [n])
 
 {-
 
@@ -994,13 +994,13 @@ instance (Num v) => Num (v, v) where
 instance (Integral a, Show a) => ShowHex (LinearCombination a) where
     showHex (LC c combos) =
         let nonConst = concatMap dispPair $ Map.toList combos
-            dispPair (_, 0)    = ""
+            dispPair (_, 0) = ""
             dispPair (name, 1) = " + " ++ name
             dispPair (name, c) = " + " ++ Numeric.showHex c (" * " ++ name)
          in case (c, null nonConst) of
                 (0, True) -> "0"
-                (0, _)    -> drop 3 nonConst
-                _         -> Numeric.showHex c (" + " ++ nonConst)
+                (0, _) -> drop 3 nonConst
+                _ -> Numeric.showHex c (" + " ++ nonConst)
 
 {-
 
@@ -1014,7 +1014,7 @@ instance (Integral a, Show a) => ShowHex (PositiveCombination a) where
         nonZero =
             concat $
             L.intersperse " + " $ concatMap dispPair $ Map.toAscList combos
-        dispPair (_, 0)     = []
+        dispPair (_, 0) = []
         dispPair (names, 1) = [showNames names]
         dispPair (names, c) = [showNames (showNeg c : names)]
         showNeg c =
@@ -1066,7 +1066,7 @@ instance ShowHex Scalar where
             Just (Const dims d) ->
                 case dims of
                     Dim0 -> Numeric.showHex (round d) ""
-                    _    -> error $ "showHex Scalar has dims ! " ++ show dims
+                    _ -> error $ "showHex Scalar has dims ! " ++ show dims
             Just _ -> prettyHex e
 
 {-
@@ -1130,7 +1130,7 @@ instance Show ScalarC where
             Just (Const dims _) ->
                 case dims of
                     Dim0 -> pretty e
-                    _    -> error $ "show Scalar has dims ! " ++ show dims
+                    _ -> error $ "show Scalar has dims ! " ++ show dims
             Just _ -> pretty e
 
 instance Show OneD where
@@ -1223,7 +1223,7 @@ instance Show TwoDC where
             Just (Const dims _) ->
                 case dims of
                     Dim2 _ -> pretty e
-                    _      -> error $ "show TwoDC non-scalar " ++ show (e)
+                    _ -> error $ "show TwoDC non-scalar " ++ show (e)
             Just _ -> pretty e
 
 instance Show TwoDSparse where
@@ -1315,7 +1315,7 @@ instance Show ThreeD where
             Just (Const dims _) ->
                 case dims of
                     Dim3 _ -> pretty e
-                    _      -> error $ "show ThreeD non-scalar " ++ show (e)
+                    _ -> error $ "show ThreeD non-scalar " ++ show (e)
             Just _ -> pretty e
 
 instance Show ThreeDC where
@@ -1342,7 +1342,7 @@ instance Show ThreeDC where
             Just (Const dims _) ->
                 case dims of
                     Dim3 _ -> pretty e
-                    _      -> error $ "show ThreeDC non-scalar " ++ show (e)
+                    _ -> error $ "show ThreeDC non-scalar " ++ show (e)
             Just _ -> pretty e
 
 instance Show ThreeDSparse where
@@ -1478,7 +1478,7 @@ instance Rectangular TwoDC where
             scale =
                 case getDimE exprs n of
                     Dim2 (d1, d2) -> d1 * d2
-                    d             -> error $ "invFT 2d got dim " ++ show d
+                    d -> error $ "invFT 2d got dim " ++ show d
             (e'', s) = addEdge e' $ Const Dim0 $ 1 / fromIntegral scale
          in TwoDC $ addEdge' e'' $ Op (getDimE exprs n) (ScaleV) [s, n']
     rowPFT (TwoDC (Expression n exprs)) =

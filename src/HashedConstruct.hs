@@ -9,21 +9,21 @@ and |Op|s don't appear explicity,
 but the result still has to be applied to the right expression map,
 or hard-to-pointpoint errors will occur.
 -}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TypeSynonymInstances      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module HashedConstruct where
 
-import           HashedExpression
+import HashedExpression
 
 --import HashedInstances ()
-import           Data.IntMap      ()
-import qualified Data.IntMap      as I
-import qualified Data.List        as L
-import           Debug.Trace
+import Data.IntMap ()
+import qualified Data.IntMap as I
+import qualified Data.List as L
+import Debug.Trace
 
 {-
 
@@ -161,7 +161,7 @@ sumE xs =
         let (e', xs'@(x':_)) = L.mapAccumR (\e' x -> x e') e xs
          in case xs' of
                 [x] -> (e', x)
-                _   -> addEdge e' $ Op (getDimE e' x') Sum $ nodeSort' e' xs'
+                _ -> addEdge e' $ Op (getDimE e' x') Sum $ nodeSort' e' xs'
 
 prodE [] = error "HashedConstruct: Can't prodE empty list."
 prodE xs =
@@ -176,26 +176,26 @@ sumO f e =
     let (e', ns@(n1:_)) = f e
      in case ns of
             [x] -> (e', x)
-            _   -> addEdge e' $ Op (getDimE e' n1) Sum $ nodeSort' e' ns
+            _ -> addEdge e' $ Op (getDimE e' n1) Sum $ nodeSort' e' ns
 
 prodO f e =
     let (e', ns@(n1:_)) = f e
      in case ns of
             [x] -> (e', x)
-            _   -> addEdge e' $ Op (getDimE e' n1) Prod $ nodeSort' e' ns
+            _ -> addEdge e' $ Op (getDimE e' n1) Prod $ nodeSort' e' ns
 
 sumN, prodN :: (Internal, [Node]) -> (Internal, Node)
 sumN (e, ns@(n1:_)) =
     case ns of
         [x] -> (e, x)
-        _   -> addEdge e $ Op (getDimE e n1) Sum $ nodeSort' e ns
+        _ -> addEdge e $ Op (getDimE e n1) Sum $ nodeSort' e ns
 sumN (e, []) = error $ "sumN [] " ++ show e
 
 -- CKA: if we removed the dims from Zeros, we could determine the dims from context, and not return an error here
 prodN (e, ns@(n1:_)) =
     case ns of
         [x] -> (e, x)
-        _   -> addEdge e $ Op (getDimE e n1) Prod $ nodeSort' e ns
+        _ -> addEdge e $ Op (getDimE e n1) Prod $ nodeSort' e ns
 prodN (e, []) = addEdge e $ Const Dim0 1
 
 {-

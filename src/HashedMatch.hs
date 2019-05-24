@@ -4,27 +4,28 @@
 Helper functions/instances to make pattern gaurds involving Expressions easier to read.
 
 -}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedMatch where
 
-import           HashedConstruct       (Construct, sourceNode)
-import           HashedExpression
+import HashedConstruct (Construct, sourceNode)
+import HashedExpression
 
-import           Control.Monad         (liftM)
+import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as C
-import qualified Data.IntMap           as I
-import           Data.Maybe
-import qualified Data.Set              as Set
+import qualified Data.IntMap as I
+import Data.Maybe
+import qualified Data.Set as Set
+
 --import HashedInstances ()
-import           Prelude               (Bool (..), Double, ($), (==))
-import           Prelude               (error, show, (++))
-import qualified Prelude               as P
+import Prelude (Bool(..), Double, ($), (==))
+import Prelude ((++), error, show)
+import qualified Prelude as P
 
 {-
 
@@ -50,7 +51,7 @@ var :: Internal -> Node -> Maybe (C.ByteString, Dims)
 var e n =
     case I.lookup n e of
         Just (Var dims name) -> Just (name, dims)
-        _                    -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -59,7 +60,7 @@ dot :: Internal -> Node -> Maybe (Construct, Construct)
 dot e n =
     case I.lookup n e of
         Just (Op _dims Dot [n1, n2]) -> Just (sourceNode n1, sourceNode n2)
-        _                            -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -68,7 +69,7 @@ plus :: Internal -> Node -> Maybe (Construct, Construct)
 plus e n =
     case I.lookup n e of
         Just (Op _dims Sum [n1, n2]) -> Just (sourceNode n1, sourceNode n2)
-        _                            -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -95,7 +96,7 @@ negate :: Internal -> Node -> Maybe Construct
 negate e n =
     case I.lookup n e of
         Just (Op _dims Neg [node]) -> Just $ sourceNode node
-        _                          -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -104,7 +105,7 @@ sum :: Internal -> Node -> Maybe [Construct]
 sum e n =
     case I.lookup n e of
         Just (Op _dims Sum nodes) -> Just $ P.map sourceNode nodes
-        _                         -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -113,7 +114,7 @@ times :: Internal -> Node -> Maybe (Construct, Construct)
 times e n =
     case I.lookup n e of
         Just (Op _dims Prod [n1, n2]) -> Just (sourceNode n1, sourceNode n2)
-        _                             -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -122,7 +123,7 @@ div :: Internal -> Node -> Maybe (Construct, Construct)
 div e n =
     case I.lookup n e of
         Just (Op _dims Div [n1, n2]) -> Just (sourceNode n1, sourceNode n2)
-        _                            -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -131,7 +132,7 @@ prod :: Internal -> Node -> Maybe [Construct]
 prod e n =
     case I.lookup n e of
         Just (Op _dims Prod nodes) -> Just $ P.map sourceNode nodes
-        _                          -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -183,7 +184,7 @@ fwdFt :: Internal -> Node -> Maybe Construct
 fwdFt e n =
     case I.lookup n e of
         Just (Op _dims (FT True) [node]) -> Just $ sourceNode node
-        _                                -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -192,7 +193,7 @@ invFt :: Internal -> Node -> Maybe Construct
 invFt e n =
     case I.lookup n e of
         Just (Op _dims (FT False) [node]) -> Just $ sourceNode node
-        _                                 -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -201,7 +202,7 @@ fwdCFt :: Internal -> Node -> Maybe Construct
 fwdCFt e n =
     case I.lookup n e of
         Just (Op _dims (PFT True Column) [node]) -> Just $ sourceNode node
-        _                                        -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -210,7 +211,7 @@ invCFt :: Internal -> Node -> Maybe Construct
 invCFt e n =
     case I.lookup n e of
         Just (Op _dims (PFT False Column) [node]) -> Just $ sourceNode node
-        _                                         -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -229,7 +230,7 @@ xRe :: Internal -> Node -> Maybe Construct
 xRe e n =
     case I.lookup n e of
         Just (Op _dims RealPart [node]) -> Just $ sourceNode node
-        _                               -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -247,7 +248,7 @@ xIm :: Internal -> Node -> Maybe Construct
 xIm e n =
     case I.lookup n e of
         Just (Op _dims ImagPart [node]) -> Just $ sourceNode node
-        _                               -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -280,7 +281,7 @@ scale :: Internal -> Node -> Maybe (Construct, Construct)
 scale e n =
     case I.lookup n e of
         Just (Op _dims ScaleV [s, v]) -> Just (sourceNode s, sourceNode v)
-        _                             -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -289,7 +290,7 @@ proj :: Internal -> Node -> Maybe (Subspace, Construct)
 proj e n =
     case I.lookup n e of
         Just (Op _dims (Project ss) [v]) -> Just (ss, sourceNode v)
-        _                                -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -298,7 +299,7 @@ inject :: Internal -> Node -> Maybe (Subspace, Construct)
 inject e n =
     case I.lookup n e of
         Just (Op _dims (Inject ss) [v]) -> Just (ss, sourceNode v)
-        _                               -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -307,7 +308,7 @@ zeros :: Internal -> Node -> Maybe Construct
 zeros e n =
     case I.lookup n e of
         Just (Const dims 0) -> Just (\e -> addEdge e $ Const dims 0)
-        _                   -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -358,7 +359,7 @@ const :: Internal -> Node -> Maybe (Double, Construct)
 const e n =
     case I.lookup n e of
         Just (Const _ d) -> Just (d, sourceNode n)
-        _                -> Nothing
+        _ -> Nothing
 
 {-
 
@@ -373,7 +374,7 @@ mAll consumers match exprs node =
         Just nodes ->
             case catMaybes $ P.map (match exprs) $ Set.toList nodes of
                 [a] -> Just a
-                _   -> Nothing
+                _ -> Nothing
 
 mOne consumers match exprs node =
     case liftM Set.toList $ I.lookup node consumers of
@@ -389,7 +390,7 @@ mAny consumers match exprs node =
         Just nodes ->
             case catMaybes $ P.map (match exprs) $ Set.toList nodes of
                 (a:_) -> Just a
-                _     -> Nothing
+                _ -> Nothing
 
 {-
 
@@ -466,7 +467,7 @@ o11 match1 match2 e n =
             let (e', n2') = n2 e
              in case match2 e' n2' of
                     Just (b, n3) -> Just ((a, b), n3)
-                    Nothing      -> Nothing
+                    Nothing -> Nothing
         _ -> Nothing
 
 oReIm match2 e n =
@@ -476,7 +477,7 @@ oReIm match2 e n =
                 (_, im') = im e
              in case (match2 e re', match2 e im') of
                     (Just n1, Just n2) -> Just (n1, n2)
-                    _                  -> Nothing
+                    _ -> Nothing
         _ -> Nothing
 {-
 

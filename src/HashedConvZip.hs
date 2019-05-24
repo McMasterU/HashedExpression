@@ -3,16 +3,16 @@
 
 Experiment in common subexpressions without monads and better expression simplification.
 -}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module HashedConvZip where
 
-import           Data.ByteString  ()
-import           HashedExpression
-import           HashedSimplify
+import Data.ByteString ()
+import HashedExpression
+import HashedSimplify
 
 --import qualified Data.IntMap as I
 --import Debug.Trace

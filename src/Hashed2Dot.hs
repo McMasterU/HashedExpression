@@ -3,10 +3,10 @@
 module Hashed2Dot where
 
 import qualified Data.ByteString.Char8 as C
-import qualified Data.IntMap           as I
-import qualified Data.IntSet           as Set
-import qualified Data.List             as L
-import           HashedExpression
+import qualified Data.IntMap as I
+import qualified Data.IntSet as Set
+import qualified Data.List as L
+import HashedExpression
 
 threeDC2dot fileName (ThreeDC (Expression n e)) =
     writeFile fileName $ expr2dot' (e, n)
@@ -58,9 +58,9 @@ node2dot e ns n =
                          (nns, [nnl n ("RE" ++ show i ++ show idx)])
                      Just (Const _ d) -> (nns, [nnl n (show d)])
 
-showOp (SCZ e)         = pretty e
+showOp (SCZ e) = pretty e
 showOp (MapND e input) = pretty e
-showOp x               = show x
+showOp x = show x
 {-
 data ExpressionEdge  = Op  Dims                          -- dims of output
                            OpId                          -- the operation

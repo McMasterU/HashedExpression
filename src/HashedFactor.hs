@@ -3,11 +3,11 @@
 
 Calculating Derivatives.
 -}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE PatternGuards             #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedFactor
     ( factor'
@@ -23,23 +23,23 @@ module HashedFactor
     , normalizeSCZ
     ) where
 
-import           HashedConstruct
-import           HashedExpression
-import           HashedInstances  (pretty')
-import           HashedSimplify   (mkSCZ, simpRewrite, simplify')
+import HashedConstruct
+import HashedExpression
+import HashedInstances (pretty')
+import HashedSimplify (mkSCZ, simpRewrite, simplify')
 
 --import HashedMatch (o)
-import qualified HashedMatch      as M
+import qualified HashedMatch as M
 
 --import Data.ByteString (ByteString)
 --import qualified Data.ByteString.Char8 as C
-import qualified Data.IntMap      as I
+import qualified Data.IntMap as I
 
 --import Data.Map (Map)
 --import qualified Data.Map as Map
-import qualified Data.List        as L
-import           Data.Maybe       (catMaybes)
-import           Debug.Trace
+import qualified Data.List as L
+import Data.Maybe (catMaybes)
+import Debug.Trace
 
 {-
 
@@ -224,15 +224,15 @@ pullNeg exprs node
                  addEdge pulledE $ Op dims op pulledArgs
     | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ (show x)) (exprs, node)
 
-canPull RealPart      = True
-canPull ImagPart      = True
-canPull RealImag      = True
-canPull (Project _)   = True
-canPull (Inject _)    = True
-canPull (PFT _ _)     = True
+canPull RealPart = True
+canPull ImagPart = True
+canPull RealImag = True
+canPull (Project _) = True
+canPull (Inject _) = True
+canPull (PFT _ _) = True
 canPull (Transpose _) = True
-canPull (Compound _)  = True
-canPull x             = mt ("couldn't pull " ++ show x) False
+canPull (Compound _) = True
+canPull x = mt ("couldn't pull " ++ show x) False
 
 {-
 
@@ -284,7 +284,7 @@ factor' (exprs, node)
         let prodArgsOrSelf arg =
                 case I.lookup arg exprs of
                     Just (Op _ Prod argArgs) -> argArgs
-                    _                        -> [arg]
+                    _ -> [arg]
          -- factor the products greedily, factoring out the most common factor each time
             f [] = []
             f [[]] = []
@@ -306,17 +306,17 @@ factor' (exprs, node)
                 possibleConst =
                     case ones of
                         [] -> []
-                        _  -> [fromRational $ fromIntegral $ length ones]
+                        _ -> [fromRational $ fromIntegral $ length ones]
                 (has, hasNot) = L.partition (mostCommon `L.elem`) proper
                 possibleNot =
                     case f hasNot of
-                        []        -> []
+                        [] -> []
                         something -> [prodE something]
                 had = f $ map (L.delete mostCommon) has
                 hadProd =
                     case had of
                         [] -> mostCommon'
-                        _  -> mostCommon' * (prodE had)
+                        _ -> mostCommon' * (prodE had)
                 notNull x =
                     if null x
                         then error $
@@ -336,7 +336,7 @@ factor' (exprs, node)
                     Dim1 _ -> [0]
                     Dim2 _ -> [0, 0]
                     Dim3 _ -> [0, 0, 0]
-                    _      -> error "factor SCZ dims"
+                    _ -> error "factor SCZ dims"
             replacements =
                 zipWith
                     (\(oldN, cs) newIdx -> (oldN, (cs, newIdx)))
@@ -484,7 +484,7 @@ commonTop exprs summands =
                             (sumE $
                              zipWith makeNeg twoOrMore $ map scaleBy twoOrMore)
                                 e
-                makeNeg (_, (True, _, _), _) c  = negate c
+                makeNeg (_, (True, _, _), _) c = negate c
                 makeNeg (_, (False, _, _), _) c = c
                 scaleBy ::
                        ( Maybe (OpId, Node)
@@ -501,7 +501,7 @@ commonTop exprs summands =
         -- FIXME Op (getDimE e1 newSum) op [newSum] is dangerous, because dimensions change
         pushSum _ _ = error "commonTop pushSum"
         sameOp (Just (op1, _), _, _) (Just (op2, _), _, _) = op1 == op2
-        sameOp _ _                                         = False
+        sameOp _ _ = False
     -- find the nodes which come from linear operations
         getOp :: ((a, b, Node), c) -> (Maybe (OpId, Node), (a, b, Node), c)
         getOp ((a, b, n), c)
@@ -527,7 +527,7 @@ commonTop exprs summands =
                  Just
                      (case newSummands of
                           [x] -> (exprs1, x)
-                          _   -> (sumE $ map sourceNode newSummands) exprs1)
+                          _ -> (sumE $ map sourceNode newSummands) exprs1)
             else mt (unlines $
                      ("nonCommon " ++
                       show (newSummands, summands, map (getOp . dS) summands)) :
@@ -631,7 +631,7 @@ normalizeSCZs (exprs0, node)
                      else id) $
                 L.mapAccumR (curry $ normalizeSCZs) exprs0 args
          in addEdge e $ Op dims op simpArgs
-normalizeSCZs (exprs, node) = (exprs, node){-
+normalizeSCZs (exprs, node) = (exprs, node) {-
 
 
 -- find a linear combination of RelElems, and look for a common top of _linear_ operations

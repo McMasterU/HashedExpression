@@ -3,15 +3,15 @@
 
 Utility functions for Hashed Expresson
 -}
-{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module HashedUtils where
 
-import           HashedExpression
+import HashedExpression
 
-import qualified Data.List        as L
+import qualified Data.List as L
 import qualified System.Exit
 import qualified System.Process
 

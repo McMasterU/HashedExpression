@@ -1,21 +1,21 @@
 {-
 \section{Polynomials:  Data Structures and Basic Algorithms}
 -}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Polynomials where
 
-import           HashedExpression
+import HashedExpression
 
 --import Data.Complex
 --import Data.Ratio
 import qualified Data.IntMap.Strict as I
-import qualified Data.Map.Strict    as M
+import qualified Data.Map.Strict as M
 
 --import qualified Data.ByteString.Char8 as C
-import qualified Data.List          as L
+import qualified Data.List as L
 
 {-
 
@@ -110,7 +110,7 @@ instance HashedExpression.Complex (Term, Term) Term where
     iRe x = (x, 0)
     iIm y = (0, y)
 
-pAbs2 []        = 0
+pAbs2 [] = 0
 pAbs2 (t:prest) = (fromRational (fst t)) ** 2 + (pAbs2 prest)
 
 {-
@@ -170,17 +170,17 @@ then compares exponents of the variables in reverse order, reversing the outcome
 grevlex (_, (t1, mon1)) (_, (t2, mon2)) =
     case compare t1 t2 of
         EQ -> fstNE $ map cmp allKeys
-        x  -> x
+        x -> x
   where
     fstNE (EQ:rest) = fstNE rest
-    fstNE (x:_)     = x
-    fstNE []        = EQ
+    fstNE (x:_) = x
+    fstNE [] = EQ
     cmp k =
         case (I.lookup k mon1, I.lookup k mon2) of
             (Nothing, Nothing) -> EQ
-            (Just _, Nothing)  -> GT -- reversed
-            (Nothing, Just _)  -> LT -- reversed
-            (Just x, Just y)   -> compare x y -- reversed
+            (Just _, Nothing) -> GT -- reversed
+            (Nothing, Just _) -> LT -- reversed
+            (Just x, Just y) -> compare x y -- reversed
     allKeys = reverse $ L.nub $ L.sort $ concatMap I.keys [mon1, mon2]
 
 {-
@@ -195,7 +195,7 @@ Requires: Terms of poly input is ORDERED (descending, by term power)
 '
 -}
 lt :: [Term] -> Either [Char] Term
-lt []       = Left "Error:  zero polynomial in ..."
+lt [] = Left "Error:  zero polynomial in ..."
 lt (t1:_ts) = Right t1
 
 {-
@@ -210,7 +210,7 @@ Leading coefficient (lc).
 lc p =
     case lt p of
         (Left err) -> Left $ err ++ " lc"
-        (Right t)  -> Right (fst t)
+        (Right t) -> Right (fst t)
 
 {-
 
@@ -224,7 +224,7 @@ Leading Term (lm).
 lm p =
     case lt p of
         (Left err) -> Left $ err ++ " lm"
-        (Right t)  -> Right (snd t)
+        (Right t) -> Right (snd t)
 
 {-
 
@@ -323,13 +323,13 @@ redBasis f gs eps =
 --                in if f == f1 then f   -- N:Replaced by line below (rounding problems)
 redBasis' f gs eps =
     case gs of
-        (Left msg)   -> Left (msg ++ " redBasisPrime")
+        (Left msg) -> Left (msg ++ " redBasisPrime")
         (Right isgs) -> Right (redBasis f isgs eps)
 
 -- try to reduce f by g.  If locally irreducible, return original f.
 red1 f g =
     case findqcDivlc f g of
-        Left _         -> f
+        Left _ -> f
         Right cDivlcqg -> f - (map ((*) cDivlcqg) g)
 
 --kredBasis k f gs
@@ -402,7 +402,7 @@ buchberger gs = buchberger' [(g1, g2) | g1 <- gs, g2 <- gs] gs globalEps
 termFromTriple :: (Rational, Int, Int) -> Term
 termFromTriple (c, v, e) = (c, (e, I.fromList [(v, e)]))
 
-polyFromTriples []       = []
+polyFromTriples [] = []
 polyFromTriples (t:rest) = (termFromTriple t) : (polyFromTriples rest)
 
 globalEps = 0.0000001
