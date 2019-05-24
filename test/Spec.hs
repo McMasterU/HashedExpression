@@ -1,5 +1,8 @@
 import HashedTests (regressionTestAll)
 import qualified SimplifySpec
+import qualified EvalSpec
+import qualified PartDiffSpec
+import qualified GradDiffSpec
 import Test.Hspec
 
 --main = regressionTestAll
@@ -10,4 +13,6 @@ main = hspec spec
 spec :: Spec
 spec = do
     describe "SimplifySpec" SimplifySpec.spec
-    -- e.g describe "EvalSpec" EvalSpec.spec
+    describe "EvalSpec" EvalSpec.spec
+    describe "PartDiffSpec" PartDiffSpec.spec
+    describe "GradDiffSpec" GradDiffSpec.spec
