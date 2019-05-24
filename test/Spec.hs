@@ -1,4 +1,3 @@
-import HashedTests (regressionTestAll)
 import qualified SimplifySpec
 import qualified EvalSpec
 import qualified PartDiffSpec
