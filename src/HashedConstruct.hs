@@ -13,7 +13,6 @@ or hard-to-pointpoint errors will occur.
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module HashedConstruct where
 
@@ -38,7 +37,7 @@ The type of subexpressions will be
 type Construct = Internal -> (Internal, Node)
 
 comp :: ((Internal, Node) -> (Internal, Node)) -> Construct -> Construct
-comp fun c = \e -> fun $ c e
+comp fun c e = fun $ c e
 
 {-
 
