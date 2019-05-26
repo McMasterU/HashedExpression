@@ -245,13 +245,13 @@ script:
 - hindent --validate src/*.hs test/*.hs
 - |
   set -x
-  if ["$BUILD" == "stack"]; then
+  if [ "$BUILD" == "stack" ]; then
     stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
   fi
   set +x
 - |
   set -x
-  if ["$BUILD" == "cabal"]; then
+  if [ "$BUILD" == "cabal" ]; then
     cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
 
     ORIGDIR=$(pwd)
