@@ -243,36 +243,8 @@ install:
 
 script:
 - hindent --validate src/*.hs test/*.hs
-- |
-  set -x
-  if [ "$BUILD" == "stack" ]; then
-    stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
-  fi
-  set +x
-- |
-  set -x
-  if [ "$BUILD" == "cabal" ]; then
-    cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
-
-    ORIGDIR=$(pwd)
-    for dir in $PACKAGES
-    do
-      cd $dir
-      cabal check || [ "$CABALVER" == "1.16" ]
-      cabal sdist
-      PKGVER=$(cabal info . | awk '{print $2;exit}')
-      SRC_TGZ=$PKGVER.tar.gz
-      cd dist
-      tar zxfv "$SRC_TGZ"
-      cd "$PKGVER"
-      cabal configure --enable-tests --ghc-options -O0
-      cabal build
-      if [ "$CABALVER" = "1.16" ] || [ "$CABALVER" = "1.18" ]; then
-        cabal test
-      else
-        cabal test --show-details=streaming --log=/dev/stdout
-      fi
-      cd $ORIGDIR
-    done
-    ;;  fi
-  set +x
+- if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS build; fi
+- if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
+- if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS test; fi
+- if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS bench; fi
+- if [ "$BUILD" == "cabal" ]; then buildscripts/build-cabal.sh; fi
