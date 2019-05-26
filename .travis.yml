@@ -32,8 +32,12 @@ cache:
 # If you need to have different apt packages for each combination in the
 # matrix, you can use a line such as:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
-matrix:
+jobs:
   include:
+
+  - script: hindent --validate src/*.hs test/*.hs
+    name: "hindent validation"
+
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
   #- env: BUILD=cabal GHCVER=7.0.4 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
@@ -54,29 +58,33 @@ matrix:
   #- env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
   #  compiler: ": #GHC 7.10.3"
   #  addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - if: branch = master OR branch = develop
-    env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.0.2"
     addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - if: branch = master OR branch = develop
-    env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    if: branch = master OR branch = develop
+    
+  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.2.2"
     addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - if: branch = master OR branch = develop
-    env: BUILD=cabal GHCVER=8.4.4 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    if: branch = master OR branch = develop
+
+  - env: BUILD=cabal GHCVER=8.4.4 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.4.4"
     addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-  - if: branch = master OR branch = develop
-    env: BUILD=cabal GHCVER=8.6.3 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    if: branch = master OR branch = develop
+    
+
+  - env: BUILD=cabal GHCVER=8.6.3 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.6.3"
     addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+    if: branch = master OR branch = develop
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
-  - if: branch = master OR branch = develop
-    env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
+  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC HEAD"
     addons: {apt: {packages: [cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+    if: branch = master OR branch = develop
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
@@ -242,7 +250,6 @@ install:
 - stack --no-terminal install hindent
 
 script:
-- hindent --validate src/*.hs test/*.hs
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS build; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS test; fi
