@@ -239,14 +239,14 @@ install:
       ;;
   esac
   set +ex
-- stack install hindent
+- stack --no-terminal install hindent
 
 script:
 - |
   set -ex
   case "$BUILD" in
     stack)
-      hindent --validate
+      hindent --validate src/*.hs test/*.hs
       stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       ;;
     cabal)
