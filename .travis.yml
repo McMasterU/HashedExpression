@@ -242,36 +242,37 @@ install:
 - stack --no-terminal install hindent
 
 script:
+- hindent --validate src/*.hs test/*.hs
 - |
   set -x
-  case "$BUILD" in
-    stack)
-      hindent --validate src/*.hs test/*.hs
-      stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
-      ;;
-    cabal)
-      cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
+  if ["$BUILD" == "stack"]; then
+    stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+  fi
+  set +x
+- |
+  set -x
+  if ["$BUILD" == "cabal"]; then
+    cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
 
-      ORIGDIR=$(pwd)
-      for dir in $PACKAGES
-      do
-        cd $dir
-        cabal check || [ "$CABALVER" == "1.16" ]
-        cabal sdist
-        PKGVER=$(cabal info . | awk '{print $2;exit}')
-        SRC_TGZ=$PKGVER.tar.gz
-        cd dist
-        tar zxfv "$SRC_TGZ"
-        cd "$PKGVER"
-        cabal configure --enable-tests --ghc-options -O0
-        cabal build
-        if [ "$CABALVER" = "1.16" ] || [ "$CABALVER" = "1.18" ]; then
-          cabal test
-        else
-          cabal test --show-details=streaming --log=/dev/stdout
-        fi
-        cd $ORIGDIR
-      done
-      ;;
-  esac
+    ORIGDIR=$(pwd)
+    for dir in $PACKAGES
+    do
+      cd $dir
+      cabal check || [ "$CABALVER" == "1.16" ]
+      cabal sdist
+      PKGVER=$(cabal info . | awk '{print $2;exit}')
+      SRC_TGZ=$PKGVER.tar.gz
+      cd dist
+      tar zxfv "$SRC_TGZ"
+      cd "$PKGVER"
+      cabal configure --enable-tests --ghc-options -O0
+      cabal build
+      if [ "$CABALVER" = "1.16" ] || [ "$CABALVER" = "1.18" ]; then
+        cabal test
+      else
+        cabal test --show-details=streaming --log=/dev/stdout
+      fi
+      cd $ORIGDIR
+    done
+    ;;  fi
   set +x
