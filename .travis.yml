@@ -243,7 +243,7 @@ install:
 
 script:
 - |
-  set -ex
+  set -x
   case "$BUILD" in
     stack)
       hindent --validate src/*.hs test/*.hs
@@ -274,4 +274,4 @@ script:
       done
       ;;
   esac
-  set +ex
+  set +x
