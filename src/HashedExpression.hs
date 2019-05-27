@@ -380,25 +380,25 @@ var = Scalar . (varHidden Dim0)
 
 varc = ScalarC . (varHidden Dim0)
 
-var1d size = OneD . (varHidden (Dim1 size))
+var1d shape = OneD . (varHidden (Dim1 shape))
 
-dvar1d size = OneD . (dvarHidden (Dim1 size))
+dvar1d shape = OneD . (dvarHidden (Dim1 shape))
 
-var1dc size = OneDC . (varHidden (Dim1 size)) -- shouldn't we create separate real and imaginary parts and wrap them
+var1dc shape = OneDC . (varHidden (Dim1 shape)) -- shouldn't we create separate real and imaginary parts and wrap them
 
-var2d size = TwoD . (varHidden (Dim2 size))
+var2d shape = TwoD . (varHidden (Dim2 shape))
 
-var2ds size sL@(SparseList2D len _ _ _) =
-    (TwoDSparse sL) . (varHidden (Dim2SL1 size len))
+var2ds shape sL@(SparseList2D len _ _ _) =
+    (TwoDSparse sL) . (varHidden (Dim2SL1 shape len))
 
-var2dc size = TwoDC . (varHidden (Dim2 size))
+var2dc shape = TwoDC . (varHidden (Dim2 shape))
 
-var3d size = ThreeD . (varHidden (Dim3 size))
+var3d shape = ThreeD . (varHidden (Dim3 shape))
 
-var3ds size sL@(SparseList3D len _ _ _ _ _) =
-    (ThreeDSparse sL) . (varHidden (Dim3SL1 size len))
+var3ds shape sL@(SparseList3D len _ _ _ _ _) =
+    (ThreeDSparse sL) . (varHidden (Dim3SL1 shape len))
 
-var3dc size = ThreeDC . (varHidden (Dim3 size))
+var3dc shape = ThreeDC . (varHidden (Dim3 shape))
 
 {-
 
