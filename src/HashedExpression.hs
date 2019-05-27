@@ -896,10 +896,10 @@ data OpId
     | SubMask
     | NegMask
 
-    | Shift DomainWeights
+    | Shift OffsetAndScale
 
-    | Reglzr DomainWeights RangeKernel     -- DEPRECATED
-    | GradReglzr DomainWeights RangeKernel -- DEPRECATED
+    | Reglzr [OffsetAndScale] RangeKernel     -- DEPRECATED
+    | GradReglzr [OffsetAndScale] RangeKernel -- DEPRECATED
 
     | Piecewise Double  -- this op 
     
@@ -950,21 +950,22 @@ prodScale dims =
 
 {-
 For the Regularizers, we need domain weights, which are a discrete version of a kernel,
+For shifts we interpret the tuple as a displacement from the output index before the load.
 -}
-data DomainWeights
-    = DW1d [(Int, Double)]
-    | DW2d [((Int, Int), Double)]
-    | DW3d [((Int, Int, Int), Double)]
-    | DW4d [((Int, Int, Int, Int), Double)]
-    | DW5d [((Int, Int, Int, Int, Int), Double)]
-    | DW6d [((Int, Int, Int, Int, Int, Int), Double)]
-    | DW7d [((Int, Int, Int, Int, Int, Int, Int), Double)]
+data OffsetAndScale
+    = OS1d (Int, Double)
+    | OS2d ((Int, Int), Double)
+    | OS3d ((Int, Int, Int), Double)
+    | OS4d ((Int, Int, Int, Int), Double)
+    | OS5d ((Int, Int, Int, Int, Int), Double)
+    | OS6d ((Int, Int, Int, Int, Int, Int), Double)
+    | OS7d ((Int, Int, Int, Int, Int, Int, Int), Double)
     deriving (Eq, Show, Ord)
 
 {-
 and a range kernel
 -}
-data RangeKernel
+data RangeKernel  -- Deprecated
     = RKHuber
     | RKTukey Double
     | RKL2
