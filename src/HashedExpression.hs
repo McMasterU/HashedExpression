@@ -1500,6 +1500,8 @@ instance HasHash Scalar where
 instance HasHash Expression where
     hash (Expression n _) = n
 
+toNewBase :: Char -> Int -> Int
+toNewBase c hash = hash * 40591 + (fromEnum c)
 --  JLMP : make hash depend on some arguments to reduce clashes
 --         and benchmark to make sure this really helps
 instance HasHash OpId where
@@ -1509,14 +1511,9 @@ instance HasHash OpId where
     hash Prod = 2437
     hash Div = 2621
     hash NegMask = 2909
-    hash (Reglzr dw rk) = 281 * (C.foldr' fun 0 $ C.pack $ show (dw, rk))
-      where
-        fun :: Char -> Int -> Int
-        fun c hash = hash * 40591 + (fromEnum c)
-    hash (GradReglzr dw rk) = 283 * (C.foldr' fun 0 $ C.pack $ show (dw, rk))
-      where
-        fun :: Char -> Int -> Int
-        fun c hash = hash * 40591 + (fromEnum c)
+    hash (Reglzr dw rk) = 281 * (C.foldr' toNewBase 0 . C.pack . show $ (dw, rk))
+    hash (GradReglzr dw rk) = 283 * (C.foldr' toNewBase 0 . C.pack . show $ (dw, rk))
+    hash (Shift oc) = 199 * (C.foldr' toNewBase 0 . C.pack . show $ oc) -- TODO: not yet benchmarked or checked
     hash Sqrt = 3083
     hash Sin = 1009
     hash Cos = 1013
