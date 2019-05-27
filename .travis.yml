@@ -250,6 +250,7 @@ install:
       ;;
   esac
   set +ex
+- chmod u+x buildscripts/cabal-build.sh
 
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
