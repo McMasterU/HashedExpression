@@ -250,7 +250,7 @@ install:
       ;;
   esac
   set +ex
-- chmod u+x $TRAVIS_BUILD_DIR/buildscripts/cabal-build.sh
+- chmod u+x $TRAVIS_BUILD_DIR/buildscripts/build-cabal.sh
 
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
