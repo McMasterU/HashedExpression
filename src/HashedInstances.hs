@@ -1621,11 +1621,11 @@ instance (SimilarSum a, All1D a) => Regularizable a [((Int), Double)] where
     l1l2Bi dk vs = helpROneD RKL1mL2 dk $ decompose vs
     gmBi dk vs = helpROneD RKGM dk $ decompose vs
 
-helpROneD :: RangeKernel -> [((Int), Double)] -> (Internal, [Node]) -> Scalar
+helpROneD :: RangeKernel -> [(Int, Double)] -> (Internal, [Node]) -> Scalar
 helpROneD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim1 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW1d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS1d dk) rk) nodes)
         dims ->
             error $
             "HI." ++
@@ -1648,7 +1648,7 @@ helpRTwoD ::
 helpRTwoD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim2 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW2d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS2d dk) rk) nodes)
         dims ->
             error $
             "HI." ++
@@ -1675,7 +1675,7 @@ helpRThreeD ::
 helpRThreeD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim3 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW3d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS3d dk) rk) nodes)
         dims ->
             error $
             "HI." ++

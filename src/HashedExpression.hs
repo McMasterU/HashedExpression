@@ -1698,7 +1698,7 @@ nodeIsRelElem edges node =
 -}
 airity :: OpId -> (Airity, Airity)
 airity Sum = (Natural, Fixed 1)
-airity Piecewise _ = (Fixed 3, Fixed 1)
+airity (Piecewise _) = (Fixed 3, Fixed 1)
 airity SubMask = (Fixed 2, Fixed 1)
 airity NegMask = (Fixed 2, Fixed 1)
 airity (Reglzr _ _) = (Natural, Fixed 1)
