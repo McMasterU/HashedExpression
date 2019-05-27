@@ -22,7 +22,7 @@ import HashedSimplify
 -}
 instance ConvZip OneD Scalar Int where
     conv bndry pairs (OneD (Expression n es)) =
-        let Scalar expr = sum [c * (relElem 0 bndry [idx]) | (idx, c) <- pairs]
+        let Scalar expr = sum [c * relElem 0 bndry [idx] | (idx, c) <- pairs]
          in OneD $ addEdge' es $ mkSCZ (getDimE es n) expr [n]
     conv1Zip1 ker (OneD (Expression n es)) =
         let Scalar expr = ker (\bnd idx -> relElem 0 bnd [idx])
@@ -71,7 +71,7 @@ instance ConvZip OneD Scalar Int where
             (Expression _ es, (n1, n2)) = merge e1 e2
          in if getDimE' e1 == getDimE' e2
                 then OneD $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1, n2]
-                else error $ "czZip OneD don't match "
+                else error "czZip OneD don't match "
     czZip3 f arg1@(OneD e1) arg2@(OneD e2) arg3@(OneD e3) =
         let Scalar expr =
                 f
@@ -161,7 +161,7 @@ instance ConvZip OneDC ScalarC Int where
 instance ConvZip TwoD Scalar (Int, Int) where
     conv bndry pairs (TwoD (Expression n es)) =
         let Scalar expr =
-                sum [c * (relElem 0 bndry [i, j]) | ((i, j), c) <- pairs]
+                sum [c * relElem 0 bndry [i, j] | ((i, j), c) <- pairs]
          in TwoD $ addEdge' es $ mkSCZ (getDimE es n) expr [n]
     conv1Zip1 ker (TwoD (Expression n es)) =
         let Scalar expr = ker (\bnd (i, j) -> relElem 0 bnd [i, j])
@@ -244,7 +244,7 @@ instance ConvZip TwoD Scalar (Int, Int) where
 instance ConvZip TwoDC Scalar (Int, Int) where
     conv bndry pairs (TwoDC (Expression n es)) =
         let Scalar expr =
-                sum [c * (relElem 0 bndry [i, j]) | ((i, j), c) <- pairs]
+                sum [c * relElem 0 bndry [i, j] | ((i, j), c) <- pairs]
          in TwoDC $ addEdge' es $ mkSCZ (getDimE es n) expr [n]
     conv1Zip1 ker (TwoDC (Expression n es)) =
         let Scalar expr = ker (\bnd (i, j) -> relElem 0 bnd [i, j])
@@ -293,7 +293,7 @@ instance ConvZip TwoDC Scalar (Int, Int) where
             (Expression _ es, (n1, n2)) = merge e1 e2
          in if getDimE' e1 == getDimE' e2
                 then TwoDC $ addEdge' es $ mkSCZ (getDimE' e1) expr [n1, n2]
-                else error $ "czZip TwoDC (dima,dimb)s don't match "
+                else error "czZip TwoDC (dima,dimb)s don't match "
     czZip3 f arg1@(TwoDC e1) arg2@(TwoDC e2) arg3@(TwoDC e3) =
         let Scalar expr =
                 f
@@ -327,7 +327,7 @@ instance ConvZip TwoDC Scalar (Int, Int) where
 instance ConvZip ThreeD Scalar (Int, Int, Int) where
     conv bndry pairs (ThreeD (Expression n es)) =
         let Scalar expr =
-                sum [c * (relElem 0 bndry [i, j, k]) | ((i, j, k), c) <- pairs]
+                sum [c * relElem 0 bndry [i, j, k] | ((i, j, k), c) <- pairs]
          in ThreeD $ addEdge' es $ mkSCZ (getDimE es n) expr [n]
     conv1Zip1 ker (ThreeD (Expression n es)) =
         let Scalar expr = ker (\bnd (i, j, k) -> relElem 0 bnd [i, j, k])
@@ -414,7 +414,7 @@ instance ConvZip ThreeD Scalar (Int, Int, Int) where
 instance ConvZip ThreeDC Scalar (Int, Int, Int) where
     conv bndry pairs (ThreeDC (Expression n es)) =
         let Scalar expr =
-                sum [c * (relElem 0 bndry [i, j, k]) | ((i, j, k), c) <- pairs]
+                sum [c * relElem 0 bndry [i, j, k] | ((i, j, k), c) <- pairs]
          in ThreeDC $ addEdge' es $ mkSCZ (getDimE es n) expr [n]
     conv1Zip1 ker (ThreeDC (Expression n es)) =
         let Scalar expr = ker (\bnd (i, j, k) -> relElem 0 bnd [i, j, k])

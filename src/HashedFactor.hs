@@ -83,7 +83,6 @@ fn exprs node
             _ ->
                 error $
                 "HF.newFloatNeg differing signs for compound " ++ show negNodes
-  -- if all the signs are the floated signs are the same in a |Sum| keep floating, otherwise construct SCZ
     | Just (Op dims Sum args) <- I.lookup node exprs
     , (expr1, negNodes) <- L.mapAccumR fn exprs args =
         case L.nub $ map fst negNodes of
@@ -108,8 +107,7 @@ fn exprs node
                     (newE, newN) =
                         addEdge expr1 $
                         mkSCZ dims (Expression sN sE) $ map snd negNodes
-                 in mt ("fn.sum" ++ show negNodes) $ (newE, (False, newN))
-  -- insert negations into SCZ from floated negatives, and them simplify
+                 in mt ("fn.sum" ++ show negNodes) (newE, (False, newN))
     | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs
     , (expr1, negNodes) <- L.mapAccumR fn exprs args =
         let (sE, sN) = simplify' $ rewrite se sn
@@ -127,9 +125,8 @@ fn exprs node
                     if xchSign idx
                         then addEdge e0 $ Op Dim0 Neg [head]
                         else (e0, head)
-                | True = (e0, head)
+                | otherwise = (e0, head)
          in mt ("fn.scz" ++ show negNodes) (e2, (False, n2))
-  -- either an operation allows the sign to pull through, or there are no negative signs to worry about
     | Just (Op dims op args) <- I.lookup node exprs
     , (expr1, negNodes) <- L.mapAccumR fn exprs args
     , canPull op || not (any fst negNodes) =
@@ -143,9 +140,9 @@ fn exprs node
     | Just (Var _ _) <- I.lookup node exprs = (exprs, (False, node))
     | Just (DVar _ _) <- I.lookup node exprs = (exprs, (False, node))
     | Just (Const _ _) <- I.lookup node exprs = (exprs, (False, node))
-    | Just (RelElem _ _ _) <- I.lookup node exprs =
-        error $ "HF.fn found RelElem " ++ (take 200 $ show exprs)
-    | True = error $ "HF.fn unhandled " ++ pretty' (exprs, node)
+    | Just RelElem {} <- I.lookup node exprs =
+        error $ "HF.fn found RelElem " ++ take 200 (show exprs)
+    | otherwise = error $ "HF.fn unhandled " ++ pretty' (exprs, node)
 
 {-
 
@@ -203,26 +200,24 @@ floatNeg exprs node
             if tryPull == args
                 then mt "no" (exprs, node)
                 else addEdge exprTry $ mkSCZ dims (Expression newN newE) tryPull
-  -- keep looking for SCZs lower down
     | Just (Op dims op args) <- I.lookup node exprs =
         let (newE, newArgs) = L.mapAccumR floatNeg exprs args
          in mt ("~~op~~" ++ (show $ zip args newArgs)) $
             if newArgs == args
                 then (exprs, node)
                 else addEdge newE $ Op dims op newArgs
-  -- nothing more to look for
-    | True = (exprs, node)
+    | otherwise = (exprs, node)
 
 pullNeg exprs node
-    | Just (Op _ Neg [arg]) <- I.lookup node exprs = mt "neg" $ (exprs, arg)
+    | Just (Op _ Neg [arg]) <- I.lookup node exprs = mt "neg" (exprs, arg)
     | Just (Op dims op args) <- I.lookup node exprs
     , canPull op
     , (pulledE, pulledArgs) <- L.mapAccumR pullNeg exprs args =
         if L.or $ zipWith (==) args pulledArgs
-            then mt ("not " ++ (show op)) $ (exprs, node) -- couldn't pull negate out of all args
+            then mt ("not " ++ (show op)) (exprs, node) -- couldn't pull negate out of all args
             else mt ("pulled " ++ show (op, args, pulledArgs)) $
                  addEdge pulledE $ Op dims op pulledArgs
-    | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ (show x)) (exprs, node)
+    | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ show x) (exprs, node)
 
 canPull RealPart = True
 canPull ImagPart = True
@@ -247,7 +242,7 @@ factorNeg (exprs, node)
     | Just (Op dims op args) <- I.lookup node exprs
     , (newExprs, newArgs) <- L.mapAccumR (curry factorNeg) exprs args
     , newArgs /= args = addEdge newExprs $ Op dims op newArgs
-    | True = (exprs, node)
+    | otherwise = (exprs, node)
 
 {-
 
@@ -269,15 +264,13 @@ pushNegIntoConst (exprs, node)
     | Just (Op dims op args) <- I.lookup node exprs
     , (newExprs, newArgs) <- L.mapAccumR (curry pushNegIntoConst) exprs args
     , newArgs /= args = addEdge newExprs $ Op dims op newArgs
-    | True = (exprs, node)
+    | otherwise = (exprs, node)
 
 {-
 
 
 -}
 factor' (exprs, node)
-  -- * factor out common factors in sums of products
-  -- - Sum(x*y,x*z) -> Prod(x,Sum(y+z))
     | Just (Op Dim0 Sum args) <- mt "preSum" $ I.lookup node exprs
     , any ((Nothing /=) . M.prod exprs) args =
         tf "factor prod out of sum" $
@@ -285,7 +278,6 @@ factor' (exprs, node)
                 case I.lookup arg exprs of
                     Just (Op _ Prod argArgs) -> argArgs
                     _ -> [arg]
-         -- factor the products greedily, factoring out the most common factor each time
             f [] = []
             f [[]] = []
             f argSets =
@@ -316,7 +308,7 @@ factor' (exprs, node)
                 hadProd =
                     case had of
                         [] -> mostCommon'
-                        _ -> mostCommon' * (prodE had)
+                        _ -> mostCommon' * prodE had
                 notNull x =
                     if null x
                         then error $
@@ -325,9 +317,6 @@ factor' (exprs, node)
                         else x
          in tf "distribute prod inside sum" $
             prodE (f $ map prodArgsOrSelf args) exprs
-  --FIXME this catches sums of |RelElem|s but not general linear combinations (or maybe not)
-  --FIXME this catches maps but not SCZs with non-zero offsets
-  --FIXME extract garbage-collection function from simplify and apply it here for unused args
     | Just (Op dims (SCZ (Expression sn se)) args) <-
          mt "preSCZ" $ I.lookup node exprs =
         let (sczE, sczN) = factor' (se, sn)
@@ -344,7 +333,7 @@ factor' (exprs, node)
                     [(length args) ..]
             rewrite newE head
                 | Just (_cs, newIdx) <- lookup head replacements =
-                    tf "." $ addEdge newE (RelElem newIdx ZeroMargin offset) {-doesn't matter-}
+                    tf "." $ addEdge newE (RelElem newIdx ZeroMargin offset)
                 | Just (Op dims op args) <- I.lookup head sczE =
                     let (e1, newAs) = L.mapAccumR rewrite newE args
                      in tf ("rewrite op" ++ show op) $
@@ -359,7 +348,7 @@ factor' (exprs, node)
             usedArgs =
                 map snd $
                 filter ((`elem` usedIdxs) . fst) $
-                zip [0 ..] $ args ++ (map snd argsToAdd)
+                zip [0 ..] $ args ++ map snd argsToAdd
             (newSCZe, newSCZn) =
                 let remap = I.fromList $ zip usedIdxs [0 ..]
                     rewrite newE head
@@ -370,7 +359,7 @@ factor' (exprs, node)
                                     tf "." $
                                     addEdge
                                         newE
-                                        (RelElem newIdx ZeroMargin offset) {-doesn't matter-}
+                                        (RelElem newIdx ZeroMargin offset)
                                 _ ->
                                     error $
                                     "factor newSCZ found idx we shouln't have " ++
@@ -414,7 +403,7 @@ factor' (exprs, node)
                      in [(node, toSum)]
                 | Just (Op _ _op opArgs) <- I.lookup node sczE =
                     mt "=" $ concatMap commonSummands opArgs
-                | True = []
+                | otherwise = []
          in tf (unlines
                     [ "SCZ"
                     , pretty (rewrittenE, rewrittenN)
@@ -426,11 +415,11 @@ factor' (exprs, node)
             mkSCZ
                 dims
                 (Expression newSCZn newSCZe)
-                (mt (show $ usedArgs) $ usedArgs)
+                (mt (show $ usedArgs) usedArgs)
     | Just (Op dims op args) <- mt "preOp" $ I.lookup node exprs
     , (exprs1, newArgs) <- L.mapAccumR (curry factor') exprs args
     , args /= newArgs = tf "Op" $ addEdge exprs1 $ Op dims op newArgs
-    | True = tf "True" $ (exprs, node)
+    | otherwise = tf "True" (exprs, node)
 
 {-
 
@@ -492,10 +481,10 @@ commonTop exprs summands =
                        , Node)
                     -> (Internal -> (Internal, Node))
                 scaleBy (Just (_, arg), (_, Left sn, _), _) =
-                    (sourceNode sn) `scale` (sourceNode arg)
+                    sourceNode sn `scale` sourceNode arg
                 scaleBy (Just (_, arg), (_, Right 1, _), _) = sourceNode arg
                 scaleBy (Just (_, arg), (_, Right d, _), _) =
-                    (mkConst Dim0 d) `scale` (sourceNode arg)
+                    (mkConst Dim0 d) `scale` sourceNode arg
                 scaleBy _ = error "commonTop.scaleBy impossible"
              in addEdgeD e1 op [newSum]
         -- FIXME Op (getDimE e1 newSum) op [newSum] is dangerous, because dimensions change
@@ -507,7 +496,7 @@ commonTop exprs summands =
         getOp ((a, b, n), c)
             | Just (Op _ op [arg]) <- I.lookup n exprs
             , linearOp op = (Just (op, arg), (a, b, n), c)
-            | True = (Nothing, (a, b, n), c)
+            | otherwise = (Nothing, (a, b, n), c)
         dS :: Node -> ((Bool, Either Node Double, Node), Node)
         dS n = disassociateScale False n n
         disassociateScale ::
