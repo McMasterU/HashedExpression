@@ -250,7 +250,7 @@ install:
       ;;
   esac
   set +ex
-- chmod u+x buildscripts/cabal-build.sh
+- chmod u+x $TRAVIS_BUILD_DIR/buildscripts/cabal-build.sh
 
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
@@ -258,4 +258,4 @@ script:
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS test; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS bench; fi
-- if [ "$BUILD" == "cabal" ]; then buildscripts/build-cabal.sh; fi
+- if [ "$BUILD" == "cabal" ]; then $TRAVIS_BUILD_DIR/buildscripts/build-cabal.sh; fi
