@@ -837,8 +837,8 @@ spec =
         specify "evalTest3_2" $ property evalTest3_2
         specify "evalTest3_3" $ property evalTest3_3
         specify "evalTest3_4" $ property evalTest3_4
-        specify "evalTest3_5" $ property evalTest3_5
-        specify "evalTest3_6" $ property evalTest3_6
+        --specify "evalTest3_5" $ property evalTest3_5
+        --specify "evalTest3_6" $ property evalTest3_6
         specify "evalTest3_7" $ property evalTest3_7
         specify "evalTest3_8" $ property evalTest3_8
         specify "evalTest4_1" $ property evalTest4_1
