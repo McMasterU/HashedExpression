@@ -35,24 +35,24 @@ cache:
 jobs:
   include:
 
-  - addons: {apt: {packages: [libgmp-dev]}}
-    script: 
+  - script: 
     # should go in install part but don't want to waste time installing it each time
     - stack --no-terminal install hindent
     - hindent --validate src/*.hs test/*.hs
     name: "hindent validation"
+    addons: {apt: {packages: [libgmp-dev]}}
     if: NOT (branch = master OR (branch = develop && type = push))
 
-  - addons: {apt: {packages: [libgmp-dev]}}
-    script:
+  - script:
     - stack --no-terminal haddock --no-haddock-deps
     name: "haddock verification"
+    addons: {apt: {packages: [libgmp-dev]}}
     if: NOT (branch = master OR (branch = develop && type = push))
 
-  - addons: {apt: {packages: [libgmp-dev]}}
-    script:
+  - script:
     - stack --no-terminal test
     name: "test case verification"
+    addons: {apt: {packages: [libgmp-dev]}}
     if: NOT (branch = master OR (branch = develop && type = push))
 
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
