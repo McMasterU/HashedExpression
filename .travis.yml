@@ -42,7 +42,6 @@ jobs:
     addons: {apt: {packages: [libgmp-dev]}}
     env: CACHE_NAME=hin
     name: "hindent validation"
-    if: NOT (branch = master OR (branch = develop && type = push))
 
   - script:
     - stack --no-terminal haddock --no-haddock-deps
