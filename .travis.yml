@@ -110,7 +110,7 @@ jobs:
   - env: BUILD=stack ARGS=""
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
-    if: ((branch = master OR (branch = develop && type = push)) AND commit_message !~ /(nostack)/
+    if: (branch = master OR (branch = develop && type = push)) AND commit_message !~ /(nostack)/
 
 
   #- env: BUILD=stack ARGS="--resolver lts-2"
