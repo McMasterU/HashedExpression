@@ -895,8 +895,14 @@ data OpId
     | Sum
     | SubMask
     | NegMask
-    | Reglzr DomainWeights RangeKernel
-    | GradReglzr DomainWeights RangeKernel
+
+    | Shift DomainWeights
+
+    | Reglzr DomainWeights RangeKernel     -- DEPRECATED
+    | GradReglzr DomainWeights RangeKernel -- DEPRECATED
+
+    | Piecewise Double  -- this op 
+    
     | Neg
     | Abs
     | Signum
@@ -921,12 +927,13 @@ data OpId
                  -- Dot of complex arguments is Hermitian project (so returns a real scalar)
                  -- JLMP: check that this is consistent with all uses of Dot
            -- JLMP:  eliminate this and convert uses to SCZ
-    | MapND
+    | MapND   -- DEPRECATED
           { mapExpr :: Expression -- Scalar; not explict due to circular Show instances
           , mapInput :: ByteString -- CKA: why can't we use SCZ?
           }
-    | SCZ Expression -- WARNING:  use for pattern matching, not construction, use |mkSCZ|
-    | ScaleV -- first input should be scalar and second a vector expression
+    | SCZ Expression  -- DEPRECATED
+    | ScaleV -- first input should be scalar and second a vector expression 
+       -- TODO branch into ScaleR and ScaleC, maybe
     | Project Subspace
     | Inject Subspace
     | Compound Int -- make compound node
@@ -1690,6 +1697,7 @@ nodeIsRelElem edges node =
 -}
 airity :: OpId -> (Airity, Airity)
 airity Sum = (Natural, Fixed 1)
+airity Piecewise _ = (Fixed 3, Fixed 1)
 airity SubMask = (Fixed 2, Fixed 1)
 airity NegMask = (Fixed 2, Fixed 1)
 airity (Reglzr _ _) = (Natural, Fixed 1)
