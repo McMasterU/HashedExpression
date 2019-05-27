@@ -23,5 +23,4 @@ do
   fi
   cd $ORIGDIR
 done
-;;
 set +ev
