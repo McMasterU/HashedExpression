@@ -40,18 +40,21 @@ jobs:
     - stack --no-terminal install hindent
     - hindent --validate src/*.hs test/*.hs
     addons: {apt: {packages: [libgmp-dev]}}
+    env: CACHE_NAME=hin
     name: "hindent validation"
     if: NOT (branch = master OR (branch = develop && type = push))
 
   - script:
     - stack --no-terminal haddock --no-haddock-deps
     addons: {apt: {packages: [libgmp-dev]}}
+    env: CACHE_NAME=had
     name: "haddock verification"
     if: NOT (branch = master OR (branch = develop && type = push))
 
   - script:
     - stack --no-terminal test
     addons: {apt: {packages: [libgmp-dev]}}
+    env: CACHE_NAME=tes
     name: "test case verification"
     if: NOT (branch = master OR (branch = develop && type = push))
 
