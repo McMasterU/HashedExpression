@@ -35,11 +35,28 @@ cache:
 jobs:
   include:
 
-  - script: 
+  - compiler: ": #stack default"
+    addons: {apt: {packages: [libgmp-dev]}}
+    script: 
     # should go in install part but don't want to waste time installing it each time
     - stack --no-terminal install hindent
     - hindent --validate src/*.hs test/*.hs
     name: "hindent validation"
+    if: NOT ((branch = master OR (branch = develop && type = push))
+
+  - compiler: ": #stack default"
+    addons: {apt: {packages: [libgmp-dev]}}
+    script:
+    - stack --no-terminal haddock --no-haddock-deps
+    name: "haddock verification"
+    if: NOT ((branch = master OR (branch = develop && type = push))
+
+  - compiler: ": #stack default"
+    addons: {apt: {packages: [libgmp-dev]}}
+    script:
+    - stack --no-terminal test
+    name: "test case verification"
+    if: NOT ((branch = master OR (branch = develop && type = push))
 
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
@@ -96,7 +113,7 @@ jobs:
   - env: BUILD=stack ARGS=""
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
-    if: commit_message !~ /(nostack)/
+    if: ((branch = master OR (branch = develop && type = push)) AND commit_message !~ /(nostack)/
 
 
   #- env: BUILD=stack ARGS="--resolver lts-2"
