@@ -380,25 +380,25 @@ var = Scalar . (varHidden Dim0)
 
 varc = ScalarC . (varHidden Dim0)
 
-var1d dim = OneD . (varHidden (Dim1 dim))
+var1d size = OneD . (varHidden (Dim1 size))
 
-dvar1d dim = OneD . (dvarHidden (Dim1 dim))
+dvar1d size = OneD . (dvarHidden (Dim1 size))
 
-var1dc dim = OneDC . (varHidden (Dim1 dim)) -- shouldn't we create separate real and imaginary parts and wrap them
+var1dc size = OneDC . (varHidden (Dim1 size)) -- shouldn't we create separate real and imaginary parts and wrap them
 
-var2d d = TwoD . (varHidden (Dim2 d))
+var2d size = TwoD . (varHidden (Dim2 size))
 
-var2ds d sL@(SparseList2D len _ _ _) =
-    (TwoDSparse sL) . (varHidden (Dim2SL1 d len))
+var2ds size sL@(SparseList2D len _ _ _) =
+    (TwoDSparse sL) . (varHidden (Dim2SL1 size len))
 
-var2dc d = TwoDC . (varHidden (Dim2 d))
+var2dc size = TwoDC . (varHidden (Dim2 size))
 
-var3d d = ThreeD . (varHidden (Dim3 d))
+var3d size = ThreeD . (varHidden (Dim3 size))
 
-var3ds d sL@(SparseList3D len _ _ _ _ _) =
-    (ThreeDSparse sL) . (varHidden (Dim3SL1 d len))
+var3ds size sL@(SparseList3D len _ _ _ _ _) =
+    (ThreeDSparse sL) . (varHidden (Dim3SL1 size len))
 
-var3dc d = ThreeDC . (varHidden (Dim3 d))
+var3dc size = ThreeDC . (varHidden (Dim3 size))
 
 {-
 
@@ -734,7 +734,7 @@ The actual expressions are
 data Expression =
     Expression
         Node -- the final product of this expression
-        Internal -- all subexpressions, including vars
+        Internal -- all subexpressions, including vars -- (Int -> ExpressionEdge)
     deriving (Show, Ord)
 
 {-
