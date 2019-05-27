@@ -137,13 +137,13 @@ jobs:
   - env: BUILD=stack ARGS="--resolver nightly"
     compiler: ": #stack nightly"
     addons: {apt: {packages: [libgmp-dev]}}
-    if: branch = master OR (branch = develop && type = push)
+    if: branch = master OR (branch = develop && type = push) OR type = cron
     
   # Build on macOS in addition to Linux
   - env: BUILD=stack ARGS=""
     compiler: ": #stack default osx"
     os: osx
-    if: branch = master OR (branch = develop && type = push)
+    if: branch = master OR (branch = develop && type = push) OR type = cron
     
 
   # Travis includes an macOS which is incompatible with GHC 7.8.4
@@ -182,7 +182,7 @@ jobs:
     compiler: ": #stack 8.6.3 osx"
     os: osx
     if: branch = master OR (branch = develop && type = push)
-    
+
   - env: BUILD=stack ARGS="--resolver nightly"
     compiler: ": #stack nightly osx"
     os: osx
@@ -252,6 +252,7 @@ install:
   set +ex
 
 script:
+- echo "Building using $BUILD (commands for other compiler will return 0)."
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS build; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS test; fi
