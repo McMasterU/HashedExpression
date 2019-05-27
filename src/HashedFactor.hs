@@ -77,9 +77,12 @@ fn exprs node
     , (expr1, negNodes) <- L.mapAccumR fn exprs args =
         case L.nub $ map fst negNodes of
             [loose] ->
-                let (e2, n2) = addEdge expr1 $ Op dims (Compound l) $ map snd negNodes
+                let (e2, n2) =
+                        addEdge expr1 $ Op dims (Compound l) $ map snd negNodes
                  in (e2, (loose, n2))
-            _ -> error $ "HF.newFloatNeg differing signs for compound " ++ show negNodes
+            _ ->
+                error $
+                "HF.newFloatNeg differing signs for compound " ++ show negNodes
     | Just (Op dims Sum args) <- I.lookup node exprs
     , (expr1, negNodes) <- L.mapAccumR fn exprs args =
         case L.nub $ map fst negNodes of
@@ -99,13 +102,17 @@ fn exprs node
                             args
                             negNodes
                     (sE, sN) = simplify' (nE, nN)
-                    relElem0 idx arg = relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
-                    (newE, newN) = addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
+                    relElem0 idx arg =
+                        relElem idx ZeroMargin $ zeroOffsets $ getDimE exprs arg
+                    (newE, newN) =
+                        addEdge expr1 $
+                        mkSCZ dims (Expression sN sE) $ map snd negNodes
                  in mt ("fn.sum" ++ show negNodes) (newE, (False, newN))
     | Just (Op dims (SCZ (Expression sn se)) args) <- I.lookup node exprs
     , (expr1, negNodes) <- L.mapAccumR fn exprs args =
         let (sE, sN) = simplify' $ rewrite se sn
-            (e2, n2) = addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
+            (e2, n2) =
+                addEdge expr1 $ mkSCZ dims (Expression sN sE) $ map snd negNodes
             xchSign idx =
                 if idx < 0 || idx >= length negNodes
                     then error $ "HF.fn scz idx " ++ show (idx, negNodes)
@@ -127,11 +134,14 @@ fn exprs node
             [loose] ->
                 let (e2, n2) = addEdge expr1 $ Op dims op $ map snd negNodes
                  in (e2, (loose, n2))
-            _ -> error $ "HF.newFloatNeg differing signs for " ++ show (op, negNodes)
+            _ ->
+                error $
+                "HF.newFloatNeg differing signs for " ++ show (op, negNodes)
     | Just (Var _ _) <- I.lookup node exprs = (exprs, (False, node))
     | Just (DVar _ _) <- I.lookup node exprs = (exprs, (False, node))
     | Just (Const _ _) <- I.lookup node exprs = (exprs, (False, node))
-    | Just RelElem {} <- I.lookup node exprs = error $ "HF.fn found RelElem " ++ take 200 (show exprs)
+    | Just RelElem {} <- I.lookup node exprs =
+        error $ "HF.fn found RelElem " ++ take 200 (show exprs)
     | otherwise = error $ "HF.fn unhandled " ++ pretty' (exprs, node)
 
 {-
