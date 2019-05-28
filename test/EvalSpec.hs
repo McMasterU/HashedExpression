@@ -802,7 +802,6 @@ Things which should be zero.  Taking derivative with respect to variables not pr
 -}
 {-
 -}
-
 spec :: Spec
 spec =
     describe "eval test" $ do

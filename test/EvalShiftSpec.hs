@@ -58,4 +58,3 @@ spec =
                      , [])) `shouldBe`
                 U.listArray (0, size - 1) [0, 1, 2, 3, 4]
         specify "oneD 1" $ property oneD_0
-

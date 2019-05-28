@@ -749,7 +749,8 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                     let original = evalOneD' x
                                         shiftedElemAt i =
                                             if i >= offset && i - offset < dim
-                                                then (original ! (i - offset)) * c
+                                                then (original ! (i - offset)) *
+                                                     c
                                                 else 0
                                      in U.listArray
                                             (0, dim - 1)
