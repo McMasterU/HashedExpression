@@ -1681,9 +1681,15 @@ helpRThreeD rk dk (exprs, nodes) =
             "HI." ++
             show rk ++
             " ThreeD applied to " ++ show (dims, map (pretty . (exprs, )) nodes)
+
 {-
 
 -}
 {-
 
 -}
+instance Shiftable OneD Int where
+    shiftScale offset c (OneD (Expression n exprs)) =
+        OneD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS1d $ (offset, c)
