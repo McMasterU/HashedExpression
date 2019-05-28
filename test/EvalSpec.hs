@@ -494,14 +494,13 @@ evalTest2_7 n a1 a2 a3 a4 a5 a6 =
                  , [ ( "X2"
                      , U.listArray
                            ((0, 0), (size - 1, size - 1))
-                           (a1 :
-                            a2 : a3 : a4 : a5 : ((replicate (size ^ 2 - 6) a6))))
+                           (a1 : a2 : a3 : a4 : a5 : replicate (size ^ 2 - 6) a6))
                    ]
                  , []
                  , [])) ==
         U.listArray
             ((0, 0), (size - 1, size - 1))
-            (a1 : a2 : a3 : a4 : a5 : (replicate (size ^ 2 - 6) a6))
+            (a1 : a2 : a3 : a4 : a5 : replicate (size ^ 2 - 6) a6)
 
 evalTest2_8 n a1 a2 a3 a4 a5 a6 =
     let size = 2 + (n `mod` 10)
@@ -521,7 +520,7 @@ evalTest2_8 n a1 a2 a3 a4 a5 a6 =
                  , [])) ==
         U.listArray
             ((0, 0), (size - 1, size - 1))
-            (a1 : a2 : a3 : a4 : a5 : (replicate (size ^ 2 - 6) a6))
+            (a1 : a2 : a3 : a4 : a5 : replicate (size ^ 2 - 6) a6)
 
 {-
 
@@ -837,8 +836,12 @@ spec =
         specify "evalTest3_2" $ property evalTest3_2
         specify "evalTest3_3" $ property evalTest3_3
         specify "evalTest3_4" $ property evalTest3_4
-        --specify "evalTest3_5" $ property evalTest3_5
-        --specify "evalTest3_6" $ property evalTest3_6
+        specify "evalTest3_5" $ do
+            pendingWith "FIXME evalTest3_5, then uncomment me"
+            --property evalTest3_5
+        specify "evalTest3_6" $ do
+            pendingWith "FIXME evalTest3_6, then uncomment me"
+            --property evalTest3_6
         specify "evalTest3_7" $ property evalTest3_7
         specify "evalTest3_8" $ property evalTest3_8
         specify "evalTest4_1" $ property evalTest4_1
