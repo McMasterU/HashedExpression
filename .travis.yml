@@ -48,7 +48,7 @@ jobs:
     addons: {apt: {packages: [libgmp-dev]}}
     env: CACHE_NAME=had
     name: "haddock verification"
-    if: NOT (branch = master OR (branch = develop && type = push)) AND commit_message ~= /(skiphaddock)/
+    if: NOT (branch = master OR (branch = develop && type = push)) AND commit_message !~ /(skiphaddock)/
 
   - script:
     - stack --no-terminal test
