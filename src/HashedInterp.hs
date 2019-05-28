@@ -620,7 +620,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                      rest)
                             sumFun [cs] = cs
                             sumFun [] = error "evalOneD.sumFun []"
-                         in sumFun $ map (\x -> evalOneD' x) inputs
+                         in sumFun $ map (evalOneD') inputs
                     Inject ss ->
                         let v =
                                 case inputs of
@@ -742,6 +742,21 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                             | i <- [0 .. dim - 1]
                                             ]
                                 _ -> error $ "evalOneD " ++ show inputs
+                    Shift (OS1d (offset, c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalOneD' x
+                                        shiftedElemAt i =
+                                            if i >= offset && i - offset < dim
+                                                then original ! (i - offset)
+                                                else 0
+                                     in U.listArray
+                                            (0, dim - 1)
+                                            (map shiftedElemAt [0 .. dim - 1])
+                                _ ->
+                                    error
+                                        "evalOneD wrong number of input Shift, expect 1"
                     _ -> error $ "evalOneD' implemented " ++ show op ++ " yet"
             Just e -> error $ "evalOneD found " ++ show e
 

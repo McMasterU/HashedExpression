@@ -1693,3 +1693,36 @@ instance Shiftable OneD Int where
         OneD . addEdge' exprs $ Op (getDimE exprs n) op [n]
       where
         op = Shift . OS1d $ (offset, c)
+
+instance Shiftable TwoD (Int, Int) where
+    shiftScale offset c (TwoD (Expression n exprs)) =
+        TwoD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS2d $ (offset, c)
+
+instance Shiftable ThreeD (Int, Int, Int) where
+    shiftScale offset c (ThreeD (Expression n exprs)) =
+        ThreeD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS3d $ (offset, c)
+
+instance Shiftable OneDC Int where
+    shiftScale offset c (OneDC (Expression n exprs)) =
+        OneDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS1d $ (offset, c)
+
+instance Shiftable TwoDC (Int, Int) where
+    shiftScale offset c (TwoDC (Expression n exprs)) =
+        TwoDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS2d $ (offset, c)
+
+instance Shiftable ThreeDC (Int, Int, Int) where
+    shiftScale offset c (ThreeDC (Expression n exprs)) =
+        ThreeDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS3d $ (offset, c)
+        
+{- | TODO : TwoDSparse, ThreeDSpare, TwoDCSpare, ThreeDSpare
+-}
