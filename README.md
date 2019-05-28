@@ -1,4 +1,4 @@
-# HashedExpression
+# HashedExpression [![Build Status](https://travis-ci.org/dalvescb/HashedExpression.svg?branch=develop)](https://travis-ci.org/dalvescb/HashedExpression)
 
 ## Style Guide
 - hindent
