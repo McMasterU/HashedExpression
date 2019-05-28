@@ -157,7 +157,7 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
         case I.lookup node exprs of
             Nothing ->
                 error $
-                "partDiff didn't find node " ++ (take 200 $ show (node, exprs))
+                "partDiff didn't find node " ++ take 200 (show (node, exprs))
             Just (Const dims _) -> addEdge' exprs (Const dims 0)
             Just (Var dims n) -> dVar dims n exprs node
             Just (DVar dims _n) -> addEdge' exprs (Const dims 0)
@@ -168,14 +168,14 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                 let d1Input =
                         let (d1E', node) =
                                 case inputs of
-                                    (input:[]) ->
-                                        (partDiff' (dVar, dRel)) exprs input
+                                    [input] ->
+                                        partDiff' (dVar, dRel) exprs input
                                     _ ->
                                         error $
                                         "partDiff " ++
                                         show op ++
                                         " needs 1 input " ++
-                                        (take 200 $ show inputs)
+                                        take 200 (show inputs)
                          in addEdge' d1E' (Op dims op [node])
                  in case op of
                         Transpose swap ->
@@ -183,18 +183,17 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                             "derivative doesn't know how to handle transpose " ++
                             show swap
                         Reglzr _dk _rk ->
-                            error $ "HD.partDiff' Rglzr not implemented"
+                            error "HD.partDiff' Rglzr not implemented"
                         GradReglzr _dk _rk ->
-                            error $ "HD.partDiff' Rglzr not implemented"
+                            error "HD.partDiff' Rglzr not implemented"
                         RealPart -> d1Input
                         ImagPart -> d1Input
                         RealImag ->
                             case inputs of
-                                (i1:i2:[]) ->
+                                [i1, i2] ->
                                     let (e1, dn1) =
-                                            (partDiff' (dVar, dRel)) exprs i1
-                                        (e2, dn2) =
-                                            (partDiff' (dVar, dRel)) e1 i2
+                                            partDiff' (dVar, dRel) exprs i1
+                                        (e2, dn2) = partDiff' (dVar, dRel) e1 i2
                                      in addEdge'
                                             e2
                                             (Op dims RealImag [dn1, dn2])
@@ -202,15 +201,14 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                                     error $
                                     "partDiff " ++
                                     show op ++
-                                    " needs 2 input " ++
-                                    (take 200 $ show inputs)
+                                    " needs 2 input " ++ take 200 (show inputs)
                         SubMask ->
                             case inputs of
-                                (i1:i2:[]) ->
+                                [i1, i2] ->
                                     let (e1, dn1) =
-                                            (partDiff' (dVar, dRel)) exprs i1
+                                            partDiff' (dVar, dRel) exprs i1
                                         (e2, dn2) =
-                                            (partDiff' (dVar, dRel)) exprs i2
+                                            partDiff' (dVar, dRel) exprs i2
                                      in if isDeepZero e1 dn1
                                             then addEdge'
                                                      e2
@@ -222,15 +220,14 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                                     error $
                                     "partDiff " ++
                                     show op ++
-                                    " needs 2 input " ++
-                                    (take 200 $ show inputs)
+                                    " needs 2 input " ++ take 200 (show inputs)
                         NegMask ->
                             case inputs of
-                                (i1:i2:[]) ->
+                                [i1, i2] ->
                                     let (e1, dn1) =
-                                            (partDiff' (dVar, dRel)) exprs i1
+                                            partDiff' (dVar, dRel) exprs i1
                                         (e2, dn2) =
-                                            (partDiff' (dVar, dRel)) exprs i2
+                                            partDiff' (dVar, dRel) exprs i2
                                      in if isDeepZero e1 dn1
                                             then addEdge'
                                                      e2
@@ -297,14 +294,14 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                                                          (*)
                                                          (ee, dterm : others)
                                                  newOps' =
-                                                     case map (flip I.lookup ee1)
+                                                     case map (`I.lookup` ee1)
                                                               newOps of
-                                                         ((Just (Const Dim0 0)):_) ->
+                                                         (Just (Const Dim0 0):_) ->
                                                              Const Dim0 0
                                                          [] -> Const Dim0 0
                                                          [Just (Const Dim0 1)] ->
                                                              Const Dim0 1
-                                                         ((Just (Const Dim0 1)):(Just x):[]) ->
+                                                         [Just (Const Dim0 1), Just x] ->
                                                              x
                                                          ((Just (Const Dim0 1)):_xs) ->
                                                              Op Dim0 Prod $
