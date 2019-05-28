@@ -43,6 +43,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - HashedExpression
+    - hspec
 
 tests:
   HashedExpression-test:

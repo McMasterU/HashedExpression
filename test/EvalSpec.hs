@@ -736,6 +736,7 @@ evalTest3_8 n a1 a2 a3 a4 a5 a6 =
             ((0, 0, 0), (size - 1, size - 1, size - 1))
             (a1 : a2 : a3 : a4 : a5 : (replicate (size ^ 3 - 6) a6))
 
+--evalTestShift_OneD_0 :: [Int] -> Double -> Bool
 {-
 --\begin{code}
 
@@ -801,6 +802,7 @@ Things which should be zero.  Taking derivative with respect to variables not pr
 -}
 {-
 -}
+
 spec :: Spec
 spec =
     describe "eval test" $ do

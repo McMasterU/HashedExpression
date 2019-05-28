@@ -1,18 +1,31 @@
 {-# LANGUAGE TupleSections #-}
+
 module Main where
 
-import HashedInstances
+import Data.Array.Unboxed as U
 import HashedDerivative
-import HashedSimplify
 import HashedExpression
 import HashedFactor
+import HashedInstances
+import HashedInterp
+import HashedSimplify
 
-[x1, y1, z1, u1, v1, w1] = map (var1d 4) ["X1", "Y1", "Z1", "U1", "V1", "W1"]
-
---e = x1 + y1 + z1
---e = shift
-e = shiftScale 1 1 x1
+import Test.Hspec
+import Test.QuickCheck hiding (scale)
 
 -- TODO run tests? or anything really
-main = do
-    print . unOneD $ e
+main = hspec $ do
+    describe "eval test" $ do
+        specify "test here" $ do
+            let size = 5
+                x1 = var1d size "x1"
+                e = shift 1 x1
+            evalOneD
+                (simplify e)
+                (subs
+                     ( []
+                     , [("x1", U.listArray (0, size - 1) [1, 2, 3, 4, 5])]
+                     , []
+                     , []
+                     , [])) `shouldBe`
+                U.listArray (0, size - 1) [0, 1, 2, 3, 4]

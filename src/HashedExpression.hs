@@ -3236,6 +3236,7 @@ instance NFData OpId where
     rnf (Extract _) = ()
     rnf (Project _) = ()
     rnf (Inject _) = ()
+    rnf (Shift _) = ()
     rnf (SCZ e) = rnf e
     rnf x = error $ "HE.NFData not implemented: " ++ show x
 
