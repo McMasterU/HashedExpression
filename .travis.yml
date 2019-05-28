@@ -272,8 +272,7 @@ install:
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS build; fi
-- if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
-  if: commit_message =~ /(checkhaddock)/
+# - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS haddock --no-haddock-deps; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS test; fi
 - if [ "$BUILD" == "stack" ]; then stack --no-terminal $ARGS bench; fi
 - if [ "$BUILD" == "cabal" ]; then $TRAVIS_BUILD_DIR/buildscripts/build-cabal.sh; fi
