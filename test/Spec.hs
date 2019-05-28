@@ -1,11 +1,10 @@
-import qualified SimplifySpec
 import qualified EvalSpec
-import qualified PartDiffSpec
 import qualified GradDiffSpec
+import qualified PartDiffSpec
+import qualified SimplifySpec
 import Test.Hspec
 
 --main = regressionTestAll
-
 main :: IO ()
 main = hspec spec
 
