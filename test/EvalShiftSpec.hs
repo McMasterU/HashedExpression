@@ -17,7 +17,6 @@ import HashedInstances
 import HashedInterp
 import HashedSimplify
 import qualified Polynomials as P
-import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 --import System.IO.Unsafe
@@ -25,8 +24,15 @@ import Test.QuickCheck hiding (scale)
 import Debug.Trace
 import Test.Hspec
 
+normalShiftList :: Int -> [Double] -> [Double]
+normalShiftList offset xs =
+    if offset > 0
+        then take (length xs) . (replicate offset 0 ++) $ xs
+        else drop (-offset) . (++ replicate (-offset) 0) $ xs
+
 oneD_0 :: [Double] -> Int -> Double -> Bool
-oneD_0 lst offset c = U.elems evalRes == undefined
+oneD_0 lst offset c =
+    U.elems evalRes == (normalShiftList offset . map (* c) $ lst)
   where
     size = length lst
     x1 = var1d size "x1"
@@ -34,16 +40,14 @@ oneD_0 lst offset c = U.elems evalRes == undefined
     evalRes =
         evalOneD
             (simplify e)
-            (subs
-                 ( []
-                 , [("x1", U.listArray (0, size - 1) [1, 2, 3, 4, 5])]
-                 , []
-                 , []
-                 , []))
+            (subs ([], [("x1", U.listArray (0, size - 1) lst)], [], [], []))
 
 spec :: Spec
 spec =
     describe "eval shift test" $ do
+        specify "test normalShiftList" $ do
+            normalShiftList (-2) [1, 2, 3, 4, 5] `shouldBe` [3, 4, 5, 0, 0]
+            normalShiftList 2 [1, 2, 3, 4, 5] `shouldBe` [0, 0, 1, 2, 3]
         specify "oneD 0" $ do
             let size = 5
                 x1 = var1d size "x1"
@@ -57,5 +61,4 @@ spec =
                      , []
                      , [])) `shouldBe`
                 U.listArray (0, size - 1) [0, 1, 2, 3, 4]
-        specify "oneD 1" $
-            pendingWith "implementing shiftScale tests" -- property oneD_0
+        specify "oneD 1" $ property oneD_0

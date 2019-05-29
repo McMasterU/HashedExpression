@@ -1,7 +1,7 @@
 {-
 (c) 2010-2012 Christopher Kumar Anand, Jessica LM Pavlin
 
-Caluclating Derivatives.
+Calculating Derivatives.
 -}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
