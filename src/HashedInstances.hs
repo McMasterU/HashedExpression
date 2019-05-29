@@ -1723,6 +1723,5 @@ instance Shiftable ThreeDC (Int, Int, Int) where
         ThreeDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
       where
         op = Shift . OS3d $ (offset, c)
-        
 {- | TODO : TwoDSparse, ThreeDSpare, TwoDCSpare, ThreeDSpare
 -}
