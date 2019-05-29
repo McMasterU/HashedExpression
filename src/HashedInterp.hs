@@ -24,6 +24,7 @@ import qualified Data.IntMap as I
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import HashedUtils
 
 import Data.Complex as DC
 
@@ -766,8 +767,8 @@ evalOneD (OneD (Expression node exprs)) eMap =
 -}
 evalOneDC :: OneDC -> ValMaps -> (Array Int (DC.Complex Double))
 evalOneDC (OneDC (Expression node exprs)) eMap =
-    let evalOneDC' next =
-            evalOneDC (OneDC (Expression next exprs)) eMap :: (Array Int (DC.Complex Double))
+    let evalOneDC' node =
+            evalOneDC (OneDC (Expression node exprs)) eMap :: (Array Int (DC.Complex Double))
      in case I.lookup node exprs of
             Nothing ->
                 error $
@@ -909,6 +910,22 @@ evalOneDC (OneDC (Expression node exprs)) eMap =
                                     error $
                                     "evalOneDC doesn't implement " ++
                                     show (ss, exprs)
+                    Shift (OS1d (offset, c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalOneDC' x
+                                        shiftedElemAt i =
+                                            if i >= offset && i - offset < dim
+                                                then (original ! (i - offset)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            (0, dim - 1)
+                                            (map shiftedElemAt [0 .. dim - 1])
+                                _ ->
+                                    error
+                                        "evalOneD wrong number of input Shift, expect 1"
                     _ -> error $ "evalOneDC't implemented " ++ show op ++ " yet"
             Just e -> error $ "evalOneDC found " ++ show e
 

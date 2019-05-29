@@ -1682,6 +1682,7 @@ helpRThreeD rk dk (exprs, nodes) =
             show rk ++
             " ThreeD applied to " ++ show (dims, map (pretty . (exprs, )) nodes)
 
+
 {-
 
 -}

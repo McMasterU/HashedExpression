@@ -366,6 +366,8 @@ CKA:  when we wrap Mary's types, we can use this
 class HasZero v where
     zero :: v
 
+instance (Num a) => HasZero a where
+    zero = fromInteger (0 :: Integer)
 {-
 
 -}
