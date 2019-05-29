@@ -1147,9 +1147,10 @@ evalTwoD (TwoD (Expression node exprs)) eMap =
                                 [x] ->
                                     let original = evalTwoD' x
                                         shiftedElemAt (i, j) =
-                                            if (i, j) >= (offset1, offset2) &&
-                                               (i - offset1, j - offset2) <
-                                               (dim1, dim2)
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2
                                                 then (original !
                                                       (i - offset1, j - offset2)) *
                                                      c
@@ -1550,9 +1551,10 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                 [x] ->
                                     let original = evalTwoDC' x
                                         shiftedElemAt (i, j) =
-                                            if (i, j) >= (offset1, offset2) &&
-                                               (i - offset1, j - offset2) <
-                                               (dim1, dim2)
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2
                                                 then (original !
                                                       (i - offset1, j - offset2)) *
                                                      fromReal c
@@ -1565,7 +1567,7 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                             ]
                                 _ ->
                                     error
-                                        "evalTwoDC wrong number of input Shift, expect 1"
+                                        "evalTwoD wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalTwoDC doesn't implemented " ++ show op ++ " yet"

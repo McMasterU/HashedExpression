@@ -368,6 +368,7 @@ class HasZero v where
 
 instance (Num a) => HasZero a where
     zero = fromInteger (0 :: Integer)
+
 {-
 
 -}

@@ -11,10 +11,10 @@ module HashedUtils where
 
 import HashedExpression
 
+import Data.Complex as DC
 import qualified Data.List as L
 import qualified System.Exit
 import qualified System.Process
-import Data.Complex as DC
 
 {-
 
@@ -95,7 +95,6 @@ mate name =
     "open -a ~/Downloads/TextMate.app " ++ name ++ ".lhs"
 
 search string = System.Process.system $ "fgrep \"" ++ string ++ "\" *.lhs"
-
 
 fromReal :: (RealFloat a) => a -> DC.Complex a
 fromReal x = DC.mkPolar x 0

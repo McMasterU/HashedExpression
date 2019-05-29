@@ -40,7 +40,7 @@ instance Arbitrary a => Arbitrary (TwoDMatrix a) where
     arbitrary = do
         dim1 <- choose (1, 100)
         dim2 <- choose (1, 100)
-        mat  <- vectorOf dim1 . vectorOf dim2 $ arbitrary
+        mat <- vectorOf dim1 . vectorOf dim2 $ arbitrary
         return $ TwoDMatrix dim1 dim2 mat
 
 normalShift1d :: Num a => Int -> [a] -> [a]
@@ -54,8 +54,9 @@ normalShift2d (offset1, offset2) twoDMat =
     TwoDMatrix d1 d2 .
     List.transpose .
     map (normalShift1d offset1) .
-    List.transpose . map (normalShift1d offset2) . unTwoDMatrix $ twoDMat
-  where 
+    List.transpose . map (normalShift1d offset2) . unTwoDMatrix $
+    twoDMat
+  where
     d1 = dim1 twoDMat
     d2 = dim2 twoDMat
 
@@ -94,53 +95,58 @@ oneDC_0 lst offset c =
                  , []))
 
 twoD_0 :: TwoDMatrix Double -> (Int, Int) -> Double -> Bool
-twoD_0 (twoDMat@(TwoDMatrix d1 d2 mat)) (offset1, offset2) c =
-    evalRes == undefined
+twoD_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
+    U.elems evalRes == concat normalRes &&
+    lastDim1 == d1 - 1 && lastDim2 == d2 - 1
   where
-    normalRes = unTwoDMatrix (normalShift2d (offset1, offset2) . fmap (* c) $ twoDMat)
+    normalRes = unTwoDMatrix . normalShift2d offset . fmap (* c) $ twoDMat
     x1 = var2d (d1, d2) "x1"
-    e = shiftScale (offset1, offset2) c x1
+    (lastDim1, lastDim2) = last . U.indices $ evalRes
+    e = shiftScale offset c x1
     evalRes =
         evalTwoD
             (simplify e)
-            (subs ([], [], [("x1", U.listArray ((0, d1-1), (0,d2-1)) $ concat mat)], [], []))
+            (subs
+                 ( []
+                 , []
+                 , [("x1", U.listArray ((0, 0), (d1 - 1, d2 - 1)) $ concat mat)]
+                 , []
+                 , []))
 
--- twoDC_0 :: TwoDMatrix Double -> Int -> Double -> Bool
--- twoDC_0 (TwoDMatrix lst) offset c =
---     U.elems evalRes == (normalShift1d offset . map (* fromReal c) $ complexLst)
---   where
---     size = length lst
---     x1 = var1d size "x1"
---     x2 = var1d size "x2"
---     v = x1 +: x2
---     complexLst = map (uncurry (DC.:+)) lst
---     e = shiftScale offset c v
---     evalRes =
---         evalOneDC
---             (simplify e)
---             (subs
---                  ( []
---                  , [ ("x1", U.listArray (0, size - 1) (map fst lst))
---                    , ("x2", U.listArray (0, size - 1) (map snd lst))
---                    ]
---                  , []
---                  , []
---                  , []))
+twoDC_0 :: TwoDMatrix (Double, Double) -> (Int, Int) -> Double -> Bool
+twoDC_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
+    U.elems evalRes == concat normalRes &&
+    lastDim1 == d1 - 1 && lastDim2 == d2 - 1
+  where
+    normalRes =
+        unTwoDMatrix . normalShift2d offset . fmap (* fromReal c) $ complexMat
+    x1 = var2d (d1, d2) "x1"
+    x2 = var2d (d1, d2) "x2"
+    v = x1 +: x2
+    complexMat = fmap (uncurry (DC.:+)) twoDMat
+    (lastDim1, lastDim2) = last . U.indices $ evalRes
+    e = shiftScale offset c v
+    evalRes =
+        evalTwoDC
+            (simplify e)
+            (subs
+                 ( []
+                 , []
+                 , [ ( "x1"
+                     , U.listArray
+                           ((0, 0), (d1 - 1, d2 - 1))
+                           (map fst $ concat mat))
+                   , ( "x2"
+                     , U.listArray
+                           ((0, 0), (d1 - 1, d2 - 1))
+                           (map snd $ concat mat))
+                   ]
+                 , []
+                 , []))
 
--- oneD_0 :: [Double] -> Int -> Double -> Bool
--- oneD_0 lst offset c =
---     U.elems evalRes == (normalShift1d offset . map (* c) $ lst)
---   where
---     size = length lst
---     x1 = var1d size "x1"
---     e = shiftScale offset c x1
---     evalRes =
---         evalOneD
---             (simplify e)
---             (subs ([], [("x1", U.listArray (0, size - 1) lst)], [], [], []))
 spec :: Spec
-spec =
-    describe "eval shift test" $ do
+spec = do
+    describe "eval shift tests 1d" $ do
         specify "test normalShiftList" $ do
             normalShift1d (-2) [1, 2, 3, 4, 5] `shouldBe` [3, 4, 5, 0, 0]
             normalShift1d 2 [1, 2, 3, 4, 5] `shouldBe` [0, 0, 1, 2, 3]
@@ -166,6 +172,7 @@ spec =
                 U.listArray (0, size - 1) [0, 1, 2, 3, 4]
         specify "oneD 1" $ property oneD_0
         specify "oneDC 0" $ property oneDC_0
+    describe "eval shift tests 2d" $ do
         specify "test normalShiftList 2d" $ do
             normalShift2d (0, -2) (TwoDMatrix 1 5 [[1, 2, 3, 4, 5]]) `shouldBe`
                 (TwoDMatrix 1 5 [[3, 4, 5, 0, 0]])
@@ -180,3 +187,5 @@ spec =
             property $ \twoDMat ->
                 (normalShift2d (0, 0) twoDMat) ==
                 (twoDMat :: TwoDMatrix (DC.Complex Double))
+        specify "twoD 0" $ property twoD_0
+        specify "twoDC 0" $ property twoDC_0
