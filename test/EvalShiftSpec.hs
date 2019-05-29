@@ -25,6 +25,12 @@ import Debug.Trace
 import HashedUtils (fromReal)
 import Test.Hspec
 
+class Matrix f where
+    toList :: f a -> [a]
+
+{-
+  2-D Matrix
+-}
 data TwoDMatrix a =
     TwoDMatrix
         { dim1 :: Int
@@ -36,13 +42,19 @@ data TwoDMatrix a =
 instance Functor TwoDMatrix where
     fmap f (TwoDMatrix d1 d2 mat) = TwoDMatrix d1 d2 (map (map f) mat)
 
+instance Matrix TwoDMatrix where
+    toList = concat . unTwoDMatrix
+
 instance Arbitrary a => Arbitrary (TwoDMatrix a) where
     arbitrary = do
-        dim1 <- choose (1, 100)
-        dim2 <- choose (1, 100)
+        dim1 <- choose (1, 30)
+        dim2 <- choose (1, 30)
         mat <- vectorOf dim1 . vectorOf dim2 $ arbitrary
         return $ TwoDMatrix dim1 dim2 mat
 
+{-
+  3-D Matrix
+-}
 data ThreeDMatrix a =
     ThreeDMatrix
         { dim1_3d :: Int
@@ -53,15 +65,28 @@ data ThreeDMatrix a =
     deriving (Eq, Show)
 
 instance Functor ThreeDMatrix where
-    fmap f (ThreeDMatrix d1 d2 d3 mat) = ThreeDMatrix d1 d2 d3 $ (map (fmap f)) mat
+    fmap f (ThreeDMatrix d1 d2 d3 mat) =
+        ThreeDMatrix d1 d2 d3 . map (fmap f) $ mat
+
+instance Matrix ThreeDMatrix where
+    toList = concat . map toList . unThreeDMatrix
 
 instance Arbitrary a => Arbitrary (ThreeDMatrix a) where
     arbitrary = do
-        dim1 <- choose (1, 100)
-        dim2 <- choose (1, 100)
-        dim3 <- choose (1, 100)
-        mat <- vectorOf dim1 . fmap (TwoDMatrix dim2 dim3) . vectorOf dim2 . vectorOf dim3 $ arbitrary
+        dim1 <- choose (1, 10)
+        dim2 <- choose (1, 10)
+        dim3 <- choose (1, 10)
+        mat <-
+            vectorOf dim1 .
+            fmap (TwoDMatrix dim2 dim3) . vectorOf dim2 . vectorOf dim3 $
+            arbitrary
         return $ ThreeDMatrix dim1 dim2 dim3 mat
+
+normalShift1dWithZero :: Int -> a -> [a] -> [a]
+normalShift1dWithZero offset zero xs =
+    if offset > 0
+        then take (length xs) . (replicate offset zero ++) $ xs
+        else drop (-offset) . (++ replicate (-offset) zero) $ xs
 
 normalShift1d :: Num a => Int -> [a] -> [a]
 normalShift1d offset xs =
@@ -80,17 +105,17 @@ normalShift2d (offset1, offset2) twoDMat =
     d1 = dim1 twoDMat
     d2 = dim2 twoDMat
 
--- normalShift3d :: Num a => (Int, Int) -> ThreeDMatrix a -> ThreeDMatrix a
--- normalShift3d (offset1, offset2, offset3) threeDMat =
---     ThreeDMatrix d1 d2 .
---     List.transpose .
---     map (normalShift1d offset1) .
---     List.transpose . map (normalShift1d offset2) . unTwoDMatrix $
---     twoDMat
---   where
---     d1 = dim1_3d threeDMat
---     d2 = dim2_3d threeDMat
---     d3 = dim3_3d threeDMat
+normalShift3d :: Num a => (Int, Int, Int) -> ThreeDMatrix a -> ThreeDMatrix a
+normalShift3d (offset1, offset2, offset3) threeDMat =
+    ThreeDMatrix d1 d2 d3 .
+    normalShift1dWithZero offset1 zeroMatrix .
+    map (normalShift2d (offset2, offset3)) . unThreeDMatrix $
+    threeDMat
+  where
+    d1 = dim1_3d threeDMat
+    d2 = dim2_3d threeDMat
+    d3 = dim3_3d threeDMat
+    zeroMatrix = TwoDMatrix d2 d3 $ replicate d2 (replicate d3 0)
 
 oneD_0 :: [Double] -> Int -> Double -> Bool
 oneD_0 lst offset c =
@@ -127,13 +152,12 @@ oneDC_0 lst offset c =
                  , []))
 
 twoD_0 :: TwoDMatrix Double -> (Int, Int) -> Double -> Bool
-twoD_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
-    U.elems evalRes == concat normalRes &&
-    lastDim1 == d1 - 1 && lastDim2 == d2 - 1
+twoD_0 twoDMat@(TwoDMatrix d1 d2 _) offset c =
+    U.elems evalRes == toList normalRes &&
+    (last . U.indices $ evalRes) == (d1 - 1, d2 - 1)
   where
-    normalRes = unTwoDMatrix . normalShift2d offset . fmap (* c) $ twoDMat
+    normalRes = normalShift2d offset . fmap (* c) $ twoDMat
     x1 = var2d (d1, d2) "x1"
-    (lastDim1, lastDim2) = last . U.indices $ evalRes
     e = shiftScale offset c x1
     evalRes =
         evalTwoD
@@ -141,22 +165,22 @@ twoD_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
             (subs
                  ( []
                  , []
-                 , [("x1", U.listArray ((0, 0), (d1 - 1, d2 - 1)) $ concat mat)]
+                 , [ ( "x1"
+                     , U.listArray ((0, 0), (d1 - 1, d2 - 1)) $ toList twoDMat)
+                   ]
                  , []
                  , []))
 
 twoDC_0 :: TwoDMatrix (Double, Double) -> (Int, Int) -> Double -> Bool
-twoDC_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
-    U.elems evalRes == concat normalRes &&
-    lastDim1 == d1 - 1 && lastDim2 == d2 - 1
+twoDC_0 twoDMat@(TwoDMatrix d1 d2 _) offset c =
+    U.elems evalRes == toList normalRes &&
+    (last . U.indices $ evalRes) == (d1 - 1, d2 - 1)
   where
-    normalRes =
-        unTwoDMatrix . normalShift2d offset . fmap (* fromReal c) $ complexMat
+    normalRes = normalShift2d offset . fmap (* fromReal c) $ complexMat
     x1 = var2d (d1, d2) "x1"
     x2 = var2d (d1, d2) "x2"
     v = x1 +: x2
     complexMat = fmap (uncurry (DC.:+)) twoDMat
-    (lastDim1, lastDim2) = last . U.indices $ evalRes
     e = shiftScale offset c v
     evalRes =
         evalTwoDC
@@ -167,13 +191,34 @@ twoDC_0 twoDMat@(TwoDMatrix d1 d2 mat) offset c =
                  , [ ( "x1"
                      , U.listArray
                            ((0, 0), (d1 - 1, d2 - 1))
-                           (map fst $ concat mat))
+                           (map fst $ toList twoDMat))
                    , ( "x2"
                      , U.listArray
                            ((0, 0), (d1 - 1, d2 - 1))
-                           (map snd $ concat mat))
+                           (map snd $ toList twoDMat))
                    ]
                  , []
+                 , []))
+
+threeD_0 :: ThreeDMatrix Double -> (Int, Int, Int) -> Double -> Bool
+threeD_0 threeDMat@(ThreeDMatrix d1 d2 d3 _) offset c =
+    U.elems evalRes == toList normalRes &&
+    (last . U.indices $ evalRes) == (d1 - 1, d2 - 1, d3 - 1)
+  where
+    normalRes = normalShift3d offset . fmap (* c) $ threeDMat
+    x1 = var3d (d1, d2, d3) "x1"
+    e = shiftScale offset c x1
+    evalRes =
+        evalThreeD
+            (simplify e)
+            (subs
+                 ( []
+                 , []
+                 , []
+                 , [ ( "x1"
+                     , U.listArray ((0, 0, 0), (d1 - 1, d2 - 1, d3 - 1)) $
+                       toList threeDMat)
+                   ]
                  , []))
 
 spec :: Spec
@@ -188,7 +233,7 @@ spec = do
             property $ \lst -> (normalShift1d 0 lst) == (lst :: [Double])
         specify "normalShiftList with zero-shift complex" $
             property $ \lst ->
-                (normalShift1d 0 lst) == (lst :: [DC.Complex Double])
+                normalShift1d 0 lst == (lst :: [DC.Complex Double])
         specify "oneD 0" $ do
             let size = 5
                 x1 = var1d size "x1"
@@ -221,3 +266,4 @@ spec = do
                 (twoDMat :: TwoDMatrix (DC.Complex Double))
         specify "twoD 0" $ property twoD_0
         specify "twoDC 0" $ property twoDC_0
+        specify "threeD 0" $ property threeD_0

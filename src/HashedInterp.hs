@@ -2038,10 +2038,10 @@ evalThreeD (ThreeD (Expression node exprs)) eMap =
                                         shiftedElemAt (i, j, k) =
                                             if i >= offset1 &&
                                                j >= offset2 &&
-                                               j >= offset3 &&
+                                               k >= offset3 &&
                                                i - offset1 < dim1 &&
                                                j - offset2 < dim2 &&
-                                               j - offset3 < dim3
+                                               k - offset3 < dim3
                                                 then (original !
                                                       ( i - offset1
                                                       , j - offset2
