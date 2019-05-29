@@ -1544,6 +1544,28 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                     error $
                                     "evalTwoDC Project doesn't implement " ++
                                     show (ss, exprs)
+                    Shift (OS2d ((offset1, offset2), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalTwoDC' x
+                                        shiftedElemAt (i, j) =
+                                            if (i, j) >= (offset1, offset2) &&
+                                               (i - offset1, j - offset2) <
+                                               (dim1, dim2)
+                                                then (original !
+                                                      (i - offset1, j - offset2)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            ((0, 0), (dim1 - 1, dim2 - 1))
+                                            [ shiftedElemAt (i, j)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalTwoDC wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalTwoDC doesn't implemented " ++ show op ++ " yet"
