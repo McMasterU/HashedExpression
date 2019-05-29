@@ -95,7 +95,7 @@ oneDC_0 lst offset c =
 
 twoD_0 :: TwoDMatrix Double -> (Int, Int) -> Double -> Bool
 twoD_0 (twoDMat@(TwoDMatrix d1 d2 mat)) (offset1, offset2) c =
-    evalRes == 
+    evalRes == undefined
   where
     normalRes = unTwoDMatrix (normalShift2d (offset1, offset2) . fmap (* c) $ twoDMat)
     x1 = var2d (d1, d2) "x1"
