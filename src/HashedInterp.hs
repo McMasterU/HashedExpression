@@ -1141,6 +1141,28 @@ evalTwoD (TwoD (Expression node exprs)) eMap =
                                         , j <- [0 .. dim2 - 1]
                                         ]
                             _ -> error $ "evalTwoD ImagPart " ++ show inputs
+                    Shift (OS2d ((offset1, offset2), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalTwoD' x
+                                        shiftedElemAt (i, j) =
+                                            if (i, j) >= (offset1, offset2) &&
+                                               (i - offset1, j - offset2) <
+                                               (dim1, dim2)
+                                                then (original !
+                                                      (i - offset1, j - offset2)) *
+                                                     c
+                                                else 0
+                                     in U.listArray
+                                            ((0, 0), (dim1 - 1, dim2 - 1))
+                                            [ shiftedElemAt (i, j)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalTwoD wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalTwoD't implemented " ++
