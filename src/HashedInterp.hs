@@ -2547,6 +2547,35 @@ evalThreeDC (ThreeDC (Expression node exprs)) eMap =
                             sumFun [cs] = cs
                             sumFun [] = error "evalThreeDC.sumFun []"
                          in sumFun $ map (\x -> evalThreeDC' x) inputs
+                    Shift (OS3d ((offset1, offset2, offset3), c)) ->
+                        let
+                         in case inputs of
+                                [x] ->
+                                    let original = evalThreeDC' x
+                                        shiftedElemAt (i, j, k) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               k >= offset3 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2 &&
+                                               k - offset3 < dim3
+                                                then (original !
+                                                      ( i - offset1
+                                                      , j - offset2
+                                                      , k - offset3)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            ( (0, 0, 0)
+                                            , (dim1 - 1, dim2 - 1, dim3 - 1))
+                                            [ shiftedElemAt (i, j, k)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            , k <- [0 .. dim3 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalThreeDC wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalThreeDC't implemented " ++ show op ++ " yet"

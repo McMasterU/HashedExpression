@@ -82,6 +82,9 @@ instance Arbitrary a => Arbitrary (ThreeDMatrix a) where
             arbitrary
         return $ ThreeDMatrix dim1 dim2 dim3 mat
 
+{-
+  Done classes and instances
+-}
 normalShift1dWithZero :: Int -> a -> [a] -> [a]
 normalShift1dWithZero offset zero xs =
     if offset > 0
@@ -134,10 +137,10 @@ oneDC_0 lst offset c =
     U.elems evalRes == (normalShift1d offset . map (* fromReal c) $ complexLst)
   where
     size = length lst
+    complexLst = map (uncurry (DC.:+)) lst
     x1 = var1d size "x1"
     x2 = var1d size "x2"
     v = x1 +: x2
-    complexLst = map (uncurry (DC.:+)) lst
     e = shiftScale offset c v
     evalRes =
         evalOneDC
@@ -176,11 +179,11 @@ twoDC_0 twoDMat@(TwoDMatrix d1 d2 _) offset c =
     U.elems evalRes == toList normalRes &&
     (last . U.indices $ evalRes) == (d1 - 1, d2 - 1)
   where
+    complexMat = fmap (uncurry (DC.:+)) twoDMat
     normalRes = normalShift2d offset . fmap (* fromReal c) $ complexMat
     x1 = var2d (d1, d2) "x1"
     x2 = var2d (d1, d2) "x2"
     v = x1 +: x2
-    complexMat = fmap (uncurry (DC.:+)) twoDMat
     e = shiftScale offset c v
     evalRes =
         evalTwoDC
@@ -218,6 +221,33 @@ threeD_0 threeDMat@(ThreeDMatrix d1 d2 d3 _) offset c =
                  , [ ( "x1"
                      , U.listArray ((0, 0, 0), (d1 - 1, d2 - 1, d3 - 1)) $
                        toList threeDMat)
+                   ]
+                 , []))
+
+threeDC_0 :: ThreeDMatrix (Double, Double) -> (Int, Int, Int) -> Double -> Bool
+threeDC_0 threeDMat@(ThreeDMatrix d1 d2 d3 _) offset c =
+    U.elems evalRes == toList normalRes &&
+    (last . U.indices $ evalRes) == (d1 - 1, d2 - 1, d3 - 1)
+  where
+    complexMat = fmap (uncurry (DC.:+)) threeDMat
+    normalRes = normalShift3d offset . fmap (* fromReal c) $ complexMat
+    x1 = var3d (d1, d2, d3) "x1"
+    x2 = var3d (d1, d2, d3) "x2"
+    v = x1 +: x2
+    e = shiftScale offset c v
+    evalRes =
+        evalThreeDC
+            (simplify e)
+            (subs
+                 ( []
+                 , []
+                 , []
+                 , [ ( "x1"
+                     , U.listArray ((0, 0, 0), (d1 - 1, d2 - 1, d3 - 1)) $
+                       (map fst . toList $ threeDMat))
+                   , ( "x2"
+                     , U.listArray ((0, 0, 0), (d1 - 1, d2 - 1, d3 - 1)) $
+                       (map snd . toList $ threeDMat))
                    ]
                  , []))
 
@@ -267,3 +297,4 @@ spec = do
         specify "twoD 0" $ property twoD_0
         specify "twoDC 0" $ property twoDC_0
         specify "threeD 0" $ property threeD_0
+        specify "threeDC 0" $ property threeDC_0
