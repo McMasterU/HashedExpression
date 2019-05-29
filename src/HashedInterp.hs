@@ -2030,6 +2030,35 @@ evalThreeD (ThreeD (Expression node exprs)) eMap =
                                 _ ->
                                     error
                                         "evalThreeD Transpose requires a single input node "
+                    Shift (OS3d ((offset1, offset2, offset3), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalThreeD' x
+                                        shiftedElemAt (i, j, k) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               j >= offset3 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2 &&
+                                               j - offset3 < dim3
+                                                then (original !
+                                                      ( i - offset1
+                                                      , j - offset2
+                                                      , k - offset3)) *
+                                                     c
+                                                else 0
+                                     in U.listArray
+                                            ( (0, 0, 0)
+                                            , (dim1 - 1, dim2 - 1, dim3 - 1))
+                                            [ shiftedElemAt (i, j, k)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            , k <- [0 .. dim3 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalThreeD wrong number of input Shift, expect 1"
                     _ ->
                         error $ "evalThreeD't implemented " ++ show op ++ " yet"
             Just e -> error $ "evalThreeD found " ++ show e

@@ -43,6 +43,26 @@ instance Arbitrary a => Arbitrary (TwoDMatrix a) where
         mat <- vectorOf dim1 . vectorOf dim2 $ arbitrary
         return $ TwoDMatrix dim1 dim2 mat
 
+data ThreeDMatrix a =
+    ThreeDMatrix
+        { dim1_3d :: Int
+        , dim2_3d :: Int
+        , dim3_3d :: Int
+        , unThreeDMatrix :: [TwoDMatrix a]
+        }
+    deriving (Eq, Show)
+
+instance Functor ThreeDMatrix where
+    fmap f (ThreeDMatrix d1 d2 d3 mat) = ThreeDMatrix d1 d2 d3 $ (map (fmap f)) mat
+
+instance Arbitrary a => Arbitrary (ThreeDMatrix a) where
+    arbitrary = do
+        dim1 <- choose (1, 100)
+        dim2 <- choose (1, 100)
+        dim3 <- choose (1, 100)
+        mat <- vectorOf dim1 . fmap (TwoDMatrix dim2 dim3) . vectorOf dim2 . vectorOf dim3 $ arbitrary
+        return $ ThreeDMatrix dim1 dim2 dim3 mat
+
 normalShift1d :: Num a => Int -> [a] -> [a]
 normalShift1d offset xs =
     if offset > 0
@@ -59,6 +79,18 @@ normalShift2d (offset1, offset2) twoDMat =
   where
     d1 = dim1 twoDMat
     d2 = dim2 twoDMat
+
+-- normalShift3d :: Num a => (Int, Int) -> ThreeDMatrix a -> ThreeDMatrix a
+-- normalShift3d (offset1, offset2, offset3) threeDMat =
+--     ThreeDMatrix d1 d2 .
+--     List.transpose .
+--     map (normalShift1d offset1) .
+--     List.transpose . map (normalShift1d offset2) . unTwoDMatrix $
+--     twoDMat
+--   where
+--     d1 = dim1_3d threeDMat
+--     d2 = dim2_3d threeDMat
+--     d3 = dim3_3d threeDMat
 
 oneD_0 :: [Double] -> Int -> Double -> Bool
 oneD_0 lst offset c =
