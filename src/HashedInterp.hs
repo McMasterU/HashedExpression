@@ -2548,7 +2548,7 @@ evalThreeDC (ThreeDC (Expression node exprs)) eMap =
                             sumFun [] = error "evalThreeDC.sumFun []"
                          in sumFun $ map (\x -> evalThreeDC' x) inputs
                     Shift (OS3d ((offset1, offset2, offset3), c)) ->
-                        let
+                        let 
                          in case inputs of
                                 [x] ->
                                     let original = evalThreeDC' x
