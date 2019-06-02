@@ -296,5 +296,6 @@ spec = do
                 (twoDMat :: TwoDMatrix (DC.Complex Double))
         specify "twoD 0" $ property twoD_0
         specify "twoDC 0" $ property twoDC_0
+    describe "eval shift tests 3d" $ do
         specify "threeD 0" $ property threeD_0
         specify "threeDC 0" $ property threeDC_0
