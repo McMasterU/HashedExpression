@@ -34,12 +34,12 @@ module HashedSimplify
     ) where
 
 import HashedExpression
-import HashedInstances ()
 
+-- import HashedInstances ()
 --import HashedComplexInstances   --this might be helpful for some complex things which aren't working, but causes overlapping instances
-import HashedConstruct
-import HashedMatch (o)
-import qualified HashedMatch as M
+-- import HashedConstruct
+-- import HashedMatch (o)
+-- import qualified HashedMatch as M
 import WithHoles
 
 --import HashedTransformable
