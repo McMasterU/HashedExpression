@@ -59,7 +59,9 @@ class VectorSpace d rc rc =>
       InnerProductSpace d rc
 
 
-class (VectorSpace d1 rc rc, VectorSpace d2 rc rc) => Subspace d1 d2 rc
+class (VectorSpace d1 rc rc, VectorSpace d2 rc rc) =>
+      Subspace d1 d2 rc
+
 
 -- | Instances
 --
@@ -72,7 +74,6 @@ instance (Ring d C) => VectorSpace d C C
 instance (VectorSpace d rc rc) => InnerProductSpace d rc
 
 --instance (VectorSpace One rc rc, VectorSpace Two rc rc) => Subspace One Two rc
-
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
@@ -99,7 +100,6 @@ data RC
 --
 type Internal = (Shape, Node)
 
-
 -- | Hash map of all subexpressions
 --
 type ExpressionMap = IntMap Internal
@@ -120,12 +120,9 @@ data Expression d rc =
 --FormNode
 --    = Expression Int
 --    | Connect Int String
-
 --    = SingleDVar String Expression
 --                     | DVarSum String Expression Expression
-
-
-data Node 
+data Node
     = Var String
     | DVar String
     | Sum RC Args -- element-wise sum
@@ -167,7 +164,6 @@ nodeNumType node =
         InnerProd rc _ _ -> rc
         RealImg _ _ -> Complex
 
-
 -- | Auxiliary functions for operations
 --
 expressionNumType :: (NumType rc) => Expression d rc -> RC
@@ -193,7 +189,6 @@ ensureSameShape e1 e2 after =
     if expressionShape e1 == expressionShape e2
         then after
         else error "Ensure same shape failed"
-
 
 fromReal :: Double -> DC.Complex Double
 fromReal x = x DC.:+ 0

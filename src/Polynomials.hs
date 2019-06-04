@@ -109,7 +109,6 @@ instance Num a => Num (a, a) where
 --    xIm (_x, y) = y
 --    iRe x = (x, 0)
 --    iIm y = (0, y)
-
 pAbs2 [] = 0
 pAbs2 (t:prest) = (fromRational (fst t)) ** 2 + (pAbs2 prest)
 

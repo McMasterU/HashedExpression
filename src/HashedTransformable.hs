@@ -15,7 +15,6 @@ module HashedTransformable
 import HashedExpression
 import HashedFactor
 import HashedSimplify
-
 {-
 
 Class for expression types which can be simplified, differentials isolated, etc.

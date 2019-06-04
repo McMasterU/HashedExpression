@@ -27,7 +27,6 @@ import HashedConstruct
 import HashedExpression
 import HashedInstances (pretty')
 import HashedSimplify (mkSCZ, simpRewrite, simplify')
-
 {-
 
 --import HashedMatch (o)
@@ -677,4 +676,3 @@ scz12OpsReducedTo6 = putStrLn $ unlines $ map (\((e,args),i,f) -> pretty e ++ sh
 -}
 
  -}
--}

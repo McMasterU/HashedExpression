@@ -89,4 +89,3 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     shape = expressionShape e1
     node = RealImg n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-

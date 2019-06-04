@@ -48,7 +48,6 @@ import qualified Data.Map as Map
 --import Debug.Trace
 import HashedSimplify (isDeepZero, mkSCZ, simplify')
 import HashedTransformable ()
-
 {--
 {-
 \end{comment}

@@ -107,7 +107,6 @@ instance Evaluable Scalar C where
                         let subExp1 = Expression node1 mp :: Expression Scalar C -- shape is [], so must be Scalar C
                             subExp2 = Expression node2 mp :: Expression Scalar C -- shape is [], so must be Scalar C
                          in eval valMap subExp1 * eval valMap subExp2
-
                     Just ([size], _) ->
                         let subExp1 = Expression node1 mp :: Expression One C -- shape is [size], so must be One C
                             subExp2 = Expression node2 mp :: Expression One C -- shape is [size], so must be One C
