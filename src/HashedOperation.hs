@@ -90,8 +90,3 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     node = RealImg n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
---sqrt :: Ring d R => Expression d R -> Expression d R
-
---project :: (Subspace d1 d2 rc) => Expression d1 rc -> Expression d2 rc
-
---derivative :: Expression Scalar R x -> Expression DScalar R (Suc x)
