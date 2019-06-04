@@ -1,3 +1,4 @@
+import qualified EvalShiftSpec
 import qualified EvalSpec
 import qualified GradDiffSpec
 import qualified PartDiffSpec
@@ -10,6 +11,7 @@ main = hspec spec
 
 spec :: Spec
 spec = do
+    describe "EvalShiftSpec" EvalShiftSpec.spec
     describe "SimplifySpec" SimplifySpec.spec
     describe "EvalSpec" EvalSpec.spec
     describe "PartDiffSpec" PartDiffSpec.spec

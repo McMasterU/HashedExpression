@@ -1621,11 +1621,11 @@ instance (SimilarSum a, All1D a) => Regularizable a [((Int), Double)] where
     l1l2Bi dk vs = helpROneD RKL1mL2 dk $ decompose vs
     gmBi dk vs = helpROneD RKGM dk $ decompose vs
 
-helpROneD :: RangeKernel -> [((Int), Double)] -> (Internal, [Node]) -> Scalar
+helpROneD :: RangeKernel -> [(Int, Double)] -> (Internal, [Node]) -> Scalar
 helpROneD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim1 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW1d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS1d dk) rk) nodes)
         dims ->
             error $
             "HI." ++
@@ -1648,7 +1648,7 @@ helpRTwoD ::
 helpRTwoD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim2 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW2d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS2d dk) rk) nodes)
         dims ->
             error $
             "HI." ++
@@ -1675,15 +1675,53 @@ helpRThreeD ::
 helpRThreeD rk dk (exprs, nodes) =
     case map (getDimE exprs) nodes of
         (Dim3 _):_ ->
-            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (DW3d dk) rk) nodes)
+            Scalar $ addEdge' exprs (Op Dim0 (Reglzr (map OS3d dk) rk) nodes)
         dims ->
             error $
             "HI." ++
             show rk ++
             " ThreeD applied to " ++ show (dims, map (pretty . (exprs, )) nodes)
+
 {-
 
 -}
 {-
 
+-}
+instance Shiftable OneD Int where
+    shiftScale offset c (OneD (Expression n exprs)) =
+        OneD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS1d $ (offset, c)
+
+instance Shiftable TwoD (Int, Int) where
+    shiftScale offset c (TwoD (Expression n exprs)) =
+        TwoD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS2d $ (offset, c)
+
+instance Shiftable ThreeD (Int, Int, Int) where
+    shiftScale offset c (ThreeD (Expression n exprs)) =
+        ThreeD . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS3d $ (offset, c)
+
+instance Shiftable OneDC Int where
+    shiftScale offset c (OneDC (Expression n exprs)) =
+        OneDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS1d $ (offset, c)
+
+instance Shiftable TwoDC (Int, Int) where
+    shiftScale offset c (TwoDC (Expression n exprs)) =
+        TwoDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS2d $ (offset, c)
+
+instance Shiftable ThreeDC (Int, Int, Int) where
+    shiftScale offset c (ThreeDC (Expression n exprs)) =
+        ThreeDC . addEdge' exprs $ Op (getDimE exprs n) op [n]
+      where
+        op = Shift . OS3d $ (offset, c)
+{- | TODO : TwoDSparse, ThreeDSpare, TwoDCSpare, ThreeDSpare
 -}

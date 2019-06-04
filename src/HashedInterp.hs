@@ -24,6 +24,7 @@ import qualified Data.IntMap as I
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import HashedUtils
 
 import Data.Complex as DC
 
@@ -620,7 +621,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                      rest)
                             sumFun [cs] = cs
                             sumFun [] = error "evalOneD.sumFun []"
-                         in sumFun $ map (\x -> evalOneD' x) inputs
+                         in sumFun $ map (evalOneD') inputs
                     Inject ss ->
                         let v =
                                 case inputs of
@@ -742,6 +743,22 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                             | i <- [0 .. dim - 1]
                                             ]
                                 _ -> error $ "evalOneD " ++ show inputs
+                    Shift (OS1d (offset, c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalOneD' x
+                                        shiftedElemAt i =
+                                            if i >= offset && i - offset < dim
+                                                then (original ! (i - offset)) *
+                                                     c
+                                                else 0
+                                     in U.listArray
+                                            (0, dim - 1)
+                                            (map shiftedElemAt [0 .. dim - 1])
+                                _ ->
+                                    error
+                                        "evalOneD wrong number of input Shift, expect 1"
                     _ -> error $ "evalOneD' implemented " ++ show op ++ " yet"
             Just e -> error $ "evalOneD found " ++ show e
 
@@ -750,8 +767,8 @@ evalOneD (OneD (Expression node exprs)) eMap =
 -}
 evalOneDC :: OneDC -> ValMaps -> (Array Int (DC.Complex Double))
 evalOneDC (OneDC (Expression node exprs)) eMap =
-    let evalOneDC' next =
-            evalOneDC (OneDC (Expression next exprs)) eMap :: (Array Int (DC.Complex Double))
+    let evalOneDC' node =
+            evalOneDC (OneDC (Expression node exprs)) eMap :: (Array Int (DC.Complex Double))
      in case I.lookup node exprs of
             Nothing ->
                 error $
@@ -893,6 +910,22 @@ evalOneDC (OneDC (Expression node exprs)) eMap =
                                     error $
                                     "evalOneDC doesn't implement " ++
                                     show (ss, exprs)
+                    Shift (OS1d (offset, c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalOneDC' x
+                                        shiftedElemAt i =
+                                            if i >= offset && i - offset < dim
+                                                then (original ! (i - offset)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            (0, dim - 1)
+                                            (map shiftedElemAt [0 .. dim - 1])
+                                _ ->
+                                    error
+                                        "evalOneD wrong number of input Shift, expect 1"
                     _ -> error $ "evalOneDC't implemented " ++ show op ++ " yet"
             Just e -> error $ "evalOneDC found " ++ show e
 
@@ -1108,6 +1141,29 @@ evalTwoD (TwoD (Expression node exprs)) eMap =
                                         , j <- [0 .. dim2 - 1]
                                         ]
                             _ -> error $ "evalTwoD ImagPart " ++ show inputs
+                    Shift (OS2d ((offset1, offset2), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalTwoD' x
+                                        shiftedElemAt (i, j) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2
+                                                then (original !
+                                                      (i - offset1, j - offset2)) *
+                                                     c
+                                                else 0
+                                     in U.listArray
+                                            ((0, 0), (dim1 - 1, dim2 - 1))
+                                            [ shiftedElemAt (i, j)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalTwoD wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalTwoD't implemented " ++
@@ -1489,6 +1545,29 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                     error $
                                     "evalTwoDC Project doesn't implement " ++
                                     show (ss, exprs)
+                    Shift (OS2d ((offset1, offset2), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalTwoDC' x
+                                        shiftedElemAt (i, j) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2
+                                                then (original !
+                                                      (i - offset1, j - offset2)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            ((0, 0), (dim1 - 1, dim2 - 1))
+                                            [ shiftedElemAt (i, j)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalTwoD wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalTwoDC doesn't implemented " ++ show op ++ " yet"
@@ -1951,6 +2030,35 @@ evalThreeD (ThreeD (Expression node exprs)) eMap =
                                 _ ->
                                     error
                                         "evalThreeD Transpose requires a single input node "
+                    Shift (OS3d ((offset1, offset2, offset3), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalThreeD' x
+                                        shiftedElemAt (i, j, k) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               k >= offset3 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2 &&
+                                               k - offset3 < dim3
+                                                then (original !
+                                                      ( i - offset1
+                                                      , j - offset2
+                                                      , k - offset3)) *
+                                                     c
+                                                else 0
+                                     in U.listArray
+                                            ( (0, 0, 0)
+                                            , (dim1 - 1, dim2 - 1, dim3 - 1))
+                                            [ shiftedElemAt (i, j, k)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            , k <- [0 .. dim3 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalThreeD wrong number of input Shift, expect 1"
                     _ ->
                         error $ "evalThreeD't implemented " ++ show op ++ " yet"
             Just e -> error $ "evalThreeD found " ++ show e
@@ -2439,6 +2547,35 @@ evalThreeDC (ThreeDC (Expression node exprs)) eMap =
                             sumFun [cs] = cs
                             sumFun [] = error "evalThreeDC.sumFun []"
                          in sumFun $ map (\x -> evalThreeDC' x) inputs
+                    Shift (OS3d ((offset1, offset2, offset3), c)) ->
+                        let 
+                         in case inputs of
+                                [x] ->
+                                    let original = evalThreeDC' x
+                                        shiftedElemAt (i, j, k) =
+                                            if i >= offset1 &&
+                                               j >= offset2 &&
+                                               k >= offset3 &&
+                                               i - offset1 < dim1 &&
+                                               j - offset2 < dim2 &&
+                                               k - offset3 < dim3
+                                                then (original !
+                                                      ( i - offset1
+                                                      , j - offset2
+                                                      , k - offset3)) *
+                                                     fromReal c
+                                                else fromReal 0
+                                     in U.listArray
+                                            ( (0, 0, 0)
+                                            , (dim1 - 1, dim2 - 1, dim3 - 1))
+                                            [ shiftedElemAt (i, j, k)
+                                            | i <- [0 .. dim1 - 1]
+                                            , j <- [0 .. dim2 - 1]
+                                            , k <- [0 .. dim3 - 1]
+                                            ]
+                                _ ->
+                                    error
+                                        "evalThreeDC wrong number of input Shift, expect 1"
                     _ ->
                         error $
                         "evalThreeDC't implemented " ++ show op ++ " yet"

@@ -366,6 +366,9 @@ CKA:  when we wrap Mary's types, we can use this
 class HasZero v where
     zero :: v
 
+instance (Num a) => HasZero a where
+    zero = fromInteger (0 :: Integer)
+
 {-
 
 -}
@@ -874,6 +877,15 @@ cMult u v =
                    (ui ZeroMargin zeroIdx) * (vr ZeroMargin zeroIdx)))
              (ux, uy, vx, vy))
 
+{- |
+    v - type of vectors
+    o - type of offset
+-}
+class Shiftable v o | v -> o where
+    shiftScale :: o -> Double -> v -> v
+    shift :: o -> v -> v
+    shift offset = shiftScale offset 1
+
 {-
 
 
@@ -895,8 +907,10 @@ data OpId
     | Sum
     | SubMask
     | NegMask
-    | Reglzr DomainWeights RangeKernel
-    | GradReglzr DomainWeights RangeKernel
+    | Shift OffsetAndScale
+    | Reglzr [OffsetAndScale] RangeKernel -- DEPRECATED
+    | GradReglzr [OffsetAndScale] RangeKernel -- DEPRECATED
+    | Piecewise Double -- this op 
     | Neg
     | Abs
     | Signum
@@ -921,12 +935,13 @@ data OpId
                  -- Dot of complex arguments is Hermitian project (so returns a real scalar)
                  -- JLMP: check that this is consistent with all uses of Dot
            -- JLMP:  eliminate this and convert uses to SCZ
-    | MapND
+    | MapND -- DEPRECATED
           { mapExpr :: Expression -- Scalar; not explict due to circular Show instances
           , mapInput :: ByteString -- CKA: why can't we use SCZ?
           }
-    | SCZ Expression -- WARNING:  use for pattern matching, not construction, use |mkSCZ|
-    | ScaleV -- first input should be scalar and second a vector expression
+    | SCZ Expression -- DEPRECATED
+    | ScaleV -- first input should be scalar and second a vector expression 
+       -- TODO branch into ScaleR and ScaleC, maybe
     | Project Subspace
     | Inject Subspace
     | Compound Int -- make compound node
@@ -943,21 +958,22 @@ prodScale dims =
 
 {-
 For the Regularizers, we need domain weights, which are a discrete version of a kernel,
+For shifts we interpret the tuple as a displacement from the output index before the load.
 -}
-data DomainWeights
-    = DW1d [(Int, Double)]
-    | DW2d [((Int, Int), Double)]
-    | DW3d [((Int, Int, Int), Double)]
-    | DW4d [((Int, Int, Int, Int), Double)]
-    | DW5d [((Int, Int, Int, Int, Int), Double)]
-    | DW6d [((Int, Int, Int, Int, Int, Int), Double)]
-    | DW7d [((Int, Int, Int, Int, Int, Int, Int), Double)]
+data OffsetAndScale
+    = OS1d (Int, Double)
+    | OS2d ((Int, Int), Double)
+    | OS3d ((Int, Int, Int), Double)
+    | OS4d ((Int, Int, Int, Int), Double)
+    | OS5d ((Int, Int, Int, Int, Int), Double)
+    | OS6d ((Int, Int, Int, Int, Int, Int), Double)
+    | OS7d ((Int, Int, Int, Int, Int, Int, Int), Double)
     deriving (Eq, Show, Ord)
 
 {-
 and a range kernel
 -}
-data RangeKernel
+data RangeKernel -- Deprecated
     = RKHuber
     | RKTukey Double
     | RKL2
@@ -1477,10 +1493,10 @@ instance ZeroIdx (Int, Int, Int, Int) where
 {-
 
 -}
-data Airity
+data Arity
     = Natural
     | Fixed Int
-    | IsMap (Airity, Airity)
+    | IsMap (Arity, Arity)
     deriving (Eq, Read, Show, Ord)
 
 class HasHash a where
@@ -1492,6 +1508,9 @@ instance HasHash Scalar where
 instance HasHash Expression where
     hash (Expression n _) = n
 
+toNewBase :: Char -> Int -> Int
+toNewBase c hash = hash * 40591 + (fromEnum c)
+
 --  JLMP : make hash depend on some arguments to reduce clashes
 --         and benchmark to make sure this really helps
 instance HasHash OpId where
@@ -1501,14 +1520,11 @@ instance HasHash OpId where
     hash Prod = 2437
     hash Div = 2621
     hash NegMask = 2909
-    hash (Reglzr dw rk) = 281 * (C.foldr' fun 0 $ C.pack $ show (dw, rk))
-      where
-        fun :: Char -> Int -> Int
-        fun c hash = hash * 40591 + (fromEnum c)
-    hash (GradReglzr dw rk) = 283 * (C.foldr' fun 0 $ C.pack $ show (dw, rk))
-      where
-        fun :: Char -> Int -> Int
-        fun c hash = hash * 40591 + (fromEnum c)
+    hash (Reglzr dw rk) =
+        281 * (C.foldr' toNewBase 0 . C.pack . show $ (dw, rk))
+    hash (GradReglzr dw rk) =
+        283 * (C.foldr' toNewBase 0 . C.pack . show $ (dw, rk))
+    hash (Shift oc) = 199 * (C.foldr' toNewBase 0 . C.pack . show $ oc) -- TODO: not yet benchmarked or checked
     hash Sqrt = 3083
     hash Sin = 1009
     hash Cos = 1013
@@ -1688,46 +1704,48 @@ nodeIsRelElem edges node =
 {-
 
 -}
-airity :: OpId -> (Airity, Airity)
-airity Sum = (Natural, Fixed 1)
-airity SubMask = (Fixed 2, Fixed 1)
-airity NegMask = (Fixed 2, Fixed 1)
-airity (Reglzr _ _) = (Natural, Fixed 1)
-airity (GradReglzr _ _) = (Natural, Fixed 1)
-airity Prod = (Natural, Fixed 1)
-airity Div = (Fixed 2, Fixed 1)
-airity Neg = (Fixed 1, Fixed 1)
-airity Abs = (Fixed 1, Fixed 1)
-airity Signum = (Fixed 1, Fixed 1)
-airity Sin = (Fixed 1, Fixed 1)
-airity Cos = (Fixed 1, Fixed 1)
-airity Tan = (Fixed 1, Fixed 1)
-airity Exp = (Fixed 1, Fixed 1)
-airity Log = (Fixed 1, Fixed 1)
-airity Sinh = (Fixed 1, Fixed 1)
-airity Cosh = (Fixed 1, Fixed 1)
-airity Tanh = (Fixed 1, Fixed 1)
-airity Asin = (Fixed 1, Fixed 1)
-airity Acos = (Fixed 1, Fixed 1)
-airity Atan = (Fixed 1, Fixed 1)
-airity Asinh = (Fixed 1, Fixed 1)
-airity Acosh = (Fixed 1, Fixed 1)
-airity Atanh = (Fixed 1, Fixed 1)
-airity Sqrt = (Fixed 1, Fixed 1)
-airity Dot = (Fixed 2, Fixed 1)
-airity (MapND _ _) = (Fixed 1, Fixed 1)
-airity ScaleV = (Fixed 2, Fixed 1)
-airity (FT _) = (Fixed 1, Fixed 1) -- takes complex input node and produces complex (compound) node
-airity (PFT _ _) = (Fixed 1, Fixed 1)
-airity (SCZ _) = (Natural, Fixed 1)
-airity (Compound _) = (Natural, Fixed 1)
-airity (Extract _) = (Fixed 1, Fixed 1)
-airity (Project _) = (Fixed 1, Fixed 1)
-airity (Inject _) = (Fixed 1, Fixed 1)
-airity RealPart = (Fixed 1, Fixed 1)
-airity ImagPart = (Fixed 1, Fixed 1)
-airity RealImag = (Fixed 2, Fixed 1)
-airity (Transpose _) = (Fixed 1, Fixed 1)
+arity :: OpId -> (Arity, Arity)
+arity Sum = (Natural, Fixed 1)
+arity (Piecewise _) = (Fixed 3, Fixed 1)
+arity (Shift _) = (Fixed 1, Fixed 1)
+arity SubMask = (Fixed 2, Fixed 1)
+arity NegMask = (Fixed 2, Fixed 1)
+arity (Reglzr _ _) = (Natural, Fixed 1)
+arity (GradReglzr _ _) = (Natural, Fixed 1)
+arity Prod = (Natural, Fixed 1)
+arity Div = (Fixed 2, Fixed 1)
+arity Neg = (Fixed 1, Fixed 1)
+arity Abs = (Fixed 1, Fixed 1)
+arity Signum = (Fixed 1, Fixed 1)
+arity Sin = (Fixed 1, Fixed 1)
+arity Cos = (Fixed 1, Fixed 1)
+arity Tan = (Fixed 1, Fixed 1)
+arity Exp = (Fixed 1, Fixed 1)
+arity Log = (Fixed 1, Fixed 1)
+arity Sinh = (Fixed 1, Fixed 1)
+arity Cosh = (Fixed 1, Fixed 1)
+arity Tanh = (Fixed 1, Fixed 1)
+arity Asin = (Fixed 1, Fixed 1)
+arity Acos = (Fixed 1, Fixed 1)
+arity Atan = (Fixed 1, Fixed 1)
+arity Asinh = (Fixed 1, Fixed 1)
+arity Acosh = (Fixed 1, Fixed 1)
+arity Atanh = (Fixed 1, Fixed 1)
+arity Sqrt = (Fixed 1, Fixed 1)
+arity Dot = (Fixed 2, Fixed 1)
+arity (MapND _ _) = (Fixed 1, Fixed 1)
+arity ScaleV = (Fixed 2, Fixed 1)
+arity (FT _) = (Fixed 1, Fixed 1) -- takes complex input node and produces complex (compound) node
+arity (PFT _ _) = (Fixed 1, Fixed 1)
+arity (SCZ _) = (Natural, Fixed 1)
+arity (Compound _) = (Natural, Fixed 1)
+arity (Extract _) = (Fixed 1, Fixed 1)
+arity (Project _) = (Fixed 1, Fixed 1)
+arity (Inject _) = (Fixed 1, Fixed 1)
+arity RealPart = (Fixed 1, Fixed 1)
+arity ImagPart = (Fixed 1, Fixed 1)
+arity RealImag = (Fixed 2, Fixed 1)
+arity (Transpose _) = (Fixed 1, Fixed 1)
 
 --airity x = error $ "airity not implemented for " ++ show x
 {-
@@ -1810,18 +1828,18 @@ instance HasHash ExpressionEdge where
             (Const dim d) -> 919393 + (C.foldr' fun 0 $ C.pack $ show (d, dim))
             (Op _ op args) ->
                 let (airIn, airOut) =
-                        case airity op of
+                        case arity op of
                             (Natural, Fixed 1) -> (length args, 1)
                             (Fixed n, Fixed 1) ->
                                 if length args == n
                                     then (n, 1)
                                     else error $
                                          "eHash airity mismatch " ++
-                                         show (op, airity op, length args)
+                                         show (op, arity op, length args)
                             _ ->
                                 error $
                                 "eHash unsupported airity " ++
-                                show (op, airity op, length args)
+                                show (op, arity op, length args)
                  in if airIn * airOut == 0
                         then error $
                              "hash bad airities " ++ show (airIn, airOut, ee)
@@ -2089,7 +2107,7 @@ otherPrimes = [1097, 1103, 1109, 1117, 40099, 42589, 933199, 87178291199]
 Add an edge (not necessarily the head)
 -}
 addEdge' :: Internal -> ExpressionEdge -> Expression
-addEdge' e edge = (\(es, n) -> Expression n es) $ addEdge e edge
+addEdge' e = (uncurry . flip $ Expression) . addEdge e
 
 addEdge'' exprs edge =
     let (exprs', n) = addEdge exprs edge
@@ -3221,6 +3239,7 @@ instance NFData OpId where
     rnf (Extract _) = ()
     rnf (Project _) = ()
     rnf (Inject _) = ()
+    rnf (Shift _) = ()
     rnf (SCZ e) = rnf e
     rnf x = error $ "HE.NFData not implemented: " ++ show x
 
