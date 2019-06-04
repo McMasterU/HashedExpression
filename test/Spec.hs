@@ -1,8 +1,4 @@
-import qualified EvalShiftSpec
 import qualified EvalSpec
-import qualified GradDiffSpec
-import qualified PartDiffSpec
-import qualified SimplifySpec
 import Test.Hspec
 
 --main = regressionTestAll
@@ -11,8 +7,4 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-    describe "EvalShiftSpec" EvalShiftSpec.spec
-    describe "SimplifySpec" SimplifySpec.spec
     describe "EvalSpec" EvalSpec.spec
-    describe "PartDiffSpec" PartDiffSpec.spec
-    describe "GradDiffSpec" GradDiffSpec.spec

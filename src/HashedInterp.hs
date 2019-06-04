@@ -716,7 +716,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                              | idx <- [0 .. dim - 1]
                                              ]
                     RealPart ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let v =
@@ -730,7 +730,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                             ]
                                 _ -> error $ "evalOneD " ++ show inputs
                     ImagPart ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let v =
@@ -744,7 +744,7 @@ evalOneD (OneD (Expression node exprs)) eMap =
                                             ]
                                 _ -> error $ "evalOneD " ++ show inputs
                     Shift (OS1d (offset, c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalOneD' x
@@ -911,7 +911,7 @@ evalOneDC (OneDC (Expression node exprs)) eMap =
                                     "evalOneDC doesn't implement " ++
                                     show (ss, exprs)
                     Shift (OS1d (offset, c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalOneDC' x
@@ -1142,7 +1142,7 @@ evalTwoD (TwoD (Expression node exprs)) eMap =
                                         ]
                             _ -> error $ "evalTwoD ImagPart " ++ show inputs
                     Shift (OS2d ((offset1, offset2), c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalTwoD' x
@@ -1546,7 +1546,7 @@ evalTwoDC (TwoDC (Expression node exprs)) eMap =
                                     "evalTwoDC Project doesn't implement " ++
                                     show (ss, exprs)
                     Shift (OS2d ((offset1, offset2), c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalTwoDC' x
@@ -2031,7 +2031,7 @@ evalThreeD (ThreeD (Expression node exprs)) eMap =
                                     error
                                         "evalThreeD Transpose requires a single input node "
                     Shift (OS3d ((offset1, offset2, offset3), c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalThreeD' x
@@ -2548,7 +2548,7 @@ evalThreeDC (ThreeDC (Expression node exprs)) eMap =
                             sumFun [] = error "evalThreeDC.sumFun []"
                          in sumFun $ map (\x -> evalThreeDC' x) inputs
                     Shift (OS3d ((offset1, offset2, offset3), c)) ->
-                        let 
+                        let
                          in case inputs of
                                 [x] ->
                                     let original = evalThreeDC' x
