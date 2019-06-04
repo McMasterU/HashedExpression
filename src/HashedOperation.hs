@@ -201,3 +201,17 @@ atanh e@(Expression n mp) = Expression h newMap
     numType = expressionNumType e
     node = Atanh numType n
     (newMap, h) = addEdge mp (shape, node)
+
+realPart :: (DimensionType d) => Expression d C -> Expression d R
+realPart e@(Expression n mp) = Expression h newMap
+  where
+    shape = expressionShape e
+    node = RealPart n
+    (newMap, h) = addEdge mp (shape, node)
+
+imagPart :: (DimensionType d) => Expression d C -> Expression d R
+imagPart e@(Expression n mp) = Expression h newMap
+  where
+    shape = expressionShape e
+    node = ImagPart n
+    (newMap, h) = addEdge mp (shape, node)
