@@ -62,7 +62,7 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
   where
     numType = expressionNumType e2
     shape = expressionShape e2
-    node = Scale numType [n1, n2]
+    node = Scale numType n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 -- | Inner product in Inner Product Space
@@ -76,7 +76,7 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
   where
     numType = expressionNumType e1
     shape = []
-    node = InnerProd numType [n1, n2]
+    node = InnerProd numType n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 -- | From R to C two part
@@ -87,5 +87,11 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     ensureSameShape e1 e2 $ Expression h newMap
   where
     shape = expressionShape e1
-    node = RealImg [n1, n2]
+    node = RealImg n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
+--sqrt :: Ring d R => Expression d R -> Expression d R
+
+--project :: (Subspace d1 d2 rc) => Expression d1 rc -> Expression d2 rc
+
+--derivative :: Expression Scalar R x -> Expression DScalar R (Suc x)

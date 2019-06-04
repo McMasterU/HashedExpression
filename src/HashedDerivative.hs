@@ -49,6 +49,7 @@ import qualified Data.Map as Map
 import HashedSimplify (isDeepZero, mkSCZ, simplify')
 import HashedTransformable ()
 
+{--
 {-
 \end{comment}
 
@@ -989,3 +990,6 @@ sortNodes exprs = List.sortBy cmpNodes
             [Just (DVar _ _), Just _] -> LT
             [Just _, Just (DVar _ _)] -> GT
             _ -> compare l r
+
+
+-}

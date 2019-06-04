@@ -19,7 +19,7 @@ import Data.Maybe (mapMaybe)
 import Data.Ratio
 
 import Debug.Trace
-
+{--
 threeDC2dot name (ThreeDC (Expression n e)) =
     writeFile (addDot name) $ snd $ expr2dot' name (e, n)
 
@@ -235,3 +235,5 @@ extractPoly pe@(PolyEnv (_, nbidx2varIdx) _envExpr) inputs e n =
                 ( c
                 , ( I.foldr (+) 0 vars -- total degree of all variables
                   , vars))
+
+-}

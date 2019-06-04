@@ -19,7 +19,6 @@ import HashedSimplify
 {-
 
 Class for expression types which can be simplified, differentials isolated, etc.
--}
 instance Transformable (Internal, Node) where
     factor = factor'
     simplify = simplify'
@@ -179,6 +178,6 @@ instance Transformable ThreeDCSparse where
         ThreeDCSparse sl $ Expression n' exprs'
       where
         (exprs', n') = simplify'' (exprs, n)
-{-
+
 
 -}
