@@ -64,9 +64,9 @@ class VectorSpace d rc rc =>
 --
 instance (DimensionType d, NumType rc) => Ring d rc
 
-instance (Ring d rc) => VectorSpace d rc R
+instance (DimensionType d, NumType rc) => VectorSpace d rc R
 
-instance (Ring d C) => VectorSpace d C C
+instance (DimensionType d, NumType rc) => VectorSpace d C C
 
 instance VectorSpace Covector R R
 
@@ -123,7 +123,7 @@ data Expression d rc =
 --                     | DVarSum String Expression Expression
 data Node
     = Var String
-    | DVar String
+    | DVar String -- only contained in **Expression Covector R**
     | Sum RC Args -- element-wise sum
     | Mul RC Args -- element-wise multiplication
     | Scale RC Arg Arg -- scalar first, TODO: Int Int instead ?
