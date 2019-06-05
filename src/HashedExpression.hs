@@ -41,7 +41,7 @@ data Two
 data Three
     deriving (DimensionType)
 
-data Covector
+data Covector --- not a dimension type
 
 -- | Type classes
 --
@@ -70,7 +70,7 @@ instance (DimensionType d, NumType rc) => VectorSpace d C C
 
 instance VectorSpace Covector R R
 
-instance (VectorSpace d rc rc) => InnerProductSpace d rc
+instance (DimensionType d, VectorSpace d rc rc) => InnerProductSpace d rc
 
 --instance (VectorSpace One rc rc, VectorSpace Two rc rc) => Subspace One Two rc
 -- | Shape type:
