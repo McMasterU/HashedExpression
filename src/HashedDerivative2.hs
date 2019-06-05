@@ -12,8 +12,14 @@ differentialForm e@(Expression n mp) =
         ([], Var name) ->
             let node = DVar name
                 shape = []
-                (newMap, h) = addEdge mp (shape, node)
+                (newMap, h) = fromNode (shape, node)
                 -- dx = dx
+             in Expression h newMap
+        ([], Const (S _)) ->
+            let node = Const (S 0)
+                shape = []
+                (newMap, h) = fromNode (shape, node)
+                -- dc = 0
              in Expression h newMap
         ([], Sum Real [node1, node2]) ->
             let subExp1 = Expression node1 mp :: Expression Scalar R
@@ -27,9 +33,3 @@ differentialForm e@(Expression n mp) =
                 diff2 = differentialForm subExp2
                 -- d(f * g) = f * dg + g * df
              in subExp1 * diff1 + subExp2 * diff1
-        ([], Val (S _)) ->
-            let node = Val (S 0)
-                shape = []
-                (newMap, h) = addEdge mp (shape, node)
-                -- dc = 0
-             in Expression h newMap

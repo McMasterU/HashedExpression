@@ -24,6 +24,8 @@ argHash [] = 0
 rehash :: Int -> [Int]
 rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 
+-- | HasHash instances
+--
 instance HasHash Internal where
     hash (shape, node) = hash node * (1 + argHash shape)
 
@@ -59,9 +61,17 @@ hashOutcome mp new newHash =
                 then IsDuplicate newHash
                 else IsClash
 
+-- | Where should these functions belong to?
+--
 addEdge :: ExpressionMap -> Internal -> (ExpressionMap, Int)
 addEdge mp e =
     case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
         (IsDuplicate h:_) -> (mp, h)
         (IsNew h:_) -> (IM.insert h e mp, h)
         _ -> error "addEdge everything clashed!"
+
+fromNode :: Internal -> (ExpressionMap, Int)
+fromNode e = (mp, h)
+  where
+    h = hash e
+    mp = IM.insert h e IM.empty

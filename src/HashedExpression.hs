@@ -71,7 +71,8 @@ class VectorSpace d rc rc =>
 -- the constraints later, therefore it will show overlap instances error if we declare, say, VectorSpace Covector R R even
 -- if Covector R R does not satisfies the constraints
 --
-instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Addable d rc
+instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) =>
+                              Addable d rc
 
 instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Ring d rc
 
@@ -143,12 +144,12 @@ data ValType
 data Node
     = Var String
     | DVar String -- only contained in **Expression Covector R**
-    | Val ValType
+    | Const ValType
     | Sum RC Args -- element-wise sum
     | Mul RC Args -- element-wise multiplication
-    | Scale RC Arg Arg -- scalar first, TODO: Int Int instead ?
-    | InnerProd RC Arg Arg -- inner product, TODO: Int Int instead ?
-    | RealImg Arg Arg -- from real and imagine, TODO: Int Int instead ?
+    | Scale RC Arg Arg -- scalar first
+    | InnerProd RC Arg Arg -- inner product
+    | RealImg Arg Arg -- from real and imagine
     | Neg RC Arg
     | Abs RC Arg
     | Signum RC Arg
@@ -195,6 +196,18 @@ expressionShape :: Expression d rc -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
+        _ -> error "expression not in map"
+
+expressionInternal :: Expression d rc -> Internal
+expressionInternal (Expression n mp) =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "expression not in map"
+
+expressionNode :: Expression d rc -> Node
+expressionNode (Expression n mp) =
+    case IM.lookup n mp of
+        Just (_, node) -> node
         _ -> error "expression not in map"
 
 retrieveNode :: ExpressionMap -> Int -> Node
