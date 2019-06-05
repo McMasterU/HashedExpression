@@ -41,6 +41,8 @@ data Two
 data Three
     deriving (DimensionType)
 
+data Covector
+
 -- | Type classes
 --
 class NumType rc
@@ -51,16 +53,11 @@ class (DimensionType d, NumType rc) =>
       Ring d rc
 
 
-class Ring d rc =>
-      VectorSpace d rc s
+class (NumType rc, NumType s) => VectorSpace d rc s
 
 
 class VectorSpace d rc rc =>
       InnerProductSpace d rc
-
-
-class (VectorSpace d1 rc rc, VectorSpace d2 rc rc) =>
-      Subspace d1 d2 rc
 
 
 -- | Instances
@@ -70,6 +67,8 @@ instance (DimensionType d, NumType rc) => Ring d rc
 instance (Ring d rc) => VectorSpace d rc R
 
 instance (Ring d C) => VectorSpace d C C
+
+instance VectorSpace Covector R R
 
 instance (VectorSpace d rc rc) => InnerProductSpace d rc
 
@@ -172,7 +171,7 @@ expressionNumType (Expression n mp) =
         Just (_, node) -> nodeNumType node
         _ -> error "expression not in map"
 
-expressionShape :: (DimensionType d) => Expression d rc -> Shape
+expressionShape :: Expression d rc -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
@@ -184,7 +183,7 @@ retrieveNode mp n =
         Just (_, node) -> node
         _ -> error "node not in map"
 
-ensureSameShape :: (Ring d rc) => Expression d rc -> Expression d rc -> a -> a
+ensureSameShape :: Expression d rc -> Expression d rc -> a -> a
 ensureSameShape e1 e2 after =
     if expressionShape e1 == expressionShape e2
         then after

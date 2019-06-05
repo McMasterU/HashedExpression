@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module HashedOperation where
 
@@ -30,17 +31,6 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     node = ([size1, size2], Var name)
     h = hash node
 
--- | Element-wise sum
---
-(+) :: (Ring d rc) => Expression d rc -> Expression d rc -> Expression d rc
-(+) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-    ensureSameShape e1 e2 $ Expression h newMap
-  where
-    numType = expressionNumType e1
-    shape = expressionShape e1
-    node = Sum numType [n1, n2]
-    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-
 -- | Element-wise multiplication (like in MATLAB)
 --
 (.*) :: (Ring d rc) => Expression d rc -> Expression d rc -> Expression d rc
@@ -51,6 +41,18 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     shape = expressionShape e1
     node = Mul numType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
+-- | Element-wise sum
+--
+(+) :: (VectorSpace d rc s) => Expression d rc -> Expression d rc -> Expression d rc
+(+) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    ensureSameShape e1 e2 $ Expression h newMap
+  where
+    numType = expressionNumType e1
+    shape = expressionShape e1
+    node = Sum numType [n1, n2]
+    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
 
 -- | Scale by scalar, TODO: put this inside typeclass with default implementation???
 --
