@@ -9,9 +9,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE OverlappingInstances #-}
 
 module HashedExpression where
 
+import Data.Array
 import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
@@ -49,11 +51,16 @@ class NumType rc
 
 class DimensionType d
 
+class (NumType rc) =>
+      Addable d rc
+
+
 class (DimensionType d, NumType rc) =>
       Ring d rc
 
 
-class (NumType rc, NumType s) => VectorSpace d rc s
+class (NumType rc, NumType s) =>
+      VectorSpace d rc s
 
 
 class VectorSpace d rc rc =>
@@ -67,6 +74,8 @@ instance (DimensionType d, NumType rc) => Ring d rc
 instance (DimensionType d, NumType rc) => VectorSpace d rc R
 
 instance (DimensionType d, NumType rc) => VectorSpace d C C
+
+instance Addable Covector R
 
 instance VectorSpace Covector R R
 
@@ -111,19 +120,24 @@ data Expression d rc =
         ExpressionMap -- all subexpressions
     deriving (Show, Eq, Ord, Typeable)
 
---data Form (k :: Nat) =
---    Form
---        Int
---        ExpressionMap
+-- | Val type
 --
---FormNode
---    = Expression Int
---    | Connect Int String
---    = SingleDVar String Expression
---                     | DVarSum String Expression Expression
+data ValType
+    = S Double
+    | All1D Double
+    | Custom1D (Array Int Double)
+    | All2D Double
+    | Custom2D (Array (Int, Int) Double)
+    | All3D Double
+    | Custom3D (Array (Int, Int, Int) Double)
+    deriving (Show, Eq, Ord)
+
+-- | Node type
+--
 data Node
     = Var String
     | DVar String -- only contained in **Expression Covector R**
+    | Val ValType
     | Sum RC Args -- element-wise sum
     | Mul RC Args -- element-wise multiplication
     | Scale RC Arg Arg -- scalar first, TODO: Int Int instead ?
@@ -181,6 +195,12 @@ retrieveNode :: ExpressionMap -> Int -> Node
 retrieveNode mp n =
     case IM.lookup n mp of
         Just (_, node) -> node
+        _ -> error "node not in map"
+
+retrieveInternal :: ExpressionMap -> Int -> Internal
+retrieveInternal mp n =
+    case IM.lookup n mp of
+        Just internal -> internal
         _ -> error "node not in map"
 
 ensureSameShape :: Expression d rc -> Expression d rc -> a -> a
