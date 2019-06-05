@@ -67,14 +67,21 @@ class VectorSpace d rc rc =>
 
 
 -- | Instances
+-- Set language pragma {-# OVERLAPPABLE #-} because GHC looks at the head first (e.g Vector Space d rc R) and check
+-- the constraints later, therefore it will show overlap instances error if we declare, say, VectorSpace Covector R R even
+-- if Covector R R does not satisfies the constraints
 --
+instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Addable d rc
+
 instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Ring d rc
 
-instance {-# OVERLAPPABLE #-} (Addable d rc, NumType rc) => VectorSpace d rc R
+instance {-# OVERLAPPABLE #-} (Addable d rc, NumType rc) =>
+                              VectorSpace d rc R
 
 instance {-# OVERLAPPABLE #-} (Addable d C) => VectorSpace d C C
 
-instance {-# OVERLAPPABLE #-} (DimensionType d, VectorSpace d rc rc) => InnerProductSpace d rc
+instance {-# OVERLAPPABLE #-} (DimensionType d, VectorSpace d rc rc) =>
+                              InnerProductSpace d rc
 
 instance Addable Covector R
 
