@@ -9,7 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE OverlappingInstances #-}
 
 module HashedExpression where
 
@@ -59,7 +58,7 @@ class (DimensionType d, NumType rc) =>
       Ring d rc
 
 
-class (NumType rc, NumType s) =>
+class (Addable d rc, NumType s) =>
       VectorSpace d rc s
 
 
@@ -69,17 +68,17 @@ class VectorSpace d rc rc =>
 
 -- | Instances
 --
-instance (DimensionType d, NumType rc) => Ring d rc
+instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Ring d rc
 
-instance (DimensionType d, NumType rc) => VectorSpace d rc R
+instance {-# OVERLAPPABLE #-} (Addable d rc, NumType rc) => VectorSpace d rc R
 
-instance (DimensionType d, NumType rc) => VectorSpace d C C
+instance {-# OVERLAPPABLE #-} (Addable d C) => VectorSpace d C C
+
+instance {-# OVERLAPPABLE #-} (DimensionType d, VectorSpace d rc rc) => InnerProductSpace d rc
 
 instance Addable Covector R
 
 instance VectorSpace Covector R R
-
-instance (DimensionType d, VectorSpace d rc rc) => InnerProductSpace d rc
 
 --instance (VectorSpace One rc rc, VectorSpace Two rc rc) => Subspace One Two rc
 -- | Shape type:
