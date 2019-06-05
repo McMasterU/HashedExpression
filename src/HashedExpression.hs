@@ -23,26 +23,28 @@ import GHC.TypeLits (Nat)
 -- | Type representation of Real and Complex num type
 --
 data R
-    deriving (NumType)
+    deriving (NumType, Typeable)
 
 data C
-    deriving (NumType)
+    deriving (NumType, Typeable)
 
 -- | Type representation of vector dimension
 --
 data Scalar
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
 data One
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
 data Two
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
 data Three
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
+-- we only allow covector fields derived from real scalar fields
 data Covector --- not a dimension type
+    deriving (Typeable)
 
 -- | Type classes
 --
@@ -129,14 +131,14 @@ data Expression d rc =
 
 -- | Val type
 --
-data ValType
-    = S Double
+data ConstType
+    = Const0D Double
     | All1D Double
-    | Custom1D (Array Int Double)
+    | Const1D (Array Int Double)
     | All2D Double
-    | Custom2D (Array (Int, Int) Double)
+    | Const2D (Array (Int, Int) Double)
     | All3D Double
-    | Custom3D (Array (Int, Int, Int) Double)
+    | Const3D (Array (Int, Int, Int) Double)
     deriving (Show, Eq, Ord)
 
 -- | Node type
@@ -144,31 +146,31 @@ data ValType
 data Node
     = Var String
     | DVar String -- only contained in **Expression Covector R**
-    | Const ValType
+    | Const ConstType
     | Sum RC Args -- element-wise sum
     | Mul RC Args -- element-wise multiplication
     | Scale RC Arg Arg -- scalar first
     | InnerProd RC Arg Arg -- inner product
     | RealImg Arg Arg -- from real and imagine
     | Neg RC Arg
-    | Abs RC Arg
-    | Signum RC Arg
-    | Div RC Arg Arg
+    | Abs Arg
+    | Signum Arg
+    | Div Arg Arg
     | Sqrt Arg
-    | Sin RC Arg
-    | Cos RC Arg
-    | Tan RC Arg
-    | Exp RC Arg
-    | Log RC Arg
-    | Sinh RC Arg
-    | Cosh RC Arg
-    | Tanh RC Arg
-    | Asin RC Arg
-    | Acos RC Arg
-    | Atan RC Arg
-    | Asinh RC Arg
-    | Acosh RC Arg
-    | Atanh RC Arg
+    | Sin Arg
+    | Cos Arg
+    | Tan Arg
+    | Exp Arg
+    | Log Arg
+    | Sinh Arg
+    | Cosh Arg
+    | Tanh Arg
+    | Asin Arg
+    | Acos Arg
+    | Atan Arg
+    | Asinh Arg
+    | Acosh Arg
+    | Atanh Arg
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)

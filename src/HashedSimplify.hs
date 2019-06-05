@@ -14,7 +14,6 @@ But we also don't have a proof of correctness (equivalence of expressions).
 {-# LANGUAGE TupleSections #-}
 
 module HashedSimplify where
-
 {-
 
 module HashedSimplify

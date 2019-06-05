@@ -9,6 +9,7 @@ Helper functions/instances to make pattern gaurds involving Expressions easier t
 {-# LANGUAGE TypeFamilies #-}
 
 module WithHoles where
+
 import qualified Data.IntMap as I
 import qualified Data.List as L
 import Data.Maybe
@@ -25,7 +26,6 @@ import Data.Maybe
 --    , addEdge
 --    , getDimE
 --    )
-
 {-
 import qualified HashedExpression
 --import HashedInstances ()

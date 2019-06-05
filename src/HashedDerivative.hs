@@ -25,7 +25,6 @@ Caluclating Derivatives.
 {-# LANGUAGE TupleSections #-}
 
 module HashedDerivative where
-
 --import HashedConstruct
 --import HashedExpression
 --import HashedInstances (pretty')

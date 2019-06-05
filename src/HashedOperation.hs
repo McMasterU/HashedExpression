@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-} -- allows constraining rc to R for example
 
 module HashedOperation where
 
@@ -84,6 +85,7 @@ infixl 6 +
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 infixl 7 *
+
 -- | Inner product in Inner Product Space
 --
 (<.>) ::
@@ -110,100 +112,88 @@ infixl 7 *
     node = RealImg n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
-sin :: (Ring d rc) => Expression d rc -> Expression d rc
+sin :: (Ring d R) => Expression d R -> Expression d R
 sin e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Sin numType n
+    node = Sin n
     (newMap, h) = addEdge mp (shape, node)
 
-cos :: (Ring d rc) => Expression d rc -> Expression d rc
+cos :: (Ring d R) => Expression d R -> Expression d R
 cos e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Cos numType n
+    node = Cos n
     (newMap, h) = addEdge mp (shape, node)
 
-tan :: (Ring d rc) => Expression d rc -> Expression d rc
+tan :: (Ring d R) => Expression d R -> Expression d R
 tan e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Tan numType n
+    node = Tan n
     (newMap, h) = addEdge mp (shape, node)
 
-asin :: (Ring d rc) => Expression d rc -> Expression d rc
+asin :: (Ring d R) => Expression d R -> Expression d R
 asin e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Asin numType n
+    node = Asin n
     (newMap, h) = addEdge mp (shape, node)
 
-acos :: (Ring d rc) => Expression d rc -> Expression d rc
+acos :: (Ring d R) => Expression d R -> Expression d R
 acos e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Acos numType n
+    node = Acos n
     (newMap, h) = addEdge mp (shape, node)
 
-atan :: (Ring d rc) => Expression d rc -> Expression d rc
+atan :: (Ring d R) => Expression d R -> Expression d R
 atan e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Atan numType n
+    node = Atan n
     (newMap, h) = addEdge mp (shape, node)
 
-sinh :: (Ring d rc) => Expression d rc -> Expression d rc
+sinh :: (Ring d R) => Expression d R -> Expression d R
 sinh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Sinh numType n
+    node = Sinh n
     (newMap, h) = addEdge mp (shape, node)
 
-cosh :: (Ring d rc) => Expression d rc -> Expression d rc
+cosh :: (Ring d R) => Expression d R -> Expression d R
 cosh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Cosh numType n
+    node = Cosh n
     (newMap, h) = addEdge mp (shape, node)
 
-tanh :: (Ring d rc) => Expression d rc -> Expression d rc
+tanh :: (Ring d R) => Expression d R -> Expression d R
 tanh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Tanh numType n
+    node = Tanh n
     (newMap, h) = addEdge mp (shape, node)
 
-asinh :: (Ring d rc) => Expression d rc -> Expression d rc
+asinh :: (Ring d R) => Expression d R -> Expression d R
 asinh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Asinh numType n
+    node = Asinh n
     (newMap, h) = addEdge mp (shape, node)
 
-acosh :: (Ring d rc) => Expression d rc -> Expression d rc
+acosh :: (Ring d R) => Expression d R -> Expression d R
 acosh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Acosh numType n
+    node = Acosh n
     (newMap, h) = addEdge mp (shape, node)
 
-atanh :: (Ring d rc) => Expression d rc -> Expression d rc
+atanh :: (Ring d R) => Expression d R -> Expression d R
 atanh e@(Expression n mp) = Expression h newMap
   where
     shape = expressionShape e
-    numType = expressionNumType e
-    node = Atanh numType n
+    node = Atanh n
     (newMap, h) = addEdge mp (shape, node)
 
 realPart :: (DimensionType d) => Expression d C -> Expression d R
