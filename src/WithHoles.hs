@@ -13,21 +13,23 @@ module WithHoles where
 import qualified Data.IntMap as I
 import qualified Data.List as L
 import Data.Maybe
-import HashedExpression
-    ( Complex
-    , Dims(..)
-    , Dir(..)
-    , ExpressionEdge(..)
-    , Internal
-    , Node
-    , OpId(..)
-    , RealVectorSpace
-    , Rectangular
-    , addEdge
-    , getDimE
-    )
+--import HashedExpression
+--    ( Complex
+--    , Dims(..)
+--    , Dir(..)
+--    , ExpressionEdge(..)
+--    , Internal
+--    , Node
+--    , OpId(..)
+--    , RealVectorSpace
+--    , Rectangular
+--    , addEdge
+--    , getDimE
+--    )
+
+{-
 import qualified HashedExpression
-import HashedInstances ()
+--import HashedInstances ()
 
 data WithHoles
     = WHOp OpId [WithHoles]
@@ -323,4 +325,5 @@ infix 0 |.~~>
 [p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11] {-
 
 
+-}
 -}

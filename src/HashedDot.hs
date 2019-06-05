@@ -5,7 +5,7 @@ module HashedDot where
 import Polynomials
 
 import HashedExpression
-import HashedInstances ()
+--import HashedInstances ()
 
 import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as C

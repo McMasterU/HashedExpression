@@ -9,24 +9,24 @@ Calculating Derivatives.
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module HashedFactor
-    ( factor'
-    , commonTop
-    , linOpDepth
-    , floatNeg
-    , floatNeg'
-    , newFloatNeg
-    , newFloatNeg'
-    , factorNeg
-    , pushNegIntoConst
-    , normalizeSCZs
-    , normalizeSCZ
-    ) where
-
-import HashedConstruct
-import HashedExpression
-import HashedInstances (pretty')
-import HashedSimplify (mkSCZ, simpRewrite, simplify')
+module HashedFactor where
+--    ( factor'
+--    , commonTop
+--    , linOpDepth
+--    , floatNeg
+--    , floatNeg'
+--    , newFloatNeg
+--    , newFloatNeg'
+--    , factorNeg
+--    , pushNegIntoConst
+--    , normalizeSCZs
+--    , normalizeSCZ
+--    ) where
+--
+--import HashedConstruct
+--import HashedExpression
+--import HashedInstances (pretty')
+--import HashedSimplify (mkSCZ, simpRewrite, simplify')
 {-
 
 --import HashedMatch (o)

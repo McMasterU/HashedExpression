@@ -13,6 +13,10 @@ But we also don't have a proof of correctness (equivalence of expressions).
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
+module HashedSimplify where
+
+{-
+
 module HashedSimplify
     ( simplify'
     , simplify''
@@ -33,8 +37,9 @@ module HashedSimplify
     , mkConst -- for testing
     ) where
 
+-}
+{-
 import HashedExpression
-import HashedInstances ()
 
 --import HashedComplexInstances   --this might be helpful for some complex things which aren't working, but causes overlapping instances
 import HashedConstruct
@@ -55,6 +60,9 @@ import Control.DeepSeq
 import qualified Data.List as List
 import Data.Maybe (catMaybes, fromJust)
 import Debug.Trace
+
+{-
+
 
 {-
 
@@ -1076,9 +1084,12 @@ collapse exprs op term =
                 else [term]
         _ -> [term]
 
-{-
+
+
+{--
+cartProd (l1:ls) = [i : j | i <- l1, j <- cartProd ls]
+cartProd [] = [[]]
+
 
 -}
-cartProd (l1:ls) = [i : j | i <- l1, j <- cartProd ls]
-cartProd [] = [[]] {-
 -}

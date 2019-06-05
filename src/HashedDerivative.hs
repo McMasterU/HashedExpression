@@ -26,28 +26,28 @@ Caluclating Derivatives.
 
 module HashedDerivative where
 
-import HashedConstruct
-import HashedExpression
-import HashedInstances (pretty')
-
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as C
-
---import HashedMatch (o)
---import qualified HashedMatch as M
-import Data.Maybe (catMaybes)
-
---import Data.IntMap (IntMap)
-import qualified Data.IntMap as I
-
-import qualified Data.List as List
-
---import Data.Map (Map)
-import qualified Data.Map as Map
-
---import Debug.Trace
-import HashedSimplify (isDeepZero, mkSCZ, simplify')
-import HashedTransformable ()
+--import HashedConstruct
+--import HashedExpression
+--import HashedInstances (pretty')
+--
+--import Data.ByteString (ByteString)
+--import qualified Data.ByteString.Char8 as C
+--
+----import HashedMatch (o)
+----import qualified HashedMatch as M
+--import Data.Maybe (catMaybes)
+--
+----import Data.IntMap (IntMap)
+--import qualified Data.IntMap as I
+--
+--import qualified Data.List as List
+--
+----import Data.Map (Map)
+--import qualified Data.Map as Map
+--
+----import Debug.Trace
+--import HashedSimplify (isDeepZero, mkSCZ, simplify')
+--import HashedTransformable ()
 {--
 {-
 \end{comment}
