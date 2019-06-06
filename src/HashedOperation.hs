@@ -72,6 +72,15 @@ scaleWise e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
     node = Sum elementType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
+--sum :: Addable et => [Expression d et] -> Expression d et
+--sum expressions =
+--    ensureSameShape e1 e2 $ Expression h newMap
+--  where
+--    elementType = expressionElementType e1
+--    shape = expressionShape e1
+--    node = Sum elementType [n1, n2]
+--    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
 infixl 6 +
 
 -- | Element-wise multiplication

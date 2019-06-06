@@ -118,22 +118,22 @@ data Expression d et =
 
 -- | Const type
 --
-data ConstType
-    = Const0D Double
-    | All1D Double
-    | Const1D (Array Int Double)
-    | All2D Double
-    | Const2D (Array (Int, Int) Double)
-    | All3D Double
-    | Const3D (Array (Int, Int, Int) Double)
-    deriving (Show, Eq, Ord)
+--data ConstType
+--    = Const0D Double
+--    | All1D Double
+--    | Const1D (Array Int Double)
+--    | All2D Double
+--    | Const2D (Array (Int, Int) Double)
+--    | All3D Double
+--    | Const3D (Array (Int, Int, Int) Double)
+--    deriving (Show, Eq, Ord)
 
 -- | Node type
 --
 data Node
     = Var String
     | DVar String -- only contained in **Expression d Covector (1-form)**
-    | Const ConstType
+    | Const Double -- only all elements the same
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- element-wise multiplication
     | Scale ET Arg Arg -- scalar first
@@ -215,6 +215,16 @@ ensureSameShape e1 e2 after =
     if expressionShape e1 == expressionShape e2
         then after
         else error "Ensure same shape failed"
+
+ensureSameShapeList :: [Expression d et] -> a -> a
+ensureSameShapeList es after =
+    if allEqual
+        then after
+        else error "Ensure same shape failed"
+  where
+    safeTail [] = []
+    safeTail (x:xs) = xs
+    allEqual = and $ zipWith (==) (safeTail es) es
 
 fromR :: Double -> DC.Complex Double
 fromR x = x DC.:+ 0
