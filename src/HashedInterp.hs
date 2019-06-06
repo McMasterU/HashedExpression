@@ -53,10 +53,10 @@ instance Evaluable Zero R where
 --                let subExp1 = Expression node1 mp :: Expression Scalar R
 --                    subExp2 = Expression node2 mp :: Expression Scalar R
 --                 in eval valMap subExp1 * eval valMap subExp2
-            Just ([], Scale R node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Zero R
-                    subExp2 = Expression node2 mp :: Expression Zero R
-                 in eval valMap subExp1 * eval valMap subExp2
+--            Just ([], Scale R node1 node2) ->
+--                let subExp1 = Expression node1 mp :: Expression Zero R
+--                    subExp2 = Expression node2 mp :: Expression Zero R
+--                 in eval valMap subExp1 * eval valMap subExp2
 --            Just ([], InnerProd R node1 node2) ->
 --                case IM.lookup node1 mp of
 --                    Just ([], _) ->
@@ -85,18 +85,18 @@ instance Evaluable Zero C where
 --                let subExp1 = Expression node1 mp :: Expression Scalar C
 --                    subExp2 = Expression node2 mp :: Expression Scalar C
 --                 in eval valMap subExp1 * eval valMap subExp2
-            Just ([], Scale C node1 node2) ->
-                let subExp2 = Expression node2 mp :: Expression Zero C
-                    scale =
-                        case nodeElementType . retrieveNode mp $ node1 of
-                            R ->
-                                fromR . eval valMap $
-                                (Expression node1 mp :: Expression Zero R)
-                            C ->
-                                eval
-                                    valMap
-                                    (Expression node1 mp :: Expression Zero C)
-                 in scale * eval valMap subExp2
+--            Just ([], Scale C node1 node2) ->
+--                let subExp2 = Expression node2 mp :: Expression Zero C
+--                    scale =
+--                        case nodeElementType . retrieveNode mp $ node1 of
+--                            R ->
+--                                fromR . eval valMap $
+--                                (Expression node1 mp :: Expression Zero R)
+--                            C ->
+--                                eval
+--                                    valMap
+--                                    (Expression node1 mp :: Expression Zero C)
+--                 in scale * eval valMap subExp2
             Just ([], RImg node1 node2) ->
                 let subExp1 = Expression node1 mp :: Expression Zero R
                     subExp2 = Expression node2 mp :: Expression Zero R
@@ -139,11 +139,11 @@ instance Evaluable One R where
 --                    lst2 = A.elems $ eval valMap subExp2
 --                    lstRes = zipWith (*) lst1 lst2
 --                 in A.listArray (0, size - 1) lstRes
-            Just ([size], Scale R node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Zero R
-                    subExp2 = Expression node2 mp :: Expression One R
-                    scale = eval valMap subExp1
-                 in fmap (* scale) $ eval valMap subExp2
+--            Just ([size], Scale R node1 node2) ->
+--                let subExp1 = Expression node1 mp :: Expression Zero R
+--                    subExp2 = Expression node2 mp :: Expression One R
+--                    scale = eval valMap subExp1
+--                 in fmap (* scale) $ eval valMap subExp2
             _ -> error "expression structure One R is wrong"
 
 -- |
@@ -166,19 +166,19 @@ instance Evaluable One C where
 --                    lst2 = A.elems $ eval valMap subExp2
 --                    lstRes = zipWith (*) lst1 lst2
 --                 in A.listArray (0, size - 1) lstRes
-            Just ([size], Scale C node1 node2) ->
-                let subExp2 = Expression node2 mp :: Expression One C
-                    lst = A.elems $ eval valMap subExp2
-                    scale =
-                        case nodeElementType . retrieveNode mp $ node1 of
-                            R ->
-                                fromR . eval valMap $
-                                (Expression node1 mp :: Expression Zero R)
-                            C ->
-                                eval
-                                    valMap
-                                    (Expression node1 mp :: Expression Zero C)
-                 in A.listArray (0, size - 1) $ map (* scale) lst
+--            Just ([size], Scale C node1 node2) ->
+--                let subExp2 = Expression node2 mp :: Expression One C
+--                    lst = A.elems $ eval valMap subExp2
+--                    scale =
+--                        case nodeElementType . retrieveNode mp $ node1 of
+--                            R ->
+--                                fromR . eval valMap $
+--                                (Expression node1 mp :: Expression Zero R)
+--                            C ->
+--                                eval
+--                                    valMap
+--                                    (Expression node1 mp :: Expression Zero C)
+--                 in A.listArray (0, size - 1) $ map (* scale) lst
             Just ([size], RImg node1 node2) ->
                 let subExp1 = Expression node1 mp :: Expression One R
                     subExp2 = Expression node2 mp :: Expression One R

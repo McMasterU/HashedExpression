@@ -39,7 +39,7 @@ instance HasHash Node where
             Var name -> foldr moveBase 0 name
             DVar name -> foldr moveBase 1123 name
             Sum rc args -> (1 + argHash (hash rc : args)) * 2131
-            Scale rc arg1 arg2 -> (1 + argHash [hash rc, arg1, arg2]) * 3343
+            Mul rc args -> (1 + argHash (hash rc : args)) * 3343
             RImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
 
 -- |

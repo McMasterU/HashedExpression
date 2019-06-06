@@ -20,7 +20,7 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 
--- | Type representation of elements in the 1D, 2D, 3D, ... vector
+-- | Type representation of elements in the 1D, 2D, 3D, ... in the grid
 --
 data R
     deriving (NumType, ElementType, Addable, Typeable)
@@ -135,9 +135,7 @@ data Node
     | DVar String -- only contained in **Expression d Covector (1-form)**
     | Const Double -- only all elements the same
     | Sum ET Args -- element-wise sum
-    | Mul ET Args -- element-wise multiplication
-    | Scale ET Arg Arg -- scalar first
-    | ScaleWise ET Arg Arg -- scalar first
+    | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
     | RImg Arg Arg -- from real and imagine
     | Neg ET Arg
     | Abs Arg
@@ -168,7 +166,7 @@ nodeElementType node =
         Var _ -> R
         DVar _ -> Covector
         Sum et _ -> et
-        Scale et _ _ -> et
+        Mul et _ -> et
         RImg _ _ -> C
         -- TODO: and more
 
@@ -210,7 +208,7 @@ retrieveInternal mp n =
         Just internal -> internal
         _ -> error "node not in map"
 
-ensureSameShape :: Expression d et -> Expression d et -> a -> a
+ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after =
     if expressionShape e1 == expressionShape e2
         then after
