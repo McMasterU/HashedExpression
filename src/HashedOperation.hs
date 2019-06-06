@@ -63,7 +63,7 @@ scaleWise e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
 
 -- | Element-wise sum
 --
-(+) :: Addable rc => Expression d rc -> Expression d rc -> Expression d rc
+(+) :: Addable et => Expression d et -> Expression d et -> Expression d et
 (+) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     ensureSameShape e1 e2 $ Expression h newMap
   where
@@ -72,8 +72,18 @@ scaleWise e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
     node = Sum elementType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
---
 infixl 6 +
+
+-- | Element-wise multiplication
+--
+mul :: NumType et => Expression d et -> Expression d et -> Expression d et
+mul e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    ensureSameShape e1 e2 $ Expression h newMap
+  where
+    elementType = expressionElementType e1
+    shape = expressionShape e1
+    node = Mul elementType [n1, n2]
+    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 --
 -- | Scale by scalar, TODO: put this inside typeclass with default implementation???
@@ -90,6 +100,7 @@ infixl 6 +
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 infixl 7 *
+
 --
 ---- | Inner product in Inner Product Space
 ----

@@ -6,8 +6,11 @@ import HashedHash
 import HashedOperation
 import Prelude hiding ((*), (+))
 
---exteriorDerivative :: Expression Scalar R -> Expression Covector R
---exteriorDerivative e@(Expression n mp) =
+exteriorDerivative ::
+       (DimensionType d) => Expression d R -> Expression d Covector
+exteriorDerivative e@(Expression n mp) =
+    let shape = fst . retrieveInternal mp $ n
+     in undefined
 --    case retrieveInternal mp n of
 --        ([], Var name) ->
 --            let node = DVar name

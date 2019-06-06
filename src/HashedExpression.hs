@@ -46,16 +46,19 @@ data Two
 data Three
     deriving (DimensionType, Typeable)
 
-class NumType et
-
 class ElementType et
+
+class ElementType et =>
+      NumType et
+
 
 class DimensionType d
 
 class ElementType et =>
       Addable et
 
-class (Addable et, NumType s) =>
+
+class (DimensionType d, Addable et, NumType s) =>
       VectorSpace d et s
 
 
@@ -132,6 +135,7 @@ data Node
     | DVar String -- only contained in **Expression d Covector (1-form)**
     | Const ConstType
     | Sum ET Args -- element-wise sum
+    | Mul ET Args -- element-wise multiplication
     | Scale ET Arg Arg -- scalar first
     | ScaleWise ET Arg Arg -- scalar first
     | RImg Arg Arg -- from real and imagine
