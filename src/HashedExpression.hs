@@ -20,13 +20,14 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 
--- | Type representation of Real and Complex num type
+-- | Type representation of the number of elements
 --
 data R
-    deriving (NumType, Typeable)
+    deriving (ElementType, Typeable)
 
 data C
-    deriving (NumType, Typeable)
+    deriving (ElementType, Typeable)
+
 
 -- | Type representation of vector dimension
 --
@@ -43,24 +44,24 @@ data Three
     deriving (DimensionType, Typeable)
 
 -- we only allow covector fields derived from real scalar fields
-data Covector --- not a dimension type
-    deriving (Typeable)
+--data Covector --- not a dimension type
+--    deriving (Typeable)
 
 -- | Type classes
 --
-class NumType rc
+class ElementType rc
 
 class DimensionType d
 
-class (NumType rc) =>
+class (ElementType rc) =>
       Addable d rc
 
 
-class (DimensionType d, NumType rc) =>
+class (DimensionType d, ElementType rc) =>
       Ring d rc
 
 
-class (Addable d rc, NumType s) =>
+class (Addable d rc, ElementType s) =>
       VectorSpace d rc s
 
 
@@ -73,22 +74,18 @@ class VectorSpace d rc rc =>
 -- the constraints later, therefore it will show overlap instances error if we declare, say, VectorSpace Covector R R even
 -- if Covector R R does not satisfies the constraints
 --
-instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) =>
+instance {-# OVERLAPPABLE #-} (DimensionType d, ElementType rc) =>
                               Addable d rc
 
-instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Ring d rc
+instance {-# OVERLAPPABLE #-} (DimensionType d, ElementType rc) => Ring d rc
 
-instance {-# OVERLAPPABLE #-} (Addable d rc, NumType rc) =>
+instance {-# OVERLAPPABLE #-} (Addable d rc, ElementType rc) =>
                               VectorSpace d rc R
 
 instance {-# OVERLAPPABLE #-} (Addable d C) => VectorSpace d C C
 
 instance {-# OVERLAPPABLE #-} (DimensionType d, VectorSpace d rc rc) =>
                               InnerProductSpace d rc
-
-instance Addable Covector R
-
-instance VectorSpace Covector R R
 
 --instance (VectorSpace One rc rc, VectorSpace Two rc rc) => Subspace One Two rc
 -- | Shape type:
@@ -188,7 +185,7 @@ nodeNumType node =
 
 -- | Auxiliary functions for operations
 --
-expressionNumType :: (NumType rc) => Expression d rc -> RC
+expressionNumType :: (ElementType rc) => Expression d rc -> RC
 expressionNumType (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> nodeNumType node
