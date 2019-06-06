@@ -29,7 +29,7 @@ rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 instance HasHash Internal where
     hash (shape, node) = hash node * (1 + argHash shape)
 
-instance HasHash RC where
+instance HasHash ET where
     hash Real = 423
     hash Complex = 451
 

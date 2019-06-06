@@ -20,14 +20,17 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 
--- | Type representation of the number of elements
+-- | Type representation of elements in the 1D, 2D, 3D, ... vector
 --
 data R
-    deriving (ElementType, Typeable)
+    deriving (NumType, ElementType, Typeable)
 
 data C
-    deriving (ElementType, Typeable)
+    deriving (NumType, ElementType, Typeable)
 
+-- we only allow covector fields derived from real scalar fields
+data Covector
+    deriving (ElementType, Typeable)
 
 -- | Type representation of vector dimension
 --
@@ -43,21 +46,17 @@ data Two
 data Three
     deriving (DimensionType, Typeable)
 
--- we only allow covector fields derived from real scalar fields
---data Covector --- not a dimension type
---    deriving (Typeable)
+class NumType rc
 
--- | Type classes
---
 class ElementType rc
 
 class DimensionType d
 
-class (ElementType rc) =>
+class (DimensionType d, ElementType rc) =>
       Addable d rc
 
 
-class (DimensionType d, ElementType rc) =>
+class (DimensionType d, NumType rc) =>
       Ring d rc
 
 
@@ -77,7 +76,7 @@ class VectorSpace d rc rc =>
 instance {-# OVERLAPPABLE #-} (DimensionType d, ElementType rc) =>
                               Addable d rc
 
-instance {-# OVERLAPPABLE #-} (DimensionType d, ElementType rc) => Ring d rc
+instance {-# OVERLAPPABLE #-} (DimensionType d, NumType rc) => Ring d rc
 
 instance {-# OVERLAPPABLE #-} (Addable d rc, ElementType rc) =>
                               VectorSpace d rc R
@@ -101,9 +100,9 @@ type Args = [Int]
 
 type Arg = Int
 
--- | Data representation of Real and Complex num type
+-- | Data representation of element type
 --
-data RC
+data ET
     = Real
     | Complex
     deriving (Show, Eq, Ord)
@@ -144,12 +143,12 @@ data Node
     = Var String
     | DVar String -- only contained in **Expression Covector R**
     | Const ConstType
-    | Sum RC Args -- element-wise sum
-    | Mul RC Args -- element-wise multiplication
-    | Scale RC Arg Arg -- scalar first
-    | InnerProd RC Arg Arg -- inner product
+    | Sum ET Args -- element-wise sum
+    | Mul ET Args -- element-wise multiplication
+    | Scale ET Arg Arg -- scalar first
+    | InnerProd ET Arg Arg -- inner product
     | RealImg Arg Arg -- from real and imagine
-    | Neg RC Arg
+    | Neg ET Arg
     | Abs Arg
     | Signum Arg
     | Div Arg Arg
@@ -172,7 +171,7 @@ data Node
     | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
 
-nodeNumType :: Node -> RC
+nodeNumType :: Node -> ET
 nodeNumType node =
     case node of
         Var _ -> Real
@@ -185,8 +184,8 @@ nodeNumType node =
 
 -- | Auxiliary functions for operations
 --
-expressionNumType :: (ElementType rc) => Expression d rc -> RC
-expressionNumType (Expression n mp) =
+expressionElementType :: (ElementType rc) => Expression d rc -> ET
+expressionElementType (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> nodeNumType node
         _ -> error "expression not in map"
