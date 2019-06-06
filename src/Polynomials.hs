@@ -9,7 +9,7 @@ module Polynomials where
 
 import HashedExpression
 
---import Data.Complex
+--import Data.C
 --import Data.Ratio
 import qualified Data.IntMap.Strict as I
 import qualified Data.Map.Strict as M

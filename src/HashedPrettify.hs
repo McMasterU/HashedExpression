@@ -22,6 +22,3 @@ hiddenPrettify e@(Expression n mp) =
             (Sum _ args) ->
                 intercalate "+" . map (hiddenPrettify . flip Expression mp) $
                 args
-            (Mul _ args) ->
-                intercalate ".*" . map (hiddenPrettify . flip Expression mp) $
-                args

@@ -21,7 +21,7 @@ module HashedSimplify
     , simplify''
     , simpRewrite
     , simpRewrite''
-    , xMkReal
+    , xMkR
     , xMkImag
     , mergeScaledConstsBy
     , HashedExpression.containsDifferential
@@ -331,7 +331,7 @@ simpRewrite'' reWrite (exprs, node)
         (sumE $ map xIm inputs) exprs
   --
   -- * pull scale outside any linear operation
-  -- - f \in [Neg,RealPart,ImagPart,FT _, PFT _ _]
+  -- - f \in [Neg,RPart,ImagPart,FT _, PFT _ _]
   -- - f (s *. x) -> s *. f x
     | Just (Op dims op [arg]) <- I.lookup node exprs
     , linearOp op
@@ -396,7 +396,7 @@ simpRewrite'' reWrite (exprs, node)
          -- sort the nodes accoring to real/complex
      =
         let (cplx, real) = List.partition (nodeIsComplex exprs) inputs
-            realParts = map (flip extractOrMakeReal) cplx
+            realParts = map (flip extractOrMakeR) cplx
             imagParts = map (flip extractOrMakeImag) cplx
          -- form complex products
             (realProd, imagProd) = complexMult realParts imagParts
@@ -734,7 +734,7 @@ isDeepZero exprs node =
         Just (Const _ 0) -> True
         Just (Op _ ScaleV [s, v]) -> isDeepZero exprs s || isDeepZero exprs v
         Just (Op _ Prod vs) -> List.or $ map (isDeepZero exprs) vs
-        Just (Op _ RealImag [re, im]) ->
+        Just (Op _ RImag [re, im]) ->
             isDeepZero exprs re && isDeepZero exprs im
         Just (Op _ op [v]) -> linearOp op && isDeepZero exprs v
         _ -> False
@@ -1028,13 +1028,13 @@ complexMult r i = error $ show "complexMult " ++ show (r, i)
 
 Extract real/imag part, or project real/imag part from complex node
 -}
-xMkReal :: (Internal, [Node]) -> (Internal, [Node])
-xMkReal (exprs, nodes) = List.mapAccumR extractOrMakeReal exprs nodes
+xMkR :: (Internal, [Node]) -> (Internal, [Node])
+xMkR (exprs, nodes) = List.mapAccumR extractOrMakeR exprs nodes
 
-extractOrMakeReal :: Internal -> Node -> (Internal, Node)
-extractOrMakeReal es node
+extractOrMakeR :: Internal -> Node -> (Internal, Node)
+extractOrMakeR es node
     | Just (reN, _) <- M.reIm es node = reN es
-extractOrMakeReal es n = addEdge es $ Op (getDimE es n) RealPart [n]
+extractOrMakeR es n = addEdge es $ Op (getDimE es n) RPart [n]
 
 xMkImag :: (Internal, [Node]) -> (Internal, [Node])
 xMkImag (exprs, nodes) = List.mapAccumR extractOrMakeImag exprs nodes

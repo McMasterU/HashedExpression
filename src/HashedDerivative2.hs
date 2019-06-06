@@ -21,12 +21,12 @@ import Prelude hiding ((*), (+))
 --                (newMap, h) = fromNode (shape, node)
 --                -- dc = 0
 --             in Expression h newMap
---        ([], Sum Real [node1, node2]) ->
+--        ([], Sum R [node1, node2]) ->
 --            let subExp1 = Expression node1 mp :: Expression Scalar R
 --                subExp2 = Expression node2 mp :: Expression Scalar R
 --                -- d(f + g) = df + dg
 --             in exteriorDerivative subExp1 + exteriorDerivative subExp2
---        ([], Mul Real [node1, node2]) ->
+--        ([], Mul R [node1, node2]) ->
 --            let subExp1 = Expression node1 mp :: Expression Scalar R
 --                subExp2 = Expression node2 mp :: Expression Scalar R
 --                diff1 = exteriorDerivative subExp1

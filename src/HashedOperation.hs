@@ -109,7 +109,7 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
 --    ensureSameShape e1 e2 $ Expression h newMap
 --  where
 --    shape = expressionShape e1
---    node = RealImg n1 n2
+--    node = RImg n1 n2
 --    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 --
 --sin :: (Ring d R) => Expression d R -> Expression d R
@@ -200,7 +200,7 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
 --realPart e@(Expression n mp) = Expression h newMap
 --  where
 --    shape = expressionShape e
---    node = RealPart n
+--    node = RPart n
 --    (newMap, h) = addEdge mp (shape, node)
 --
 --imagPart :: (DimensionType d) => Expression d C -> Expression d R

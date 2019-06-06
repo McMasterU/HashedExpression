@@ -220,9 +220,9 @@ pullNeg exprs node
                  addEdge pulledE $ Op dims op pulledArgs
     | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ show x) (exprs, node)
 
-canPull RealPart = True
+canPull RPart = True
 canPull ImagPart = True
-canPull RealImag = True
+canPull RImag = True
 canPull (Project _) = True
 canPull (Inject _) = True
 canPull (PFT _ _) = True

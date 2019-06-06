@@ -185,9 +185,9 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                             error "HD.partDiff' Rglzr not implemented"
                         GradReglzr _dk _rk ->
                             error "HD.partDiff' Rglzr not implemented"
-                        RealPart -> d1Input
+                        RPart -> d1Input
                         ImagPart -> d1Input
-                        RealImag ->
+                        RImag ->
                             case inputs of
                                 [i1, i2] ->
                                     let (e1, dn1) =
@@ -195,7 +195,7 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                                         (e2, dn2) = partDiff' (dVar, dRel) e1 i2
                                      in addEdge'
                                             e2
-                                            (Op dims RealImag [dn1, dn2])
+                                            (Op dims RImag [dn1, dn2])
                                 _ ->
                                     error $
                                     "partDiff " ++
