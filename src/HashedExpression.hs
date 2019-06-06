@@ -34,7 +34,7 @@ data Covector
 
 -- | Type representation of vector dimension
 --
-data Scalar
+data Zero
     deriving (DimensionType, Typeable)
 
 data One
@@ -52,7 +52,8 @@ class ElementType et
 
 class DimensionType d
 
-class Addable et
+class ElementType et =>
+      Addable et
 
 class (Addable et, NumType s) =>
       VectorSpace d et s
@@ -63,7 +64,8 @@ class (Addable et, NumType s) =>
 -- the constraints later, therefore it will show overlap instances error if we declare more instances of VectorSpace if
 -- if the arguments don't satisfy the constraints
 --
-instance {-# OVERLAPPABLE #-} (Addable et, DimensionType d) =>
+--instance {-# OVERLAPPABLE #-} ElementType et => Addable et
+instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
                               VectorSpace d et R
 
 instance {-# OVERLAPPABLE #-} (DimensionType d) => VectorSpace d C C
@@ -111,7 +113,7 @@ data Expression d et =
         ExpressionMap -- all subexpressions
     deriving (Show, Eq, Ord, Typeable)
 
--- | Val type
+-- | Const type
 --
 data ConstType
     = Const0D Double
@@ -131,8 +133,8 @@ data Node
     | Const ConstType
     | Sum ET Args -- element-wise sum
     | Scale ET Arg Arg -- scalar first
-    | RImg Arg Arg -- from real and imagine
     | ScaleWise ET Arg Arg -- scalar first
+    | RImg Arg Arg -- from real and imagine
     | Neg ET Arg
     | Abs Arg
     | Signum Arg
@@ -156,21 +158,22 @@ data Node
     | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
 
-nodeNumType :: Node -> ET
-nodeNumType node =
+nodeElementType :: Node -> ET
+nodeElementType node =
     case node of
         Var _ -> R
-        DVar _ -> R
+        DVar _ -> Covector
         Sum et _ -> et
         Scale et _ _ -> et
         RImg _ _ -> C
+        -- TODO: and more
 
 -- | Auxiliary functions for operations
 --
 expressionElementType :: (ElementType et) => Expression d et -> ET
 expressionElementType (Expression n mp) =
     case IM.lookup n mp of
-        Just (_, node) -> nodeNumType node
+        Just (_, node) -> nodeElementType node
         _ -> error "expression not in map"
 
 expressionShape :: Expression d et -> Shape

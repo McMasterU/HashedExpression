@@ -13,8 +13,8 @@ import qualified Data.Map as Map
 import HashedExpression
 
 type family Output d rc where
-    Output Scalar R = Double
-    Output Scalar C = DC.Complex Double
+    Output Zero R = Double
+    Output Zero C = DC.Complex Double
     Output One R = Array Int Double
     Output One C = Array Int (DC.Complex Double)
 
@@ -37,8 +37,8 @@ class Evaluable d rc where
 
 -- |
 --
-instance Evaluable Scalar R where
-    eval :: ValMaps -> Expression Scalar R -> Double
+instance Evaluable Zero R where
+    eval :: ValMaps -> Expression Zero R -> Double
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
             Just ([], Var name) ->
@@ -46,16 +46,16 @@ instance Evaluable Scalar R where
                     Just val -> val
                     _ -> error "no value associated with the variable"
             Just ([], Sum R [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression Scalar R
-                    subExp2 = Expression node2 mp :: Expression Scalar R
+                let subExp1 = Expression node1 mp :: Expression Zero R
+                    subExp2 = Expression node2 mp :: Expression Zero R
                  in eval valMap subExp1 + eval valMap subExp2
 --            Just ([], Mul R [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression Scalar R
 --                    subExp2 = Expression node2 mp :: Expression Scalar R
 --                 in eval valMap subExp1 * eval valMap subExp2
             Just ([], Scale R node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Scalar R
-                    subExp2 = Expression node2 mp :: Expression Scalar R
+                let subExp1 = Expression node1 mp :: Expression Zero R
+                    subExp2 = Expression node2 mp :: Expression Zero R
                  in eval valMap subExp1 * eval valMap subExp2
 --            Just ([], InnerProd R node1 node2) ->
 --                case IM.lookup node1 mp of
@@ -73,33 +73,33 @@ instance Evaluable Scalar R where
 
 -- |
 --
-instance Evaluable Scalar C where
-    eval :: ValMaps -> Expression Scalar C -> DC.Complex Double
+instance Evaluable Zero C where
+    eval :: ValMaps -> Expression Zero C -> DC.Complex Double
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
             Just ([], Sum C [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression Scalar C
-                    subExp2 = Expression node2 mp :: Expression Scalar C
+                let subExp1 = Expression node1 mp :: Expression Zero C
+                    subExp2 = Expression node2 mp :: Expression Zero C
                  in eval valMap subExp1 + eval valMap subExp2
 --            Just ([], Mul C [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression Scalar C
 --                    subExp2 = Expression node2 mp :: Expression Scalar C
 --                 in eval valMap subExp1 * eval valMap subExp2
             Just ([], Scale C node1 node2) ->
-                let subExp2 = Expression node2 mp :: Expression Scalar C
+                let subExp2 = Expression node2 mp :: Expression Zero C
                     scale =
-                        case nodeNumType . retrieveNode mp $ node1 of
+                        case nodeElementType . retrieveNode mp $ node1 of
                             R ->
                                 fromR . eval valMap $
-                                (Expression node1 mp :: Expression Scalar R)
+                                (Expression node1 mp :: Expression Zero R)
                             C ->
                                 eval
                                     valMap
-                                    (Expression node1 mp :: Expression Scalar C)
+                                    (Expression node1 mp :: Expression Zero C)
                  in scale * eval valMap subExp2
             Just ([], RImg node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Scalar R
-                    subExp2 = Expression node2 mp :: Expression Scalar R
+                let subExp1 = Expression node1 mp :: Expression Zero R
+                    subExp2 = Expression node2 mp :: Expression Zero R
                  in eval valMap subExp1 :+ eval valMap subExp2
 --            Just ([], InnerProd C node1 node2) ->
 --                case IM.lookup node1 mp of
@@ -140,7 +140,7 @@ instance Evaluable One R where
 --                    lstRes = zipWith (*) lst1 lst2
 --                 in A.listArray (0, size - 1) lstRes
             Just ([size], Scale R node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Scalar R
+                let subExp1 = Expression node1 mp :: Expression Zero R
                     subExp2 = Expression node2 mp :: Expression One R
                     scale = eval valMap subExp1
                  in fmap (* scale) $ eval valMap subExp2
@@ -170,14 +170,14 @@ instance Evaluable One C where
                 let subExp2 = Expression node2 mp :: Expression One C
                     lst = A.elems $ eval valMap subExp2
                     scale =
-                        case nodeNumType . retrieveNode mp $ node1 of
+                        case nodeElementType . retrieveNode mp $ node1 of
                             R ->
                                 fromR . eval valMap $
-                                (Expression node1 mp :: Expression Scalar R)
+                                (Expression node1 mp :: Expression Zero R)
                             C ->
                                 eval
                                     valMap
-                                    (Expression node1 mp :: Expression Scalar C)
+                                    (Expression node1 mp :: Expression Zero C)
                  in A.listArray (0, size - 1) $ map (* scale) lst
             Just ([size], RImg node1 node2) ->
                 let subExp1 = Expression node1 mp :: Expression One R
