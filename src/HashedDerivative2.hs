@@ -8,6 +8,9 @@ import HashedHash
 import HashedOperation
 import Prelude hiding ((*), (+))
 
+
+Exp
+
 exteriorDerivative ::
        forall d. (DimensionType d)
     => Expression d R
