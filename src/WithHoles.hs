@@ -9,25 +9,26 @@ Helper functions/instances to make pattern gaurds involving Expressions easier t
 {-# LANGUAGE TypeFamilies #-}
 
 module WithHoles where
-{-
+
 import qualified Data.IntMap as I
 import qualified Data.List as L
 import Data.Maybe
-import HashedExpression
-    ( Complex
-    , Dims(..)
-    , Dir(..)
-    , ExpressionEdge(..)
-    , Internal
-    , Node
-    , OpId(..)
-    , RealVectorSpace
-    , Rectangular
-    , addEdge
-    , getDimE
-    )
+--import HashedExpression
+--    ( Complex
+--    , Dims(..)
+--    , Dir(..)
+--    , ExpressionEdge(..)
+--    , Internal
+--    , Node
+--    , OpId(..)
+--    , RVectorSpace
+--    , Rectangular
+--    , addEdge
+--    , getDimE
+--    )
+{-
 import qualified HashedExpression
-import HashedInstances ()
+--import HashedInstances ()
 
 data WithHoles
     = WHOp OpId [WithHoles]
@@ -84,10 +85,10 @@ instance Num WithHoles where
 Instance to convert back and forth between real and complex nodes.
 -}
 instance Complex WithHoles WithHoles where
-    x +: y = WHOp RealImag [x, y]
-    iRe x = WHOp RealImag [x, WHConst 0]
-    iIm y = WHOp RealImag [WHConst 0, y]
-    xRe z = WHOp RealPart [z]
+    x +: y = WHOp RImag [x, y]
+    iRe x = WHOp RImag [x, WHConst 0]
+    iIm y = WHOp RImag [WHConst 0, y]
+    xRe z = WHOp RPart [z]
     xIm z = WHOp ImagPart [z]
 
 {-
@@ -123,7 +124,7 @@ instance Floating WithHoles where
 {-
 
 -}
-instance RealVectorSpace WithHoles WithHoles where
+instance RVectorSpace WithHoles WithHoles where
     scale n1 n2 = WHOp ScaleV [n1, n2]
     dot n1 n2 = WHOp Dot [n1, n2]
     subMask n1 n2 = WHOp SubMask [n1, n2]

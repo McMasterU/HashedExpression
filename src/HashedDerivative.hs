@@ -25,29 +25,28 @@ Caluclating Derivatives.
 {-# LANGUAGE TupleSections #-}
 
 module HashedDerivative where
-
-import HashedConstruct
-import HashedExpression
-import HashedInstances (pretty')
-
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as C
-
---import HashedMatch (o)
---import qualified HashedMatch as M
-import Data.Maybe (catMaybes)
-
---import Data.IntMap (IntMap)
-import qualified Data.IntMap as I
-
-import qualified Data.List as List
-
---import Data.Map (Map)
-import qualified Data.Map as Map
-
---import Debug.Trace
-import HashedSimplify (isDeepZero, mkSCZ, simplify')
-import HashedTransformable ()
+--import HashedConstruct
+--import HashedExpression
+--import HashedInstances (pretty')
+--
+--import Data.ByteString (ByteString)
+--import qualified Data.ByteString.Char8 as C
+--
+----import HashedMatch (o)
+----import qualified HashedMatch as M
+--import Data.Maybe (catMaybes)
+--
+----import Data.IntMap (IntMap)
+--import qualified Data.IntMap as I
+--
+--import qualified Data.List as List
+--
+----import Data.Map (Map)
+--import qualified Data.Map as Map
+--
+----import Debug.Trace
+--import HashedSimplify (isDeepZero, mkSCZ, simplify')
+--import HashedTransformable ()
 {--
 {-
 \end{comment}
@@ -186,9 +185,9 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                             error "HD.partDiff' Rglzr not implemented"
                         GradReglzr _dk _rk ->
                             error "HD.partDiff' Rglzr not implemented"
-                        RealPart -> d1Input
+                        RPart -> d1Input
                         ImagPart -> d1Input
-                        RealImag ->
+                        RImag ->
                             case inputs of
                                 [i1, i2] ->
                                     let (e1, dn1) =
@@ -196,7 +195,7 @@ partDiff' (dVar, dRel) exprs node = (exprs', node')
                                         (e2, dn2) = partDiff' (dVar, dRel) e1 i2
                                      in addEdge'
                                             e2
-                                            (Op dims RealImag [dn1, dn2])
+                                            (Op dims RImag [dn1, dn2])
                                 _ ->
                                     error $
                                     "partDiff " ++

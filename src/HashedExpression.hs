@@ -12,68 +12,72 @@
 
 module HashedExpression where
 
+import Data.Array
 import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
+import HashedUtils
 
--- | Type representation of Real and Complex num type
+-- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
 data R
-    deriving (NumType)
+    deriving (NumType, ElementType, Addable, Typeable)
 
 data C
-    deriving (NumType)
+    deriving (NumType, ElementType, Addable, Typeable)
+
+-- we only allow covector fields derived from real scalar fields
+data Covector
+    deriving (ElementType, Addable, Typeable)
 
 -- | Type representation of vector dimension
 --
-data Scalar
-    deriving (DimensionType)
+data Zero
+    deriving (DimensionType, Typeable)
 
 data One
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
 data Two
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
 data Three
-    deriving (DimensionType)
+    deriving (DimensionType, Typeable)
 
--- | Type classes
---
-class NumType rc
+class ElementType et
+
+class ElementType et =>
+      NumType et
+
 
 class DimensionType d
 
-class (DimensionType d, NumType rc) =>
-      Ring d rc
+class ElementType et =>
+      Addable et
 
 
-class Ring d rc =>
-      VectorSpace d rc s
-
-
-class VectorSpace d rc rc =>
-      InnerProductSpace d rc
-
-
-class (VectorSpace d1 rc rc, VectorSpace d2 rc rc) =>
-      Subspace d1 d2 rc
+class (DimensionType d, Addable et, NumType s) =>
+      VectorSpace d et s
 
 
 -- | Instances
+-- Set language pragma {-# OVERLAPPABLE #-} because GHC looks at the head first (e.g VectorSpace d et R) and check
+-- the constraints later, therefore it will show overlap instances error if we declare more instances of VectorSpace if
+-- if the arguments don't satisfy the constraints
 --
-instance (DimensionType d, NumType rc) => Ring d rc
+--instance {-# OVERLAPPABLE #-} ElementType et => Addable et
+instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
+                              VectorSpace d et R
 
-instance (Ring d rc) => VectorSpace d rc R
+instance {-# OVERLAPPABLE #-} (DimensionType d) => VectorSpace d C C
 
-instance (Ring d C) => VectorSpace d C C
+instance {-# OVERLAPPABLE #-} (DimensionType d) =>
+                              VectorSpace d Covector R
 
-instance (VectorSpace d rc rc) => InnerProductSpace d rc
-
---instance (VectorSpace One rc rc, VectorSpace Two rc rc) => Subspace One Two rc
+--instance (VectorSpace One et et, VectorSpace Two et et) => Subspace One Two et
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
@@ -87,11 +91,12 @@ type Args = [Int]
 
 type Arg = Int
 
--- | Data representation of Real and Complex num type
+-- | Data representation of element type
 --
-data RC
-    = Real
-    | Complex
+data ET
+    = R
+    | C
+    | Covector -- this is data constructor Covector
     deriving (Show, Eq, Ord)
 
 -- | Internal
@@ -106,89 +111,130 @@ type ExpressionMap = IntMap Internal
 
 -- | Expression with 2 phantom types (dimension and num type)
 --
-data Expression d rc =
+data Expression d et =
     Expression
-        Int -- the index this expression
-        ExpressionMap -- all subexpressions
+        { exIndex :: Int -- the index this expression
+        , exMap :: ExpressionMap -- all subexpressions
+        }
     deriving (Show, Eq, Ord, Typeable)
 
---data Form (k :: Nat) =
---    Form
---        Int
---        ExpressionMap
+-- | Const type
 --
---FormNode
---    = Expression Int
---    | Connect Int String
---    = SingleDVar String Expression
---                     | DVarSum String Expression Expression
+--data ConstType
+--    = Const0D Double
+--    | All1D Double
+--    | Const1D (Array Int Double)
+--    | All2D Double
+--    | Const2D (Array (Int, Int) Double)
+--    | All3D Double
+--    | Const3D (Array (Int, Int, Int) Double)
+--    deriving (Show, Eq, Ord)
+-- | Node type
+--
 data Node
     = Var String
-    | DVar String
-    | Sum RC Args -- element-wise sum
-    | Mul RC Args -- element-wise multiplication
-    | Scale RC Arg Arg -- scalar first, TODO: Int Int instead ?
-    | InnerProd RC Arg Arg -- inner product, TODO: Int Int instead ?
-    | RealImg Arg Arg -- from real and imagine, TODO: Int Int instead ?
-    | Neg RC Arg
-    | Abs RC Arg
-    | Signum RC Arg
-    | Div RC Arg Arg
-    | Sqrt Arg
-    | Sin RC Arg
-    | Cos RC Arg
-    | Tan RC Arg
-    | Exp RC Arg
-    | Log RC Arg
-    | Sinh RC Arg
-    | Cosh RC Arg
-    | Tanh RC Arg
-    | Asin RC Arg
-    | Acos RC Arg
-    | Atan RC Arg
-    | Asinh RC Arg
-    | Acosh RC Arg
-    | Atanh RC Arg
+    | DVar String -- only contained in **Expression d Covector (1-form)**
+    | Const Double -- only all elements the same
+    -- MARK: Basics
+    | Sum ET Args -- element-wise sum
+    | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | Neg ET Arg
+    -- MARK: Complex related
+    | RImg Arg Arg -- from real and imagine
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
+    -- MARK: Trigonometry
+    | Abs Arg
+    | Signum Arg
+    | Div Arg Arg
+    | Sqrt Arg
+    | Sin Arg
+    | Cos Arg
+    | Tan Arg
+    | Exp Arg
+    | Log Arg
+    | Sinh Arg
+    | Cosh Arg
+    | Tanh Arg
+    | Asin Arg
+    | Acos Arg
+    | Atan Arg
+    | Asinh Arg
+    | Acosh Arg
+    | Atanh Arg
     deriving (Show, Eq, Ord)
 
-nodeNumType :: Node -> RC
-nodeNumType node =
+nodeElementType :: Node -> ET
+nodeElementType node =
     case node of
-        Var _ -> Real
-        DVar _ -> Real
-        Sum rc _ -> rc
-        Mul rc _ -> rc
-        Scale rc _ _ -> rc
-        InnerProd rc _ _ -> rc
-        RealImg _ _ -> Complex
+        Var _ -> R
+        DVar _ -> Covector
+        Sum et _ -> et
+        Mul et _ -> et
+        RImg _ _ -> C
+        -- TODO: and more
 
 -- | Auxiliary functions for operations
 --
-expressionNumType :: (NumType rc) => Expression d rc -> RC
-expressionNumType (Expression n mp) =
+retrieveNode :: Int -> ExpressionMap -> Node
+retrieveNode n mp =
     case IM.lookup n mp of
-        Just (_, node) -> nodeNumType node
+        Just (_, node) -> node
+        _ -> error "node not in map"
+
+retrieveInternal :: Int -> ExpressionMap -> Internal
+retrieveInternal n mp =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "node not in map"
+
+retrieveElementType :: Int -> ExpressionMap -> ET
+retrieveElementType n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node
         _ -> error "expression not in map"
 
-expressionShape :: (DimensionType d) => Expression d rc -> Shape
+retrieveShape :: Int -> ExpressionMap -> Shape
+retrieveShape n mp =
+    case IM.lookup n mp of
+        Just (dim, _) -> dim
+        _ -> error "expression not in map"
+
+expressionElementType :: Expression d et -> ET
+expressionElementType (Expression n mp) =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node
+        _ -> error "expression not in map"
+
+expressionShape :: Expression d et -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
         _ -> error "expression not in map"
 
-retrieveNode :: ExpressionMap -> Int -> Node
-retrieveNode mp n =
+expressionInternal :: Expression d et -> Internal
+expressionInternal (Expression n mp) =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "expression not in map"
+
+expressionNode :: Expression d et -> Node
+expressionNode (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> node
-        _ -> error "node not in map"
+        _ -> error "expression not in map"
 
-ensureSameShape :: (Ring d rc) => Expression d rc -> Expression d rc -> a -> a
+ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after =
     if expressionShape e1 == expressionShape e2
         then after
         else error "Ensure same shape failed"
 
-fromReal :: Double -> DC.Complex Double
-fromReal x = x DC.:+ 0
+ensureSameShapeList :: [Expression d et] -> a -> a
+ensureSameShapeList es after =
+    if allEqual es
+        then after
+        else error "Ensure same shape failed"
+
+fromR :: Double -> DC.Complex Double
+fromR x = x DC.:+ 0

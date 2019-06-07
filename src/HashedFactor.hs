@@ -9,24 +9,24 @@ Calculating Derivatives.
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module HashedFactor
-    ( factor'
-    , commonTop
-    , linOpDepth
-    , floatNeg
-    , floatNeg'
-    , newFloatNeg
-    , newFloatNeg'
-    , factorNeg
-    , pushNegIntoConst
-    , normalizeSCZs
-    , normalizeSCZ
-    ) where
-
-import HashedConstruct
-import HashedExpression
-import HashedInstances (pretty')
-import HashedSimplify (mkSCZ, simpRewrite, simplify')
+module HashedFactor where
+--    ( factor'
+--    , commonTop
+--    , linOpDepth
+--    , floatNeg
+--    , floatNeg'
+--    , newFloatNeg
+--    , newFloatNeg'
+--    , factorNeg
+--    , pushNegIntoConst
+--    , normalizeSCZs
+--    , normalizeSCZ
+--    ) where
+--
+--import HashedConstruct
+--import HashedExpression
+--import HashedInstances (pretty')
+--import HashedSimplify (mkSCZ, simpRewrite, simplify')
 {-
 
 --import HashedMatch (o)
@@ -220,9 +220,9 @@ pullNeg exprs node
                  addEdge pulledE $ Op dims op pulledArgs
     | x <- I.lookup node exprs = mt ("@@@@@@@@" ++ show x) (exprs, node)
 
-canPull RealPart = True
+canPull RPart = True
 canPull ImagPart = True
-canPull RealImag = True
+canPull RImag = True
 canPull (Project _) = True
 canPull (Inject _) = True
 canPull (PFT _ _) = True

@@ -1,31 +1,40 @@
-{-# LANGUAGE TupleSections #-}
-
 module Main where
 
 import Data.Array.Unboxed as U
 import HashedDerivative
+import HashedDerivative2
 import HashedExpression
 import HashedFactor
-import HashedInstances
 import HashedInterp
+import HashedOperation
+import HashedPrettify
 import HashedSimplify
+import Prelude hiding
+    ( (*)
+    , (+)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , cos
+    , cosh
+    , sin
+    , sinh
+    , tan
+    , tanh
+    )
 
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
--- TODO run tests? or anything really
-main = hspec $ do
-    describe "eval test" $ do
-        specify "test here" $ do
-            let size = 5
-                x1 = var1d size "x1"
-                e = shift 1 x1
-            evalOneD
-                (simplify e)
-                (subs
-                     ( []
-                     , [("x1", U.listArray (0, size - 1) [1, 2, 3, 4, 5])]
-                     , []
-                     , []
-                     , [])) `shouldBe`
-                U.listArray (0, size - 1) [0, 1, 2, 3, 4]
+main = do
+    let x = var1d 10 "x"
+    let y = var1d 10 "y"
+    let z = var1d 10 "z"
+    let s = var "s"
+--    let f = s * (x + y + z) + x + y
+    let f = s * (x * y)
+    print $ prettify f
+    print $ prettify . exteriorDerivative $ f
