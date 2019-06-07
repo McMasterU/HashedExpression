@@ -81,7 +81,7 @@ instance Evaluable Zero C where
                 let subExp1 = Expression node1 mp :: Expression Zero C
                     subExp2 = Expression node2 mp :: Expression Zero C
                  in eval valMap subExp1 + eval valMap subExp2
-            Just ([], RImg node1 node2) ->
+            Just ([], RealImg node1 node2) ->
                 let subExp1 = Expression node1 mp :: Expression Zero R
                     subExp2 = Expression node2 mp :: Expression Zero R
                  in eval valMap subExp1 :+ eval valMap subExp2
@@ -179,7 +179,7 @@ instance Evaluable One C where
 --                                    valMap
 --                                    (Expression node1 mp :: Expression Zero C)
 --                 in A.listArray (0, size - 1) $ map (* scale) lst
-            Just ([size], RImg node1 node2) ->
+            Just ([size], RealImg node1 node2) ->
                 let subExp1 = Expression node1 mp :: Expression One R
                     subExp2 = Expression node2 mp :: Expression One R
                     lst1 = A.elems $ eval valMap subExp1

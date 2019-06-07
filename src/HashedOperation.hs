@@ -119,7 +119,7 @@ instance (VectorSpace d et s) => Multipliable Zero s d et d et where
     ensureSameShape e1 e2 $ Expression h newMap
   where
     shape = expressionShape e1
-    node = RImg n1 n2
+    node = RealImg n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 realPart :: (DimensionType d) => Expression d C -> Expression d R

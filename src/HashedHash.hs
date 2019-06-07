@@ -41,7 +41,7 @@ instance HasHash Node where
             DVar name -> foldr moveBase 1123 name
             Sum rc args -> (1 + argHash (hash rc : args)) * 2131
             Mul rc args -> (1 + argHash (hash rc : args)) * 3343
-            RImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
+            RealImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
 
 -- |
 --

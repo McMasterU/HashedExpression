@@ -140,7 +140,7 @@ data Node
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
     | Neg ET Arg
     -- MARK: Complex related
-    | RImg Arg Arg -- from real and imagine
+    | RealImg Arg Arg -- from real and imagine
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
     -- MARK: Trigonometry
@@ -169,9 +169,31 @@ nodeElementType node =
     case node of
         Var _ -> R
         DVar _ -> Covector
+        Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
-        RImg _ _ -> C
+        Neg et _ -> et
+        RealImg _ _ -> C
+        RealPart _ -> R
+        ImagPart _ -> C
+        Abs _ -> R
+        Signum _ -> R
+        Div _ _ -> R
+        Sqrt _ -> R
+        Sin _ -> R
+        Cos _ -> R
+        Tan _ -> R
+        Exp _ -> R
+        Log _ -> R
+        Sinh _ -> R
+        Cosh _ -> R
+        Tanh _ -> R
+        Asin _ -> R
+        Acos _ -> R
+        Atan _ -> R
+        Asinh _ -> R
+        Acosh _ -> R
+        Atanh _ -> R
         -- TODO: and more
 
 -- | Auxiliary functions for operations
