@@ -14,6 +14,7 @@ module HashedExpression where
 
 import Data.Array
 import qualified Data.Complex as DC
+import HashedUtils
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
@@ -216,13 +217,9 @@ ensureSameShape e1 e2 after =
 
 ensureSameShapeList :: [Expression d et] -> a -> a
 ensureSameShapeList es after =
-    if allEqual
+    if allEqual es
         then after
         else error "Ensure same shape failed"
-  where
-    safeTail [] = []
-    safeTail (x:xs) = xs
-    allEqual = and $ zipWith (==) (safeTail es) es
 
 fromR :: Double -> DC.Complex Double
 fromR x = x DC.:+ 0

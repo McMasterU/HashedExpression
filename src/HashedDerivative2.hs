@@ -1,6 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module HashedDerivative2 where
+module HashedDerivative2
+    ( exteriorDerivative
+    ) where
 
 import Data.IntMap.Strict
 import HashedExpression
@@ -8,8 +10,10 @@ import HashedHash
 import HashedOperation
 import Prelude hiding ((*), (+))
 
-
-Exp
+-- | Untyped version for computing derivative
+--
+data UntypedExpression =
+    UntypedExpression Int ExpressionMap
 
 exteriorDerivative ::
        forall d. (DimensionType d)
@@ -30,11 +34,11 @@ exteriorDerivative e@(Expression n mp) =
                     (newMap, h) = fromNode (shape, node)
                 -- dc = 0
                  in Expression h newMap
-            Sum R [node1, node2] ->
-                let subExp1 = Expression node1 mp :: Expression d R
-                    subExp2 = Expression node2 mp :: Expression d R
-                -- d(f + g) = df + dg
-                 in exteriorDerivative subExp1 + exteriorDerivative subExp2
+            Sum R args ->
+--                let subExp1 = Expression n1 mp :: Expression d R
+--                    subExp2 = Expression n2 mp :: Expression d R
+                let mkSubExp nId = Expression n1 mp :: Expression d R
+                 in sum
 --            Mul R [node1, node2] ->
 --                let subExp1 = Expression node1 mp :: Expression Zero R
 --                    subExp2 = Expression node2 mp :: Expression Zero R
@@ -42,3 +46,8 @@ exteriorDerivative e@(Expression n mp) =
 --                    diff2 = exteriorDerivative subExp2
 --                -- d(f * g) = f * dg + g * df
 --                 in subExp1 * diff1 + subExp2 * diff1
+
+hiddenDerivative :: UntypedExpression -> UntypedExpression
+hiddenDerivative @e(UntypedExpression n mp) =
+    let (shape, node) = retrieveInternal mp n
+    in undefined
