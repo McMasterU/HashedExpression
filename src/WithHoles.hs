@@ -21,7 +21,7 @@ import Data.Maybe
 --    , Internal
 --    , Node
 --    , OpId(..)
---    , RealVectorSpace
+--    , RVectorSpace
 --    , Rectangular
 --    , addEdge
 --    , getDimE
@@ -85,10 +85,10 @@ instance Num WithHoles where
 Instance to convert back and forth between real and complex nodes.
 -}
 instance Complex WithHoles WithHoles where
-    x +: y = WHOp RealImag [x, y]
-    iRe x = WHOp RealImag [x, WHConst 0]
-    iIm y = WHOp RealImag [WHConst 0, y]
-    xRe z = WHOp RealPart [z]
+    x +: y = WHOp RImag [x, y]
+    iRe x = WHOp RImag [x, WHConst 0]
+    iIm y = WHOp RImag [WHConst 0, y]
+    xRe z = WHOp RPart [z]
     xIm z = WHOp ImagPart [z]
 
 {-
@@ -124,7 +124,7 @@ instance Floating WithHoles where
 {-
 
 -}
-instance RealVectorSpace WithHoles WithHoles where
+instance RVectorSpace WithHoles WithHoles where
     scale n1 n2 = WHOp ScaleV [n1, n2]
     dot n1 n2 = WHOp Dot [n1, n2]
     subMask n1 n2 = WHOp SubMask [n1, n2]

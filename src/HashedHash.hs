@@ -29,9 +29,9 @@ rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 instance HasHash Internal where
     hash (shape, node) = hash node * (1 + argHash shape)
 
-instance HasHash RC where
-    hash Real = 423
-    hash Complex = 451
+instance HasHash ET where
+    hash R = 423
+    hash C = 451
 
 instance HasHash Node where
     hash node =
@@ -39,10 +39,8 @@ instance HasHash Node where
             Var name -> foldr moveBase 0 name
             DVar name -> foldr moveBase 1123 name
             Sum rc args -> (1 + argHash (hash rc : args)) * 2131
-            Mul rc args -> (1 + argHash (hash rc : args)) * 2437
-            Scale rc arg1 arg2 -> (1 + argHash [hash rc, arg1, arg2]) * 3343
-            InnerProd rc arg1 arg2 -> (1 + argHash [hash rc, arg1, arg2]) * 3187
-            RealImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
+            Mul rc args -> (1 + argHash (hash rc : args)) * 3343
+            RImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
 
 -- |
 --
