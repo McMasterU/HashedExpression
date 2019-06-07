@@ -35,7 +35,6 @@ main = do
     let z = var1d 10 "z"
     let s = var "s"
 --    let f = s * (x + y + z) + x + y
-    let f = s * x
+    let f = s * (x * y)
     print $ prettify f
     print $ prettify . exteriorDerivative $ f
-    print "hello world"

@@ -96,12 +96,12 @@ hiddenExteriorDerivative e@(UntypedExpression n mp) =
                     (newMap, h) = fromNode (shape, node)
                 -- dc = 0
                  in UntypedExpression h newMap
-            Sum R args
+            Sum R args -- sum rule
                 | length args >= 2 ->
                     generalSum .
                     map (hiddenExteriorDerivative . flip UntypedExpression mp) $
                     args
-            Mul R args
+            Mul R args -- multiplication rule
                 | length args >= 2 ->
                     let mkExp = flip UntypedExpression mp
                         mkExpsEach (nId, rest) = (mkExp nId, map mkExp rest)

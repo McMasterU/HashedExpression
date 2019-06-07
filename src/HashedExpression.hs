@@ -135,10 +135,15 @@ data Node
     = Var String
     | DVar String -- only contained in **Expression d Covector (1-form)**
     | Const Double -- only all elements the same
+    -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-    | RImg Arg Arg -- from real and imagine
     | Neg ET Arg
+    -- MARK: Complex related
+    | RImg Arg Arg -- from real and imagine
+    | RealPart Arg -- extract real part
+    | ImagPart Arg -- extract imaginary part
+    -- MARK: Trigonometry
     | Abs Arg
     | Signum Arg
     | Div Arg Arg
@@ -157,8 +162,6 @@ data Node
     | Asinh Arg
     | Acosh Arg
     | Atanh Arg
-    | RealPart Arg -- extract real part
-    | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
 
 nodeElementType :: Node -> ET
@@ -173,7 +176,6 @@ nodeElementType node =
 
 -- | Auxiliary functions for operations
 --
-
 retrieveNode :: Int -> ExpressionMap -> Node
 retrieveNode n mp =
     case IM.lookup n mp of
@@ -204,13 +206,11 @@ expressionElementType (Expression n mp) =
         Just (_, node) -> nodeElementType node
         _ -> error "expression not in map"
 
-
 expressionShape :: Expression d et -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
         _ -> error "expression not in map"
-
 
 expressionInternal :: Expression d et -> Internal
 expressionInternal (Expression n mp) =
