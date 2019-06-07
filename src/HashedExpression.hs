@@ -20,7 +20,7 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 
--- | Type representation of elements in the 1D, 2D, 3D, ... in the grid
+-- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
 data R
     deriving (NumType, ElementType, Addable, Typeable)

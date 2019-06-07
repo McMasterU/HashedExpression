@@ -69,14 +69,6 @@ const c = Expression h (fromList [(h, node)])
     node = Sum elementType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
---sum :: Addable et => [Expression d et] -> Expression d et
---sum expressions = ensureSameShapeList expressions $ Expression h newMap
---  where
---    sample = head expressions
---    elementType = expressionElementType sample
---    shape = expressionShape sample
---    node = Sum elementType [n1, n2]
---    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 infixl 6 +
 
 class Multipliable d1 et1 d2 et2 d et | d1 d2 -> d, et1 et2 -> et where
