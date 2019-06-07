@@ -14,12 +14,12 @@ module HashedExpression where
 
 import Data.Array
 import qualified Data.Complex as DC
-import HashedUtils
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
+import HashedUtils
 
 -- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
@@ -113,8 +113,9 @@ type ExpressionMap = IntMap Internal
 --
 data Expression d et =
     Expression
-        Int -- the index this expression
-        ExpressionMap -- all subexpressions
+        { exIndex :: Int -- the index this expression
+        , exMap :: ExpressionMap -- all subexpressions
+        }
     deriving (Show, Eq, Ord, Typeable)
 
 -- | Const type
@@ -128,7 +129,6 @@ data Expression d et =
 --    | All3D Double
 --    | Const3D (Array (Int, Int, Int) Double)
 --    deriving (Show, Eq, Ord)
-
 -- | Node type
 --
 data Node
@@ -173,17 +173,19 @@ nodeElementType node =
 
 -- | Auxiliary functions for operations
 --
-expressionElementType :: (ElementType et) => Expression d et -> ET
+expressionElementType :: Expression d et -> ET
 expressionElementType (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> nodeElementType node
         _ -> error "expression not in map"
+
 
 expressionShape :: Expression d et -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
         _ -> error "expression not in map"
+
 
 expressionInternal :: Expression d et -> Internal
 expressionInternal (Expression n mp) =
@@ -197,17 +199,29 @@ expressionNode (Expression n mp) =
         Just (_, node) -> node
         _ -> error "expression not in map"
 
-retrieveNode :: ExpressionMap -> Int -> Node
-retrieveNode mp n =
+retrieveNode :: Int -> ExpressionMap -> Node
+retrieveNode n mp =
     case IM.lookup n mp of
         Just (_, node) -> node
         _ -> error "node not in map"
 
-retrieveInternal :: ExpressionMap -> Int -> Internal
-retrieveInternal mp n =
+retrieveInternal :: Int -> ExpressionMap -> Internal
+retrieveInternal n mp =
     case IM.lookup n mp of
         Just internal -> internal
         _ -> error "node not in map"
+
+retrieveElementType :: Int -> ExpressionMap -> ET
+retrieveElementType n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node
+        _ -> error "expression not in map"
+
+retrieveShape :: Int -> ExpressionMap -> Shape
+retrieveShape n mp =
+    case IM.lookup n mp of
+        Just (dim, _) -> dim
+        _ -> error "expression not in map"
 
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after =

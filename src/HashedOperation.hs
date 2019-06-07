@@ -9,7 +9,7 @@
 
 module HashedOperation where
 
-import Data.IntMap.Strict
+import Data.IntMap.Strict (fromList, union)
 import HashedExpression
 import HashedHash
 import Prelude hiding
@@ -49,10 +49,9 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     node = ([size1, size2], Var name)
     h = hash node
 
--- | TODO: Should const contains shape too?
--- TODO: Right now not since we only support all values in the vector equal to c
+-- |
 --
-const :: Double -> Expression d r
+const :: Double -> Expression Zero R
 const c = Expression h (fromList [(h, node)])
   where
     node = ([], Const c)
@@ -68,6 +67,19 @@ const c = Expression h (fromList [(h, node)])
     shape = expressionShape e1
     node = Sum elementType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
+-- | TODO: Should it return Maybe (Expression d et)
+--
+sum :: Addable et => [Expression d et] -> Maybe (Expression d et)
+sum [] = Nothing
+sum expressions = Just . ensureSameShapeList expressions $ Expression h newMap
+  where
+    sample = head expressions
+    elementType = expressionElementType sample
+    shape = expressionShape sample
+    node = Sum elementType . map exIndex $ expressions
+    mergedMap = foldl1 union . map exMap $ expressions
+    (newMap, h) = addEdge mergedMap (shape, node)
 
 infixl 6 +
 
