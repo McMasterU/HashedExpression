@@ -15,7 +15,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 isPrefix :: (Eq a) => [a] -> [a] -> Bool
 isPrefix xs ys = any ((== xs) . flip take ys) [0 .. length ys]
 
-
 -- | Check if one list is prefix of other
 --
 onePrefixOther :: (Eq a) => [a] -> [a] -> Bool
@@ -25,6 +24,3 @@ onePrefixOther xs ys = isPrefix xs ys || isPrefix ys xs
 --
 fromR :: Double -> DC.Complex Double
 fromR x = x DC.:+ 0
-
-
-

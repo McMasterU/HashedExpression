@@ -49,6 +49,8 @@ instance Evaluable Zero R where
                 let subExp1 = Expression node1 mp :: Expression Zero R
                     subExp2 = Expression node2 mp :: Expression Zero R
                  in eval valMap subExp1 + eval valMap subExp2
+            _ -> error "expression structure Scalar R is wrong"
+
 --            Just ([], Mul R [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression Scalar R
 --                    subExp2 = Expression node2 mp :: Expression Scalar R
@@ -69,8 +71,6 @@ instance Evaluable Zero R where
 --                            lst1 = A.elems $ eval valMap subExp1
 --                            lst2 = A.elems $ eval valMap subExp2
 --                         in sum $ zipWith (*) lst1 lst2
-            _ -> error "expression structure Scalar R is wrong"
-
 -- |
 --
 instance Evaluable Zero C where
@@ -81,6 +81,12 @@ instance Evaluable Zero C where
                 let subExp1 = Expression node1 mp :: Expression Zero C
                     subExp2 = Expression node2 mp :: Expression Zero C
                  in eval valMap subExp1 + eval valMap subExp2
+            Just ([], RImg node1 node2) ->
+                let subExp1 = Expression node1 mp :: Expression Zero R
+                    subExp2 = Expression node2 mp :: Expression Zero R
+                 in eval valMap subExp1 :+ eval valMap subExp2
+            _ -> error "expression structure Scalar C is wrong"
+
 --            Just ([], Mul C [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression Scalar C
 --                    subExp2 = Expression node2 mp :: Expression Scalar C
@@ -97,10 +103,6 @@ instance Evaluable Zero C where
 --                                    valMap
 --                                    (Expression node1 mp :: Expression Zero C)
 --                 in scale * eval valMap subExp2
-            Just ([], RImg node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Zero R
-                    subExp2 = Expression node2 mp :: Expression Zero R
-                 in eval valMap subExp1 :+ eval valMap subExp2
 --            Just ([], InnerProd C node1 node2) ->
 --                case IM.lookup node1 mp of
 --                    Just ([], _) ->
@@ -113,8 +115,6 @@ instance Evaluable Zero C where
 --                            lst1 = A.elems $ eval valMap subExp1
 --                            lst2 = A.elems $ eval valMap subExp2
 --                         in sum $ zipWith (*) lst1 lst2
-            _ -> error "expression structure Scalar C is wrong"
-
 -- |
 --
 instance Evaluable One R where
@@ -132,6 +132,8 @@ instance Evaluable One R where
                     lst2 = A.elems $ eval valMap subExp2
                     lstRes = zipWith (+) lst1 lst2
                  in A.listArray (0, size - 1) lstRes
+            _ -> error "expression structure One R is wrong"
+
 --            Just ([size], Mul R [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression One R
 --                    subExp2 = Expression node2 mp :: Expression One R
@@ -144,8 +146,6 @@ instance Evaluable One R where
 --                    subExp2 = Expression node2 mp :: Expression One R
 --                    scale = eval valMap subExp1
 --                 in fmap (* scale) $ eval valMap subExp2
-            _ -> error "expression structure One R is wrong"
-
 -- |
 --
 instance Evaluable One C where

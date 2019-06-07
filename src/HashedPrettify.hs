@@ -1,7 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module HashedPrettify where
+module HashedPrettify
+    ( prettify
+    ) where
 
 import Data.List (intercalate)
 import qualified Data.Text as T
