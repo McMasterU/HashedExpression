@@ -2,11 +2,12 @@ module Main where
 
 import Data.Array.Unboxed as U
 import HashedDerivative
-import HashedPrettify
+import HashedDerivative2
 import HashedExpression
 import HashedFactor
 import HashedInterp
 import HashedOperation
+import HashedPrettify
 import HashedSimplify
 import Prelude hiding
     ( (*)
@@ -32,8 +33,9 @@ main = do
     let x = var1d 10 "x"
     let y = var1d 10 "y"
     let z = var1d 10 "z"
-
     let s = var "s"
-    let f = s * (x + y + z) + x + y
+--    let f = s * (x + y + z) + x + y
+    let f = s * x
     print $ prettify f
+    print $ prettify . exteriorDerivative $ f
     print "hello world"

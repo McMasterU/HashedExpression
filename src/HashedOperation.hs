@@ -101,20 +101,6 @@ instance {-# OVERLAPPABLE #-} (DimensionType d, NumType et) =>
         node = Mul elementType [n1, n2]
         (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
--- | Scale-wise (each scalar in the first grid scale the element in the second grid) --> this is useful for
--- computing exterior derivative
---
-instance {-# OVERLAPPABLE #-} (VectorSpace Zero et s, DimensionType d) =>
-                              Multipliable d s d et d et where
-    (*) :: Expression d s -> Expression d et -> Expression d et
-    (*) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        ensureSameShape e1 e2 $ Expression h newMap
-      where
-        elementType = expressionElementType e2
-        shape = expressionShape e2
-        node = Mul elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) => Multipliable Zero s d et d et where

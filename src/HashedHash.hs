@@ -32,6 +32,7 @@ instance HasHash Internal where
 instance HasHash ET where
     hash R = 423
     hash C = 451
+    hash Covector = 269
 
 instance HasHash Node where
     hash node =

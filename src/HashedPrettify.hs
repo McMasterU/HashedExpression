@@ -15,7 +15,10 @@ prettify ::
 prettify e@(Expression n mp) =
     let shape = expressionShape e
         node = expressionNode e
-        typeName = " :: " ++ (show . typeRep $ (Proxy :: Proxy d)) ++ " " ++ (show . typeRep $ (Proxy :: Proxy rc))
+        typeName =
+            " :: " ++
+            (show . typeRep $ (Proxy :: Proxy d)) ++
+            " " ++ (show . typeRep $ (Proxy :: Proxy rc))
      in T.unpack (hiddenPrettify e) ++ typeName
 
 hiddenPrettify :: Expression d rc -> T.Text
@@ -34,4 +37,3 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses .
                 T.intercalate "*" . map (hiddenPrettify . flip Expression mp) $
                 args
-

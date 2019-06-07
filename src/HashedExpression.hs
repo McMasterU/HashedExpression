@@ -173,6 +173,31 @@ nodeElementType node =
 
 -- | Auxiliary functions for operations
 --
+
+retrieveNode :: Int -> ExpressionMap -> Node
+retrieveNode n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> node
+        _ -> error "node not in map"
+
+retrieveInternal :: Int -> ExpressionMap -> Internal
+retrieveInternal n mp =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "node not in map"
+
+retrieveElementType :: Int -> ExpressionMap -> ET
+retrieveElementType n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node
+        _ -> error "expression not in map"
+
+retrieveShape :: Int -> ExpressionMap -> Shape
+retrieveShape n mp =
+    case IM.lookup n mp of
+        Just (dim, _) -> dim
+        _ -> error "expression not in map"
+
 expressionElementType :: Expression d et -> ET
 expressionElementType (Expression n mp) =
     case IM.lookup n mp of
@@ -197,30 +222,6 @@ expressionNode :: Expression d et -> Node
 expressionNode (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> node
-        _ -> error "expression not in map"
-
-retrieveNode :: Int -> ExpressionMap -> Node
-retrieveNode n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "node not in map"
-
-retrieveInternal :: Int -> ExpressionMap -> Internal
-retrieveInternal n mp =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "node not in map"
-
-retrieveElementType :: Int -> ExpressionMap -> ET
-retrieveElementType n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-retrieveShape :: Int -> ExpressionMap -> Shape
-retrieveShape n mp =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
         _ -> error "expression not in map"
 
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
