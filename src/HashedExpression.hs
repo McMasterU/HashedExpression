@@ -143,7 +143,7 @@ data Node
     | RealImg Arg Arg -- from real and imagine
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
-    -- MARK: Trigonometry
+    -- MARK: Trigonometry - only apply to R
     | Abs Arg
     | Signum Arg
     | Div Arg Arg

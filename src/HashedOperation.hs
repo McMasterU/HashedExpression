@@ -83,34 +83,35 @@ sum expressions = Just . ensureSameShapeList expressions $ Expression h newMap
 
 infixl 6 +
 
-class Multipliable d1 et1 d2 et2 d et | d1 d2 -> d, et1 et2 -> et where
-    (*) :: Expression d1 et1 -> Expression d2 et2 -> Expression d et
-
 infixl 7 *
 
 -- | Element-wise multiplication
 --
-instance {-# OVERLAPPABLE #-} (DimensionType d, NumType et) =>
-                              Multipliable d et d et d et where
-    (*) :: Expression d et -> Expression d et -> Expression d et
-    (*) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        ensureSameShape e1 e2 $ Expression h newMap
-      where
-        elementType = expressionElementType e1
-        shape = expressionShape e1
-        node = Mul elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+(*) :: (DimensionType d, NumType et)
+    => Expression d et
+    -> Expression d et
+    -> Expression d et
+(*) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    ensureSameShape e1 e2 $ Expression h newMap
+  where
+    elementType = expressionElementType e1
+    shape = expressionShape e1
+    node = Mul elementType [n1, n2]
+    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 -- | Scale in vector space
 --
-instance (VectorSpace d et s) => Multipliable Zero s d et d et where
-    (*) :: Expression Zero s -> Expression d et -> Expression d et
-    (*) e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
-      where
-        elementType = expressionElementType e2
-        shape = expressionShape e2
-        node = Mul elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+scale ::
+       (VectorSpace d et s)
+    => Expression Zero s
+    -> Expression d et
+    -> Expression d et
+scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
+  where
+    elementType = expressionElementType e2
+    shape = expressionShape e2
+    node = Mul elementType [n1, n2]
+    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 ---- | From R to C two part
 ----
