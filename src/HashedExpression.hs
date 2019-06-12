@@ -63,6 +63,10 @@ class (DimensionType d, Addable et, NumType s) =>
       VectorSpace d et s
 
 
+class VectorSpace d s s =>
+      InnerProductSpace d s
+
+
 -- | Instances
 -- Set language pragma {-# OVERLAPPABLE #-} because GHC looks at the head first (e.g VectorSpace d et R) and check
 -- the constraints later, therefore it will show overlap instances error if we declare more instances of VectorSpace if
@@ -76,6 +80,8 @@ instance {-# OVERLAPPABLE #-} (DimensionType d) => VectorSpace d C C
 
 instance {-# OVERLAPPABLE #-} (DimensionType d) =>
                               VectorSpace d Covector R
+
+instance VectorSpace d s s => InnerProductSpace d s
 
 --instance (VectorSpace One et et, VectorSpace Two et et) => Subspace One Two et
 -- | Shape type:
@@ -138,14 +144,11 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-    | Neg ET Arg
     -- MARK: Complex related
     | RealImg Arg Arg -- from real and imagine
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
     -- MARK: Trigonometry - only apply to R
-    | Abs Arg
-    | Signum Arg
     | Div Arg Arg
     | Sqrt Arg
     | Sin Arg
@@ -172,12 +175,9 @@ nodeElementType node =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
-        Neg et _ -> et
         RealImg _ _ -> C
         RealPart _ -> R
         ImagPart _ -> C
-        Abs _ -> R
-        Signum _ -> R
         Div _ _ -> R
         Sqrt _ -> R
         Sin _ -> R
