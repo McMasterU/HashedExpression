@@ -49,12 +49,36 @@ var2d (size1, size2) name = Expression h (fromList [(h, node)])
     node = ([size1, size2], Var name)
     h = hash node
 
+var3d :: (Int, Int, Int) -> String -> Expression Three R
+var3d (size1, size2, size3) name = Expression h (fromList [(h, node)])
+  where
+    node = ([size1, size2, size3], Var name)
+    h = hash node
+
 -- |
 --
 const :: Double -> Expression Zero R
-const c = Expression h (fromList [(h, node)])
+const val = Expression h (fromList [(h, node)])
   where
-    node = ([], Const c)
+    node = ([], Const val)
+    h = hash node
+
+const1d :: Int -> Double -> Expression One R
+const1d size val = Expression h (fromList [(h, node)])
+  where
+    node = ([size], Const val)
+    h = hash node
+
+const2d :: (Int, Int) -> Double -> Expression Two R
+const2d (size1, size2) val = Expression h (fromList [(h, node)])
+  where
+    node = ([size1, size2], Const val)
+    h = hash node
+
+const3d :: (Int, Int, Int) -> Double -> Expression Three R
+const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
+  where
+    node = ([size1, size2, size3], Const val)
     h = hash node
 
 -- | Element-wise sum
@@ -120,7 +144,7 @@ scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
     ensureSameShape e1 e2 $ Expression h newMap
   where
     shape = expressionShape e1
-    node = RealImg n1 n2
+    node = RealImag n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
 realPart :: (DimensionType d) => Expression d C -> Expression d R

@@ -39,9 +39,31 @@ instance HasHash Node where
         case node of
             Var name -> foldr moveBase 0 name
             DVar name -> foldr moveBase 1123 name
+            Const num -> 919393 + foldr moveBase 0 (show num)
+            -- MARK: Basics
             Sum rc args -> (1 + argHash (hash rc : args)) * 2131
             Mul rc args -> (1 + argHash (hash rc : args)) * 3343
-            RealImg arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
+            -- MARK: only apply to R
+            Div arg1 arg2 -> (1 + argHash [arg1, arg2]) * 2621
+            Sqrt arg -> (1 + argHash [arg]) * 3083
+            Sin arg -> (1 + argHash [arg]) * 1009
+            Cos arg -> (1 + argHash [arg]) * 1013
+            Tan arg -> (1 + argHash [arg]) * 1019
+            Exp arg -> (1 + argHash [arg]) * 1031
+            Log arg -> (1 + argHash [arg]) * 1033
+            Sinh arg -> (1 + argHash [arg]) * 1039
+            Cosh arg -> (1 + argHash [arg]) * 1049
+            Tanh arg -> (1 + argHash [arg]) * 1051
+            Asin arg -> (1 + argHash [arg]) * 1061
+            Acos arg -> (1 + argHash [arg]) * 1063
+            Atan arg -> (1 + argHash [arg]) * 1069
+            Asinh arg -> (1 + argHash [arg]) * 1087
+            Acosh arg -> (1 + argHash [arg]) * 1091
+            Atanh arg -> (1 + argHash [arg]) * 1093
+            -- MARK: Complex related
+            RealPart arg -> (1 + argHash [arg]) * 223
+            ImagPart arg -> (1 + argHash [arg]) * 227
+            RealImag arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
 
 -- |
 --

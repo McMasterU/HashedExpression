@@ -9,7 +9,7 @@ import Data.List.HT (removeEach)
 import HashedExpression
 import HashedHash
 import HashedOperation
-import Prelude hiding ((*), (+), sum)
+import Prelude hiding ((*), (+), cos, sin, sum, const)
 
 -- | TODO - How can we define more kind of type class constraint to reuse the type-safe operations in HashedOperation ?
 -- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
@@ -31,15 +31,30 @@ exteriorDerivative (Expression n mp) =
                     (newMap, h) = fromNode (shape, node)
                 -- dc = 0
                  in Expression h newMap
+            -- | Sum and multiplication are very special case
             Sum R args -- sum rule
-                | length args >= 2 -> wrap . generalSum . map (dOne mp) $ args
+                | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
             Mul R args -- multiplication rule
                 | length args >= 2 ->
                     let mkSub nId = (nId, mp)
-                        dEach (one, rest) =
-                            generalMul (map mkSub rest ++ [dOne mp one])
-                     in wrap . generalSum . map dEach . removeEach $ args
+                        dEach (one, rest) = mul' (map mkSub rest ++ [dOne mp one])
+                     in wrap . sum' . map dEach . removeEach $ args
+            Sin arg
+                -- d(sin(f x)) = cos (f x) * d(f x)
+             ->
+                let fx = Expression arg mp :: Expression d R
+                    dFx = exteriorDerivative fx
+                    cosFx = cos fx
+                 in cosFx |*| dFx
+            Cos arg
+                -- d(cos(f x)) = -sin (f x) * d(f x)
+             ->
+                let fx = Expression arg mp :: Expression d R
+                    dFx = exteriorDerivative fx
+                    minusSinFx = const (-1) `scale` sin fx
+                 in minusSinFx |*| dFx
 
+--                 in mul' []
 -- |
 --
 dOne :: ExpressionMap -> Int -> (Int, ExpressionMap)
@@ -85,8 +100,8 @@ highestElementType = foldl f R
   where
     f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - ad hoc?)
 
-generalMul :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-generalMul es = (h, newMap)
+mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
+mul' es = (h, newMap)
   where
     elementType = highestElementType es
     shape = highestShape es
@@ -96,8 +111,8 @@ generalMul es = (h, newMap)
 
 -- | General sum
 --
-generalSum :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-generalSum es = (h, newMap)
+sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
+sum' es = (h, newMap)
   where
     (n, mp) = head es
     elementType = retrieveElementType n mp
@@ -105,3 +120,18 @@ generalSum es = (h, newMap)
     node = Sum elementType . map fst $ es
     mergedMap = foldl1 IM.union . map snd $ es
     (newMap, h) = addEdge mergedMap (shape, node)
+
+-- | Wise-scale R with a covector
+--
+(|*|) ::
+       (DimensionType d)
+    => Expression d R
+    -> Expression d Covector
+    -> Expression d Covector
+(|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    ensureSameShape e1 e2 $ Expression h newMap
+  where
+    elementType = expressionElementType e1
+    shape = expressionShape e1
+    node = Mul elementType [n1, n2]
+    (newMap, h) = addEdge (mp1 `IM.union` mp2) (shape, node)

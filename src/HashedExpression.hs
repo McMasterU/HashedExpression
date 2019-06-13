@@ -144,11 +144,7 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-    -- MARK: Complex related
-    | RealImg Arg Arg -- from real and imagine
-    | RealPart Arg -- extract real part
-    | ImagPart Arg -- extract imaginary part
-    -- MARK: Trigonometry - only apply to R
+    -- MARK: only apply to R
     | Div Arg Arg
     | Sqrt Arg
     | Sin Arg
@@ -165,6 +161,10 @@ data Node
     | Asinh Arg
     | Acosh Arg
     | Atanh Arg
+    -- MARK: Complex related
+    | RealImag Arg Arg -- from real and imagine
+    | RealPart Arg -- extract real part
+    | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
 
 nodeElementType :: Node -> ET
@@ -175,7 +175,7 @@ nodeElementType node =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
-        RealImg _ _ -> C
+        RealImag _ _ -> C
         RealPart _ -> R
         ImagPart _ -> C
         Div _ _ -> R
