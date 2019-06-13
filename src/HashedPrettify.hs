@@ -28,9 +28,34 @@ hiddenPrettify e@(Expression n mp) =
     let shape = expressionShape e
         wrapParentheses x = T.concat ["(", x, ")"]
         node = expressionNode e
+        shapeSignature =
+            case shape of
+                [] -> ""
+                [x] -> T.concat ["[", T.pack . show $ x, "]"]
+                [x, y] ->
+                    T.concat
+                        [ "["
+                        , T.pack . show $ x
+                        , "]"
+                        , "["
+                        , T.pack . show $ y
+                        , "]"
+                        ]
+                [x, y, z] ->
+                    T.concat
+                        [ "["
+                        , T.pack . show $ x
+                        , "]"
+                        , "["
+                        , T.pack . show $ y
+                        , "]"
+                        , "["
+                        , T.pack . show $ z
+                        , "]"
+                        ]
      in case node of
-            Var name -> T.pack name
-            DVar name -> T.concat ["d", T.pack name]
+            Var name -> T.concat [T.pack name, shapeSignature]
+            DVar name -> T.concat ["d", T.pack name, shapeSignature]
             Sum _ args ->
                 wrapParentheses .
                 T.intercalate "+" . map (hiddenPrettify . flip Expression mp) $

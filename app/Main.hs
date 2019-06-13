@@ -37,4 +37,5 @@ main = do
 --    let f = s * (x + y + z) + x + y
     let f = s `scale` (x * y)
     print $ prettify f
-    print $ prettify . exteriorDerivative $ f
+    print $ prettify $ exteriorDerivative f
+--    print $ prettify . exteriorDerivative $ f
