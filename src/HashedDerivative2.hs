@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 
 module HashedDerivative2
     ( exteriorDerivative
@@ -14,10 +13,10 @@ import Prelude hiding ((*), (+), sum)
 
 -- | TODO - How can we define more kind of type class constraint to reuse the type-safe operations in HashedOperation ?
 -- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
--- Assume the expression is correctly built
+--
 exteriorDerivative ::
-       forall d. (DimensionType d)
-    => Expression d R
+       forall d nt. (DimensionType d, NumType nt)
+    => Expression d nt
     -> Expression d Covector
 exteriorDerivative (Expression n mp) =
     let (shape, node) = retrieveInternal n mp
@@ -33,11 +32,35 @@ exteriorDerivative (Expression n mp) =
                 -- dc = 0
                  in Expression h newMap
             Sum R args -- sum rule
-                | length args >= 2 ->
-                    let mkSub nId = (Expression nId mp :: Expression d R)
-                     in wrap . generalSum . map (unwrap . exteriorDerivative . mkSub) $ args
+                | length args >= 2 -> wrap . generalSum . map (dOne mp) $ args
             Mul R args -- multiplication rule
-                | length args >= 2 -> undefined
+                | length args >= 2 ->
+                    let mkSub nId = (nId, mp)
+                        dEach (one, rest) =
+                            generalMul (map mkSub rest ++ [dOne mp one])
+                     in wrap . generalSum . map dEach . removeEach $ args
+
+-- |
+--
+dOne :: ExpressionMap -> Int -> (Int, ExpressionMap)
+dOne mp n =
+    case (length $ retrieveShape n mp, retrieveElementType n mp) of
+        (0, R) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Zero R)
+        (0, C) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Zero C)
+        (1, R) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression One R)
+        (1, C) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression One C)
+        (2, R) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Two R)
+        (2, C) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Two C)
+        (3, R) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Three R)
+        (3, C) ->
+            unwrap $ exteriorDerivative (Expression n mp :: Expression Three C)
 
 -- |
 --
