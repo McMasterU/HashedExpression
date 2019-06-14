@@ -35,7 +35,7 @@ main = do
     let z = var1d 10 "z"
     let s = var "s"
 --    let f = s * (x + y + z) + x + y
-    let f = s `scale` (x * y)
+    let f = cos (s `scale` (x * y))
     print $ prettify f
     print $ prettify $ exteriorDerivative f
 --    print $ prettify . exteriorDerivative $ f

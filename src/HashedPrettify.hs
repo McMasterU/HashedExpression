@@ -56,6 +56,7 @@ hiddenPrettify e@(Expression n mp) =
      in case node of
             Var name -> T.concat [T.pack name, shapeSignature]
             DVar name -> T.concat ["d", T.pack name, shapeSignature]
+            Const val -> T.concat [T.pack . show $ val, shapeSignature]
             Sum _ args ->
                 wrapParentheses .
                 T.intercalate "+" . map (hiddenPrettify . flip Expression mp) $
@@ -64,3 +65,5 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses .
                 T.intercalate "*" . map (hiddenPrettify . flip Expression mp) $
                 args
+            Sin arg -> T.concat ["sin(", hiddenPrettify . flip Expression mp $ arg, ")"]
+            Cos arg -> T.concat ["cos(", hiddenPrettify . flip Expression mp $ arg, ")"]
