@@ -11,6 +11,9 @@ import HashedSimplify
 import Prelude hiding
     ( (*)
     , (+)
+    , (-)
+    , (/)
+    , sqrt
     , acos
     , acosh
     , asin
@@ -34,7 +37,7 @@ main = do
     let z = var1d 10 "z"
     let s = var "s"
 --    let f = s * (x + y + z) + x + y
-    let f = cos (s `scale` (x * y))
+    let f = sqrt $ cos $ s `scale` (x * y) / y
     print $ prettify f
     print $ prettify $ exteriorDerivative f
 --    print $ prettify . exteriorDerivative $ f

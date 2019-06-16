@@ -74,7 +74,7 @@ hiddenDerivative (Expression n mp) =
                     (newMap, h) = fromNode (shape, node)
                 -- dc = 0
                  in Expression h newMap
-            -- | Sum and multiplication are very special case
+            -- | Sum and multiplication are special cases since they involve multiple arguments
             Sum R args -- sum rule
                 | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
             Mul R args -- multiplication rule
