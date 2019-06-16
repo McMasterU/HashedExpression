@@ -74,7 +74,7 @@ hiddenDerivative (Expression n mp) =
                     (newMap, h) = fromNode (shape, node)
                 -- dc = 0
                  in Expression h newMap
-            -- | Sum and multiplication are special cases since they involve multiple arguments
+            -- | Sum and multiplication are special cases because they involve multiple arguments
             Sum R args -- sum rule
                 | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
             Mul R args -- multiplication rule
@@ -91,7 +91,7 @@ hiddenDerivative (Expression n mp) =
                     dg = exteriorDerivative g
                     g'2 = g * g
                     part1 = (g / g'2) |*| df
-                    part2 = (const (-1) `scale` (f / g'2)) |*| dg
+                    part2 = const (-1) *. (f / g'2) |*| dg
                  in part1 + part2
             Sqrt arg
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
@@ -111,7 +111,7 @@ hiddenDerivative (Expression n mp) =
              ->
                 let f = Expression arg mp :: Expression d R
                     df = exteriorDerivative f
-                    minusSinFx = const (-1) `scale` sin f
+                    minusSinFx = const (-1) *. sin f
                  in minusSinFx |*| df
             Tan arg -> undefined
             Exp arg -> undefined

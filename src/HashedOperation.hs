@@ -137,6 +137,17 @@ scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
     node = Mul elementType [n1, n2]
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
 
+(*.) ::
+       (VectorSpace d et s)
+    => Expression Zero s
+    -> Expression d et
+    -> Expression d et
+(*.) = scale
+
+infix 8 *.
+
+infix 8 `scale`
+
 ---- | From R to C two part
 ----
 (+:) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d C
