@@ -28,6 +28,7 @@ hiddenPrettify e@(Expression n mp) =
     let shape = expressionShape e
         wrapParentheses x = T.concat ["(", x, ")"]
         node = expressionNode e
+        innerPrettify = hiddenPrettify . flip Expression mp
         shapeSignature =
             case shape of
                 [] -> ""
@@ -58,12 +59,24 @@ hiddenPrettify e@(Expression n mp) =
             DVar name -> T.concat ["d", T.pack name, shapeSignature]
             Const val -> T.concat [T.pack . show $ val, shapeSignature]
             Sum _ args ->
-                wrapParentheses .
-                T.intercalate "+" . map (hiddenPrettify . flip Expression mp) $
-                args
+                wrapParentheses . T.intercalate "+" . map innerPrettify $ args
             Mul _ args ->
-                wrapParentheses .
-                T.intercalate "*" . map (hiddenPrettify . flip Expression mp) $
-                args
-            Sin arg -> T.concat ["sin(", hiddenPrettify . flip Expression mp $ arg, ")"]
-            Cos arg -> T.concat ["cos(", hiddenPrettify . flip Expression mp $ arg, ")"]
+                wrapParentheses . T.intercalate "*" . map innerPrettify $ args
+            Div arg1 arg2 ->
+                wrapParentheses . T.concat $
+                [innerPrettify arg1, "/", innerPrettify arg2]
+            Sqrt arg -> T.concat ["sqrt", wrapParentheses $ innerPrettify arg]
+            Sin arg -> T.concat ["sin", wrapParentheses $ innerPrettify arg]
+            Cos arg -> T.concat ["cos", wrapParentheses $ innerPrettify arg]
+            Tan arg -> T.concat ["tan", wrapParentheses $ innerPrettify arg]
+            Exp arg -> T.concat ["exp", wrapParentheses $ innerPrettify arg]
+            Log arg -> T.concat ["log", wrapParentheses $ innerPrettify arg]
+            Sinh arg -> T.concat ["sinh", wrapParentheses $ innerPrettify arg]
+            Cosh arg -> T.concat ["cosh", wrapParentheses $ innerPrettify arg]
+            Tanh arg -> T.concat ["tanh", wrapParentheses $ innerPrettify arg]
+            Asin arg -> T.concat ["asin", wrapParentheses $ innerPrettify arg]
+            Acos arg -> T.concat ["acos", wrapParentheses $ innerPrettify arg]
+            Atan arg -> T.concat ["atan", wrapParentheses $ innerPrettify arg]
+            Asinh arg -> T.concat ["asinh", wrapParentheses $ innerPrettify arg]
+            Acosh arg -> T.concat ["acosh", wrapParentheses $ innerPrettify arg]
+            Atanh arg -> T.concat ["atanh", wrapParentheses $ innerPrettify arg]

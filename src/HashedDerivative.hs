@@ -9,7 +9,7 @@ import Data.List.HT (removeEach)
 import HashedExpression
 import HashedHash
 import HashedOperation
-import Prelude hiding ((*), (+), const, cos, sin, sum)
+import Prelude hiding ((*), (+), (/), const, cos, sin, sqrt, sum)
 
 -- | TODO - How can we define more kind of type class constraint to reuse the type-safe operations in HashedOperation ?
 -- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
@@ -42,15 +42,25 @@ dOne mp n =
         (3, C) ->
             unwrap $ hiddenDerivative (Expression n mp :: Expression Three C)
 
-arb :: Expression d1 et1 -> Expression d2 et2
-arb (Expression n mp) = Expression n mp
+-- | We can write our coerce function because Expression data constructor is exposed, but users can't
+--
+coerce :: Expression d1 et1 -> Expression d2 et2
+coerce (Expression n mp) = Expression n mp
+
+-- | Generic const
+--
+const' :: (DimensionType d) => Shape -> Double -> Expression d R
+const' shape val = Expression h (IM.fromList [(h, node)])
+  where
+    node = (shape, Const val)
+    h = hash node
 
 -- | Hidden exterior derivative
 --
 hiddenDerivative ::
-       forall d et1 et2. (DimensionType d)
+       forall d et1 et2. (DimensionType d, NumType et1)
     => Expression d et1
-    -> Expression d et2
+    -> Expression d Covector
 hiddenDerivative (Expression n mp) =
     let (shape, node) = retrieveInternal n mp
      in case node of
@@ -70,24 +80,51 @@ hiddenDerivative (Expression n mp) =
             Mul R args -- multiplication rule
                 | length args >= 2 ->
                     let mkSub nId = (nId, mp)
-                        dEach (one, rest) =
-                            mul' (map mkSub rest ++ [dOne mp one])
+                        dEach (one, rest) = mul' (map mkSub rest ++ [dOne mp one])
                      in wrap . sum' . map dEach . removeEach $ args
+            Div arg1 arg2
+                -- d (f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
+             ->
+                let f = Expression arg1 mp :: Expression d R
+                    g = Expression arg2 mp :: Expression d R
+                    df = exteriorDerivative f
+                    dg = exteriorDerivative g
+                    g'2 = g * g
+                    part1 = (g / g'2) |*| df
+                    part2 = (const (-1) `scale` (f / g'2)) |*| dg
+                 in part1 + part2
+            Sqrt arg
+                -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
+             ->
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                    recipSqrtF = const' (expressionShape f) 0.5 / sqrt f
+                 in recipSqrtF |*| df
             Sin arg
-                -- d(sin(f x)) = cos (f x) * d(f x)
+                -- d(sin(f)) = cos(f) * d(f)
              ->
-                let fx = Expression arg mp :: Expression d R
-                    dFx = hiddenDerivative fx :: Expression d Covector
-                    cosFx = cos fx
-                 in arb $ cosFx |*| dFx
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                 in cos f |*| df
             Cos arg
-                -- d(cos(f x)) = -sin (f x) * d(f x)
+                -- d(cos(f)) = -sin(f) * d(f)
              ->
-                let fx = Expression arg mp :: Expression d R
-                    dFx = hiddenDerivative fx :: Expression d Covector
-                    minusSinFx = const (-1) `scale` sin fx
-                 in arb $ minusSinFx |*| dFx
-
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                    minusSinFx = const (-1) `scale` sin f
+                 in minusSinFx |*| df
+            Tan arg -> undefined
+            Exp arg -> undefined
+            Log arg -> undefined
+            Sinh arg -> undefined
+            Cosh arg -> undefined
+            Tanh arg -> undefined
+            Asin arg -> undefined
+            Acos arg -> undefined
+            Atan arg -> undefined
+            Asinh arg -> undefined
+            Acosh arg -> undefined
+            Atanh arg -> undefined
 
 -- |
 --

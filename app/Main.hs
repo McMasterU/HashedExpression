@@ -2,7 +2,6 @@ module Main where
 
 import Data.Array.Unboxed as U
 import HashedDerivative
-import HashedDerivative
 import HashedExpression
 import HashedFactor
 import HashedInterp

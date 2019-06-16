@@ -161,6 +161,26 @@ imagPart e@(Expression n mp) = Expression h newMap
     node = ImagPart n
     (newMap, h) = addEdge mp (shape, node)
 
+-- | Element-wise division for R
+--
+(/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
+(/) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    ensureSameShape e1 e2 $ Expression h newMap
+  where
+    elementType = expressionElementType e1
+    shape = expressionShape e1
+    node = Div n1 n2
+    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
+-- | Square root
+--
+sqrt :: (DimensionType d) => Expression d R -> Expression d R
+sqrt e@(Expression n mp) = Expression h newMap
+  where
+    shape = expressionShape e
+    node = Sqrt n
+    (newMap, h) = addEdge mp (shape, node)
+
 -- | Trigonometric operations
 --
 sin :: (DimensionType d) => Expression d R -> Expression d R

@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RoleAnnotations #-}
 
 module HashedExpression where
 
@@ -83,7 +84,6 @@ instance {-# OVERLAPPABLE #-} (DimensionType d) =>
 
 instance VectorSpace d s s => InnerProductSpace d s
 
---instance (VectorSpace One et et, VectorSpace Two et et) => Subspace One Two et
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
@@ -102,7 +102,7 @@ type Arg = Int
 data ET
     = R
     | C
-    | Covector -- this is data constructor Covector
+    | Covector
     deriving (Show, Eq, Ord)
 
 -- | Internal
@@ -124,17 +124,8 @@ data Expression d et =
         }
     deriving (Show, Eq, Ord, Typeable)
 
--- | Const type
---
---data ConstType
---    = Const0D Double
---    | All1D Double
---    | Const1D (Array Int Double)
---    | All2D Double
---    | Const2D (Array (Int, Int) Double)
---    | All3D Double
---    | Const3D (Array (Int, Int, Int) Double)
---    deriving (Show, Eq, Ord)
+type role Expression nominal nominal -- So the users cannot use Data.Coerce.coerce to convert between expression types
+
 -- | Node type
 --
 data Node
