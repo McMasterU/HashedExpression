@@ -88,39 +88,26 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 instance (DimensionType d, Addable et) =>
          AddableOp (Expression d et) (Expression d et) (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
-    (+) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        ensureSameShape e1 e2 $ Expression h newMap
-      where
-        elementType = expressionElementType e1
-        shape = expressionShape e1
-        node = Sum elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+    (+) = applyOpSameShapeSameElement (\et arg1 arg2 -> Sum et [arg1, arg2])
 
--- | TODO: Should it return Maybe (Expression d et)
---
-sum :: Addable et => [Expression d et] -> Maybe (Expression d et)
-sum [] = Nothing
-sum expressions = Just . ensureSameShapeList expressions $ Expression h newMap
-  where
-    sample = head expressions
-    elementType = expressionElementType sample
-    shape = expressionShape sample
-    node = Sum elementType . map exIndex $ expressions
-    mergedMap = foldl1 union . map exMap $ expressions
-    (newMap, h) = addEdge mergedMap (shape, node)
-
+---- | TODO: Should it return Maybe (Expression d et)
+----
+--sum :: Addable et => [Expression d et] -> Maybe (Expression d et)
+--sum [] = Nothing
+--sum expressions = Just . ensureSameShapeList expressions $ Expression h newMap
+--  where
+--    sample = head expressions
+--    elementType = expressionElementType sample
+--    shape = expressionShape sample
+--    node = Sum elementType . map exIndex $ expressions
+--    mergedMap = foldl1 union . map exMap $ expressions
+--    (newMap, h) = addEdge mergedMap (shape, node)
 -- | Element-wise multiplication
 --
 instance (DimensionType d, NumType et) =>
          MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
-    (*) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        ensureSameShape e1 e2 $ Expression h newMap
-      where
-        elementType = expressionElementType e1
-        shape = expressionShape e1
-        node = Mul elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+    (*) = applyOpSameShapeSameElement (\et arg1 arg2 -> Mul et [arg1, arg2])
 
 -- | Scale in vector space
 --
@@ -146,121 +133,54 @@ instance (DimensionType d) =>
         node = RealImag n1 n2
         (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
     realPart :: Expression d C -> Expression d R
-    realPart e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = RealPart n
-        (newMap, h) = addEdge mp (shape, node)
+    realPart = applyOp RealPart
     imagPart :: Expression d C -> Expression d R
-    imagPart e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = ImagPart n
-        (newMap, h) = addEdge mp (shape, node)
+    imagPart = applyOp ImagPart
 
 -- | Element-wise division for R
 --
 (/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
-(/) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+(/) = applyOpSameShapeSameElement (\_ arg1 arg2 -> Div arg1 arg2)
+
+-- | Num op
+--
+instance (DimensionType d) => NumOp (Expression d R) where
+    sqrt = applyOp Sqrt
+    exp = applyOp Exp
+    log = applyOp Log
+    -- | Trigonometric operations
+    --
+    sin = applyOp Sin
+    cos = applyOp Cos
+    tan = applyOp Tan
+    asin = applyOp Asin
+    acos = applyOp Acos
+    atan = applyOp Atan
+    sinh = applyOp Sinh
+    cosh = applyOp Cosh
+    tanh = applyOp Tanh
+    asinh = applyOp Asinh
+    acosh = applyOp Acosh
+    atanh = applyOp Atanh
+
+-- | Utilities for writing operations
+--
+applyOp :: (Arg -> Node) -> Expression d et1 -> Expression d et2
+applyOp op e@(Expression n mp) = Expression h newMap
+  where
+    shape = expressionShape e
+    node = op n
+    (newMap, h) = addEdge mp (shape, node)
+
+applyOpSameShapeSameElement ::
+       (ET -> Arg -> Arg -> Node)
+    -> Expression d et1
+    -> Expression d et1
+    -> Expression d et1
+applyOpSameShapeSameElement op e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     ensureSameShape e1 e2 $ Expression h newMap
   where
     elementType = expressionElementType e1
     shape = expressionShape e1
-    node = Div n1 n2
+    node = op elementType n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-
--- | Square root
---
-instance (DimensionType d) => NumOp (Expression d R) where
-    sqrt :: Expression d R -> Expression d R
-    sqrt e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Sqrt n
-        (newMap, h) = addEdge mp (shape, node)
-    exp :: Expression d R -> Expression d R
-    exp e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Exp n
-        (newMap, h) = addEdge mp (shape, node)
-    log :: Expression d R -> Expression d R
-    log e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Log n
-        (newMap, h) = addEdge mp (shape, node)
-    -- | Trigonometric operations
-    --
-    sin :: Expression d R -> Expression d R
-    sin e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Sin n
-        (newMap, h) = addEdge mp (shape, node)
-    cos :: Expression d R -> Expression d R
-    cos e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Cos n
-        (newMap, h) = addEdge mp (shape, node)
-    tan :: Expression d R -> Expression d R
-    tan e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Tan n
-        (newMap, h) = addEdge mp (shape, node)
-    asin :: Expression d R -> Expression d R
-    asin e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Asin n
-        (newMap, h) = addEdge mp (shape, node)
-    acos :: Expression d R -> Expression d R
-    acos e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Acos n
-        (newMap, h) = addEdge mp (shape, node)
-    atan :: Expression d R -> Expression d R
-    atan e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Atan n
-        (newMap, h) = addEdge mp (shape, node)
-    sinh :: Expression d R -> Expression d R
-    sinh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Sinh n
-        (newMap, h) = addEdge mp (shape, node)
-    cosh :: Expression d R -> Expression d R
-    cosh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Cosh n
-        (newMap, h) = addEdge mp (shape, node)
-    tanh :: Expression d R -> Expression d R
-    tanh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Tanh n
-        (newMap, h) = addEdge mp (shape, node)
-    asinh :: Expression d R -> Expression d R
-    asinh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Asinh n
-        (newMap, h) = addEdge mp (shape, node)
-    acosh :: Expression d R -> Expression d R
-    acosh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Acosh n
-        (newMap, h) = addEdge mp (shape, node)
-    atanh :: Expression d R -> Expression d R
-    atanh e@(Expression n mp) = Expression h newMap
-      where
-        shape = expressionShape e
-        node = Atanh n
-        (newMap, h) = addEdge mp (shape, node)
