@@ -41,5 +41,6 @@ main = do
         f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
         fImg = realPart $ f +: z
     print $ prettify fImg
+    print . prettify . simplify $ fImg
     print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f

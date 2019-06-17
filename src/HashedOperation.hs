@@ -11,6 +11,7 @@ module HashedOperation where
 
 import Data.IntMap.Strict (fromList, union)
 import HashedExpression
+import HashedUtils
 import HashedHash
 import Prelude hiding
     ( (*)

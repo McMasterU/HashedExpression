@@ -8,11 +8,13 @@ Helper functions/instances to make pattern gaurds involving Expressions easier t
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TupleSections #-}
 
 module WithHoles where
 
 import qualified Data.IntMap as I
 import qualified Data.List as L
+import HashedUtils
 import Data.Maybe
 import HashedExpression
 
@@ -44,42 +46,6 @@ data WithHoles
     | WHImagPart WithHoles
     deriving (Show, Eq, Ord)
 
-match :: Expression e dt -> WithHoles -> Maybe [(Capture, Int)]
-match e@(Expression n mp) wh =
-    let recursiveAndCombine :: [Arg] -> [WithHoles] -> Maybe [(Capture, Int)]
-        recursiveAndCombine args whs
-            | length args == length whs
-            , let subMatches = zipWith match (map (flip Expression mp) args) whs
-            , all isJust subMatches = Just . concat . catMaybes $ subMatches
-            | otherwise = Nothing
-     in case (expressionNode e, wh) of
-            (_, WHHole capture) -> Just [(capture, n)]
-            (Const c, WHConst whc)
-                | c == whc -> Just []
-            (Sum _ args, WHSum whs) -> recursiveAndCombine args whs
-            (Mul _ args, WHMul whs) -> recursiveAndCombine args whs
-            (Div arg1 arg2, WHDiv wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (Sqrt arg, WHSqrt wh) -> recursiveAndCombine [arg] [wh]
-            (Sin arg, WHSin wh) -> recursiveAndCombine [arg] [wh]
-            (Cos arg, WHCos wh) -> recursiveAndCombine [arg] [wh]
-            (Tan arg, WHTan wh) -> recursiveAndCombine [arg] [wh]
-            (Exp arg, WHExp wh) -> recursiveAndCombine [arg] [wh]
-            (Log arg, WHLog wh) -> recursiveAndCombine [arg] [wh]
-            (Sinh arg, WHSinh wh) -> recursiveAndCombine [arg] [wh]
-            (Cosh arg, WHCosh wh) -> recursiveAndCombine [arg] [wh]
-            (Tanh arg, WHTanh wh) -> recursiveAndCombine [arg] [wh]
-            (Asin arg, WHAsin wh) -> recursiveAndCombine [arg] [wh]
-            (Acos arg, WHAcos wh) -> recursiveAndCombine [arg] [wh]
-            (Atan arg, WHAtan wh) -> recursiveAndCombine [arg] [wh]
-            (Asinh arg, WHAsinh wh) -> recursiveAndCombine [arg] [wh]
-            (Acosh arg, WHAcosh wh) -> recursiveAndCombine [arg] [wh]
-            (Atanh arg, WHAtanh wh) -> recursiveAndCombine [arg] [wh]
-            (RealImag arg1 arg2, WHRealImag wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (RealPart arg, WHRealPart wh) -> recursiveAndCombine [arg] [wh]
-            (ImagPart arg, WHImagPart wh) -> recursiveAndCombine [arg] [wh]
-            _ -> Nothing
 
 instance AddableOp WithHoles WithHoles WithHoles where
     (+) wh1 wh2 = WHSum [wh1, wh2]
@@ -119,4 +85,47 @@ data GuardedPattern =
 (|.~~>) :: WithHoles -> WithHoles -> (GuardedPattern, WithHoles)
 (|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
 
+infix 0 |.~~>
+
 [p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11]
+
+one = WHConst 1
+zero = WHConst 0
+
+
+match :: (ExpressionMap, Int)-> WithHoles -> Maybe [(Capture, Int)]
+match (mp, n) wh =
+    let recursiveAndCombine :: [Arg] -> [WithHoles] -> Maybe [(Capture, Int)]
+        recursiveAndCombine args whs
+            | length args == length whs
+            , let subMatches = zipWith match (map (mp,) args) whs
+            , all isJust subMatches = Just . concat . catMaybes $ subMatches
+            | otherwise = Nothing
+     in case (retrieveNode n mp, wh) of
+            (_, WHHole capture) -> Just [(capture, n)]
+            (Const c, WHConst whc)
+                | c == whc -> Just []
+            (Sum _ args, WHSum whs) -> recursiveAndCombine args whs
+            (Mul _ args, WHMul whs) -> recursiveAndCombine args whs
+            (Div arg1 arg2, WHDiv wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (Sqrt arg, WHSqrt wh) -> recursiveAndCombine [arg] [wh]
+            (Sin arg, WHSin wh) -> recursiveAndCombine [arg] [wh]
+            (Cos arg, WHCos wh) -> recursiveAndCombine [arg] [wh]
+            (Tan arg, WHTan wh) -> recursiveAndCombine [arg] [wh]
+            (Exp arg, WHExp wh) -> recursiveAndCombine [arg] [wh]
+            (Log arg, WHLog wh) -> recursiveAndCombine [arg] [wh]
+            (Sinh arg, WHSinh wh) -> recursiveAndCombine [arg] [wh]
+            (Cosh arg, WHCosh wh) -> recursiveAndCombine [arg] [wh]
+            (Tanh arg, WHTanh wh) -> recursiveAndCombine [arg] [wh]
+            (Asin arg, WHAsin wh) -> recursiveAndCombine [arg] [wh]
+            (Acos arg, WHAcos wh) -> recursiveAndCombine [arg] [wh]
+            (Atan arg, WHAtan wh) -> recursiveAndCombine [arg] [wh]
+            (Asinh arg, WHAsinh wh) -> recursiveAndCombine [arg] [wh]
+            (Acosh arg, WHAcosh wh) -> recursiveAndCombine [arg] [wh]
+            (Atanh arg, WHAtanh wh) -> recursiveAndCombine [arg] [wh]
+            (RealImag arg1 arg2, WHRealImag wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (RealPart arg, WHRealPart wh) -> recursiveAndCombine [arg] [wh]
+            (ImagPart arg, WHImagPart wh) -> recursiveAndCombine [arg] [wh]
+            _ -> Nothing

@@ -9,6 +9,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
 import Data.Typeable (Typeable)
 import HashedExpression
+import HashedUtils
 import HashedHash
 import HashedOperation
 import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
@@ -150,45 +151,6 @@ hiddenDerivative (Expression n mp) =
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
--- | General multiplication and sum
---
-unwrap :: Expression d et -> (Int, ExpressionMap)
-unwrap (Expression n mp) = (n, mp)
-
-wrap :: (Int, ExpressionMap) -> Expression d et
-wrap = uncurry Expression
-
-highestShape :: [(Int, ExpressionMap)] -> Shape
-highestShape = foldl f []
-  where
-    f acc (n, mp) =
-        if length acc > length (retrieveShape n mp)
-            then acc
-            else retrieveShape n mp
-
-highestElementType :: [(Int, ExpressionMap)] -> ET
-highestElementType = foldl f R
-  where
-    f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - is this ok?)
-
-mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-mul' es = (h, newMap)
-  where
-    elementType = highestElementType es
-    shape = highestShape es
-    node = Mul elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
-
-sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-sum' es = (h, newMap)
-  where
-    (n, mp) = head es
-    elementType = retrieveElementType n mp
-    shape = retrieveShape n mp
-    node = Sum elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
 
 -- | Wise-scale R with a covector
 --

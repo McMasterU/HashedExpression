@@ -7,6 +7,7 @@ module HashedPrettify
 
 import Data.List (intercalate)
 import qualified Data.Text as T
+import HashedUtils
 import Data.Typeable
 import HashedExpression
 

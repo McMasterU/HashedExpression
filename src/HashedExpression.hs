@@ -21,7 +21,6 @@ import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
-import HashedUtils
 import Prelude hiding
     ( (*)
     , (+)
@@ -143,9 +142,9 @@ infixl 6 +
 
 infixl 7 *
 
-infix 8 *.
+infixl 8 *.
 
-infix 8 `scale`
+infixl 8 `scale`
 
 -- | Shape type:
 -- []        --> scalar
@@ -250,67 +249,3 @@ nodeElementType node =
         Atanh _ -> R
         -- TODO: and more
 
--- | Auxiliary functions for operations
---
-retrieveNode :: Int -> ExpressionMap -> Node
-retrieveNode n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "node not in map"
-
-retrieveInternal :: Int -> ExpressionMap -> Internal
-retrieveInternal n mp =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "node not in map"
-
-retrieveElementType :: Int -> ExpressionMap -> ET
-retrieveElementType n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-retrieveShape :: Int -> ExpressionMap -> Shape
-retrieveShape n mp =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionElementType :: Expression d et -> ET
-expressionElementType (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-expressionShape :: Expression d et -> Shape
-expressionShape (Expression n mp) =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionInternal :: Expression d et -> Internal
-expressionInternal (Expression n mp) =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "expression not in map"
-
-expressionNode :: Expression d et -> Node
-expressionNode (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "expression not in map"
-
-ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
-ensureSameShape e1 e2 after =
-    if expressionShape e1 == expressionShape e2
-        then after
-        else error "Ensure same shape failed"
-
-ensureSameShapeList :: [Expression d et] -> a -> a
-ensureSameShapeList es after =
-    if allEqual es
-        then after
-        else error "Ensure same shape failed"
-
-fromR :: Double -> DC.Complex Double
-fromR x = x DC.:+ 0
