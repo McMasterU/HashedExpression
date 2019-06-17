@@ -13,8 +13,7 @@ import HashedHash
 import HashedOperation
 import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
 
--- | TODO - How can we define more kind of type class constraint to reuse the type-safe operations in HashedOperation ?
--- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
+-- | Exterior derivative
 --
 exteriorDerivative ::
        (DimensionType d) => Expression d R -> Expression d Covector
@@ -61,7 +60,10 @@ hiddenDerivative (Expression n mp) =
                 df2 = hiddenDerivative (Expression arg2 mp)
                 dfShape = expressionShape df1
                 outputNode = op (exIndex df1) (exIndex df2)
-                (newMap, nRes) = addEdge (exMap df1 `IM.union` exMap df2) (dfShape, outputNode)
+                (newMap, nRes) =
+                    addEdge
+                        (exMap df1 `IM.union` exMap df2)
+                        (dfShape, outputNode)
              in Expression nRes newMap
         res =
             case node of
@@ -76,9 +78,8 @@ hiddenDerivative (Expression n mp) =
                 -- dc = 0
                      in Expression h newMap
             -- | Sum and multiplication are special cases because they involve multiple arguments
-                Sum R args -- sum rule
-                    | length args >= 2 -> wrap . sum' . map dOne $ args
-                Mul R args -- multiplication rule
+                Sum _ args -> wrap . sum' . map dOne $ args
+                Mul _ args -- multiplication rule
                     | length args >= 2 ->
                         let mkSub nId = (nId, mp)
                             dEach (one, rest) =
