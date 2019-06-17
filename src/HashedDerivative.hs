@@ -27,34 +27,12 @@ exteriorDerivative = hiddenDerivative
 data WhateverD
     deriving (Typeable, DimensionType)
 
--- | Helpers functions for hiddenDerivative
---
-dOne :: ExpressionMap -> Int -> (Int, ExpressionMap)
-dOne mp n =
-    case (length $ retrieveShape n mp, retrieveElementType n mp) of
-        (0, R) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Zero R)
-        (0, C) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Zero C)
-        (1, R) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression One R)
-        (1, C) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression One C)
-        (2, R) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Two R)
-        (2, C) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Two C)
-        (3, R) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Three R)
-        (3, C) ->
-            unwrap $ hiddenDerivative (Expression n mp :: Expression Three C)
-
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
 coerce :: Expression d1 et1 -> Expression d2 et2
 coerce (Expression n mp) = Expression n mp
 
--- | Generic const
+-- | Hidden const to represent many dimension
 --
 const' :: (DimensionType d) => Shape -> Double -> Expression d R
 const' shape val = Expression h (IM.fromList [(h, node)])
@@ -67,6 +45,7 @@ const' shape val = Expression h (IM.fromList [(h, node)])
 hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
 hiddenDerivative (Expression n mp) =
     let (shape, node) = retrieveInternal n mp
+        dOne nId = unwrap . hiddenDerivative $ Expression nId mp
         res =
             case node of
                 Var name ->
@@ -81,12 +60,12 @@ hiddenDerivative (Expression n mp) =
                      in Expression h newMap
             -- | Sum and multiplication are special cases because they involve multiple arguments
                 Sum R args -- sum rule
-                    | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
+                    | length args >= 2 -> wrap . sum' . map dOne $ args
                 Mul R args -- multiplication rule
                     | length args >= 2 ->
                         let mkSub nId = (nId, mp)
                             dEach (one, rest) =
-                                mul' (map mkSub rest ++ [dOne mp one])
+                                mul' (map mkSub rest ++ [dOne one])
                          in wrap . sum' . map dEach . removeEach $ args
                 Div arg1 arg2
                 -- d (f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
@@ -150,7 +129,7 @@ hiddenDerivative (Expression n mp) =
                 Atanh arg -> undefined
      in coerce res
 
--- |
+-- | General multiplication and sum
 --
 unwrap :: Expression d et -> (Int, ExpressionMap)
 unwrap (Expression n mp) = (n, mp)
@@ -158,8 +137,6 @@ unwrap (Expression n mp) = (n, mp)
 wrap :: (Int, ExpressionMap) -> Expression d et
 wrap = uncurry Expression
 
--- | General multiplication
---
 highestShape :: [(Int, ExpressionMap)] -> Shape
 highestShape = foldl f []
   where
@@ -171,7 +148,7 @@ highestShape = foldl f []
 highestElementType :: [(Int, ExpressionMap)] -> ET
 highestElementType = foldl f R
   where
-    f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - ad hoc?)
+    f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - is this ok?)
 
 mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
 mul' es = (h, newMap)
@@ -182,8 +159,6 @@ mul' es = (h, newMap)
     mergedMap = foldl1 IM.union . map snd $ es
     (newMap, h) = addEdge mergedMap (shape, node)
 
--- | General sum
---
 sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
 sum' es = (h, newMap)
   where
