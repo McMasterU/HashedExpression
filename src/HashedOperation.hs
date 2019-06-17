@@ -142,7 +142,7 @@ instance (DimensionType d) =>
 (/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
 (/) = applyOpSameShapeSameElement (\_ arg1 arg2 -> Div arg1 arg2)
 
--- | Num op
+-- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
     sqrt = applyOp Sqrt

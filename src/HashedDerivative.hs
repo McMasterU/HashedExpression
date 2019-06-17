@@ -17,9 +17,7 @@ import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
 -- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
 --
 exteriorDerivative ::
-       forall d nt. (DimensionType d)
-    => Expression d R
-    -> Expression d Covector
+       (DimensionType d) => Expression d R -> Expression d Covector
 exteriorDerivative = hiddenDerivative
 
 -- |
@@ -46,6 +44,25 @@ hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
 hiddenDerivative (Expression n mp) =
     let (shape, node) = retrieveInternal n mp
         dOne nId = unwrap . hiddenDerivative $ Expression nId mp
+        -- For cases g = ImagPart, RealPart, FFT, .. that take 1 input
+        -- d(g(x)) = g(d(x))
+        d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
+        d1Input op arg =
+            let df = hiddenDerivative (Expression arg mp)
+                dfShape = expressionShape df
+                outputNode = op (exIndex df)
+                (newMap, nRes) = addEdge mp (dfShape, outputNode)
+             in Expression nRes newMap
+        -- For cases g = RealImag, .. that take 2 input
+        -- d(g(x, y)) = g(d(x), d(y))
+        d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
+        d2Input op arg1 arg2 =
+            let df1 = hiddenDerivative (Expression arg1 mp)
+                df2 = hiddenDerivative (Expression arg2 mp)
+                dfShape = expressionShape df1
+                outputNode = op (exIndex df1) (exIndex df2)
+                (newMap, nRes) = addEdge mp (dfShape, outputNode)
+             in Expression nRes newMap
         res =
             case node of
                 Var name ->
@@ -127,6 +144,9 @@ hiddenDerivative (Expression n mp) =
                 Asinh arg -> undefined
                 Acosh arg -> undefined
                 Atanh arg -> undefined
+                RealPart arg -> d1Input RealPart arg
+                ImagPart arg -> d1Input ImagPart arg
+                RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
 -- | General multiplication and sum
