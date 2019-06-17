@@ -80,3 +80,6 @@ hiddenPrettify e@(Expression n mp) =
             Asinh arg -> T.concat ["asinh", wrapParentheses $ innerPrettify arg]
             Acosh arg -> T.concat ["acosh", wrapParentheses $ innerPrettify arg]
             Atanh arg -> T.concat ["atanh", wrapParentheses $ innerPrettify arg]
+            RealImag arg1 arg2 -> T.concat ["realImag(", innerPrettify arg1, ",", innerPrettify arg2, ")"]
+            RealPart arg -> T.concat ["re", wrapParentheses $ innerPrettify arg]
+            ImagPart arg -> T.concat ["im", wrapParentheses $ innerPrettify arg]

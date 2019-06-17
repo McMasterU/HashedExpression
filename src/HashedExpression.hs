@@ -134,7 +134,7 @@ class NumOp a where
     acosh :: a -> a
     atanh :: a -> a
 
-class ComplexRealOp r c where
+class ComplexRealOp r c | r -> c, c -> r where
     (+:) :: r -> r -> c
     realPart :: c -> r
     imagPart :: c -> r

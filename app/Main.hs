@@ -35,11 +35,11 @@ import Test.QuickCheck hiding (scale)
 
 main = do
     let x = var1d 10 "x"
-    let y = var1d 10 "y"
-    let z = var1d 10 "z"
-    let s = var "s"
---    let f = s * (x + y + z) + x + y
-    let f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
-    print $ prettify f
-    print $ prettify $ exteriorDerivative f
+        y = var1d 10 "y"
+        z = var1d 10 "z"
+        s = var "s"
+        f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
+        fImg = realPart $ f +: z
+    print $ prettify fImg
+    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f

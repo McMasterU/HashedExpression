@@ -51,7 +51,7 @@ hiddenDerivative (Expression n mp) =
             let df = hiddenDerivative (Expression arg mp)
                 dfShape = expressionShape df
                 outputNode = op (exIndex df)
-                (newMap, nRes) = addEdge mp (dfShape, outputNode)
+                (newMap, nRes) = addEdge (exMap df) (dfShape, outputNode)
              in Expression nRes newMap
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
@@ -61,7 +61,7 @@ hiddenDerivative (Expression n mp) =
                 df2 = hiddenDerivative (Expression arg2 mp)
                 dfShape = expressionShape df1
                 outputNode = op (exIndex df1) (exIndex df2)
-                (newMap, nRes) = addEdge mp (dfShape, outputNode)
+                (newMap, nRes) = addEdge (exMap df1 `IM.union` exMap df2) (dfShape, outputNode)
              in Expression nRes newMap
         res =
             case node of
