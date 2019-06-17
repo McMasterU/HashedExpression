@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module HashedDerivative
     ( exteriorDerivative
@@ -6,6 +7,7 @@ module HashedDerivative
 
 import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
+import Data.Typeable (Typeable)
 import HashedExpression
 import HashedHash
 import HashedOperation
@@ -19,6 +21,11 @@ exteriorDerivative ::
     => Expression d R
     -> Expression d Covector
 exteriorDerivative = hiddenDerivative
+
+-- |
+--
+data WhateverD
+    deriving (Typeable, DimensionType)
 
 -- | Helpers functions for hiddenDerivative
 --
@@ -57,90 +64,91 @@ const' shape val = Expression h (IM.fromList [(h, node)])
 
 -- | Hidden exterior derivative
 --
-hiddenDerivative ::
-       forall d et1 et2. (DimensionType d, NumType et1)
-    => Expression d et1
-    -> Expression d Covector
+hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
 hiddenDerivative (Expression n mp) =
     let (shape, node) = retrieveInternal n mp
-     in case node of
-            Var name ->
-                let node = DVar name
-                    (newMap, h) = fromNode (shape, node)
+        res =
+            case node of
+                Var name ->
+                    let node = DVar name
+                        (newMap, h) = fromNode (shape, node)
                 -- dx = dx
-                 in Expression h newMap
-            Const _ ->
-                let node = Const 0
-                    (newMap, h) = fromNode (shape, node)
+                     in Expression h newMap
+                Const _ ->
+                    let node = Const 0
+                        (newMap, h) = fromNode (shape, node)
                 -- dc = 0
-                 in Expression h newMap
+                     in Expression h newMap
             -- | Sum and multiplication are special cases because they involve multiple arguments
-            Sum R args -- sum rule
-                | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
-            Mul R args -- multiplication rule
-                | length args >= 2 ->
-                    let mkSub nId = (nId, mp)
-                        dEach (one, rest) = mul' (map mkSub rest ++ [dOne mp one])
-                     in wrap . sum' . map dEach . removeEach $ args
-            Div arg1 arg2
+                Sum R args -- sum rule
+                    | length args >= 2 -> wrap . sum' . map (dOne mp) $ args
+                Mul R args -- multiplication rule
+                    | length args >= 2 ->
+                        let mkSub nId = (nId, mp)
+                            dEach (one, rest) =
+                                mul' (map mkSub rest ++ [dOne mp one])
+                         in wrap . sum' . map dEach . removeEach $ args
+                Div arg1 arg2
                 -- d (f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
-             ->
-                let f = Expression arg1 mp :: Expression d R
-                    g = Expression arg2 mp :: Expression d R
-                    df = exteriorDerivative f
-                    dg = exteriorDerivative g
-                    g'2 = g * g
-                    part1 = (g / g'2) |*| df
-                    part2 = const (-1) *. (f / g'2) |*| dg
-                 in part1 + part2
-            Sqrt arg
+                 ->
+                    let f = Expression arg1 mp :: Expression WhateverD R
+                        g = Expression arg2 mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                        dg = exteriorDerivative g
+                        g'2 = g * g
+                        part1 = (g / g'2) |*| df
+                        part2 = const (-1) *. (f / g'2) |*| dg
+                     in part1 + part2
+                Sqrt arg
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
-             ->
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                    recipSqrtF = const' (expressionShape f) 0.5 / sqrt f
-                 in recipSqrtF |*| df
-            Sin arg
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                        recipSqrtF = const' (expressionShape f) 0.5 / sqrt f
+                     in recipSqrtF |*| df
+                Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
-             ->
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                 in cos f |*| df
-            Cos arg
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in cos f |*| df
+                Cos arg
                 -- d(cos(f)) = -sin(f) * d(f)
-             ->
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                    minusSinFx = const (-1) *. sin f
-                 in minusSinFx |*| df
-            Tan arg
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                        minusSinFx = const (-1) *. sin f
+                     in minusSinFx |*| df
+                Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
-             ->
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                    cosSqrF = cos f * cos f
-                    sqrRecip = const' shape 1 / cosSqrF
-                 in sqrRecip |*| df
-            Exp arg
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                        cosSqrF = cos f * cos f
+                        sqrRecip = const' shape 1 / cosSqrF
+                     in sqrRecip |*| df
+                Exp arg
                 -- d(exp(f)) = exp(f) * d(f)
-             ->
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                 in exp f |*| df
-            Log arg ->
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in exp f |*| df
+                Log arg
                 -- d(log(f)) = 1 / f * d(f)
-                let f = Expression arg mp :: Expression d R
-                    df = exteriorDerivative f
-                 in const' shape 1 / f |*| df
-            Sinh arg -> undefined
-            Cosh arg -> undefined
-            Tanh arg -> undefined
-            Asin arg -> undefined
-            Acos arg -> undefined
-            Atan arg -> undefined
-            Asinh arg -> undefined
-            Acosh arg -> undefined
-            Atanh arg -> undefined
+                 ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in const' shape 1 / f |*| df
+                Sinh arg -> undefined
+                Cosh arg -> undefined
+                Tanh arg -> undefined
+                Asin arg -> undefined
+                Acos arg -> undefined
+                Atan arg -> undefined
+                Asinh arg -> undefined
+                Acosh arg -> undefined
+                Atanh arg -> undefined
+     in coerce res
 
 -- |
 --
