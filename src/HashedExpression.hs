@@ -108,21 +108,13 @@ instance VectorSpace d s s => InnerProductSpace d s
 class AddableOp a b c | a b -> c where
     (+) :: a -> b -> c
 
-infixl 6 +
-
 class MultiplyOp a b c | a b -> c where
     (*) :: a -> b -> c
-
-infixl 7 *
 
 class VectorSpaceOp a b where
     scale :: a -> b -> b
     (*.) :: a -> b -> b
     (*.) = scale
-
-infix 8 *.
-
-infix 8 `scale`
 
 class NumOp a where
     sqrt :: a -> a
@@ -146,6 +138,15 @@ class ComplexRealOp r c where
     (+:) :: r -> r -> c
     realPart :: c -> r
     imagPart :: c -> r
+
+infixl 6 +
+
+infixl 7 *
+
+infix 8 *.
+
+infix 8 `scale`
+
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
