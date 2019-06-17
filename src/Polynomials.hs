@@ -7,7 +7,7 @@
 
 module Polynomials where
 
-import HashedExpression
+import HashedExpression hiding ((+), (*))
 
 --import Data.C
 --import Data.Ratio

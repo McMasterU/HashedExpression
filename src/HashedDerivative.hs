@@ -9,7 +9,7 @@ import Data.List.HT (removeEach)
 import HashedExpression
 import HashedHash
 import HashedOperation
-import Prelude hiding ((*), (+), (/), const, cos, sin, sqrt, sum)
+import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
 
 -- | TODO - How can we define more kind of type class constraint to reuse the type-safe operations in HashedOperation ?
 -- | TODO - Now, we aren't able to do so, so we just write untyped version of the derivative
@@ -113,9 +113,25 @@ hiddenDerivative (Expression n mp) =
                     df = exteriorDerivative f
                     minusSinFx = const (-1) *. sin f
                  in minusSinFx |*| df
-            Tan arg -> undefined
-            Exp arg -> undefined
-            Log arg -> undefined
+            Tan arg
+                -- d(tan(f)) = -1/(cos^2(f)) * d(f)
+             ->
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                    cosSqrF = cos f * cos f
+                    sqrRecip = const' shape 1 / cosSqrF
+                 in sqrRecip |*| df
+            Exp arg
+                -- d(exp(f)) = exp(f) * d(f)
+             ->
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                 in exp f |*| df
+            Log arg ->
+                -- d(log(f)) = 1 / f * d(f)
+                let f = Expression arg mp :: Expression d R
+                    df = exteriorDerivative f
+                 in const' shape 1 / f |*| df
             Sinh arg -> undefined
             Cosh arg -> undefined
             Tanh arg -> undefined

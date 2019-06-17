@@ -13,7 +13,6 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
-    , sqrt
     , acos
     , acosh
     , asin
@@ -22,8 +21,11 @@ import Prelude hiding
     , atanh
     , cos
     , cosh
+    , exp
+    , log
     , sin
     , sinh
+    , sqrt
     , tan
     , tanh
     )
@@ -37,7 +39,7 @@ main = do
     let z = var1d 10 "z"
     let s = var "s"
 --    let f = s * (x + y + z) + x + y
-    let f = sqrt $ cos $ s `scale` (x * y) / y
+    let f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
     print $ prettify f
     print $ prettify $ exteriorDerivative f
 --    print $ prettify . exteriorDerivative $ f

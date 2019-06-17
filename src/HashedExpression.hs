@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module HashedExpression where
 
@@ -21,6 +22,24 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 import HashedUtils
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (/)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , cos
+    , cosh
+    , exp
+    , sin
+    , sinh
+    , tan
+    , tanh
+    )
 
 -- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
@@ -84,6 +103,49 @@ instance {-# OVERLAPPABLE #-} (DimensionType d) =>
 
 instance VectorSpace d s s => InnerProductSpace d s
 
+-- | Classes for operations so that both Expression and WithHoles can implement
+--
+class AddableOp a b c | a b -> c where
+    (+) :: a -> b -> c
+
+infixl 6 +
+
+class MultiplyOp a b c | a b -> c where
+    (*) :: a -> b -> c
+
+infixl 7 *
+
+class VectorSpaceOp a b where
+    scale :: a -> b -> b
+    (*.) :: a -> b -> b
+    (*.) = scale
+
+infix 8 *.
+
+infix 8 `scale`
+
+class NumOp a where
+    sqrt :: a -> a
+    exp :: a -> a
+    log :: a -> a
+    -- Trigonometric operations
+    sin :: a -> a
+    cos :: a -> a
+    tan :: a -> a
+    asin :: a -> a
+    acos :: a -> a
+    atan :: a -> a
+    sinh :: a -> a
+    cosh :: a -> a
+    tanh :: a -> a
+    asinh :: a -> a
+    acosh :: a -> a
+    atanh :: a -> a
+
+class ComplexRealOp r c where
+    (+:) :: r -> r -> c
+    realPart :: c -> r
+    imagPart :: c -> r
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
