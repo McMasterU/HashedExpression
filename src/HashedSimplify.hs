@@ -1,6 +1,7 @@
 module HashedSimplify where
 
 import HashedExpression
+import HashedHash
 import HashedOperation
 import HashedUtils
 import Prelude hiding
@@ -53,12 +54,22 @@ applyOne ::
        (ExpressionMap, Int) -- (IntMap ExpressionEdge, Int)
     -> [(GuardedPattern, WithHoles)]
     -> Maybe (ExpressionMap, Int)
-applyOne (e, n) ((GP pattern condition, replacement):rules)
-    | Just found <- match (e, n) pattern
-    , condition e found = Just $ (e, n) -- TODO
-    | otherwise = applyOne (e, n) rules
+applyOne (mp, n) ((GP pattern condition, replacement):rules)
+    | Just captures <- match (mp, n) pattern
+    , condition mp captures = Just $ replace (mp, n) captures replacement
+    | otherwise = applyOne (mp, n) rules
 applyOne _ [] = Nothing
 
+replace ::
+       (ExpressionMap, Int)
+    -> [(Capture, Int)]
+    -> WithHoles
+    -> (ExpressionMap, Int)
+replace (mp, n) cns (WHHole c)
+    | Just nId <- lookup c cns = (mp, nId)
+replace (mp, n) cns (WHConst d) = addEdge mp (retrieveShape n mp, Const d)
+replace (mp, n) cns replacement = case (retrieveNode n mp, replacement) of
+    (Sum _ args, WHSum whs) -> undefined
 -- |
 --
 rules1 :: [(GuardedPattern, WithHoles)]
@@ -72,5 +83,7 @@ rules1 =
     , x *. zero |.~~> zero
     , one *. x |.~~> x
     , x + zero |.~~> x
+    , zero + x |.~~> x
+    , x + zero |.~~> x -- added these two TB 01/06/2015
     , zero + x |.~~> x
     ]

@@ -12,6 +12,8 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
   where
     safeTail [] = []
     safeTail (x:xs) = xs
+
+
 -- | Auxiliary functions for operations
 --
 retrieveNode :: Int -> ExpressionMap -> Node
@@ -115,3 +117,4 @@ sum' es = (h, newMap)
     node = Sum elementType . map fst $ es
     mergedMap = foldl1 IM.union . map snd $ es
     (newMap, h) = addEdge mergedMap (shape, node)
+
