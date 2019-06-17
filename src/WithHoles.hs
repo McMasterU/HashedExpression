@@ -42,6 +42,7 @@ data WithHoles
     | WHRealImag WithHoles WithHoles
     | WHRealPart WithHoles
     | WHImagPart WithHoles
+    deriving (Show, Eq, Ord)
 
 match :: Expression e dt -> WithHoles -> Maybe [(Capture, Int)]
 match e@(Expression n mp) wh =
@@ -79,3 +80,43 @@ match e@(Expression n mp) wh =
             (RealPart arg, WHRealPart wh) -> recursiveAndCombine [arg] [wh]
             (ImagPart arg, WHImagPart wh) -> recursiveAndCombine [arg] [wh]
             _ -> Nothing
+
+instance AddableOp WithHoles WithHoles WithHoles where
+    (+) wh1 wh2 = WHSum [wh1, wh2]
+
+instance MultiplyOp WithHoles WithHoles WithHoles where
+    (*) wh1 wh2 = WHMul [wh1, wh2]
+
+instance VectorSpaceOp WithHoles WithHoles where
+    scale wh1 wh2 = WHMul [wh1, wh2]
+
+instance NumOp WithHoles where
+    sqrt = WHSqrt
+    exp = WHExp
+    log = WHLog
+    -- Trigonometric operations
+    sin = WHSin
+    cos = WHCos
+    tan = WHTan
+    asin = WHAsin
+    acos = WHAcos
+    atan = WHAtan
+    sinh = WHSinh
+    cosh = WHCosh
+    tanh = WHTanh
+    asinh = WHAsinh
+    acosh = WHAcosh
+    atanh = WHAtanh
+
+instance ComplexRealOp WithHoles WithHoles where
+    (+:) = WHRealImag
+    realPart = WHRealPart
+    imagPart = WHImagPart
+
+data GuardedPattern =
+    GP WithHoles (ExpressionMap -> [(Capture, Int)] -> Bool)
+
+(|.~~>) :: WithHoles -> WithHoles -> (GuardedPattern, WithHoles)
+(|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
+
+[p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11]
