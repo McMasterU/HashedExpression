@@ -14,15 +14,16 @@ module WithHoles where
 
 import qualified Data.IntMap as I
 import qualified Data.List as L
-import HashedUtils
 import Data.Maybe
 import HashedExpression
+import HashedUtils
 
 type Capture = Int
 
 data WithHoles
     = WHHole Capture
-    | WHConst Double
+    | WHConstScalar Double
+    | WHConstShape Double
     | WHSum [WithHoles]
     | WHMul [WithHoles]
     | WHDiv WithHoles WithHoles
@@ -45,7 +46,6 @@ data WithHoles
     | WHRealPart WithHoles
     | WHImagPart WithHoles
     deriving (Show, Eq, Ord)
-
 
 instance AddableOp WithHoles WithHoles WithHoles where
     (+) wh1 wh2 = WHSum [wh1, wh2]
@@ -89,21 +89,31 @@ infix 0 |.~~>
 
 [p, q, r, s, t, u, v, w, x, y, z] = map WHHole [1 .. 11]
 
-one = WHConst 1
-zero = WHConst 0
+one :: WithHoles
+one = WHConstScalar 1
 
+zero :: WithHoles
+zero = WHConstScalar 0
 
-match :: (ExpressionMap, Int)-> WithHoles -> Maybe [(Capture, Int)]
+oneS :: WithHoles
+oneS = WHConstShape 1
+
+zeroS :: WithHoles
+zeroS = WHConstShape 0
+
+match :: (ExpressionMap, Int) -> WithHoles -> Maybe [(Capture, Int)]
 match (mp, n) wh =
     let recursiveAndCombine :: [Arg] -> [WithHoles] -> Maybe [(Capture, Int)]
         recursiveAndCombine args whs
             | length args == length whs
-            , let subMatches = zipWith match (map (mp,) args) whs
+            , let subMatches = zipWith match (map (mp, ) args) whs
             , all isJust subMatches = Just . concat . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, wh) of
             (_, WHHole capture) -> Just [(capture, n)]
-            (Const c, WHConst whc)
+            (Const c, WHConstScalar whc)
+                | c == whc && retrieveShape n mp == [] -> Just []
+            (Const c, WHConstShape whc)
                 | c == whc -> Just []
             (Sum _ args, WHSum whs) -> recursiveAndCombine args whs
             (Mul _ args, WHMul whs) -> recursiveAndCombine args whs

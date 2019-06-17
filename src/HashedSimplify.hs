@@ -56,34 +56,34 @@ applyOne ::
     -> Maybe (ExpressionMap, Int)
 applyOne (mp, n) ((GP pattern condition, replacement):rules)
     | Just captures <- match (mp, n) pattern
-    , condition mp captures = Just $ replace (mp, n) captures replacement
+    , condition mp captures = Just $ replace mp captures replacement
     | otherwise = applyOne (mp, n) rules
 applyOne _ [] = Nothing
 
+-- | Transform current expression using the replacement "WithHoles"
+--
 replace ::
-       (ExpressionMap, Int)
+       ExpressionMap
     -> [(Capture, Int)]
     -> WithHoles
     -> (ExpressionMap, Int)
-replace (mp, n) cns (WHHole c)
+replace mp cns (WHHole c)
     | Just nId <- lookup c cns = (mp, nId)
-replace (mp, n) cns (WHConst d) = addEdge mp (retrieveShape n mp, Const d)
-replace (mp, n) cns replacement = case (retrieveNode n mp, replacement) of
-    (Sum _ args, WHSum whs) -> undefined
+replace mp cns replacement = undefined
+
 -- |
 --
 rules1 :: [(GuardedPattern, WithHoles)]
 rules1 =
     [ x *. (y *. z) |.~~> (x * y) *. z
-    , one * x |.~~> x
-    , x * one |.~~> x
-    , zero * x |.~~> zero
-    , x * zero |.~~> zero
-    , zero *. x |.~~> zero
-    , x *. zero |.~~> zero
     , one *. x |.~~> x
-    , x + zero |.~~> x
-    , zero + x |.~~> x
-    , x + zero |.~~> x -- added these two TB 01/06/2015
-    , zero + x |.~~> x
+    , oneS * x |.~~> x
+    , x * oneS |.~~> x
+    , zeroS * x |.~~> zeroS
+    , x * zeroS |.~~> zeroS
+    , zero *. x |.~~> zeroS
+    , x *. zeroS |.~~> zeroS
+    , one *. x |.~~> x
+    , x + zeroS |.~~> x
+    , zeroS + x |.~~> x
     ]
