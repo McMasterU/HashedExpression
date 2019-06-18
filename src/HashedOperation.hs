@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-} --
 
@@ -164,7 +163,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
     acosh = applyOp Acosh
     atanh = applyOp Atanh
 
--- | Utilities for writing operations
+-- | Utilities for writing operations, should not be exported
 --
 applyOp :: (Arg -> Node) -> Expression d et1 -> Expression d et2
 applyOp op e@(Expression n mp) = Expression h newMap

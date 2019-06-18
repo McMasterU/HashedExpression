@@ -80,21 +80,21 @@ ensureSameShapeList es after =
 fromR :: Double -> DC.Complex Double
 fromR x = x DC.:+ 0
 
-unwrap :: Expression d et -> (Int, ExpressionMap)
-unwrap (Expression n mp) = (n, mp)
+unwrap :: Expression d et -> (ExpressionMap, Int)
+unwrap (Expression n mp) = (mp, n)
 
-wrap :: (Int, ExpressionMap) -> Expression d et
-wrap = uncurry Expression
+wrap :: (ExpressionMap, Int) -> Expression d et
+wrap = uncurry $ flip Expression
 
-highestShape :: [(Int, ExpressionMap)] -> Shape
+highestShape :: [(ExpressionMap, Int)] -> Shape
 highestShape = foldl f []
   where
-    f acc (n, mp) =
+    f acc (mp, n) =
         if length acc > length (retrieveShape n mp)
             then acc
             else retrieveShape n mp
 
-highestElementType :: [(Int, ExpressionMap)] -> ET
+highestElementType :: [(ExpressionMap, Int)] -> ET
 highestElementType = foldl f R
   where
-    f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - is this ok?)
+    f acc (mp, n) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - is this ok?)

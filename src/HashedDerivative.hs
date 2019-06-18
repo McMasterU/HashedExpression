@@ -67,8 +67,9 @@ hiddenDerivative (Expression n mp) =
                         (dfShape, outputNode)
              in Expression nRes newMap
         res =
-            case node of
+            case node
                 -- dx = dx
+                  of
                 Var name ->
                     let node = DVar name
                         (newMap, h) = fromNode (shape, node)
@@ -82,7 +83,7 @@ hiddenDerivative (Expression n mp) =
                 Sum _ args -> wrap . sum' . map dOne $ args
                 Mul _ args -- multiplication rule
                     | length args >= 2 ->
-                        let mkSub nId = (nId, mp)
+                        let mkSub nId = (mp, nId)
                             dEach (one, rest) =
                                 mul' (map mkSub rest ++ [dOne one])
                          in wrap . sum' . map dEach . removeEach $ args
@@ -153,24 +154,22 @@ hiddenDerivative (Expression n mp) =
 
 -- | General multiplication and sum
 --
-mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-mul' es = (h, newMap)
+mul' :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+mul' es = addEdge mergedMap (shape, node)
   where
     elementType = highestElementType es
     shape = highestShape es
-    node = Mul elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
+    node = Mul elementType . map snd $ es
+    mergedMap = foldl1 IM.union . map fst $ es
 
-sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-sum' es = (h, newMap)
+sum' :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+sum' es = addEdge mergedMap (shape, node)
   where
-    (n, mp) = head es
+    (mp, n) = head es
     elementType = retrieveElementType n mp
     shape = retrieveShape n mp
-    node = Sum elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
+    node = Sum elementType . map snd $ es
+    mergedMap = foldl1 IM.union . map fst $ es
 
 -- | Wise-multiply a number with a covector
 --

@@ -19,63 +19,92 @@ import HashedExpression
 import HashedNode
 import HashedUtils
 
+-- | Pattern for simplification
+--
 type Capture = Int
 
+-- | This reflexes Node in HashedExpression
+--
 data Pattern
-    = PatternHole Capture
-    | PatternConst Double
-    | PatternOp Node [Pattern]
+    = PHole Capture
+    | PConst Double
+    | PSum [Pattern] -- element-wise sum
+    | PMul [Pattern] -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | PDiv Pattern Pattern
+    | PSqrt Pattern
+    | PSin Pattern
+    | PCos Pattern
+    | PTan Pattern
+    | PExp Pattern
+    | PLog Pattern
+    | PSinh Pattern
+    | PCosh Pattern
+    | PTanh Pattern
+    | PAsin Pattern
+    | PAcos Pattern
+    | PAtan Pattern
+    | PAsinh Pattern
+    | PAcosh Pattern
+    | PAtanh Pattern
+    | PRealImag Pattern Pattern -- from real and imagine
+    | PRealPart Pattern -- extract real part
+    | PImagPart Pattern -- extract imaginary part
     deriving (Show, Eq, Ord)
 
 instance AddableOp Pattern Pattern Pattern where
-    (+) wh1 wh2 = PatternOp opSum [wh1, wh2]
+    (+) wh1 wh2 =  PSum [wh1, wh2]
 
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
 instance MultiplyOp Pattern Pattern Pattern where
-    (*) wh1 wh2 = PatternOp opMul [wh1, wh2]
+    (*) wh1 wh2 = PMul [wh1, wh2]
 
 instance VectorSpaceOp Pattern Pattern where
-    scale wh1 wh2 = PatternOp opMul [wh1, wh2]
+    scale wh1 wh2 = PMul [wh1, wh2]
 
 instance NumOp Pattern where
-    sqrt wh = PatternOp opSqrt [wh]
-    exp wh = PatternOp opExp [wh]
-    log wh = PatternOp opLog [wh]
-    --
-    sin wh = PatternOp opSin [wh]
-    cos wh = PatternOp opCos [wh]
-    tan wh = PatternOp opTan [wh]
-    asin wh = PatternOp opAsin [wh]
-    acos wh = PatternOp opAcos [wh]
-    atan wh = PatternOp opAtan [wh]
-    sinh wh = PatternOp opSinh [wh]
-    cosh wh = PatternOp opCosh [wh]
-    tanh wh = PatternOp opTanh [wh]
-    asinh wh = PatternOp opAsinh [wh]
-    acosh wh = PatternOp opAcosh [wh]
-    atanh wh = PatternOp opAtanh [wh]
+    sqrt = PSqrt
+    exp = PExp
+    log =  PLog
+    sin = PSin
+    cos =  PCos
+    tan =  PTan
+    asin =  PAsin
+    acos =  PAcos
+    atan =  PAtan
+    sinh =  PSinh
+    cosh =  PCosh
+    tanh =  PTanh
+    asinh =  PAsinh
+    acosh =  PAcosh
+    atanh =  PAtanh
 
 instance ComplexRealOp Pattern Pattern where
-    (+:) wh1 wh2 = PatternOp opRealImag [wh1, wh2]
-    realPart wh = PatternOp opRealPart [wh]
-    imagPart wh = PatternOp opImagPart [wh]
+    (+:) = PRealImag
+    realPart =  PRealPart
+    imagPart =  PImagPart
 
+-- | Guarded patterns for simplification
+--
 data GuardedPattern =
     GP Pattern (ExpressionMap -> [(Capture, Int)] -> Bool)
 
+-- | Helper to make pattern and replacement without condition
+--
 (|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
 (|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
 
 infix 0 |.~~>
 
-[p, q, r, s, t, u, v, w, x, y, z] = map PatternHole [1 .. 11]
+[p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
 
 one :: Pattern
-one = PatternConst 1
+one = PConst 1
 
 zero :: Pattern
-zero = PatternConst 0
+zero = PConst 0
 
+-- | Match an expression with a pattern, return the map between capture hole to the actual node
+--
 match :: (ExpressionMap, Int) -> Pattern -> Maybe [(Capture, Int)]
 match (mp, n) wh =
     let recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe [(Capture, Int)]
@@ -85,8 +114,11 @@ match (mp, n) wh =
             , all isJust subMatches = Just . concat . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, wh) of
-            (_, PatternHole capture) -> Just [(capture, n)]
-            (Const c, PatternConst pc) -> Just []
-            (node, PatternOp patternOp subPatterns)
-                | sameOp node patternOp ->
-                    recursiveAndCombine (args node) subPatterns
+            (_, PHole capture) -> Just [(capture, n)]
+            (Const c, PConst pc) -> Just []
+--            (node, PatternOp patternOp subPatterns)
+--                | sameOp node patternOp ->
+--                    recursiveAndCombine (args node) subPatterns
+
+lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
+lookupCapture = lookup
