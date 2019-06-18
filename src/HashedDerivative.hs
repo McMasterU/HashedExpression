@@ -9,9 +9,9 @@ import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
 import Data.Typeable (Typeable)
 import HashedExpression
-import HashedUtils
 import HashedHash
 import HashedOperation
+import HashedUtils
 import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
 
 -- | Exterior derivative
@@ -68,17 +68,17 @@ hiddenDerivative (Expression n mp) =
              in Expression nRes newMap
         res =
             case node of
+                -- dx = dx
                 Var name ->
                     let node = DVar name
                         (newMap, h) = fromNode (shape, node)
-                -- dx = dx
                      in Expression h newMap
+                -- dc = 0
                 Const _ ->
                     let node = Const 0
                         (newMap, h) = fromNode (shape, node)
-                -- dc = 0
                      in Expression h newMap
-            -- | Sum and multiplication are special cases because they involve multiple arguments
+                -- Sum and multiplication are special cases because they involve multiple arguments
                 Sum _ args -> wrap . sum' . map dOne $ args
                 Mul _ args -- multiplication rule
                     | length args >= 2 ->
@@ -151,12 +151,32 @@ hiddenDerivative (Expression n mp) =
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
+-- | General multiplication and sum
+--
+mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
+mul' es = (h, newMap)
+  where
+    elementType = highestElementType es
+    shape = highestShape es
+    node = Mul elementType . map fst $ es
+    mergedMap = foldl1 IM.union . map snd $ es
+    (newMap, h) = addEdge mergedMap (shape, node)
 
--- | Wise-scale R with a covector
+sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
+sum' es = (h, newMap)
+  where
+    (n, mp) = head es
+    elementType = retrieveElementType n mp
+    shape = retrieveShape n mp
+    node = Sum elementType . map fst $ es
+    mergedMap = foldl1 IM.union . map snd $ es
+    (newMap, h) = addEdge mergedMap (shape, node)
+
+-- | Wise-multiply a number with a covector
 --
 (|*|) ::
-       (DimensionType d)
-    => Expression d R
+       (DimensionType d, NumType nt)
+    => Expression d nt
     -> Expression d Covector
     -> Expression d Covector
 (|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =

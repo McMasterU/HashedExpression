@@ -1,7 +1,9 @@
 module HashedUtils where
-import HashedHash
-import HashedExpression
+
 import qualified Data.IntMap.Strict as IM
+import HashedExpression
+import HashedHash
+import HashedNode
 
 import qualified Data.Complex as DC
 
@@ -12,7 +14,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
   where
     safeTail [] = []
     safeTail (x:xs) = xs
-
 
 -- | Auxiliary functions for operations
 --
@@ -78,8 +79,7 @@ ensureSameShapeList es after =
 
 fromR :: Double -> DC.Complex Double
 fromR x = x DC.:+ 0
--- | General multiplication and sum
---
+
 unwrap :: Expression d et -> (Int, ExpressionMap)
 unwrap (Expression n mp) = (n, mp)
 
@@ -98,23 +98,3 @@ highestElementType :: [(Int, ExpressionMap)] -> ET
 highestElementType = foldl f R
   where
     f acc (n, mp) = max acc (retrieveElementType n mp) -- R < C < Covector (TODO - is this ok?)
-
-mul' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-mul' es = (h, newMap)
-  where
-    elementType = highestElementType es
-    shape = highestShape es
-    node = Mul elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
-
-sum' :: [(Int, ExpressionMap)] -> (Int, ExpressionMap)
-sum' es = (h, newMap)
-  where
-    (n, mp) = head es
-    elementType = retrieveElementType n mp
-    shape = retrieveShape n mp
-    node = Sum elementType . map fst $ es
-    mergedMap = foldl1 IM.union . map snd $ es
-    (newMap, h) = addEdge mergedMap (shape, node)
-

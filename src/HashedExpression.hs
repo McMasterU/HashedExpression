@@ -220,32 +220,3 @@ data Node
     | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
 
-nodeElementType :: Node -> ET
-nodeElementType node =
-    case node of
-        Var _ -> R
-        DVar _ -> Covector
-        Const _ -> R
-        Sum et _ -> et
-        Mul et _ -> et
-        RealImag _ _ -> C
-        RealPart _ -> R
-        ImagPart _ -> C
-        Div _ _ -> R
-        Sqrt _ -> R
-        Sin _ -> R
-        Cos _ -> R
-        Tan _ -> R
-        Exp _ -> R
-        Log _ -> R
-        Sinh _ -> R
-        Cosh _ -> R
-        Tanh _ -> R
-        Asin _ -> R
-        Acos _ -> R
-        Atan _ -> R
-        Asinh _ -> R
-        Acosh _ -> R
-        Atanh _ -> R
-        -- TODO: and more
-
