@@ -152,24 +152,6 @@ hiddenDerivative (Expression n mp) =
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
--- | General multiplication and sum
---
-mul' :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-mul' es = addEdge mergedMap (shape, node)
-  where
-    elementType = highestElementType es
-    shape = highestShape es
-    node = Mul elementType . map snd $ es
-    mergedMap = foldl1 IM.union . map fst $ es
-
-sum' :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-sum' es = addEdge mergedMap (shape, node)
-  where
-    (mp, n) = head es
-    elementType = retrieveElementType n mp
-    shape = retrieveShape n mp
-    node = Sum elementType . map snd $ es
-    mergedMap = foldl1 IM.union . map fst $ es
 
 -- | Wise-multiply a number with a covector
 --

@@ -53,32 +53,30 @@ simplifyRewrite (mp, n)
 -- |
 --
 applyOne ::
-       (ExpressionMap, Int) -- (IntMap ExpressionEdge, Int)
+       (ExpressionMap, Int)
     -> [(GuardedPattern, Pattern)]
     -> Maybe (ExpressionMap, Int)
-applyOne (mp, n) ((GP pattern condition, replacement):rules)
-    | Just capturesMap <- match (mp, n) pattern
-    , condition mp capturesMap = Just $ replace (mp, n) capturesMap replacement
-    | otherwise = applyOne (mp, n) rules
+applyOne (originalMp, originalN) ((GP pattern condition, replacement):rules)
+    | Just capturesMap <- match (originalMp, originalN) pattern
+    , condition originalMp capturesMap =
+        let buildFromPattern :: Pattern -> (ExpressionMap, Int)
+            buildFromPattern pattern =
+                case pattern of
+                    (PHole capture)
+                        | Just nId <- lookupCapture capture capturesMap ->
+                            (originalMp, nId)
+                    (PConst pc) ->
+                        case retrieveShape originalN originalMp of
+                            [] -> unwrap $ const pc
+                            [size] -> unwrap $ const1d size pc
+                            [size1, size2] -> unwrap $ const2d (size1, size2) pc
+                            [size1, size2, size3] ->
+                                unwrap $ const3d (size1, size2, size3) pc
+                    PMul sps -> mul' . map buildFromPattern $ sps
+                    PSum sps -> sum' . map buildFromPattern $ sps
+         in Just $ buildFromPattern replacement
+    | otherwise = applyOne (originalMp, originalN) rules
 applyOne _ [] = Nothing
-
--- | Transform current expression using the replacement "Pattern"
---
-replace ::
-       (ExpressionMap, Int)
-    -> [(Capture, Int)]
-    -> Pattern
-    -> (ExpressionMap, Int)
-replace (originalMp, originalN) capturesMap (PHole capture)
-    | Just nId <- lookupCapture capture capturesMap = (originalMp, nId)
-replace (originalMp, originalN) capturesMap (PConst pc) =
-    -- Constants always have the shape of the original expression according to our rules
-    case retrieveShape originalN originalMp of
-        [] -> unwrap $ const pc
-        [size] -> unwrap $ const1d size pc
-        [size1, size2] -> unwrap $ const2d (size1, size2) pc
-        [size1, size2, size3] -> unwrap $ const3d (size1, size2, size3) pc
---replace (originalMp, originalN) capturesMap (PatternOp)
 
 ---- | Simplification rules
 ----
