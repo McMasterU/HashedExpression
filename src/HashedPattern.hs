@@ -52,7 +52,7 @@ data Pattern
     deriving (Show, Eq, Ord)
 
 instance AddableOp Pattern Pattern Pattern where
-    (+) wh1 wh2 =  PSum [wh1, wh2]
+    (+) wh1 wh2 = PSum [wh1, wh2]
 
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
 instance MultiplyOp Pattern Pattern Pattern where
@@ -64,24 +64,24 @@ instance VectorSpaceOp Pattern Pattern where
 instance NumOp Pattern where
     sqrt = PSqrt
     exp = PExp
-    log =  PLog
+    log = PLog
     sin = PSin
-    cos =  PCos
-    tan =  PTan
-    asin =  PAsin
-    acos =  PAcos
-    atan =  PAtan
-    sinh =  PSinh
-    cosh =  PCosh
-    tanh =  PTanh
-    asinh =  PAsinh
-    acosh =  PAcosh
-    atanh =  PAtanh
+    cos = PCos
+    tan = PTan
+    asin = PAsin
+    acos = PAcos
+    atan = PAtan
+    sinh = PSinh
+    cosh = PCosh
+    tanh = PTanh
+    asinh = PAsinh
+    acosh = PAcosh
+    atanh = PAtanh
 
 instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
-    realPart =  PRealPart
-    imagPart =  PImagPart
+    realPart = PRealPart
+    imagPart = PImagPart
 
 -- | Guarded patterns for simplification
 --
@@ -115,10 +115,32 @@ match (mp, n) wh =
             | otherwise = Nothing
      in case (retrieveNode n mp, wh) of
             (_, PHole capture) -> Just [(capture, n)]
-            (Const c, PConst pc) -> Just []
---            (node, PatternOp patternOp subPatterns)
---                | sameOp node patternOp ->
---                    recursiveAndCombine (args node) subPatterns
+            (Const c, PConst whc)
+                | c == whc -> Just []
+            (Sum _ args, PSum whs) -> recursiveAndCombine args whs
+            (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Div arg1 arg2, PDiv wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (Sqrt arg, PSqrt wh) -> recursiveAndCombine [arg] [wh]
+            (Sin arg, PSin wh) -> recursiveAndCombine [arg] [wh]
+            (Cos arg, PCos wh) -> recursiveAndCombine [arg] [wh]
+            (Tan arg, PTan wh) -> recursiveAndCombine [arg] [wh]
+            (Exp arg, PExp wh) -> recursiveAndCombine [arg] [wh]
+            (Log arg, PLog wh) -> recursiveAndCombine [arg] [wh]
+            (Sinh arg, PSinh wh) -> recursiveAndCombine [arg] [wh]
+            (Cosh arg, PCosh wh) -> recursiveAndCombine [arg] [wh]
+            (Tanh arg, PTanh wh) -> recursiveAndCombine [arg] [wh]
+            (Asin arg, PAsin wh) -> recursiveAndCombine [arg] [wh]
+            (Acos arg, PAcos wh) -> recursiveAndCombine [arg] [wh]
+            (Atan arg, PAtan wh) -> recursiveAndCombine [arg] [wh]
+            (Asinh arg, PAsinh wh) -> recursiveAndCombine [arg] [wh]
+            (Acosh arg, PAcosh wh) -> recursiveAndCombine [arg] [wh]
+            (Atanh arg, PAtanh wh) -> recursiveAndCombine [arg] [wh]
+            (RealImag arg1 arg2, PRealImag wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (RealPart arg, PRealPart wh) -> recursiveAndCombine [arg] [wh]
+            (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
+            _ -> Nothing
 
 lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
 lookupCapture = lookup
