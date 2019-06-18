@@ -51,8 +51,8 @@ infixl 1 |>
 chain :: [Simplification] -> Simplification
 chain ss init = foldl (|>) init ss
 
-nTimes :: Int -> Simplification -> Simplification
-nTimes = nest
+multipleTimes :: Int -> Simplification -> Simplification
+multipleTimes = nest
 
 -- | Turn HashedPattern to a simplification
 --
@@ -82,7 +82,7 @@ fromPattern (GP pattern condition, replacementPattern) (originalMp, originalN)
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    nTimes 1000 . chain . map fromPattern $
+    multipleTimes 1000 . chain . map fromPattern $
     [ x *. (y *. z) |.~~> (x * y) *. z
     , one *. x |.~~> x
     , one * x |.~~> x
@@ -94,8 +94,9 @@ zeroOneRules =
     , one *. x |.~~> x
     , x + zero |.~~> x
     , zero + x |.~~> x
-    ] otherRules
+    ]
 
+otherRules :: Simplification
 otherRules = id
 
 productRule :: Simplification
