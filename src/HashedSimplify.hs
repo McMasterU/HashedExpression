@@ -2,6 +2,7 @@ module HashedSimplify where
 
 import HashedExpression
 import HashedHash
+import HashedInner
 import HashedOperation
 import HashedPattern
 import HashedUtils
@@ -56,7 +57,7 @@ applyOne ::
        (ExpressionMap, Int)
     -> [(GuardedPattern, Pattern)]
     -> Maybe (ExpressionMap, Int)
-applyOne (originalMp, originalN) ((GP pattern condition, replacement):rules)
+applyOne (originalMp, originalN) ((GP pattern condition, replacementPattern):rules)
     | Just capturesMap <- match (originalMp, originalN) pattern
     , condition originalMp capturesMap =
         let buildFromPattern :: Pattern -> (ExpressionMap, Int)
@@ -74,7 +75,7 @@ applyOne (originalMp, originalN) ((GP pattern condition, replacement):rules)
                                 unwrap $ const3d (size1, size2, size3) pc
                     PMul sps -> mul' . map buildFromPattern $ sps
                     PSum sps -> sum' . map buildFromPattern $ sps
-         in Just $ buildFromPattern replacement
+         in Just $ buildFromPattern replacementPattern
     | otherwise = applyOne (originalMp, originalN) rules
 applyOne _ [] = Nothing
 

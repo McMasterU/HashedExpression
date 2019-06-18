@@ -10,6 +10,7 @@ import Data.List.HT (removeEach)
 import Data.Typeable (Typeable)
 import HashedExpression
 import HashedHash
+import HashedInner
 import HashedOperation
 import HashedUtils
 import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
