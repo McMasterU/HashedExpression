@@ -28,6 +28,7 @@ import Prelude hiding
     , sqrt
     , tan
     , tanh
+    , const
     )
 
 import Test.Hspec
@@ -39,8 +40,9 @@ main = do
         z = var1d 10 "z"
         s = var "s"
         f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
+        anotherF = const 0 *. f
         fImg = realPart $ f +: z
-    print $ prettify fImg
-    print . prettify . simplify $ fImg
-    print $ prettify $ exteriorDerivative fImg
+    print $ prettify anotherF
+    print . prettify . simplify $ anotherF
+--    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f

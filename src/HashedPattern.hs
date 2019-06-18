@@ -144,3 +144,4 @@ match (mp, n) wh =
 
 lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
 lookupCapture = lookup
+
