@@ -68,7 +68,7 @@ simplify e
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    chain . map fromPattern $
+    multipleTimes 100 . chain . map fromPattern $
     [ x *. (y *. z) |.~~> (x * y) *. z
     , one *. x |.~~> x
     , one * x |.~~> x
@@ -86,7 +86,7 @@ zeroOneRules =
 
 complexNumRules :: Simplification
 complexNumRules =
-    chain . map fromPattern $
+    multipleTimes 100 . chain . map fromPattern $
     [ xRe (x +: y) |.~~> x
     , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
@@ -96,7 +96,7 @@ complexNumRules =
 
 productRules :: Simplification
 productRules =
-    chain . map fromPattern $
+    multipleTimes 100 . chain . map fromPattern $
     [ x <.> zero |.~~> zero
     , zero <.> x |.~~> zero
     , (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
@@ -110,7 +110,7 @@ productRules =
 
 exponentRules :: Simplification
 exponentRules =
-    chain . map fromPattern $
+    multipleTimes 100 . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
 sumRule :: Simplification
@@ -182,8 +182,9 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
 removeUnreachable :: Simplification
 removeUnreachable (mp, n) =
     let collectNode n =
-            IS.insert n . IS.unions . map collectNode . nodeArgs $ retrieveNode n mp
-        reachableNodes = collectNode n
+            IS.insert n . IS.unions . map collectNode . nodeArgs $
+            retrieveNode n mp
+        reachableNodes = collectNode n -- Set Int
         reducedMap =
-            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp
+            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
      in (reducedMap, n)

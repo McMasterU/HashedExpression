@@ -2,6 +2,7 @@ module SimplifySpec where
 
 import HashedOperation
 import HashedSimplify
+import HashedPrettify
 import HashedExpression
 import Prelude hiding
     ( (*)
@@ -48,10 +49,15 @@ spec = do
             simplify (one * x) `shouldBe` x
             simplify (x * zero) `shouldBe` zero
             simplify (zero * x) `shouldBe` zero
-            simplify (x1 * one1) `shouldBe` x1
-            simplify (one1 * x1) `shouldBe` x1
-            simplify (x1 * zero1) `shouldBe` zero1
-            simplify (zero1 * x1) `shouldBe` zero1
+--            (prettify $ simplify ((x * zero) * y)) `shouldBe` (prettify zero)
+--            simplify (y * (x * zero)) `shouldBe` zero
+--            simplify (zero * (x * one)) `shouldBe` zero
+--            simplify (zero * x * one) `shouldBe` zero
+--            simplify (zero * (x * y)) `shouldBe` zero
+            simplify ((x * y) * zero) `shouldBe` zero
+--            simplify ((x * zero) * one) `shouldBe` zero
+            simplify ((x * y) * one) `shouldBe` (x * y)
+            simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
         specify "simplify 0" $ do
             simplify (log (exp (x))) `shouldBe` x
             simplify (exp (log (x))) `shouldBe` x
@@ -59,3 +65,4 @@ spec = do
             simplify (exp (log (x1))) `shouldBe` x1
             simplify (log (exp (x2))) `shouldBe` x2
             simplify (exp (log (x2))) `shouldBe` x2
+
