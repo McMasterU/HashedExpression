@@ -1,3 +1,7 @@
+-------------------------------------------------------------------------------
+-- | For simplifying expressions
+--
+-------------------------------------------------------------------------------
 module HashedSimplify where
 
 import Data.Function.HT (nest)
@@ -31,13 +35,15 @@ import Prelude hiding
     )
 import qualified Prelude as Prelude
 
+-- | Simplify an expression
+--
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
-    let (mp, n) = unwrap e
-     in wrap $ (mp, n) |> zeroOneRules |> otherRules |> productRule |> sumRule
+    e |> unwrap |> zeroOneRules |> productRule |> sumRule |> otherRules |> wrap
+    -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
 
--- | Type for Simplification, we can combine them, chain them, apply them n times using nest, ...
+-- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
 type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
@@ -96,9 +102,6 @@ zeroOneRules =
     , zero + x |.~~> x
     ]
 
-otherRules :: Simplification
-otherRules = id
-
 productRule :: Simplification
 productRule = id
 
@@ -107,3 +110,6 @@ sumRule = id
 
 dotProductRules :: Simplification
 dotProductRules = id
+
+otherRules :: Simplification
+otherRules = id

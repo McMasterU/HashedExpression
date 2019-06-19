@@ -1,9 +1,6 @@
 {-
 -}
 module HashedDot where
-
-import Polynomials
-
 import HashedExpression
 
 import Control.Monad (liftM)

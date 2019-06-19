@@ -1,8 +1,3 @@
-{-
-(c) 2014 Christopher Kumar Anand
-
-Helper functions/instances to make pattern gaurds involving Expressions easier to read.
--}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE GADTs #-}
@@ -10,6 +5,13 @@ Helper functions/instances to make pattern gaurds involving Expressions easier t
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
 
+-------------------------------------------------------------------------------
+-- |
+-- (c) 2014 Christopher Kumar Anand
+-- Helper functions/instances to make pattern gaurds involving Expressions
+-- easier to read.
+--
+-------------------------------------------------------------------------------
 module HashedPattern where
 
 import qualified Data.IntMap as I
@@ -144,4 +146,3 @@ match (mp, n) wh =
 
 lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
 lookupCapture = lookup
-

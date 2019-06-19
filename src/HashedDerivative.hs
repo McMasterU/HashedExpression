@@ -1,6 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
+-------------------------------------------------------------------------------
+-- |
+-- This module is for computing exterior derivative
+--
+-------------------------------------------------------------------------------
 module HashedDerivative
     ( exteriorDerivative
     ) where
@@ -152,7 +157,6 @@ hiddenDerivative (Expression n mp) =
                 ImagPart arg -> d1Input ImagPart arg
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
-
 
 -- | Wise-multiply a number with a covector
 --
