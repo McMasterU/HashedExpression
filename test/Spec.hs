@@ -1,4 +1,4 @@
-import qualified EvalSpec
+import qualified SimplifySpec
 import Test.Hspec
 
 --main = regressionTestAll
@@ -7,4 +7,4 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-    describe "EvalSpec" EvalSpec.spec
+    describe "EvalSpec" SimplifySpec.spec

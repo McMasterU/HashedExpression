@@ -5,9 +5,12 @@
 module HashedSimplify where
 
 import Data.Function.HT (nest)
+import qualified Data.IntMap.Strict as IM
+import qualified Data.IntSet as IS
 import HashedExpression
 import HashedHash
 import HashedInner
+import HashedNode
 import HashedOperation
 import HashedPattern
 import HashedUtils
@@ -55,7 +58,10 @@ simplify ::
 simplify e
     -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
  =
-    let applyRules e = e |> zeroOneRules |> productRule |> sumRule |> otherRules
+    let applyRules e =
+            e |> zeroOneRules |> productRules |> exponentRules |> sumRule |>
+            otherRules |>
+            removeUnreachable
      in wrap . applyRules . unwrap $ e
 
 -- | Simplifications below
@@ -88,8 +94,24 @@ complexNumRules =
     , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
-productRule :: Simplification
-productRule = id
+productRules :: Simplification
+productRules =
+    chain . map fromPattern $
+    [ x <.> zero |.~~> zero
+    , zero <.> x |.~~> zero
+    , (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+    , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+    , x * (y + z) |.~~> (x * y + x * z)
+    , (y + z) * x |.~~> (x * y + x * z)
+    , x *. (y + z) |.~~> (x *. y + x *. z)
+    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
+    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
+    ]
+
+exponentRules :: Simplification
+exponentRules =
+    chain . map fromPattern $
+    [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
 sumRule :: Simplification
 sumRule = id
@@ -154,3 +176,14 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                         map buildFromPattern [sp1, sp2]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
+
+-- | Remove unreachable nodes
+--
+removeUnreachable :: Simplification
+removeUnreachable (mp, n) =
+    let collectNode n =
+            IS.insert n . IS.unions . map collectNode . nodeArgs $ retrieveNode n mp
+        reachableNodes = collectNode n
+        reducedMap =
+            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp
+     in (reducedMap, n)
