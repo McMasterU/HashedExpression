@@ -4,6 +4,7 @@ import HashedExpression
 
 -- | Helpers functions for Expression nodes
 --
+
 nodeElementType :: Node -> ET
 nodeElementType node =
     case node of
@@ -12,6 +13,7 @@ nodeElementType node =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
+        Neg _ _ -> R
         Div _ _ -> R
         Sqrt _ -> R
         Sin _ -> R
@@ -33,7 +35,7 @@ nodeElementType node =
         ImagPart _ -> R -- extract imaginary part
 
 
--- | For HashedPattern
+-- |
 --
 sameOp :: Node -> Node -> Bool
 sameOp node1 node2 =
@@ -61,14 +63,17 @@ sameOp node1 node2 =
         (ImagPart _, ImagPart _) -> True
         _ -> False
 
-args :: Node -> Args
-args node =
+-- | Get list of arguments of this node
+--
+nodeArgs :: Node -> Args
+nodeArgs node =
     case node of
         Var _ -> []
         DVar _ -> []
         Const _ -> []
-        Sum et args -> args
-        Mul et args -> args
+        Sum _ args -> args
+        Mul _ args -> args
+        Neg _ arg -> [arg]
         Div arg1 arg2 -> [arg1, arg2]
         Sqrt arg -> [arg]
         Sin arg -> [arg]
@@ -88,3 +93,4 @@ args node =
         RealImag arg1 arg2 -> [arg1, arg2]
         RealPart arg -> [arg]
         ImagPart arg -> [arg]
+
