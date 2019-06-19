@@ -112,8 +112,8 @@ class AddableOp a where
     (-) :: a -> a -> a
     x - y = x + negate y
 
-class MultiplyOp a b c | a b -> c where
-    (*) :: a -> b -> c
+class MultiplyOp a where
+    (*) :: a -> a -> a
 
 class VectorSpaceOp a b where
     scale :: a -> b -> b
@@ -136,11 +136,15 @@ class NumOp a where
     asinh :: a -> a
     acosh :: a -> a
     atanh :: a -> a
+    (/) :: a -> a -> a
 
 class ComplexRealOp r c | r -> c, c -> r where
     (+:) :: r -> r -> c
     xRe :: c -> r
     xIm :: c -> r
+
+class InnerProductSpaceOp a b | a -> b where
+    (<.>) :: a -> a -> b
 
 infixl 6 +, -
 

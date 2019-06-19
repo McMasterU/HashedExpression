@@ -59,7 +59,7 @@ instance AddableOp Pattern where
     negate = PNeg
 
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
-instance MultiplyOp Pattern Pattern Pattern where
+instance MultiplyOp Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
 instance VectorSpaceOp Pattern Pattern where
@@ -81,6 +81,7 @@ instance NumOp Pattern where
     asinh = PAsinh
     acosh = PAcosh
     atanh = PAtanh
+    (/) = PDiv
 
 instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag

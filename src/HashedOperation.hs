@@ -98,8 +98,7 @@ instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) =>
-         MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
+instance (DimensionType d, NumType et) => MultiplyOp (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
@@ -135,10 +134,6 @@ instance (DimensionType d) =>
 
 -- | Element-wise division for R
 --
-(/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
-(/) e1 e2 =
-    let op = binary Div
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
 -- | NumOp for R
 --
@@ -158,3 +153,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
     asinh = applyUnary (unary Asinh)
     acosh = applyUnary (unary Acosh)
     atanh = applyUnary (unary Atanh)
+    (/) e1 e2 =
+        let op = binary Div
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
