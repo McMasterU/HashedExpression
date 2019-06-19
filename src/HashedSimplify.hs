@@ -49,7 +49,7 @@ infixl 1 |>
 -- | Chain n simplifications together to a simplification
 --
 chain :: [Simplification] -> Simplification
-chain ss init = foldl (|>) init ss
+chain = flip $ foldl (|>)
 
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes = nest
