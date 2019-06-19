@@ -70,6 +70,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     (PHole capture)
                         | Just nId <- lookupCapture capture capturesMap ->
                             (originalMp, nId)
+                        | otherwise -> error "Capture not in the [(Capture, Int)] which never happens"
                     (PConst pc) ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
@@ -77,6 +78,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2] -> unwrap $ const2d (size1, size2) pc
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
+                            _ -> error "Dimension > 3"
                     PMul sps -> mulMany . map buildFromPattern $ sps
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PNeg sp ->

@@ -44,7 +44,6 @@ const' shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
-
 -- | Hidden exterior derivative
 --
 hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
@@ -56,15 +55,14 @@ hiddenDerivative (Expression n mp) =
         d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
         d1Input opType arg =
             let df = hiddenDerivative (Expression arg mp)
-            in applyUnary (unary opType) df
-
+             in applyUnary (unary opType) df
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
         d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
         d2Input opType arg1 arg2 =
             let df1 = hiddenDerivative (Expression arg1 mp)
                 df2 = hiddenDerivative (Expression arg2 mp)
-            in applyBinary (binary opType) df1 df2
+             in applyBinary (binary opType) df1 df2
         res =
             case node
                 -- dx = dx
@@ -74,18 +72,20 @@ hiddenDerivative (Expression n mp) =
                         (newMap, h) = fromNode (shape, node)
                      in Expression h newMap
                 -- dc = 0
+                DVar name ->
+                    error "Haven't deal with 1-form yet, only 0-form to 1-form"
                 Const _ ->
                     let node = Const 0
                         (newMap, h) = fromNode (shape, node)
                      in Expression h newMap
                 -- Sum and multiplication are special cases because they involve multiple arguments
                 Sum _ args -> wrap . sumMany . map dOne $ args
-                Mul _ args -- multiplication rule
-                    | length args >= 2 ->
-                        let mkSub nId = (mp, nId)
-                            dEach (one, rest) =
-                                mulMany (map mkSub rest ++ [dOne one])
-                         in wrap . sumMany . map dEach . removeEach $ args
+                -- multiplication rule
+                Mul _ args ->
+                    let mkSub nId = (mp, nId)
+                        dEach (one, rest) =
+                            mulMany (map mkSub rest ++ [dOne one])
+                     in wrap . sumMany . map dEach . removeEach $ args
                 -- d(-f) = -d(f)
                 Neg et arg -> d1Input (Neg et) arg
                 Div arg1 arg2
@@ -161,7 +161,5 @@ hiddenDerivative (Expression n mp) =
     -> Expression d Covector
     -> Expression d Covector
 (|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-    let op =
-            naryET Mul (ElementSpecific Covector) `hasShape`
-            expressionShape e1
+    let op = naryET Mul (ElementSpecific Covector) `hasShape` expressionShape e1
      in ensureSameShape e1 e2 $ applyBinary op e1 e2

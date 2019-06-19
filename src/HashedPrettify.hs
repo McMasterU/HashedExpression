@@ -55,6 +55,7 @@ hiddenPrettify e@(Expression n mp) =
                         , T.pack . show $ z
                         , "]"
                         ]
+                _ -> error "Haven't deal with more than 3-dimension"
      in case node of
             Var name -> T.concat [T.pack name, shapeSignature]
             DVar name -> T.concat ["d", T.pack name, shapeSignature]

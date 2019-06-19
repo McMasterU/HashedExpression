@@ -77,6 +77,7 @@ apply (OperationOption nodeOutcome shapeOutcome) exps =
                     op (elementType elm) arg1 arg2
                 (OpMany op, args) -> op args
                 (OpManyElement op elm, args) -> op (elementType elm) args
+                _ -> error "HashedInner.apply"
      in addEdge mergedMap (shape, node)
 
 -- | General multiplication and sum
