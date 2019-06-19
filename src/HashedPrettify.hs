@@ -63,6 +63,8 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses . T.intercalate "+" . map innerPrettify $ args
             Mul _ args ->
                 wrapParentheses . T.intercalate "*" . map innerPrettify $ args
+            Neg _ arg ->
+                T.concat ["-", wrapParentheses $ innerPrettify arg]
             Div arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "/", innerPrettify arg2]
