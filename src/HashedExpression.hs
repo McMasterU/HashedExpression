@@ -68,6 +68,8 @@ data Two
 data Three
     deriving (DimensionType, Typeable)
 
+-- | Classes as constraints
+--
 class ElementType et
 
 class ElementType et =>
@@ -97,10 +99,9 @@ class VectorSpace d s s =>
 instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
                               VectorSpace d et R
 
-instance {-# OVERLAPPABLE #-} (DimensionType d) => VectorSpace d C C
+instance (DimensionType d) => VectorSpace d C C
 
-instance {-# OVERLAPPABLE #-} (DimensionType d) =>
-                              VectorSpace d Covector R
+instance (DimensionType d) => VectorSpace d Covector R
 
 instance VectorSpace d s s => InnerProductSpace d s
 
@@ -150,7 +151,7 @@ infixl 6 +, -
 
 infixl 7 *
 
-infixl 8 *., `scale`
+infixl 8 *., `scale`, <.>
 
 -- | Shape type:
 -- []        --> scalar
@@ -225,4 +226,6 @@ data Node
     | RealImag Arg Arg -- from real and imagine
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
+    -- MARK: Inner product Space
+    | InnerProd ET Arg Arg
     deriving (Show, Eq, Ord)
