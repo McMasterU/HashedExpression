@@ -23,14 +23,24 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
     , const
     , cos
+    , cosh
     , exp
     , log
     , negate
     , sin
+    , sinh
     , sqrt
     , sum
+    , tan
+    , tanh
     )
 
 -- | Exterior derivative
@@ -160,21 +170,44 @@ hiddenDerivative (Expression n mp) =
                 Sinh arg ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
-                     in one shape / f |*| df
-                Cosh arg -> undefined
-                Tanh arg -> undefined
-                Asin arg -> undefined
-                Acos arg -> undefined
-                Atan arg -> undefined
-                Asinh arg -> undefined
-                Acosh arg -> undefined
-                Atanh arg -> undefined
+                     in cosh f |*| df
+                Cosh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in sinh f |*| df
+                Tanh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in (one shape - tanh f * tanh f) |*| df
+                Asin arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / sqrt (one shape - f * f) |*| df
+                Acos arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in negate (one shape / sqrt (one shape - f * f)) |*| df
+                Atan arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / (one shape + f * f) |*| df
+                Asinh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / sqrt (f * f + one shape) |*| df
+                Acosh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / sqrt (f * f - one shape) |*| df
+                Atanh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / (one shape - f * f) |*| df
                 RealPart arg -> d1Input RealPart arg
                 ImagPart arg -> d1Input ImagPart arg
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
---                        minusSinFx = const (-1) *. sin f
 -- | Wise-multiply a number with a covector
 --
 (|*|) ::
@@ -185,3 +218,16 @@ hiddenDerivative (Expression n mp) =
 (|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op = naryET Mul (ElementSpecific Covector) `hasShape` expressionShape e1
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
+-- | Our defined custom dot product with covector - it's more like multiply wise and then add
+-- up all the elements
+(|<.>|) ::
+       (DimensionType d, NumType nt)
+    => Expression d nt
+    -> Expression d Covector
+    -> Expression Zero Covector
+(|<.>|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+    let op = binaryET InnerProd (ElementSpecific Covector) `hasShape` []
+     in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
+infixl 8 |*|, |<.>|

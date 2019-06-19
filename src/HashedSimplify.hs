@@ -112,7 +112,9 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     (PHole capture)
                         | Just nId <- lookupCapture capture capturesMap ->
                             (originalMp, nId)
-                        | otherwise -> error "Capture not in the [(Capture, Int)] which never happens"
+                        | otherwise ->
+                            error
+                                "Capture not in the [(Capture, Int)] which never happens"
                     (PConst pc) ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
@@ -124,9 +126,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     PMul sps -> mulMany . map buildFromPattern $ sps
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PNeg sp ->
-                        apply
-                            (unaryET Neg ElementDefault)
-                            [buildFromPattern sp]
+                        apply (unaryET Neg ElementDefault) [buildFromPattern sp]
                     PDiv sp1 sp2 ->
                         apply (binary Div) $ map buildFromPattern [sp1, sp2]
                     PSqrt sp -> apply (unary Sqrt) [buildFromPattern sp]
@@ -147,9 +147,10 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     PRealImag sp1 sp2 ->
                         apply (binary RealImag) $
                         map buildFromPattern [sp1, sp2]
-                    PRealPart sp ->
-                        apply (unary RealPart) [buildFromPattern sp]
-                    PImagPart sp ->
-                        apply (unary ImagPart) [buildFromPattern sp]
+                    PRealPart sp -> apply (unary RealPart) [buildFromPattern sp]
+                    PImagPart sp -> apply (unary ImagPart) [buildFromPattern sp]
+                    PInnerProd sp1 sp2 ->
+                        apply (binaryET InnerProd ElementDefault) $
+                        map buildFromPattern [sp1, sp2]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
