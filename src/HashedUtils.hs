@@ -5,7 +5,7 @@ import HashedExpression
 import HashedHash
 import HashedNode
 
-import qualified Data.Complex as DC
+import Data.Complex
 
 -- | Check if all elements of the list is equal
 --
@@ -14,6 +14,9 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
   where
     safeTail [] = []
     safeTail (x:xs) = xs
+
+fromR :: Double -> Complex Double
+fromR x = x :+ 0
 
 -- | Auxiliary functions for operations
 --
@@ -77,5 +80,3 @@ ensureSameShapeList es after =
         then after
         else error "Ensure same shape failed"
 
-fromR :: Double -> DC.Complex Double
-fromR x = x DC.:+ 0
