@@ -86,13 +86,13 @@ hiddenDerivative (Expression n mp) =
                         (newMap, h) = fromNode (shape, node)
                      in Expression h newMap
                 -- Sum and multiplication are special cases because they involve multiple arguments
-                Sum _ args -> wrap . sum' . map dOne $ args
+                Sum _ args -> wrap . sumMany . map dOne $ args
                 Mul _ args -- multiplication rule
                     | length args >= 2 ->
                         let mkSub nId = (mp, nId)
                             dEach (one, rest) =
-                                mul' (map mkSub rest ++ [dOne one])
-                         in wrap . sum' . map dEach . removeEach $ args
+                                mulMany (map mkSub rest ++ [dOne one])
+                         in wrap . sumMany . map dEach . removeEach $ args
                 -- d(-f) = -d(f)
                 Neg et arg -> d1Input (Neg et) arg
                 Div arg1 arg2

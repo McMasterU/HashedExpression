@@ -43,6 +43,6 @@ main = do
         anotherF = const 0 *. f
         fImg = xRe $ f +: z
     print $ prettify anotherF
-    print $ prettify $ exteriorDerivative $ simplify anotherF
+    print $ prettify $ exteriorDerivative $ anotherF
 --    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f

@@ -82,8 +82,8 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2] -> unwrap $ const2d (size1, size2) pc
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
-                    PMul sps -> mul' . map buildFromPattern $ sps
-                    PSum sps -> sum' . map buildFromPattern $ sps
+                    PMul sps -> mulMany . map buildFromPattern $ sps
+                    PSum sps -> sumMany . map buildFromPattern $ sps
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
 
