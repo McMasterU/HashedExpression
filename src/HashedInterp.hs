@@ -10,7 +10,7 @@ import Data.Complex as DC
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
-import HashedExpression hiding ((+))
+import HashedExpression hiding ((+), (-))
 
 type family Output d rc where
     Output Zero R = Double

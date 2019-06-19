@@ -27,6 +27,7 @@ import Prelude hiding
     , cosh
     , exp
     , log
+    , negate
     , sin
     , sinh
     , sqrt
@@ -88,7 +89,7 @@ fromPattern (GP pattern condition, replacementPattern) (originalMp, originalN)
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    multipleTimes 1000 . chain . map fromPattern $
+    chain . map fromPattern $
     [ x *. (y *. z) |.~~> (x * y) *. z
     , one *. x |.~~> x
     , one * x |.~~> x
@@ -100,6 +101,18 @@ zeroOneRules =
     , one *. x |.~~> x
     , x + zero |.~~> x
     , zero + x |.~~> x
+    , xRe (x +: y) |.~~> x
+    , xIm (x +: y) |.~~> y
+    ]
+
+complexNumRules :: Simplification
+complexNumRules =
+    chain . map fromPattern $
+    [ xRe (x +: y) |.~~> x
+    , xIm (x +: y) |.~~> y
+    , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
+    , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
+    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
 productRule :: Simplification

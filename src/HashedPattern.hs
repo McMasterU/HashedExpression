@@ -32,6 +32,7 @@ data Pattern
     | PConst Double
     | PSum [Pattern] -- element-wise sum
     | PMul [Pattern] -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | PNeg Pattern
     | PDiv Pattern Pattern
     | PSqrt Pattern
     | PSin Pattern
@@ -53,8 +54,9 @@ data Pattern
     | PImagPart Pattern -- extract imaginary part
     deriving (Show, Eq, Ord)
 
-instance AddableOp Pattern Pattern Pattern where
+instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
+    negate = PNeg
 
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
 instance MultiplyOp Pattern Pattern Pattern where

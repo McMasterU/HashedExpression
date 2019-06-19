@@ -24,6 +24,7 @@ import GHC.TypeLits (Nat)
 import Prelude hiding
     ( (*)
     , (+)
+    , (-)
     , (/)
     , acos
     , acosh
@@ -34,6 +35,7 @@ import Prelude hiding
     , cos
     , cosh
     , exp
+    , negate
     , sin
     , sinh
     , tan
@@ -102,10 +104,13 @@ instance {-# OVERLAPPABLE #-} (DimensionType d) =>
 
 instance VectorSpace d s s => InnerProductSpace d s
 
--- | Classes for operations so that both Expression and WithHoles can implement
+-- | Classes for operations so that both Expression and Pattern (in HashedPattern) can implement
 --
-class AddableOp a b c | a b -> c where
-    (+) :: a -> b -> c
+class AddableOp a where
+    (+) :: a -> a -> a
+    negate :: a -> a
+    (-) :: a -> a -> a
+    x - y = x + negate y
 
 class MultiplyOp a b c | a b -> c where
     (*) :: a -> b -> c
@@ -119,7 +124,6 @@ class NumOp a where
     sqrt :: a -> a
     exp :: a -> a
     log :: a -> a
-    -- Trigonometric operations
     sin :: a -> a
     cos :: a -> a
     tan :: a -> a
@@ -138,13 +142,11 @@ class ComplexRealOp r c | r -> c, c -> r where
     xRe :: c -> r
     xIm :: c -> r
 
-infixl 6 +
+infixl 6 +, -
 
 infixl 7 *
 
-infixl 8 *.
-
-infixl 8 `scale`
+infixl 8 *., `scale`
 
 -- | Shape type:
 -- []        --> scalar
@@ -197,6 +199,7 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | Neg ET Arg
     -- MARK: only apply to R
     | Div Arg Arg
     | Sqrt Arg
@@ -219,4 +222,3 @@ data Node
     | RealPart Arg -- extract real part
     | ImagPart Arg -- extract imaginary part
     deriving (Show, Eq, Ord)
-

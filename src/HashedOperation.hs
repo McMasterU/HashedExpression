@@ -86,9 +86,11 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 -- | Element-wise sum
 --
 instance (DimensionType d, Addable et) =>
-         AddableOp (Expression d et) (Expression d et) (Expression d et) where
+         AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
     (+) = applyOpSameShapeSameElement (\et arg1 arg2 -> Sum et [arg1, arg2])
+    negate :: Expression d et -> Expression d et
+    negate = applyOpSameElement Neg
 
 ---- | TODO: Should it return Maybe (Expression d et)
 ----
@@ -184,3 +186,11 @@ applyOpSameShapeSameElement op e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     shape = expressionShape e1
     node = op elementType n1 n2
     (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+
+applyOpSameElement :: (ET -> Arg -> Node) -> Expression d et1 -> Expression d et2
+applyOpSameElement op e@(Expression n mp) = Expression h newMap
+  where
+    shape = expressionShape e
+    elementType = expressionElementType e
+    node = op elementType n
+    (newMap, h) = addEdge mp (shape, node)

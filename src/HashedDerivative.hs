@@ -93,8 +93,10 @@ hiddenDerivative (Expression n mp) =
                             dEach (one, rest) =
                                 mul' (map mkSub rest ++ [dOne one])
                          in wrap . sum' . map dEach . removeEach $ args
+                -- d(-f) = -d(f)
+                Neg et arg -> d1Input (Neg et) arg
                 Div arg1 arg2
-                -- d (f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
+                -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
                  ->
                     let f = Expression arg1 mp :: Expression WhateverD R
                         g = Expression arg2 mp :: Expression WhateverD R
