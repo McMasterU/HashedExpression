@@ -36,16 +36,6 @@ import Prelude hiding
     )
 import qualified Prelude as Prelude
 
--- | Simplify an expression
---
-simplify ::
-       (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify e
-    -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
- =
-    let applyRules e = e |> zeroOneRules |> productRule |> sumRule |> otherRules
-     in wrap . applyRules . unwrap $ e
-
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
 type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
@@ -57,6 +47,58 @@ chain = flip $ foldl (|>)
 
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes = nest
+
+-- | Simplify an expression
+--
+simplify ::
+       (DimensionType d, ElementType et) => Expression d et -> Expression d et
+simplify e
+    -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
+ =
+    let applyRules e = e |> zeroOneRules |> productRule |> sumRule |> otherRules
+     in wrap . applyRules . unwrap $ e
+
+-- | Simplifications below
+--
+zeroOneRules :: Simplification
+zeroOneRules =
+    chain . map fromPattern $
+    [ x *. (y *. z) |.~~> (x * y) *. z
+    , one *. x |.~~> x
+    , one * x |.~~> x
+    , x * one |.~~> x
+    , zero * x |.~~> zero
+    , x * zero |.~~> zero
+    , zero *. x |.~~> zero
+    , x *. zero |.~~> zero
+    , one *. x |.~~> x
+    , x + zero |.~~> x
+    , zero + x |.~~> x
+    , xRe (x +: y) |.~~> x
+    , xIm (x +: y) |.~~> y
+    ]
+
+complexNumRules :: Simplification
+complexNumRules =
+    chain . map fromPattern $
+    [ xRe (x +: y) |.~~> x
+    , xIm (x +: y) |.~~> y
+    , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
+    , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
+    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
+    ]
+
+productRule :: Simplification
+productRule = id
+
+sumRule :: Simplification
+sumRule = id
+
+dotProductRules :: Simplification
+dotProductRules = id
+
+otherRules :: Simplification
+otherRules = id
 
 -- | Turn HashedPattern to a simplification
 --
@@ -111,45 +153,3 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                         apply (unary ImagPart) [buildFromPattern sp]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
-
--- | Simplifications below
---
-zeroOneRules :: Simplification
-zeroOneRules =
-    chain . map fromPattern $
-    [ x *. (y *. z) |.~~> (x * y) *. z
-    , one *. x |.~~> x
-    , one * x |.~~> x
-    , x * one |.~~> x
-    , zero * x |.~~> zero
-    , x * zero |.~~> zero
-    , zero *. x |.~~> zero
-    , x *. zero |.~~> zero
-    , one *. x |.~~> x
-    , x + zero |.~~> x
-    , zero + x |.~~> x
-    , xRe (x +: y) |.~~> x
-    , xIm (x +: y) |.~~> y
-    ]
-
-complexNumRules :: Simplification
-complexNumRules =
-    chain . map fromPattern $
-    [ xRe (x +: y) |.~~> x
-    , xIm (x +: y) |.~~> y
-    , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
-    , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
-    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
-    ]
-
-productRule :: Simplification
-productRule = id
-
-sumRule :: Simplification
-sumRule = id
-
-dotProductRules :: Simplification
-dotProductRules = id
-
-otherRules :: Simplification
-otherRules = id

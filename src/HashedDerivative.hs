@@ -18,7 +18,20 @@ import HashedHash
 import HashedInner
 import HashedOperation
 import HashedUtils
-import Prelude hiding ((*), (+), (-), (/), const, cos, exp, log, sin, sqrt, sum, negate)
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , const
+    , cos
+    , exp
+    , log
+    , negate
+    , sin
+    , sqrt
+    , sum
+    )
 
 -- | Exterior derivative
 --
@@ -123,7 +136,6 @@ hiddenDerivative (Expression n mp) =
                  ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
---                        minusSinFx = const (-1) *. sin f
                      in negate (sin f) |*| df
                 Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
@@ -149,7 +161,6 @@ hiddenDerivative (Expression n mp) =
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / f |*| df
-
                 Cosh arg -> undefined
                 Tanh arg -> undefined
                 Asin arg -> undefined
@@ -163,6 +174,7 @@ hiddenDerivative (Expression n mp) =
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
      in coerce res
 
+--                        minusSinFx = const (-1) *. sin f
 -- | Wise-multiply a number with a covector
 --
 (|*|) ::

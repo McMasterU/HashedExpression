@@ -41,7 +41,9 @@ main = do
         f = log $ exp $ sqrt $ cos $ s *. (x * y) / y
         anotherF = const 0 *. f
         fImg = xRe $ f +: z
-    print $ prettify anotherF
-    print $ prettify $ exteriorDerivative anotherF
+--    print $ prettify anotherF
+    print $ prettify fImg
+    print $ prettify $ exteriorDerivative fImg
+    print $ prettify $ exteriorDerivative $ simplify fImg
 --    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f
