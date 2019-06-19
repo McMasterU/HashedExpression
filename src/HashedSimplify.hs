@@ -40,9 +40,11 @@ import qualified Prelude as Prelude
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify e =
-    e |> unwrap |> zeroOneRules |> productRule |> sumRule |> otherRules |> wrap
+simplify e
     -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
+ =
+    let applyRules e = e |> zeroOneRules |> productRule |> sumRule |> otherRules
+     in wrap . applyRules . unwrap $ e
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -64,8 +66,8 @@ multipleTimes = nest
 -- | Turn HashedPattern to a simplification
 --
 fromPattern :: (GuardedPattern, Pattern) -> Simplification
-fromPattern (GP pattern condition, replacementPattern) (originalMp, originalN)
-    | Just capturesMap <- match (originalMp, originalN) pattern
+fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
+    | Just capturesMap <- match ex pattern
     , condition originalMp capturesMap =
         let buildFromPattern :: Pattern -> (ExpressionMap, Int)
             buildFromPattern pattern =
