@@ -50,12 +50,12 @@ wrap = uncurry $ flip Expression
 highestShape :: [(ExpressionMap, Int)] -> Shape
 highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
 
--- | R < C < Covector -- TODO: Is this right?
+-- | R < C < Covector
 --
 highestElementType :: [(ExpressionMap, Int)] -> ET
 highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 
--- | The ultimate apply function that is used by many places
+-- | The apply function that is used everywhere
 --
 apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 apply (OperationOption nodeOutcome shapeOutcome) exps =
@@ -110,8 +110,8 @@ applyBinary ::
     -> Expression d3 et3
 applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 
-applyMonory :: OperationOption -> Expression d1 et1 -> Expression d2 et2
-applyMonory option e1 = wrap . apply option $ [unwrap e1]
+applyUnary :: OperationOption -> Expression d1 et1 -> Expression d2 et2
+applyUnary option e1 = wrap . apply option $ [unwrap e1]
 
 -- |
 --
@@ -124,20 +124,20 @@ binaryET op elm =
     OperationOption
         {nodeOutcome = OpTwoElement op elm, shapeOutcome = ShapeDefault}
 
-monory :: (Arg -> Node) -> OperationOption
-monory op =
+unary :: (Arg -> Node) -> OperationOption
+unary op =
     OperationOption {nodeOutcome = OpOne op, shapeOutcome = ShapeDefault}
 
-monoryET :: (ET -> Arg -> Node) -> ElementOutcome -> OperationOption
-monoryET op elm =
+unaryET :: (ET -> Arg -> Node) -> ElementOutcome -> OperationOption
+unaryET op elm =
     OperationOption
         {nodeOutcome = OpOneElement op elm, shapeOutcome = ShapeDefault}
 
-multiry :: (Args -> Node) -> OperationOption
-multiry op =
+nary :: (Args -> Node) -> OperationOption
+nary op =
     OperationOption {nodeOutcome = OpMany op, shapeOutcome = ShapeDefault}
 
-multiryET :: (ET -> Args -> Node) -> ElementOutcome -> OperationOption
-multiryET op elm =
+naryET :: (ET -> Args -> Node) -> ElementOutcome -> OperationOption
+naryET op elm =
     OperationOption
         {nodeOutcome = OpManyElement op elm, shapeOutcome = ShapeDefault}

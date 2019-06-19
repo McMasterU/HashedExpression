@@ -89,12 +89,12 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
     (+) e1 e2 =
-        let op = multiryET Sum ElementDefault `hasShape` expressionShape e1
+        let op = naryET Sum ElementDefault `hasShape` expressionShape e1
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
     negate :: Expression d et -> Expression d et
     negate =
-        let op = monoryET Neg ElementDefault
-         in applyMonory $ monoryET Neg ElementDefault
+        let op = unaryET Neg ElementDefault
+         in applyUnary $ unaryET Neg ElementDefault
 
 -- | Element-wise multiplication
 --
@@ -102,7 +102,7 @@ instance (DimensionType d, NumType et) =>
          MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
-        let op = multiryET Mul ElementDefault `hasShape` expressionShape e1
+        let op = naryET Mul ElementDefault `hasShape` expressionShape e1
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
 -- | Scale in vector space
@@ -112,7 +112,7 @@ instance (VectorSpace d et s) =>
     scale :: Expression Zero s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =
-                multiryET Mul (ElementSpecific $ expressionElementType e2) `hasShape`
+                naryET Mul (ElementSpecific $ expressionElementType e2) `hasShape`
                 expressionShape e2
          in applyBinary op e1 e2
 
@@ -126,12 +126,12 @@ instance (DimensionType d) =>
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
     xRe :: Expression d C -> Expression d R
     xRe =
-        let op = monory RealPart
-         in applyMonory op
+        let op = unary RealPart
+         in applyUnary op
     xIm :: Expression d C -> Expression d R
     xIm =
-        let op = monory RealPart
-         in applyMonory op
+        let op = unary RealPart
+         in applyUnary op
 
 -- | Element-wise division for R
 --
@@ -143,18 +143,18 @@ instance (DimensionType d) =>
 -- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
-    sqrt = applyMonory (monory Sqrt)
-    exp = applyMonory (monory Exp)
-    log = applyMonory (monory Log)
-    sin = applyMonory (monory Sin)
-    cos = applyMonory (monory Cos)
-    tan = applyMonory (monory Tan)
-    asin = applyMonory (monory Asin)
-    acos = applyMonory (monory Acos)
-    atan = applyMonory (monory Atan)
-    sinh = applyMonory (monory Sinh)
-    cosh = applyMonory (monory Cosh)
-    tanh = applyMonory (monory Tanh)
-    asinh = applyMonory (monory Asinh)
-    acosh = applyMonory (monory Acosh)
-    atanh = applyMonory (monory Atanh)
+    sqrt = applyUnary (unary Sqrt)
+    exp = applyUnary (unary Exp)
+    log = applyUnary (unary Log)
+    sin = applyUnary (unary Sin)
+    cos = applyUnary (unary Cos)
+    tan = applyUnary (unary Tan)
+    asin = applyUnary (unary Asin)
+    acos = applyUnary (unary Acos)
+    atan = applyUnary (unary Atan)
+    sinh = applyUnary (unary Sinh)
+    cosh = applyUnary (unary Cosh)
+    tanh = applyUnary (unary Tanh)
+    asinh = applyUnary (unary Asinh)
+    acosh = applyUnary (unary Acosh)
+    atanh = applyUnary (unary Atanh)

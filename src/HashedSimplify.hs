@@ -86,32 +86,32 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PNeg sp ->
                         apply
-                            (monoryET Neg ElementDefault)
+                            (unaryET Neg ElementDefault)
                             [buildFromPattern sp]
                     PDiv sp1 sp2 ->
                         apply (binary Div) $ map buildFromPattern [sp1, sp2]
-                    PSqrt sp -> apply (monory Sqrt) [buildFromPattern sp]
-                    PSin sp -> apply (monory Sin) [buildFromPattern sp]
-                    PCos sp -> apply (monory Cos) [buildFromPattern sp]
-                    PTan sp -> apply (monory Tan) [buildFromPattern sp]
-                    PExp sp -> apply (monory Exp) [buildFromPattern sp]
-                    PLog sp -> apply (monory Log) [buildFromPattern sp]
-                    PSinh sp -> apply (monory Sinh) [buildFromPattern sp]
-                    PCosh sp -> apply (monory Cosh) [buildFromPattern sp]
-                    PTanh sp -> apply (monory Tanh) [buildFromPattern sp]
-                    PAsin sp -> apply (monory Asin) [buildFromPattern sp]
-                    PAcos sp -> apply (monory Acos) [buildFromPattern sp]
-                    PAtan sp -> apply (monory Atan) [buildFromPattern sp]
-                    PAsinh sp -> apply (monory Asinh) [buildFromPattern sp]
-                    PAcosh sp -> apply (monory Acosh) [buildFromPattern sp]
-                    PAtanh sp -> apply (monory Atanh) [buildFromPattern sp]
+                    PSqrt sp -> apply (unary Sqrt) [buildFromPattern sp]
+                    PSin sp -> apply (unary Sin) [buildFromPattern sp]
+                    PCos sp -> apply (unary Cos) [buildFromPattern sp]
+                    PTan sp -> apply (unary Tan) [buildFromPattern sp]
+                    PExp sp -> apply (unary Exp) [buildFromPattern sp]
+                    PLog sp -> apply (unary Log) [buildFromPattern sp]
+                    PSinh sp -> apply (unary Sinh) [buildFromPattern sp]
+                    PCosh sp -> apply (unary Cosh) [buildFromPattern sp]
+                    PTanh sp -> apply (unary Tanh) [buildFromPattern sp]
+                    PAsin sp -> apply (unary Asin) [buildFromPattern sp]
+                    PAcos sp -> apply (unary Acos) [buildFromPattern sp]
+                    PAtan sp -> apply (unary Atan) [buildFromPattern sp]
+                    PAsinh sp -> apply (unary Asinh) [buildFromPattern sp]
+                    PAcosh sp -> apply (unary Acosh) [buildFromPattern sp]
+                    PAtanh sp -> apply (unary Atanh) [buildFromPattern sp]
                     PRealImag sp1 sp2 ->
                         apply (binary RealImag) $
                         map buildFromPattern [sp1, sp2]
                     PRealPart sp ->
-                        apply (monory RealPart) [buildFromPattern sp]
+                        apply (unary RealPart) [buildFromPattern sp]
                     PImagPart sp ->
-                        apply (monory ImagPart) [buildFromPattern sp]
+                        apply (unary ImagPart) [buildFromPattern sp]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
 

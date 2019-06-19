@@ -56,7 +56,7 @@ hiddenDerivative (Expression n mp) =
         d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
         d1Input opType arg =
             let df = hiddenDerivative (Expression arg mp)
-            in applyMonory (monory opType) df
+            in applyUnary (unary opType) df
 
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
@@ -162,6 +162,6 @@ hiddenDerivative (Expression n mp) =
     -> Expression d Covector
 (|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op =
-            multiryET Mul (ElementSpecific Covector) `hasShape`
+            naryET Mul (ElementSpecific Covector) `hasShape`
             expressionShape e1
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
