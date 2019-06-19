@@ -39,10 +39,10 @@ main = do
         y = var1d 10 "y"
         z = var1d 10 "z"
         s = var "s"
-        f = log $ exp $ sqrt $ cos $ s `scale` (x * y) / y
+        f = log $ exp $ sqrt $ cos $ s *. (x * y) / y
         anotherF = const 0 *. f
         fImg = realPart $ f +: z
     print $ prettify anotherF
-    print . prettify . simplify $ anotherF
+    print $ prettify $ exteriorDerivative $ simplify anotherF
 --    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f
