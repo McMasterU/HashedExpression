@@ -15,17 +15,19 @@ import HashedHash
 import HashedNode
 import HashedUtils
 
-data Op
-    = OpOne (Arg -> Node)
-    | OpOneElement (ET -> Arg -> Node)
-    | OpTwo (Arg -> Arg -> Node)
-    | OpTwoElement (ET -> Arg -> Arg -> Node)
-    | OpMany (Args -> Node)
-    | OpManyElement (ET -> Args -> Node)
-
+-- |
+--
 data ElementOutcome
     = ElementSpecific ET
     | ElementDefault -- Highest element (R < C < Covector)
+
+data NodeOutcome
+    = OpOne (Arg -> Node)
+    | OpOneElement (ET -> Arg -> Node) ElementOutcome
+    | OpTwo (Arg -> Arg -> Node)
+    | OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome
+    | OpMany (Args -> Node)
+    | OpManyElement (ET -> Args -> Node) ElementOutcome
 
 data ShapeOutcome
     = ShapeSpecific Shape
@@ -33,33 +35,9 @@ data ShapeOutcome
 
 data OperationOption =
     OperationOption
-        { op :: Op
-        , elementOutcome :: ElementOutcome
+        { nodeOutcome :: NodeOutcome
         , shapeOutcome :: ShapeOutcome
         }
-
--- | The ultimate apply function that is used by many places
---
-apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-apply OperationOption {..} exps =
-    let mergedMap = foldl1 IM.union . map fst $ exps
-        shape =
-            case shapeOutcome of
-                ShapeSpecific s -> s
-                ShapeDefault -> highestShape exps
-        elementType =
-            case elementOutcome of
-                ElementSpecific et -> et
-                ElementDefault -> highestElementType exps
-        node =
-            case (op, map snd exps) of
-                (OpOne op, [arg]) -> op arg
-                (OpOneElement op, [arg]) -> op elementType arg
-                (OpTwo op, [arg1, arg2]) -> op arg1 arg2
-                (OpTwoElement op, [arg1, arg2]) -> op elementType arg1 arg2
-                (OpMany op, args) -> op args
-                (OpManyElement op, args) -> op elementType args
-     in addEdge mergedMap (shape, node)
 
 -- |
 --
@@ -79,25 +57,43 @@ highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
 highestElementType :: [(ExpressionMap, Int)] -> ET
 highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 
+-- | The ultimate apply function that is used by many places
+--
+apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+apply OperationOption {..} exps =
+    let mergedMap = foldl1 IM.union . map fst $ exps
+        shape =
+            case shapeOutcome of
+                ShapeSpecific s -> s
+                ShapeDefault -> highestShape exps
+        elementType elementOutcome =
+            case elementOutcome of
+                ElementSpecific et -> et
+                ElementDefault -> highestElementType exps
+        node =
+            case (nodeOutcome, map snd exps) of
+                (OpOne op, [arg]) -> op arg
+                (OpOneElement op elm, [arg]) -> op (elementType elm) arg
+                (OpTwo op, [arg1, arg2]) -> op arg1 arg2
+                (OpTwoElement op elm, [arg1, arg2]) ->
+                    op (elementType elm) arg1 arg2
+                (OpMany op, args) -> op args
+                (OpManyElement op elm, args) -> op (elementType elm) args
+     in addEdge mergedMap (shape, node)
+
 -- | General multiplication and sum
 --
 mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 mulMany =
     apply $
     OperationOption
-        { op = OpManyElement Mul
-        , shapeOutcome = ShapeDefault
-        , elementOutcome = ElementDefault
-        }
+        {nodeOutcome = OpManyElement Mul ElementDefault, shapeOutcome = ShapeDefault}
 
 sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 sumMany =
     apply $
     OperationOption
-        { op = OpManyElement Sum
-        , shapeOutcome = ShapeDefault
-        , elementOutcome = ElementDefault
-        }
+        {nodeOutcome = OpManyElement Sum ElementDefault, shapeOutcome = ShapeDefault}
 
 -- | More helpers
 --
@@ -107,9 +103,9 @@ binary ::
     -> Expression d1 et1
     -> Expression d2 et2
     -> Expression d3 et3
-binary o s e1 e2 =
-    wrap . apply (OperationOption (OpTwo o) ElementDefault s) $
-    [unwrap e1, unwrap e2]
+binary o s e1 e2 = undefined
+--    wrap . apply (OperationOption (OpTwo o) ElementDefault s) $
+--    [unwrap e1, unwrap e2]
 
 -- |
 --
@@ -120,23 +116,23 @@ binaryET ::
     -> Expression d1 et1
     -> Expression d2 et2
     -> Expression d3 et3
-binaryET o elm s e1 e2 =
-    wrap . apply (OperationOption (OpTwoElement o) elm s) $
-    [unwrap e1, unwrap e2]
+binaryET o elm s e1 e2 = undefined
+--    wrap . apply (OperationOption (OpTwoElement o) elm s) $
+--    [unwrap e1, unwrap e2]
 
 -- |
 --
 monory :: (Arg -> Node) -> Expression d et1 -> Expression d et2
-monory op ex =
-    wrap . apply (OperationOption (OpOne op) ElementDefault ShapeDefault) $
-    [unwrap ex]
+monory op ex = undefined
+--    wrap . apply (OperationOption (OpOne op) ElementDefault ShapeDefault) $
+--    [unwrap ex]
 
 -- |
 --
 monoryET :: (ET -> Arg -> Node) -> Expression d et1 -> Expression d et2
-monoryET op ex =
-    wrap . apply (OperationOption (OpOneElement op) ElementDefault ShapeDefault) $
-    [unwrap ex]
+monoryET op ex = undefined
+--    wrap . apply (OperationOption (OpOneElement op) ElementDefault ShapeDefault) $
+--    [unwrap ex]
 
 unwrapBinary ::
        (Arg -> Arg -> Node)
@@ -144,8 +140,8 @@ unwrapBinary ::
     -> (ExpressionMap, Int)
     -> (ExpressionMap, Int)
     -> (ExpressionMap, Int)
-unwrapBinary o s e1 e2 =
-    apply (OperationOption (OpTwo o) ElementDefault s) [e1, e2]
+unwrapBinary o s e1 e2 = undefined
+--    apply (OperationOption (OpTwo o) ElementDefault s) [e1, e2]
 
 -- |
 --
@@ -156,18 +152,18 @@ unwrapBinaryET ::
     -> (ExpressionMap, Int)
     -> (ExpressionMap, Int)
     -> (ExpressionMap, Int)
-unwrapBinaryET o elm s e1 e2 =
-    apply (OperationOption (OpTwoElement o) elm s) [e1, e2]
+unwrapBinaryET o elm s e1 e2 = undefined
+--    apply (OperationOption (OpTwoElement o) elm s) [e1, e2]
 
 -- |
 --
 unwrapMonory :: (Arg -> Node) -> (ExpressionMap, Int) -> (ExpressionMap, Int)
-unwrapMonory op ex =
-    apply (OperationOption (OpOne op) ElementDefault ShapeDefault) [ex]
+unwrapMonory op ex = undefined
+--    apply (OperationOption (OpOne op) ElementDefault ShapeDefault) [ex]
 
 -- |
 --
 unwrapMonoryET ::
        (ET -> Arg -> Node) -> (ExpressionMap, Int) -> (ExpressionMap, Int)
-unwrapMonoryET op ex =
-    apply (OperationOption (OpOneElement op) ElementDefault ShapeDefault) [ex]
+unwrapMonoryET op ex = undefined
+--    apply (OperationOption (OpOneElement op) ElementDefault ShapeDefault) [ex]
