@@ -53,25 +53,17 @@ hiddenDerivative (Expression n mp) =
         -- For cases g = ImagPart, RealPart, FFT, .. that take 1 input
         -- d(g(x)) = g(d(x))
         d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
-        d1Input op arg =
+        d1Input opType arg =
             let df = hiddenDerivative (Expression arg mp)
-                dfShape = expressionShape df
-                outputNode = op (exIndex df)
-                (newMap, nRes) = addEdge (exMap df) (dfShape, outputNode)
-             in Expression nRes newMap
+            in applyMonory (monory opType) df
+
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
         d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
-        d2Input op arg1 arg2 =
+        d2Input opType arg1 arg2 =
             let df1 = hiddenDerivative (Expression arg1 mp)
                 df2 = hiddenDerivative (Expression arg2 mp)
-                dfShape = expressionShape df1
-                outputNode = op (exIndex df1) (exIndex df2)
-                (newMap, nRes) =
-                    addEdge
-                        (exMap df1 `IM.union` exMap df2)
-                        (dfShape, outputNode)
-             in Expression nRes newMap
+            in applyBinary (binary opType) df1 df2
         res =
             case node
                 -- dx = dx
@@ -168,9 +160,7 @@ hiddenDerivative (Expression n mp) =
     -> Expression d Covector
     -> Expression d Covector
 (|*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-    ensureSameShape e1 e2 $ Expression h newMap
-  where
-    elementType = expressionElementType e1
-    shape = expressionShape e1
-    node = Mul elementType [n1, n2]
-    (newMap, h) = addEdge (mp1 `IM.union` mp2) (shape, node)
+    let op =
+            multiryET Mul (ElementSpecific Covector) `hasShape`
+            expressionShape e1
+     in ensureSameShape e1 e2 $ applyBinary op e1 e2

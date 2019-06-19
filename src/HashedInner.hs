@@ -4,8 +4,6 @@
 --
 --
 -------------------------------------------------------------------------------
-{-# LANGUAGE RecordWildCards #-}
-
 module HashedInner where
 
 import qualified Data.IntMap.Strict as IM
@@ -105,15 +103,15 @@ hasShape :: OperationOption -> Shape -> OperationOption
 hasShape (OperationOption nodeOutcome _) specificShape =
     OperationOption nodeOutcome (ShapeSpecific specificShape)
 
-opBinary ::
+applyBinary ::
        OperationOption
     -> Expression d1 et1
     -> Expression d2 et2
     -> Expression d3 et3
-opBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
+applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 
-opMonory :: OperationOption -> Expression d1 et1 -> Expression d2 et2
-opMonory option e1 = wrap . apply option $ [unwrap e1]
+applyMonory :: OperationOption -> Expression d1 et1 -> Expression d2 et2
+applyMonory option e1 = wrap . apply option $ [unwrap e1]
 
 -- |
 --
