@@ -52,6 +52,7 @@ data Pattern
     | PRealImag Pattern Pattern
     | PRealPart Pattern
     | PImagPart Pattern
+    | PInnerProd Pattern Pattern
     deriving (Show, Eq, Ord)
 
 instance AddableOp Pattern where
@@ -87,6 +88,9 @@ instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
     xRe = PRealPart
     xIm = PImagPart
+
+instance InnerProductSpaceOp Pattern Pattern where
+    (<.>) = PInnerProd
 
 -- | Guarded patterns for simplification
 --
@@ -146,6 +150,7 @@ match (mp, n) wh =
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (RealPart arg, PRealPart wh) -> recursiveAndCombine [arg] [wh]
             (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
+            (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) -> recursiveAndCombine [arg1, arg2] [wh1, wh2]
             _ -> Nothing
 
 lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int

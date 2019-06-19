@@ -22,11 +22,11 @@ import Prelude hiding
     , asin
     , asinh
     , atan
-    , negate
     , atanh
     , cos
     , cosh
     , exp
+    , negate
     , sin
     , sinh
     , tan
@@ -135,7 +135,6 @@ instance (DimensionType d) =>
 
 -- | Element-wise division for R
 --
-
 -- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
@@ -158,3 +157,12 @@ instance (DimensionType d) => NumOp (Expression d R) where
         let op = binary Div
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
+instance (InnerProductSpace d s) =>
+         InnerProductSpaceOp (Expression d s) (Expression Zero s) where
+    (<.>) :: Expression d s -> Expression d s -> Expression Zero s
+    (<.>) e1 e2 =
+        let scalarShape = []
+            op =
+                binaryET InnerProd (ElementSpecific $ expressionElementType e2) `hasShape`
+                scalarShape
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2

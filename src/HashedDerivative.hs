@@ -18,7 +18,7 @@ import HashedHash
 import HashedInner
 import HashedOperation
 import HashedUtils
-import Prelude hiding ((*), (+), (/), const, cos, exp, log, sin, sqrt, sum)
+import Prelude hiding ((*), (+), (-), (/), const, cos, exp, log, sin, sqrt, sum, negate)
 
 -- | Exterior derivative
 --
@@ -38,10 +38,16 @@ coerce (Expression n mp) = Expression n mp
 
 -- | Hidden const to represent many dimension
 --
-const' :: (DimensionType d) => Shape -> Double -> Expression d R
-const' shape val = Expression h (IM.fromList [(h, node)])
+c :: (DimensionType d) => Shape -> Double -> Expression d R
+c shape val = Expression h (IM.fromList [(h, node)])
   where
     node = (shape, Const val)
+    h = hash node
+
+one :: (DimensionType d) => Shape -> Expression d R
+one shape = Expression h (IM.fromList [(h, node)])
+  where
+    node = (shape, Const 1)
     h = hash node
 
 -- | Hidden exterior derivative
@@ -97,14 +103,14 @@ hiddenDerivative (Expression n mp) =
                         dg = exteriorDerivative g
                         g'2 = g * g
                         part1 = (g / g'2) |*| df
-                        part2 = const (-1) *. (f / g'2) |*| dg
-                     in part1 + part2
+                        part2 = (f / g'2) |*| dg
+                     in part1 - part2
                 Sqrt arg
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
                  ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
-                        recipSqrtF = const' (expressionShape f) 0.5 / sqrt f
+                        recipSqrtF = c (expressionShape f) 0.5 / sqrt f
                      in recipSqrtF |*| df
                 Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
@@ -117,15 +123,15 @@ hiddenDerivative (Expression n mp) =
                  ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
-                        minusSinFx = const (-1) *. sin f
-                     in minusSinFx |*| df
+--                        minusSinFx = const (-1) *. sin f
+                     in negate (sin f) |*| df
                 Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
                  ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                         cosSqrF = cos f * cos f
-                        sqrRecip = const' shape 1 / cosSqrF
+                        sqrRecip = one shape / cosSqrF
                      in sqrRecip |*| df
                 Exp arg
                 -- d(exp(f)) = exp(f) * d(f)
@@ -138,8 +144,12 @@ hiddenDerivative (Expression n mp) =
                  ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
-                     in const' shape 1 / f |*| df
-                Sinh arg -> undefined
+                     in one shape / f |*| df
+                Sinh arg ->
+                    let f = Expression arg mp :: Expression WhateverD R
+                        df = exteriorDerivative f
+                     in one shape / f |*| df
+
                 Cosh arg -> undefined
                 Tanh arg -> undefined
                 Asin arg -> undefined

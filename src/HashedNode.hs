@@ -33,6 +33,7 @@ nodeElementType node =
         RealImag _ _ -> C -- from real and imagine
         RealPart _ -> R -- extract real part
         ImagPart _ -> R -- extract imaginary part
+        InnerProd et _ _ -> et
 
 
 -- |
@@ -40,27 +41,28 @@ nodeElementType node =
 sameOp :: Node -> Node -> Bool
 sameOp node1 node2 =
     case (node1, node2) of
-        (Sum _ _, Sum _ _) -> True
-        (Mul _ _, Mul _ _) -> True
-        (Div _ _, Div _ _) -> True
-        (Sqrt _, Sqrt _) -> True
-        (Sin _, Sin _) -> True
-        (Cos _, Cos _) -> True
-        (Tan _, Tan _) -> True
-        (Exp _, Exp _) -> True
-        (Log _, Log _) -> True
-        (Sinh _, Sinh _) -> True
-        (Cosh _, Cosh _) -> True
-        (Tanh _, Tanh _) -> True
-        (Asin _, Asin _) -> True
-        (Acos _, Acos _) -> True
-        (Atan _, Atan _) -> True
-        (Asinh _, Asinh _) -> True
-        (Acosh _, Acosh _) -> True
-        (Atanh _, Atanh _) -> True
-        (RealImag _ _, RealImag _ _) -> True
-        (RealPart _, RealPart _) -> True
-        (ImagPart _, ImagPart _) -> True
+        (Sum {}, Sum {}) -> True
+        (Mul {}, Mul {}) -> True
+        (Div {}, Div {}) -> True
+        (Sqrt {}, Sqrt {}) -> True
+        (Sin {}, Sin {}) -> True
+        (Cos {}, Cos {}) -> True
+        (Tan {}, Tan {}) -> True
+        (Exp {}, Exp {}) -> True
+        (Log {}, Log {}) -> True
+        (Sinh {}, Sinh {}) -> True
+        (Cosh {}, Cosh {}) -> True
+        (Tanh {}, Tanh {}) -> True
+        (Asin {}, Asin {}) -> True
+        (Acos {}, Acos {}) -> True
+        (Atan {}, Atan {}) -> True
+        (Asinh {}, Asinh {}) -> True
+        (Acosh {}, Acosh {}) -> True
+        (Atanh {}, Atanh {}) -> True
+        (RealImag {}, RealImag {}) -> True
+        (RealPart {}, RealPart {}) -> True
+        (ImagPart {}, ImagPart {}) -> True
+        (InnerProd {}, InnerProd {}) -> True
         _ -> False
 
 -- | Get list of arguments of this node
@@ -93,4 +95,5 @@ nodeArgs node =
         RealImag arg1 arg2 -> [arg1, arg2]
         RealPart arg -> [arg]
         ImagPart arg -> [arg]
+        InnerProd _ arg1 arg2 -> [arg1, arg2]
 

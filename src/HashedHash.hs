@@ -65,6 +65,7 @@ instance HasHash Node where
             RealPart arg -> (1 + argHash [arg]) * 223
             ImagPart arg -> (1 + argHash [arg]) * 227
             RealImag arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
+            InnerProd et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3187
 
 -- |
 --
@@ -83,7 +84,7 @@ hashOutcome mp new newHash =
                 then IsDuplicate newHash
                 else IsClash
 
--- | Where should these functions belong to?
+-- |
 --
 addEdge :: ExpressionMap -> Internal -> (ExpressionMap, Int)
 addEdge mp e =
