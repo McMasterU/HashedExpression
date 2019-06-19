@@ -84,6 +84,34 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                                 unwrap $ const3d (size1, size2, size3) pc
                     PMul sps -> mulMany . map buildFromPattern $ sps
                     PSum sps -> sumMany . map buildFromPattern $ sps
+                    PNeg sp ->
+                        apply
+                            (monoryET Neg ElementDefault)
+                            [buildFromPattern sp]
+                    PDiv sp1 sp2 ->
+                        apply (binary Div) $ map buildFromPattern [sp1, sp2]
+                    PSqrt sp -> apply (monory Sqrt) [buildFromPattern sp]
+                    PSin sp -> apply (monory Sin) [buildFromPattern sp]
+                    PCos sp -> apply (monory Cos) [buildFromPattern sp]
+                    PTan sp -> apply (monory Tan) [buildFromPattern sp]
+                    PExp sp -> apply (monory Exp) [buildFromPattern sp]
+                    PLog sp -> apply (monory Log) [buildFromPattern sp]
+                    PSinh sp -> apply (monory Sinh) [buildFromPattern sp]
+                    PCosh sp -> apply (monory Cosh) [buildFromPattern sp]
+                    PTanh sp -> apply (monory Tanh) [buildFromPattern sp]
+                    PAsin sp -> apply (monory Asin) [buildFromPattern sp]
+                    PAcos sp -> apply (monory Acos) [buildFromPattern sp]
+                    PAtan sp -> apply (monory Atan) [buildFromPattern sp]
+                    PAsinh sp -> apply (monory Asinh) [buildFromPattern sp]
+                    PAcosh sp -> apply (monory Acosh) [buildFromPattern sp]
+                    PAtanh sp -> apply (monory Atanh) [buildFromPattern sp]
+                    PRealImag sp1 sp2 ->
+                        apply (binary RealImag) $
+                        map buildFromPattern [sp1, sp2]
+                    PRealPart sp ->
+                        apply (monory RealPart) [buildFromPattern sp]
+                    PImagPart sp ->
+                        apply (monory ImagPart) [buildFromPattern sp]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
 

@@ -44,6 +44,7 @@ const' shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
+
 -- | Hidden exterior derivative
 --
 hiddenDerivative :: Expression d1 et1 -> Expression d2 et2

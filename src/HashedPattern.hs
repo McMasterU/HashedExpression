@@ -30,8 +30,8 @@ type Capture = Int
 data Pattern
     = PHole Capture
     | PConst Double
-    | PSum [Pattern] -- element-wise sum
-    | PMul [Pattern] -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | PSum [Pattern]
+    | PMul [Pattern]
     | PNeg Pattern
     | PDiv Pattern Pattern
     | PSqrt Pattern
@@ -49,9 +49,9 @@ data Pattern
     | PAsinh Pattern
     | PAcosh Pattern
     | PAtanh Pattern
-    | PRealImag Pattern Pattern -- from real and imagine
-    | PRealPart Pattern -- extract real part
-    | PImagPart Pattern -- extract imaginary part
+    | PRealImag Pattern Pattern
+    | PRealPart Pattern
+    | PImagPart Pattern
     deriving (Show, Eq, Ord)
 
 instance AddableOp Pattern where
@@ -123,6 +123,7 @@ match (mp, n) wh =
                 | c == whc -> Just []
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
             (Div arg1 arg2, PDiv wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Sqrt arg, PSqrt wh) -> recursiveAndCombine [arg] [wh]
