@@ -51,6 +51,11 @@ chain = flip $ foldl (|>)
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes = nest
 
+-- | Turn a simplification to a recursive one, that is if the rule can't apply to the root node, then apply to it's children
+--
+makeRecursive :: Simplification -> Simplification
+makeRecursive = id -- TODO
+
 -- | Simplify an expression
 --
 simplify ::
@@ -59,7 +64,7 @@ simplify e
     -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
  =
     let applyRules e =
-            e |> zeroOneRules |> productRules |> exponentRules |> sumRule |>
+            e |> zeroOneRules |> dotProductRules |> exponentRules |> sumRule |>
             otherRules |>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
@@ -94,8 +99,8 @@ complexNumRules =
     , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
-productRules :: Simplification
-productRules =
+dotProductRules :: Simplification
+dotProductRules =
     multipleTimes 100 . chain . map fromPattern $
     [ x <.> zero |.~~> zero
     , zero <.> x |.~~> zero
@@ -116,11 +121,20 @@ exponentRules =
 sumRule :: Simplification
 sumRule = id
 
-dotProductRules :: Simplification
-dotProductRules = id
-
 otherRules :: Simplification
 otherRules = id
+
+-- | Remove unreachable nodes
+--
+removeUnreachable :: Simplification
+removeUnreachable (mp, n) =
+    let collectNode n =
+            IS.insert n . IS.unions . map collectNode . nodeArgs $
+            retrieveNode n mp
+        reachableNodes = collectNode n -- Set Int
+        reducedMap =
+            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
+     in (reducedMap, n)
 
 -- | Turn HashedPattern to a simplification
 --
@@ -176,15 +190,3 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                         map buildFromPattern [sp1, sp2]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
-
--- | Remove unreachable nodes
---
-removeUnreachable :: Simplification
-removeUnreachable (mp, n) =
-    let collectNode n =
-            IS.insert n . IS.unions . map collectNode . nodeArgs $
-            retrieveNode n mp
-        reachableNodes = collectNode n -- Set Int
-        reducedMap =
-            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
-     in (reducedMap, n)
