@@ -10,8 +10,9 @@ module HashedOperation where
 
 import Data.IntMap.Strict (fromList, union)
 import HashedExpression
-import HashedUtils
 import HashedHash
+import HashedInner
+import HashedUtils
 import Prelude hiding
     ( (*)
     , (+)
@@ -85,112 +86,77 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 
 -- | Element-wise sum
 --
-instance (DimensionType d, Addable et) =>
-         AddableOp (Expression d et) where
+instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
-    (+) = applyOpSameShapeSameElement (\et arg1 arg2 -> Sum et [arg1, arg2])
+    (+) e1 e2 =
+        ensureSameShape e1 e2 $
+        binaryET
+            (\et arg1 arg2 -> Sum et [arg1, arg2])
+            ElementDefault
+            ShapeDefault
+            e1
+            e2
     negate :: Expression d et -> Expression d et
-    negate = applyOpSameElement Neg
+    negate = monoryET Neg
 
----- | TODO: Should it return Maybe (Expression d et)
-----
---sum :: Addable et => [Expression d et] -> Maybe (Expression d et)
---sum [] = Nothing
---sum expressions = Just . ensureSameShapeList expressions $ Expression h newMap
---  where
---    sample = head expressions
---    elementType = expressionElementType sample
---    shape = expressionShape sample
---    node = Sum elementType . map exIndex $ expressions
---    mergedMap = foldl1 union . map exMap $ expressions
---    (newMap, h) = addEdge mergedMap (shape, node)
 -- | Element-wise multiplication
 --
 instance (DimensionType d, NumType et) =>
          MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
-    (*) = applyOpSameShapeSameElement (\et arg1 arg2 -> Mul et [arg1, arg2])
+    (*) e1 e2 =
+        ensureSameShape e1 e2 $
+        binaryET
+            (\et arg1 arg2 -> Mul et [arg1, arg2])
+            ElementDefault
+            ShapeDefault
+            e1
+            e2
 
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
          VectorSpaceOp (Expression Zero s) (Expression d et) where
     scale :: Expression Zero s -> Expression d et -> Expression d et
-    scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) = Expression h newMap
-      where
-        elementType = expressionElementType e2
-        shape = expressionShape e2
-        node = Mul elementType [n1, n2]
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+    scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+        binaryET
+            (\et arg1 arg2 -> Mul et [arg1, arg2])
+            (ElementSpecific $ expressionElementType e2)
+            (ShapeSpecific $ expressionShape e2)
+            e1
+            e2
 
 ---- | From R to C two part
 ----
 instance (DimensionType d) =>
          ComplexRealOp (Expression d R) (Expression d C) where
     (+:) :: Expression d R -> Expression d R -> Expression d C
-    (+:) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        ensureSameShape e1 e2 $ Expression h newMap
-      where
-        shape = expressionShape e1
-        node = RealImag n1 n2
-        (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
+    (+:) = binary RealImag ShapeDefault
     xRe :: Expression d C -> Expression d R
-    xRe = applyOp RealPart
+    xRe = monory RealPart
     xIm :: Expression d C -> Expression d R
-    xIm = applyOp ImagPart
+    xIm = monory ImagPart
 
 -- | Element-wise division for R
 --
 (/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
-(/) = applyOpSameShapeSameElement (\_ arg1 arg2 -> Div arg1 arg2)
+(/) e1 e2 = ensureSameShape e1 e2 $ binary Div ShapeDefault e1 e2
 
 -- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
-    sqrt = applyOp Sqrt
-    exp = applyOp Exp
-    log = applyOp Log
-    -- | Trigonometric operations
-    --
-    sin = applyOp Sin
-    cos = applyOp Cos
-    tan = applyOp Tan
-    asin = applyOp Asin
-    acos = applyOp Acos
-    atan = applyOp Atan
-    sinh = applyOp Sinh
-    cosh = applyOp Cosh
-    tanh = applyOp Tanh
-    asinh = applyOp Asinh
-    acosh = applyOp Acosh
-    atanh = applyOp Atanh
-
--- | Utilities for writing operations, should not be exported
---
-applyOp :: (Arg -> Node) -> Expression d et1 -> Expression d et2
-applyOp op e@(Expression n mp) = Expression h newMap
-  where
-    shape = expressionShape e
-    node = op n
-    (newMap, h) = addEdge mp (shape, node)
-
-applyOpSameShapeSameElement ::
-       (ET -> Arg -> Arg -> Node)
-    -> Expression d et1
-    -> Expression d et1
-    -> Expression d et1
-applyOpSameShapeSameElement op e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-    ensureSameShape e1 e2 $ Expression h newMap
-  where
-    elementType = expressionElementType e1
-    shape = expressionShape e1
-    node = op elementType n1 n2
-    (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-
-applyOpSameElement :: (ET -> Arg -> Node) -> Expression d et1 -> Expression d et2
-applyOpSameElement op e@(Expression n mp) = Expression h newMap
-  where
-    shape = expressionShape e
-    elementType = expressionElementType e
-    node = op elementType n
-    (newMap, h) = addEdge mp (shape, node)
+    sqrt = monory Sqrt
+    exp = monory Exp
+    log = monory Log
+    sin = monory Sin
+    cos = monory Cos
+    tan = monory Tan
+    asin = monory Asin
+    acos = monory Acos
+    atan = monory Atan
+    sinh = monory Sinh
+    cosh = monory Cosh
+    tanh = monory Tanh
+    asinh = monory Asinh
+    acosh = monory Acosh
+    atanh = monory Atanh
