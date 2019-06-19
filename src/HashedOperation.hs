@@ -89,15 +89,12 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
     (+) e1 e2 =
-        ensureSameShape e1 e2 $
-        binaryET
-            (\et arg1 arg2 -> Sum et [arg1, arg2])
-            ElementDefault
-            ShapeDefault
-            e1
-            e2
+        let op = multiryET Sum ElementDefault
+         in ensureSameShape e1 e2 $ opBinary op e1 e2
     negate :: Expression d et -> Expression d et
-    negate = monoryET Neg
+    negate =
+        let op = monoryET Neg ElementDefault
+         in opMonory $ monoryET Neg ElementDefault
 
 -- | Element-wise multiplication
 --
@@ -105,58 +102,59 @@ instance (DimensionType d, NumType et) =>
          MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
-        ensureSameShape e1 e2 $
-        binaryET
-            (\et arg1 arg2 -> Mul et [arg1, arg2])
-            ElementDefault
-            ShapeDefault
-            e1
-            e2
+        let op = multiryET Mul ElementDefault
+         in ensureSameShape e1 e2 $ opBinary op e1 e2
 
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
          VectorSpaceOp (Expression Zero s) (Expression d et) where
     scale :: Expression Zero s -> Expression d et -> Expression d et
-    scale e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-        binaryET
-            (\et arg1 arg2 -> Mul et [arg1, arg2])
-            (ElementSpecific $ expressionElementType e2)
-            (ShapeSpecific $ expressionShape e2)
-            e1
-            e2
+    scale e1 e2 =
+        let op =
+                multiryET Mul (ElementSpecific $ expressionElementType e2) `hasShape`
+                expressionShape e2
+         in opBinary op e1 e2
 
 ---- | From R to C two part
 ----
 instance (DimensionType d) =>
          ComplexRealOp (Expression d R) (Expression d C) where
     (+:) :: Expression d R -> Expression d R -> Expression d C
-    (+:) = binary RealImag ShapeDefault
+    (+:) e1 e2 =
+        let op = binary RealImag
+         in ensureSameShape e1 e2 $ opBinary op e1 e2
     xRe :: Expression d C -> Expression d R
-    xRe = monory RealPart
+    xRe =
+        let op = monory RealPart
+         in opMonory op
     xIm :: Expression d C -> Expression d R
-    xIm = monory ImagPart
+    xIm =
+        let op = monory RealPart
+         in opMonory op
 
 -- | Element-wise division for R
 --
 (/) :: (DimensionType d) => Expression d R -> Expression d R -> Expression d R
-(/) e1 e2 = ensureSameShape e1 e2 $ binary Div ShapeDefault e1 e2
+(/) e1 e2 =
+    let op = binary Div
+     in ensureSameShape e1 e2 $ opBinary op e1 e2
 
 -- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
-    sqrt = monory Sqrt
-    exp = monory Exp
-    log = monory Log
-    sin = monory Sin
-    cos = monory Cos
-    tan = monory Tan
-    asin = monory Asin
-    acos = monory Acos
-    atan = monory Atan
-    sinh = monory Sinh
-    cosh = monory Cosh
-    tanh = monory Tanh
-    asinh = monory Asinh
-    acosh = monory Acosh
-    atanh = monory Atanh
+    sqrt = opMonory (monory Sqrt)
+    exp = opMonory (monory Exp)
+    log = opMonory (monory Log)
+    sin = opMonory (monory Sin)
+    cos = opMonory (monory Cos)
+    tan = opMonory (monory Tan)
+    asin = opMonory (monory Asin)
+    acos = opMonory (monory Acos)
+    atan = opMonory (monory Atan)
+    sinh = opMonory (monory Sinh)
+    cosh = opMonory (monory Cosh)
+    tanh = opMonory (monory Tanh)
+    asinh = opMonory (monory Asinh)
+    acosh = opMonory (monory Acosh)
+    atanh = opMonory (monory Atanh)
