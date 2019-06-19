@@ -41,8 +41,8 @@ simplify e =
 --
 type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
-(|>) :: (ExpressionMap, Int) -> Simplification -> (ExpressionMap, Int)
-(|>) exp smp = smp exp
+(|>) :: a -> (a -> b) -> b
+(|>) = flip ($)
 
 infixl 1 |>
 
