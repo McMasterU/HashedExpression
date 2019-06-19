@@ -22,6 +22,7 @@ import Prelude hiding
     , asin
     , asinh
     , atan
+    , negate
     , atanh
     , cos
     , cosh

@@ -2,6 +2,8 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module HashedInterp where
 
@@ -11,12 +13,6 @@ import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import HashedExpression hiding ((+), (-))
-
-type family Output d rc where
-    Output Zero R = Double
-    Output Zero C = DC.Complex Double
-    Output One R = Array Int Double
-    Output One C = Array Int (DC.Complex Double)
 
 -- |
 --
@@ -32,12 +28,12 @@ subs vm0 vm1 = ValMaps (fromList vm0) (fromList vm1)
 
 -- |
 --
-class Evaluable d rc where
-    eval :: ValMaps -> Expression d rc -> Output d rc
+class Evaluable d rc output | d rc -> output where
+    eval :: ValMaps -> Expression d rc -> output
 
 -- |
 --
-instance Evaluable Zero R where
+instance Evaluable Zero R Double where
     eval :: ValMaps -> Expression Zero R -> Double
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
@@ -73,7 +69,7 @@ instance Evaluable Zero R where
 --                         in sum $ zipWith (*) lst1 lst2
 -- |
 --
-instance Evaluable Zero C where
+instance Evaluable Zero C (DC.Complex Double) where
     eval :: ValMaps -> Expression Zero C -> DC.Complex Double
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
@@ -117,7 +113,7 @@ instance Evaluable Zero C where
 --                         in sum $ zipWith (*) lst1 lst2
 -- |
 --
-instance Evaluable One R where
+instance Evaluable One R (Array Int Double) where
     eval :: ValMaps -> Expression One R -> Array Int Double
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
@@ -148,7 +144,7 @@ instance Evaluable One R where
 --                 in fmap (* scale) $ eval valMap subExp2
 -- |
 --
-instance Evaluable One C where
+instance Evaluable One C (Array Int (DC.Complex Double)) where
     eval :: ValMaps -> Expression One C -> Array Int (DC.Complex Double)
     eval valMap e@(Expression n mp) =
         case IM.lookup n mp of
