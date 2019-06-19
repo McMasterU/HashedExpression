@@ -82,8 +82,8 @@ instance NumOp Pattern where
 
 instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
-    realPart = PRealPart
-    imagPart = PImagPart
+    xRe = PRealPart
+    xIm = PImagPart
 
 -- | Guarded patterns for simplification
 --

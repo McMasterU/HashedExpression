@@ -135,8 +135,8 @@ class NumOp a where
 
 class ComplexRealOp r c | r -> c, c -> r where
     (+:) :: r -> r -> c
-    realPart :: c -> r
-    imagPart :: c -> r
+    xRe :: c -> r
+    xIm :: c -> r
 
 infixl 6 +
 

@@ -132,10 +132,10 @@ instance (DimensionType d) =>
         shape = expressionShape e1
         node = RealImag n1 n2
         (newMap, h) = addEdge (mp1 `union` mp2) (shape, node)
-    realPart :: Expression d C -> Expression d R
-    realPart = applyOp RealPart
-    imagPart :: Expression d C -> Expression d R
-    imagPart = applyOp ImagPart
+    xRe :: Expression d C -> Expression d R
+    xRe = applyOp RealPart
+    xIm :: Expression d C -> Expression d R
+    xIm = applyOp ImagPart
 
 -- | Element-wise division for R
 --

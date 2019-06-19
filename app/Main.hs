@@ -41,7 +41,7 @@ main = do
         s = var "s"
         f = log $ exp $ sqrt $ cos $ s *. (x * y) / y
         anotherF = const 0 *. f
-        fImg = realPart $ f +: z
+        fImg = xRe $ f +: z
     print $ prettify anotherF
     print $ prettify $ exteriorDerivative $ simplify anotherF
 --    print $ prettify $ exteriorDerivative fImg
