@@ -50,11 +50,6 @@ simplify e
 --
 type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
-(|>) :: a -> (a -> b) -> b
-(|>) = flip ($)
-
-infixl 1 |>
-
 -- | Chain n simplifications together to a simplification
 --
 chain :: [Simplification] -> Simplification

@@ -7,6 +7,13 @@ import HashedNode
 
 import Data.Complex
 
+-- | Forward pipe operator in Elm
+--
+(|>) :: a -> (a -> b) -> b
+(|>) = flip ($)
+
+infixl 1 |>
+
 -- | Check if all elements of the list is equal
 --
 allEqual :: (Eq a) => [a] -> Bool
@@ -79,4 +86,3 @@ ensureSameShapeList es after =
     if allEqual es
         then after
         else error "Ensure same shape failed"
-
