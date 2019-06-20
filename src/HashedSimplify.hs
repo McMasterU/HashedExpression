@@ -33,9 +33,11 @@ import Prelude hiding
     , exp
     , log
     , negate
+    , product
     , sin
     , sinh
     , sqrt
+    , sum
     , tan
     , tanh
     )
@@ -59,12 +61,14 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e
     -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
+    -- (or we can just compose them using .)
+            -- TODO: make this looks better
  =
     let applyRules e =
-            e |> zeroOneRules |> dotProductRules |> exponentRules |> sumRule |>
-            otherRules |>
+            e |> zeroOneRules |> dotProductRules |> exponentRules |>
             complexNumRules |>
             distributiveRules |>
+            (multipleTimes 100 . makeRecursive $ reduceSumProdRules) |>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -125,11 +129,31 @@ exponentRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
-sumRule :: Simplification
-sumRule = id
-
-otherRules :: Simplification
-otherRules = id
+reduceSumProdRules :: Simplification
+reduceSumProdRules exp@(mp, n) =
+    let isZero nId
+            | Const 0 <- retrieveNode nId mp = True
+            | otherwise = False
+        isOne nId
+            | Const 1 <- retrieveNode nId mp = True
+            | otherwise = False
+     in case retrieveNode n mp
+            -- if the sum has only one, collapse it
+              of
+            (Sum _ [nId]) -> (mp, nId)
+            -- if the mul has only one, collapse it
+            (Mul _ [nId]) -> (mp, nId)
+            -- if the sum has any zero, remove them
+            (Sum _ ns)
+                | length ns > 3
+                , any isZero ns ->
+                    reconstruct exp . map (mp, ) . filter (not . isZero) $ ns
+            -- if the product has any one, remove them
+            (Mul _ ns)
+                | length ns > 3
+                , any isOne ns ->
+                    reconstruct exp . map (mp, ) . filter (not . isOne) $ ns
+            _ -> (mp, n)
 
 -- | Remove unreachable nodes
 --

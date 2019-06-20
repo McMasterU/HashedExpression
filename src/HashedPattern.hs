@@ -60,9 +60,14 @@ instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
+sum :: [Pattern] -> Pattern
+sum = PSum
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
 instance MultiplyOp Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
+
+product :: [Pattern] -> Pattern
+product = PMul
 
 instance VectorSpaceOp Pattern Pattern where
     scale = PScale
@@ -112,6 +117,7 @@ one = PConst 1
 
 zero :: Pattern
 zero = PConst 0
+
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 --
