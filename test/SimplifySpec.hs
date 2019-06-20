@@ -98,3 +98,13 @@ spec = do
             simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
             simplify ((x <.> (y + z))) `shouldBe` ((x <.> y) + (x <.> z))
             simplify (((y + z) <.> x)) `shouldBe` ((x <.> y) + (x <.> z))
+        specify "dot product higher dimension with scaling and point wise" $ do
+            simplify (x1 <.> zero1) `shouldBe` zero
+            simplify (zero1 <.> x1) `shouldBe` zero
+            simplify ((s *. x1) <.> y1) `shouldBe` s * (x1 <.> y1)
+            simplify (x1 <.> (s *. y1)) `shouldBe` s * (x1 <.> y1)
+            simplify (x1 * (y1 + z1)) `shouldBe` (x1 * y1 + x1 * z1) -- TODO: Why????
+            simplify ((y1 + z1) * x1) `shouldBe` (x1 * y1 + x1 * z1)
+            simplify (s *. (y1 + z1)) `shouldBe` (s *. y1 + s *. z1)
+            simplify ((x1 <.> (y1 + z1))) `shouldBe` ((x1 <.> y1) + (x1 <.> z1))
+            simplify (((y1 + z1) <.> x1)) `shouldBe` ((x1 <.> y1) + (x1 <.> z1))
