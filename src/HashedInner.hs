@@ -114,7 +114,7 @@ applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 applyUnary :: OperationOption -> Expression d1 et1 -> Expression d2 et2
 applyUnary option e1 = wrap . apply option $ [unwrap e1]
 
--- |
+-- | binary operations
 --
 binary :: (Arg -> Arg -> Node) -> OperationOption
 binary op =
@@ -125,20 +125,58 @@ binaryET op elm =
     OperationOption
         {nodeOutcome = OpTwoElement op elm, shapeOutcome = ShapeDefault}
 
+-- | unary operations
+--
 unary :: (Arg -> Node) -> OperationOption
-unary op =
-    OperationOption {nodeOutcome = OpOne op, shapeOutcome = ShapeDefault}
+unary op = OperationOption {nodeOutcome = OpOne op, shapeOutcome = ShapeDefault}
 
 unaryET :: (ET -> Arg -> Node) -> ElementOutcome -> OperationOption
 unaryET op elm =
     OperationOption
         {nodeOutcome = OpOneElement op elm, shapeOutcome = ShapeDefault}
 
+-- | n-ary operations
+--
 nary :: (Args -> Node) -> OperationOption
-nary op =
-    OperationOption {nodeOutcome = OpMany op, shapeOutcome = ShapeDefault}
+nary op = OperationOption {nodeOutcome = OpMany op, shapeOutcome = ShapeDefault}
 
 naryET :: (ET -> Args -> Node) -> ElementOutcome -> OperationOption
 naryET op elm =
     OperationOption
         {nodeOutcome = OpManyElement op elm, shapeOutcome = ShapeDefault}
+
+-- | Reconstruct
+--
+reconstruct ::
+       (ExpressionMap, Int) -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+reconstruct oldExp@(oldMp, oldN) newChildren =
+    let (oldShape, oldNode) = retrieveInternal oldN oldMp
+        apply' option = apply (option `hasShape` oldShape) -- keep the old shape
+     in case oldNode of
+            Var _ -> oldExp
+            DVar _ -> oldExp
+            Const _ -> oldExp
+            Sum et _ -> apply' (naryET Sum (ElementSpecific et)) newChildren
+            Mul et _ -> apply' (naryET Sum (ElementSpecific et)) newChildren
+            Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) newChildren
+            Div _ _ -> apply' (binary Div) newChildren
+            Sqrt _ -> apply' (unary Sqrt) newChildren
+            Sin _ -> apply' (unary Sin) newChildren
+            Cos _ -> apply' (unary Cos) newChildren
+            Tan _ -> apply' (unary Tan) newChildren
+            Exp _ -> apply' (unary Exp) newChildren
+            Log _ -> apply' (unary Log) newChildren
+            Sinh _ -> apply' (unary Sinh) newChildren
+            Cosh _ -> apply' (unary Cosh) newChildren
+            Tanh _ -> apply' (unary Tanh) newChildren
+            Asin _ -> apply' (unary Asin) newChildren
+            Acos _ -> apply' (unary Acos) newChildren
+            Atan _ -> apply' (unary Atan) newChildren
+            Asinh _ -> apply' (unary Asinh) newChildren
+            Acosh _ -> apply' (unary Acosh) newChildren
+            Atanh _ -> apply' (unary Atanh) newChildren
+            RealImag _ _ -> apply' (binary RealImag) newChildren
+            RealPart _ -> apply' (unary RealPart) newChildren
+            ImagPart _ -> apply' (unary ImagPart) newChildren
+            InnerProd et _ _ ->
+                apply' (binaryET InnerProd (ElementSpecific et)) newChildren

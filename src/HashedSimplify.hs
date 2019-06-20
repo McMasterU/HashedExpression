@@ -2,6 +2,8 @@
 -- | For simplifying expressions
 --
 -------------------------------------------------------------------------------
+{-# LANGUAGE TupleSections #-}
+
 module HashedSimplify where
 
 import Data.Function.HT (nest)
@@ -50,11 +52,6 @@ chain = flip $ foldl (|>)
 
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes = nest
-
--- | Turn a simplification to a recursive one, that is if the rule can't apply to the root node, then apply to it's children
---
-makeRecursive :: Simplification -> Simplification
-makeRecursive = id -- TODO
 
 -- | Simplify an expression
 --
@@ -190,3 +187,14 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                         map buildFromPattern [sp1, sp2]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
+
+-- | Turn a simplification to a recursive one, that is if the rule can't apply to the root node, then apply to it's children
+--
+makeRecursive :: Simplification -> Simplification
+makeRecursive smp exp@(mp, n)
+    | newExp@(_, n) <- smp exp = newExp
+    | otherwise =
+        let shape = retrieveShape n mp
+            simplifiedChildren =
+                map smp . map (mp, ) . nodeArgs $ retrieveNode n mp
+         in reconstruct exp simplifiedChildren
