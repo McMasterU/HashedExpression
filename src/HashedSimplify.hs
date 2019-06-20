@@ -64,6 +64,7 @@ simplify e
             e |> zeroOneRules |> dotProductRules |> exponentRules |> sumRule |>
             otherRules |>
             complexNumRules |>
+            distributiveRules |>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -83,6 +84,8 @@ zeroOneRules =
     , one *. x |.~~> x
     , x + zero |.~~> x
     , zero + x |.~~> x
+    , (x <.> zero) |.~~> zero
+    , zero <.> x |.~~> zero
     ]
 
 complexNumRules :: Simplification
@@ -98,12 +101,19 @@ complexNumRules =
 dotProductRules :: Simplification
 dotProductRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
-    [
-    (x <.> zero) |.~~> zero
-    , zero <.> x |.~~> zero
-    , (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+    [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x * (y + z) |.~~> (x * y + x * z)
+    , (y + z) * x |.~~> (x * y + x * z)
+    , x *. (y + z) |.~~> (x *. y + x *. z)
+    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
+    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
+    ]
+
+distributiveRules :: Simplification
+distributiveRules =
+    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    [ x * (y + z) |.~~> (x * y + x * z)
     , (y + z) * x |.~~> (x * y + x * z)
     , x *. (y + z) |.~~> (x *. y + x *. z)
     , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
