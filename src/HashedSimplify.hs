@@ -8,9 +8,9 @@ module HashedSimplify where
 
 import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
-import qualified Data.Map.Strict as Map
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
+import qualified Data.Map.Strict as Map
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -144,22 +144,21 @@ reduceSumProdRules exp@(mp, n) =
             | Mul _ operands <- retrieveNode nId mp = operands
             | otherwise = [nId]
         reconstruct' = reconstruct exp . map (mp, )
-     in case retrieveNode n mp
-            -- if the sum has only one, collapse it
-              of
-            (Sum _ [nId]) -> (mp, nId)
-            -- if the mul has only one, collapse it
-            (Mul _ [nId]) -> (mp, nId)
-            -- if the sum has any zero, remove them
+     in case retrieveNode n mp of
             (Sum _ ns)
+                -- if the sum has only one, collapse it
+                | length ns == 1 -> (mp, head ns)
+                -- if the sum has any zero, remove them
                 | any isZero ns -> reconstruct' . filter (not . isZero) $ ns
-            -- if the product has any one, remove them
+                -- if the sum contains any sum, just flatten them out
+                | otherwise -> reconstruct' . concatMap pullSumOperands $ ns
             (Mul _ ns)
+                -- if the mul has only one, collapse it
+                | length ns == 1 -> (mp, head ns)
+                -- if the product has any one, remove them
                 | any isOne ns -> reconstruct' . filter (not . isOne) $ ns
-            -- if the sum contains any sum, just flatten them out
-            (Sum _ ns) -> reconstruct' . concatMap pullSumOperands $ ns
-            -- if the sum contains any sum, just flatten them out
-            (Mul _ ns) -> reconstruct' . concatMap pullProdOperands $ ns
+                -- if the prod contains any prod, just flatten them out
+                | otherwise -> reconstruct' . concatMap pullProdOperands $ ns
             _ -> (mp, n)
 
 -- | Remove unreachable nodes
