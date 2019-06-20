@@ -63,6 +63,7 @@ simplify e
     let applyRules e =
             e |> zeroOneRules |> dotProductRules |> exponentRules |> sumRule |>
             otherRules |>
+            complexNumRules |>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -70,7 +71,7 @@ simplify e
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    multipleTimes 100 . chain . map fromPattern $
+    multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ x *. (y *. z) |.~~> (x * y) *. z
     , one *. x |.~~> x
     , one * x |.~~> x
@@ -82,23 +83,21 @@ zeroOneRules =
     , one *. x |.~~> x
     , x + zero |.~~> x
     , zero + x |.~~> x
-    , xRe (x +: y) |.~~> x
-    , xIm (x +: y) |.~~> y
     ]
 
 complexNumRules :: Simplification
 complexNumRules =
-    multipleTimes 100 . chain . map fromPattern $
+    multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ xRe (x +: y) |.~~> x
-    , xIm (x +: y) |.~~> y
+--    , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
     , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
-    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
+----    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
 dotProductRules :: Simplification
 dotProductRules =
-    multipleTimes 100 . chain . map fromPattern $
+    multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ x <.> zero |.~~> zero
     , zero <.> x |.~~> zero
     , (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
@@ -112,7 +111,7 @@ dotProductRules =
 
 exponentRules :: Simplification
 exponentRules =
-    multipleTimes 100 . chain . map fromPattern $
+    multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
 sumRule :: Simplification
@@ -192,7 +191,8 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
 --
 makeRecursive :: Simplification -> Simplification
 makeRecursive smp exp@(mp, n)
-    | newExp@(_, n) <- smp exp = newExp
+    | newExp@(_, newN) <- smp exp
+    , n /= newN = newExp
     | otherwise =
         let shape = retrieveShape n mp
             simplifiedChildren =

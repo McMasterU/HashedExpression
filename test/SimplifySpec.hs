@@ -1,9 +1,9 @@
 module SimplifySpec where
 
-import HashedOperation
-import HashedSimplify
-import HashedPrettify
 import HashedExpression
+import HashedOperation
+import HashedPrettify
+import HashedSimplify
 import Prelude hiding
     ( (*)
     , (+)
@@ -38,32 +38,51 @@ import Test.Hspec
     map (var2d (10, 10)) ["X2", "Y2", "Z2", "U2", "V2", "W2"]
 
 [zero, one] = map const [0, 1]
+
 [zero1, one1] = map (const1d 10) [0, 1]
+
 [zero2, one2] = map (const2d (10, 10)) [0, 1]
 
 spec :: Spec
 spec = do
     describe "Simplify spec" $ do
-        specify "simplify 1" $ do
+        specify "simplify scalar one zero" $ do
             simplify (x * one) `shouldBe` x
             simplify (one * x) `shouldBe` x
             simplify (x * zero) `shouldBe` zero
             simplify (zero * x) `shouldBe` zero
-            -- TODO: These can be uncommented one makeRecursive :: Simplification -> Simplification is done
---            simplify ((x * zero) * y) `shouldBe` zero
---            simplify (y * (x * zero)) `shouldBe` zero
---            simplify (zero * (x * one)) `shouldBe` zero
---            simplify (zero * x * one) `shouldBe` zero
---            simplify (zero * (x * y)) `shouldBe` zero
---            simplify ((x * y) * zero) `shouldBe` zero
---            simplify ((x * zero) * one) `shouldBe` zero
---            simplify ((x * y) * one) `shouldBe` (x * y)
---            simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
-        specify "simplify 0" $ do
+            simplify (y * (x * zero)) `shouldBe` zero
+            simplify (zero * (x * one)) `shouldBe` zero
+            simplify (zero * x * one) `shouldBe` zero
+            simplify (zero * (x * y)) `shouldBe` zero
+            simplify ((x * y) * zero) `shouldBe` zero
+            simplify ((x * zero) * one) `shouldBe` zero
+            simplify ((x * y) * one) `shouldBe` (x * y)
+            simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
+        specify "simplify one d one zero" $ do
+            simplify (x1 * one1) `shouldBe` x1
+            simplify (one1 * x1) `shouldBe` x1
+            simplify (x1 * zero1) `shouldBe` zero1
+            simplify (zero1 * x1) `shouldBe` zero1
+            simplify (y1 * (x1 * zero1)) `shouldBe` zero1
+            simplify (zero1 * (x1 * one1)) `shouldBe` zero1
+            simplify (zero1 * x1 * one1) `shouldBe` zero1
+            simplify (zero1 * (x1 * y1)) `shouldBe` zero1
+            simplify ((x1 * y1) * zero1) `shouldBe` zero1
+            simplify ((x1 * zero1) * one1) `shouldBe` zero1
+            simplify ((x1 * y1) * one1) `shouldBe` (x1 * y1)
+            simplify (x1 * y1 * z1 * one1) `shouldBe` simplify (x1 * y1 * z1)
+        specify "simplify log and exponential" $ do
             simplify (log (exp (x))) `shouldBe` x
             simplify (exp (log (x))) `shouldBe` x
             simplify (log (exp (x1))) `shouldBe` x1
             simplify (exp (log (x1))) `shouldBe` x1
             simplify (log (exp (x2))) `shouldBe` x2
             simplify (exp (log (x2))) `shouldBe` x2
-
+        specify "complex related" $ do
+--            print $ prettify $ simplify ((x +: y) * (z +: w) * (u +: v))
+            print $ prettify $ simplify ((x +: y) * (z +: w))
+--            simplify ((x +: y) * (z +: w) * (u +: v)) `shouldBe
+--                simplify (((negate ((u * w * y) + (v * w * x))) + ((negate (v * y)) * z) +
+--                  (u * x * z)) +:
+--                 (((negate (v * y)) * w) + (u * w * x) + (u * y * z) + (v * x * z)))

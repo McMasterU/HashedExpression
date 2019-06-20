@@ -157,7 +157,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
             DVar _ -> oldExp
             Const _ -> oldExp
             Sum et _ -> apply' (naryET Sum (ElementSpecific et)) newChildren
-            Mul et _ -> apply' (naryET Sum (ElementSpecific et)) newChildren
+            Mul et _ -> apply' (naryET Mul (ElementSpecific et)) newChildren
             Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) newChildren
             Div _ _ -> apply' (binary Div) newChildren
             Sqrt _ -> apply' (unary Sqrt) newChildren
