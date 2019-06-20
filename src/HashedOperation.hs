@@ -130,7 +130,7 @@ instance (DimensionType d) =>
          in applyUnary op
     xIm :: Expression d C -> Expression d R
     xIm =
-        let op = unary RealPart
+        let op = unary ImagPart
          in applyUnary op
 
 -- | Element-wise division for R

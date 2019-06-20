@@ -130,6 +130,7 @@ match (mp, n) wh =
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
+            (Scale _ arg1 arg2, PScale wh1 wh2) -> recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Div arg1 arg2, PDiv wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Sqrt arg, PSqrt wh) -> recursiveAndCombine [arg] [wh]

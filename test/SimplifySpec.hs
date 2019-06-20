@@ -30,7 +30,7 @@ import Prelude hiding
     )
 import Test.Hspec
 
-[x, y, z, u, v, w] = map var ["x", "y", "z", "u", "v", "w"]
+[x, y, z, u, v, w, s] = map var ["x", "y", "z", "u", "v", "w", "s"]
 
 [x1, y1, z1, u1, v1, w1] = map (var1d 10) ["X1", "Y1", "Z1", "U1", "V1", "W1"]
 
@@ -79,5 +79,11 @@ spec = do
             simplify (exp (log (x1))) `shouldBe` x1
             simplify (log (exp (x2))) `shouldBe` x2
             simplify (exp (log (x2))) `shouldBe` x2
-        specify "complex related" $ do
+        specify "complex related" $
+         do
+            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +: (x * w + y * z)
+            simplify (xRe (x +: y)) `shouldBe` x
+            simplify (xIm (x +: y)) `shouldBe` y
+            simplify ((x +: y) + (u +: v)) `shouldBe` (x + u) +: (y + v)
+            simplify (s *. (x +: y)) `shouldBe` (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
             simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +: (x * w + y * z)

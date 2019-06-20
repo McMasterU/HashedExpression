@@ -41,9 +41,10 @@ instance HasHash Node where
             DVar name -> foldr moveBase 1123 name
             Const num -> 919393 + foldr moveBase 0 (show num)
             -- MARK: Basics
-            Sum rc args -> (1 + argHash (hash rc : args)) * 2131
-            Mul rc args -> (1 + argHash (hash rc : args)) * 3343
-            Neg rc arg -> (1 + argHash [hash rc, arg]) * 2293
+            Sum et args -> (1 + argHash (hash et : args)) * 2131
+            Mul et args -> (1 + argHash (hash et : args)) * 3343
+            Neg et arg -> (1 + argHash [hash et, arg]) * 2293
+            Scale et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3343
             -- MARK: only apply to R
             Div arg1 arg2 -> (1 + argHash [arg1, arg2]) * 2621
             Sqrt arg -> (1 + argHash [arg]) * 3083
