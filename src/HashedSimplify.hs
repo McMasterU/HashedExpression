@@ -98,7 +98,8 @@ complexNumRules =
 dotProductRules :: Simplification
 dotProductRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
-    [ x <.> zero |.~~> zero
+    [
+    x <.> zero |.~~> zero
     , zero <.> x |.~~> zero
     , (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.

@@ -79,11 +79,22 @@ spec = do
             simplify (exp (log (x1))) `shouldBe` x1
             simplify (log (exp (x2))) `shouldBe` x2
             simplify (exp (log (x2))) `shouldBe` x2
-        specify "complex related" $
-         do
-            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +: (x * w + y * z)
+        specify "complex related" $ do
+            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +:
+                (x * w + y * z)
             simplify (xRe (x +: y)) `shouldBe` x
             simplify (xIm (x +: y)) `shouldBe` y
             simplify ((x +: y) + (u +: v)) `shouldBe` (x + u) +: (y + v)
             simplify (s *. (x +: y)) `shouldBe` (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
-            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +: (x * w + y * z)
+            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +:
+                (x * w + y * z)
+        specify "dot product" $ do
+            simplify (x <.> zero) `shouldBe` zero
+            simplify (zero <.> x) `shouldBe` zero
+            simplify ((s *. x) <.> y) `shouldBe` s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+            simplify (x <.> (s *. y)) `shouldBe` s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+            simplify (x * (y + z)) `shouldBe` (x * y + x * z)
+            simplify ((y + z) * x) `shouldBe` (x * y + x * z)
+            simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
+            simplify ((x <.> (y + z))) `shouldBe` ((x <.> y) + (x <.> z))
+            simplify (((y + z) <.> x)) `shouldBe` ((x <.> y) + (x <.> z))
