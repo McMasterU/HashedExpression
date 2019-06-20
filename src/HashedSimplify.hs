@@ -8,6 +8,7 @@ module HashedSimplify where
 
 import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
+import qualified Data.Map.Strict as Map
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import HashedExpression
@@ -177,17 +178,18 @@ removeUnreachable (mp, n) =
 --
 fromPattern :: (GuardedPattern, Pattern) -> Simplification
 fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
-    | Just capturesMap <- match ex pattern
-    , condition originalMp capturesMap =
-        let buildFromPattern :: Pattern -> (ExpressionMap, Int)
+    | Just match <- match ex pattern
+    , condition originalMp match =
+        let (capturesMap, listCapturesMap) = match
+            buildFromPattern :: Pattern -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
                     (PHole capture)
-                        | Just nId <- lookupCapture capture capturesMap ->
+                        | Just nId <- Map.lookup capture capturesMap ->
                             (originalMp, nId)
                         | otherwise ->
                             error
-                                "Capture not in the [(Capture, Int)] which should never happens"
+                                "Capture not in the Map Capture Int which should never happens"
                     (PConst pc) ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
@@ -196,8 +198,8 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
                             _ -> error "Dimension > 3"
-                    PMul sps -> mulMany . map buildFromPattern $ sps
                     PSum sps -> sumMany . map buildFromPattern $ sps
+                    PMul sps -> mulMany . map buildFromPattern $ sps
                     PNeg sp ->
                         apply (unaryET Neg ElementDefault) [buildFromPattern sp]
                     PScale sp1 sp2 ->

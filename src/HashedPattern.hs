@@ -14,8 +14,8 @@
 -------------------------------------------------------------------------------
 module HashedPattern where
 
-import qualified Data.IntMap as I
-import qualified Data.List as L
+import Data.Map (Map, union)
+import qualified Data.Map.Strict as Map
 import Data.Maybe
 import HashedExpression
 import HashedNode
@@ -25,10 +25,13 @@ import HashedUtils
 --
 type Capture = Int
 
+type ListCapture = Int
+
 -- | This reflexes Node in HashedExpression
 --
 data Pattern
     = PHole Capture
+    | PListHole ListCapture
     | PConst Double
     | PSum [Pattern]
     | PMul [Pattern]
@@ -101,7 +104,7 @@ instance InnerProductSpaceOp Pattern Pattern where
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
-    GP Pattern (ExpressionMap -> [(Capture, Int)] -> Bool)
+    GP Pattern (ExpressionMap -> Match -> Bool)
 
 -- | Helper to make pattern and replacement without condition
 --
@@ -121,18 +124,25 @@ zero = PConst 0
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 --
-match :: (ExpressionMap, Int) -> Pattern -> Maybe [(Capture, Int)]
+type Match = (Map Capture Int, Map ListCapture [Int])
+
+match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) wh =
-    let recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe [(Capture, Int)]
+    let
+        unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
+        catMatch = foldl unionBoth (Map.empty, Map.empty)
+        recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
             , let subMatches = zipWith match (map (mp, ) args) whs
-            , all isJust subMatches = Just . concat . catMaybes $ subMatches
+            , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, wh) of
-            (_, PHole capture) -> Just [(capture, n)]
+            (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
-                | c == whc -> Just []
+                | c == whc -> Just (Map.empty, Map.empty)
+--            (Sum _ args, PSum [PListHole listCapture]) -> Just (Map.empty, Map.fromList [(listCapture, args)])
+--            (Mul _ args, PMul [PListHole listCapture]) -> Just (Map.empty, Map.fromList [(listCapture, args)])
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
@@ -161,5 +171,3 @@ match (mp, n) wh =
             (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) -> recursiveAndCombine [arg1, arg2] [wh1, wh2]
             _ -> Nothing
 
-lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
-lookupCapture = lookup
