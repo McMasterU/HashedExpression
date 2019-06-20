@@ -6,6 +6,7 @@
 
 module HashedSimplify where
 
+import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
@@ -59,16 +60,14 @@ multipleTimes = nest
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify e
-    -- Ok this is not Haskell idiomatic, but it makes sense in the context of simplification to use (|>)
-    -- (or we can just compose them using .)
-            -- TODO: make this looks better
- =
-    let applyRules e =
-            e |> zeroOneRules |> dotProductRules |> exponentRules |>
-            complexNumRules |>
-            distributiveRules |>
-            (multipleTimes 100 . makeRecursive $ reduceSumProdRules) |>
+simplify e =
+    let applyRules =
+            zeroOneRules >>>
+            dotProductRules >>>
+            exponentRules >>>
+            complexNumRules >>>
+            distributiveRules >>>
+            (multipleTimes 100 . makeRecursive $ reduceSumProdRules) >>>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -137,6 +136,13 @@ reduceSumProdRules exp@(mp, n) =
         isOne nId
             | Const 1 <- retrieveNode nId mp = True
             | otherwise = False
+        pullSumOperands nId
+            | Sum _ operands <- retrieveNode nId mp = operands
+            | otherwise = [nId]
+        pullProdOperands nId
+            | Mul _ operands <- retrieveNode nId mp = operands
+            | otherwise = [nId]
+        reconstruct' = reconstruct exp . map (mp, )
      in case retrieveNode n mp
             -- if the sum has only one, collapse it
               of
@@ -145,14 +151,14 @@ reduceSumProdRules exp@(mp, n) =
             (Mul _ [nId]) -> (mp, nId)
             -- if the sum has any zero, remove them
             (Sum _ ns)
-                | length ns > 3
-                , any isZero ns ->
-                    reconstruct exp . map (mp, ) . filter (not . isZero) $ ns
+                | any isZero ns -> reconstruct' . filter (not . isZero) $ ns
             -- if the product has any one, remove them
             (Mul _ ns)
-                | length ns > 3
-                , any isOne ns ->
-                    reconstruct exp . map (mp, ) . filter (not . isOne) $ ns
+                | any isOne ns -> reconstruct' . filter (not . isOne) $ ns
+            -- if the sum contains any sum, just flatten them out
+            (Sum _ ns) -> reconstruct' . concatMap pullSumOperands $ ns
+            -- if the sum contains any sum, just flatten them out
+            (Mul _ ns) -> reconstruct' . concatMap pullProdOperands $ ns
             _ -> (mp, n)
 
 -- | Remove unreachable nodes
@@ -181,7 +187,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             (originalMp, nId)
                         | otherwise ->
                             error
-                                "Capture not in the [(Capture, Int)] which never happens"
+                                "Capture not in the [(Capture, Int)] which should never happens"
                     (PConst pc) ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
