@@ -33,6 +33,7 @@ data Pattern
     | PSum [Pattern]
     | PMul [Pattern]
     | PNeg Pattern
+    | PScale Pattern Pattern
     | PDiv Pattern Pattern
     | PSqrt Pattern
     | PSin Pattern
@@ -64,7 +65,7 @@ instance MultiplyOp Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
 instance VectorSpaceOp Pattern Pattern where
-    scale wh1 wh2 = PMul [wh1, wh2]
+    scale = PScale
 
 instance NumOp Pattern where
     sqrt = PSqrt

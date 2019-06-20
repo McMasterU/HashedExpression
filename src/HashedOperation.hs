@@ -112,7 +112,7 @@ instance (VectorSpace d et s) =>
     scale :: Expression Zero s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =
-                naryET Mul (ElementSpecific $ expressionElementType e2) `hasShape`
+                binaryET Scale (ElementSpecific $ expressionElementType e2) `hasShape`
                 expressionShape e2
          in applyBinary op e1 e2
 

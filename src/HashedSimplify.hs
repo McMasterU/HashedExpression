@@ -89,10 +89,10 @@ complexNumRules :: Simplification
 complexNumRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ xRe (x +: y) |.~~> x
---    , xIm (x +: y) |.~~> y
+    , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
     , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
-----    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
+    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
 dotProductRules :: Simplification
@@ -159,6 +159,9 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PNeg sp ->
                         apply (unaryET Neg ElementDefault) [buildFromPattern sp]
+                    PScale sp1 sp2 ->
+                        apply (binaryET Scale ElementDefault) $
+                        map buildFromPattern [sp1, sp2]
                     PDiv sp1 sp2 ->
                         apply (binary Div) $ map buildFromPattern [sp1, sp2]
                     PSqrt sp -> apply (unary Sqrt) [buildFromPattern sp]
@@ -182,7 +185,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                     PRealPart sp -> apply (unary RealPart) [buildFromPattern sp]
                     PImagPart sp -> apply (unary ImagPart) [buildFromPattern sp]
                     PInnerProd sp1 sp2 ->
-                        apply (binaryET InnerProd ElementDefault) $
+                        apply (binaryET InnerProd ElementDefault `hasShape` []) $
                         map buildFromPattern [sp1, sp2]
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)

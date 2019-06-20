@@ -117,6 +117,7 @@ hiddenDerivative (Expression n mp) =
                      in wrap . sumMany . map dEach . removeEach $ args
                 -- d(-f) = -d(f)
                 Neg et arg -> d1Input (Neg et) arg
+                Scale et arg1 arg2 -> error "Haven't implemented"
                 Div arg1 arg2
                 -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
                  ->

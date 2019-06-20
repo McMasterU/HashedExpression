@@ -80,9 +80,4 @@ spec = do
             simplify (log (exp (x2))) `shouldBe` x2
             simplify (exp (log (x2))) `shouldBe` x2
         specify "complex related" $ do
---            print $ prettify $ simplify ((x +: y) * (z +: w) * (u +: v))
-            print $ prettify $ simplify ((x +: y) * (z +: w))
---            simplify ((x +: y) * (z +: w) * (u +: v)) `shouldBe
---                simplify (((negate ((u * w * y) + (v * w * x))) + ((negate (v * y)) * z) +
---                  (u * x * z)) +:
---                 (((negate (v * y)) * w) + (u * w * x) + (u * y * z) + (v * x * z)))
+            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +: (x * w + y * z)

@@ -205,6 +205,7 @@ data Node
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
     | Neg ET Arg
+    | Scale ET Arg Arg
     -- MARK: only apply to R
     | Div Arg Arg
     | Sqrt Arg
