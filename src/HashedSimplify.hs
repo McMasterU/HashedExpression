@@ -64,11 +64,13 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            (multipleTimes 10 . makeRecursive $
-             zeroOneRules >>>
+            (multipleTimes 10 . makeRecursive $ zeroOneRules >>>
+             groupConstantsRules >>>
              dotProductRules >>>
              exponentRules >>>
-             complexNumRules >>> distributiveRules >>> reduceSumProdRules) >>>
+             complexNumRules >>>
+             distributiveRules >>>
+             reduceSumProdRules) >>>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -170,15 +172,14 @@ groupConstantsRules exp@(mp, n) =
             Sum _ ns
                 | Just (shape, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $
-                    [aConst shape $ Prelude.sum cs] ++ nonConstants ns
-                | otherwise -> (mp, n)
+                    reconstruct exp $ [aConst shape $ Prelude.sum cs] ++
+                    nonConstants ns
             Mul _ ns
                 | Just (shape, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $
-                    [aConst shape $ Prelude.product cs] ++ nonConstants ns
-                | otherwise -> (mp, n)
+                    reconstruct exp $ [aConst shape $ Prelude.product cs] ++
+                    nonConstants ns
+            _ -> (mp, n)
 
 -- | Remove unreachable nodes
 --
