@@ -1,7 +1,9 @@
 module SimplifySpec where
 
+import Data.Maybe (fromJust)
 import HashedExpression
-import HashedOperation
+import HashedOperation hiding (product, sum)
+import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import Prelude hiding
@@ -32,6 +34,12 @@ import Prelude hiding
     )
 import Test.Hspec
 import TestCommons
+
+sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
+sum = fromJust . HashedOperation.sum
+
+product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
+product = fromJust . HashedOperation.product
 
 spec :: Spec
 spec = do
@@ -76,11 +84,16 @@ spec = do
             simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
             simplify (x <.> (y + z)) `shouldBe` ((x <.> y) + (x <.> z))
             simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
-            (fmap (simplify . (x *)) . sum $ [y, z, t, u, v]) `shouldBe` (sum . map (x *) $ [y, z, t, u, v])
-            (fmap (simplify . (* x)) . sum $ [y, z, t, u, v]) `shouldBe` (sum . map (x *) $ [y, z, t, u, v])
-            (fmap (simplify . (x *.)) . sum $ [y, z, t, u, v]) `shouldBe` (sum . map (x *.) $ [y, z, t, u, v])
-            (fmap (simplify . (x <.>)) . sum $ [y, z, t, u, v]) `shouldBe` (sum . map (x <.>) $ [y, z, t, u, v])
-            (fmap (simplify . (<.> x)) . sum $ [y, z, t, u, v]) `shouldBe` (sum . map (x <.>) $ [y, z, t, u, v])
+            simplify (x * sum [y, z, t, u, v]) `shouldBe`
+                sum (map (x *) [y, z, t, u, v])
+            simplify (sum [y, z, t, u, v] * x) `shouldBe`
+                sum (map (x *) [y, z, t, u, v])
+            simplify (x *. sum [y, z, t, u, v]) `shouldBe`
+                sum (map (x *.) [y, z, t, u, v])
+            simplify (x <.> sum [y, z, t, u, v]) `shouldBe`
+                sum (map (x <.>) [y, z, t, u, v])
+            simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
+                sum (map (x <.>) [y, z, t, u, v])
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1

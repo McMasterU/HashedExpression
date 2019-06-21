@@ -112,7 +112,8 @@ instance (DimensionType d, NumType et) =>
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
-product :: (DimensionType d, Addable et)
+product ::
+       (DimensionType d, NumType et)
     => [Expression d et]
     -> Maybe (Expression d et)
 product [] = Nothing
