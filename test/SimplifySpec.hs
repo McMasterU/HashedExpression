@@ -57,13 +57,11 @@ spec = do
             simplify ((x * zero) * one) `shouldBe` zero
             simplify ((x * y) * one) `shouldBe` (x * y)
             simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
+            simplify (product [x * y, product [z, t, w], one]) `shouldBe` product [x, y, z, t, w]
+            simplify (product [x, y, z, t, w, zero]) `shouldBe` zero
         specify "simplify log and exponential" $ do
             simplify (log (exp x)) `shouldBe` x
             simplify (exp (log x)) `shouldBe` x
-            simplify (log (exp x1)) `shouldBe` x1
-            simplify (exp (log x1)) `shouldBe` x1
-            simplify (log (exp x2)) `shouldBe` x2
-            simplify (exp (log x2)) `shouldBe` x2
         specify "complex related" $ do
             simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +:
                 (x * w + y * z)
@@ -118,3 +116,8 @@ spec = do
             simplify (s *. (y1 + z1)) `shouldBe` (s *. y1 + s *. z1)
             simplify (x1 <.> (y1 + z1)) `shouldBe` ((x1 <.> y1) + (x1 <.> z1))
             simplify ((y1 + z1) <.> x1) `shouldBe` ((x1 <.> y1) + (x1 <.> z1))
+        specify "log and exp higher" $ do
+            simplify (log (exp x1)) `shouldBe` x1
+            simplify (exp (log x1)) `shouldBe` x1
+            simplify (log (exp x2)) `shouldBe` x2
+            simplify (exp (log x2)) `shouldBe` x2

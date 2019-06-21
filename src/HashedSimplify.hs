@@ -16,6 +16,7 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
+import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedUtils
 import Prelude hiding
@@ -44,7 +45,6 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude as Prelude
-import HashedOperation (const, const1d, const2d, const3d)
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -65,14 +65,14 @@ simplify ::
 simplify e =
     let applyRules =
             (multipleTimes 10 . makeRecursive $
-            zeroOneRules >>>
-            dotProductRules >>>
-            exponentRules >>>
-            complexNumRules >>>
-            distributiveRules >>> reduceSumProdRules) >>> removeUnreachable
+             zeroOneRules >>>
+             dotProductRules >>>
+             exponentRules >>>
+             complexNumRules >>> distributiveRules >>> reduceSumProdRules) >>>
+            removeUnreachable
      in wrap . applyRules . unwrap $ e
 
--- | Simplifications below
+-- | Rules with zero and one
 --
 zeroOneRules :: Simplification
 zeroOneRules =
@@ -92,6 +92,8 @@ zeroOneRules =
     , zero <.> x |.~~> zero
     ]
 
+-- | Rules with complex operation
+--
 complexNumRules :: Simplification
 complexNumRules =
     makeRecursive . chain . map fromPattern $
@@ -102,6 +104,8 @@ complexNumRules =
     , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
+-- | Rules with dot product and scale
+--
 dotProductRules :: Simplification
 dotProductRules =
     makeRecursive . chain . map fromPattern $
@@ -109,6 +113,8 @@ dotProductRules =
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     ]
 
+-- | Rules of distributive over sum
+--
 distributiveRules :: Simplification
 distributiveRules =
     makeRecursive . chain . map fromPattern $
@@ -119,11 +125,15 @@ distributiveRules =
     , x *. sum (each) |.~~> sum (x *. each)
     ]
 
+-- | Rules of exponent and log
+--
 exponentRules :: Simplification
 exponentRules =
     makeRecursive . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
+-- | If sum or product contains sub-sum or sub-product, flatten them out
+--
 reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
     let isZero nId
@@ -152,6 +162,8 @@ reduceSumProdRules exp@(mp, n) =
                 | length ns == 1 -> (mp, head ns)
                 -- if the product has any one, remove them
                 | any isOne ns -> reconstruct' . filter (not . isOne) $ ns
+                -- if any is zero, collapse to zero
+                | [nId] <- filter isZero ns -> (mp, nId)
                 -- if the prod contains any prod, just flatten them out
                 | otherwise -> reconstruct' . concatMap pullProdOperands $ ns
             _ -> (mp, n)

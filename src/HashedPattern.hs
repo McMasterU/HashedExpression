@@ -52,7 +52,7 @@ data Normal
 
 data List
 
--- | This reflexes Node in HashedExpression
+-- |
 --
 data Pattern a where
     PHole :: Capture -> Pattern Normal
@@ -61,7 +61,7 @@ data Pattern a where
     PSumList :: Pattern List -> Pattern Normal
     -- Ref to a node in the expression
     PRef :: Int -> Pattern Normal
-    --
+    -- Reflex Node in HashedExpression
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
     PMul :: [Pattern Normal] -> Pattern Normal
