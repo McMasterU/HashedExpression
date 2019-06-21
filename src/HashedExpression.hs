@@ -144,8 +144,8 @@ class ComplexRealOp r c | r -> c, c -> r where
     xRe :: c -> r
     xIm :: c -> r
 
-class InnerProductSpaceOp a b | a -> b where
-    (<.>) :: a -> a -> b
+class InnerProductSpaceOp a b c | a b -> c where
+    (<.>) :: a -> b -> c
 
 infixl 6 +, -
 

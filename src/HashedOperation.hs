@@ -159,7 +159,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
 instance (InnerProductSpace d s) =>
-         InnerProductSpaceOp (Expression d s) (Expression Zero s) where
+         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Zero s) where
     (<.>) :: Expression d s -> Expression d s -> Expression Zero s
     (<.>) e1 e2 =
         let scalarShape = []

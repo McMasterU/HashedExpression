@@ -3,6 +3,7 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE GADTs #-}
 
 module HashedSimplify where
 
@@ -175,12 +176,12 @@ removeUnreachable (mp, n) =
 
 -- | Turn HashedPattern to a simplification
 --
-fromPattern :: (GuardedPattern, Pattern) -> Simplification
+fromPattern :: (GuardedPattern, Pattern Normal) -> Simplification
 fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
     | Just match <- match ex pattern
     , condition originalMp match =
         let (capturesMap, listCapturesMap) = match
-            buildFromPattern :: Pattern -> (ExpressionMap, Int)
+            buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
                     (PHole capture)
