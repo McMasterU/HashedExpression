@@ -123,6 +123,12 @@ distributiveRules =
     , x *. (y + z) |.~~> (x *. y + x *. z)
     , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
     , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
+    -- Updated: can write HashedPattern represent list
+    , x * sum (each) |.~~> sum (x * each)
+    , sum (each) * x |.~~> sum (x * each)
+    , x <.> sum (each) |.~~> sum (x <.> each)
+    , sum (each) <.> x |.~~> sum (x <.> each)
+    , x *. sum (each) |.~~> sum (x *. each)
     ]
 
 exponentRules :: Simplification

@@ -97,6 +97,9 @@ instance MultiplyOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
 instance MultiplyOp (Pattern Normal) (Pattern List) (Pattern List) where
     (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
 
+instance MultiplyOp (Pattern List) (Pattern Normal) (Pattern List) where
+    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
+
 instance VectorSpaceOp (Pattern Normal) (Pattern Normal) where
     scale = PScale
 
@@ -131,8 +134,11 @@ instance InnerProductSpaceOp (Pattern Normal) (Pattern Normal) (Pattern Normal) 
     (<.>) = PInnerProd
 
 instance InnerProductSpaceOp (Pattern Normal) (Pattern List) (Pattern List) where
-    (<.>) wh1 (PListHole f listCapture) =
-        PListHole ((wh1 <.>) . f) listCapture
+    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
+
+instance InnerProductSpaceOp (Pattern List) (Pattern Normal) (Pattern List) where
+    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
+
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
@@ -147,7 +153,6 @@ infix 0 |.~~>
 
 -- |
 --
-
 [p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
 
 one :: Pattern Normal
@@ -158,7 +163,6 @@ zero = PConst 0
 
 each :: Pattern List
 each = PListHole PIdentity 1
-
 
 sum :: Pattern List -> Pattern Normal
 sum = PSumList
