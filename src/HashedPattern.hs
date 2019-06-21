@@ -170,7 +170,10 @@ each = PListHole [] 1
 sum :: Pattern List -> Pattern Normal
 sum = PSumList
 
--- |
+-- | Matches all nodes in the expression to see if they all match the pattern list, if they match, return
+-- the inner actual node
+-- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> [x, y, z]
+--      matchList [x, y, z, t] (PatternList: (_)) = [x, y, z, t]
 --
 matchList :: ExpressionMap -> [Int] -> Pattern List -> Maybe [Int]
 matchList mp ns (PListHole fs listCapture)
@@ -189,7 +192,8 @@ matchList mp ns (PListHole fs listCapture)
         catMaybes . map (Map.lookup uniqueCapture . fst) $ subMatches
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
---
+-- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
+--      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
 type Match = (Map Capture Int, Map ListCapture [Int])
 
 match :: (ExpressionMap, Int) -> Pattern Normal -> Maybe Match
