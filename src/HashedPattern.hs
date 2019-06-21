@@ -62,7 +62,7 @@ data Pattern a where
     PSumList :: Pattern List -> Pattern Normal
     -- Ref to a node in the expression
     PRef :: Int -> Pattern Normal
-    -- Reflex Node in HashedExpression
+    -- MARK: Reflex Node in HashedExpression
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
     PMul :: [Pattern Normal] -> Pattern Normal
@@ -181,8 +181,9 @@ sum = PSumList
 
 -- | Matches all nodes in the expression to see if they all match the pattern list, if they match, return
 -- the inner actual node
--- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> [x, y, z]
---      matchList [x, y, z, t] (PatternList: (_)) = [x, y, z, t]
+-- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
+--      matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
+--      matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
 --
 matchList :: ExpressionMap -> [Int] -> Pattern List -> Maybe [Int]
 matchList mp ns (PListHole fs listCapture)
@@ -200,11 +201,11 @@ matchList mp ns (PListHole fs listCapture)
     nIds subMatches =
         catMaybes . map (Map.lookup uniqueCapture . fst) $ subMatches
 
+type Match = (Map Capture Int, Map ListCapture [Int])
+
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-type Match = (Map Capture Int, Map ListCapture [Int])
-
 match :: (ExpressionMap, Int) -> Pattern Normal -> Maybe Match
 match (mp, n) wh =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
