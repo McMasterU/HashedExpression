@@ -152,7 +152,17 @@ data GuardedPattern =
 (|.~~>) :: Pattern Normal -> Pattern Normal -> (GuardedPattern, Pattern Normal)
 (|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
 
-infix 0 |.~~>
+infix 0 |.~~>, ~~>
+
+(~~>) :: GuardedPattern -> Pattern Normal -> (GuardedPattern, Pattern Normal)
+(~~>) gPattern replacement = (gPattern, replacement)
+
+(|.) :: Pattern Normal -> Condition -> GuardedPattern
+(|.) pattern condition = GP pattern $ condition pattern
+
+infixl 1 |.
+
+type Condition = Pattern Normal -> ExpressionMap -> Match -> Bool
 
 -- |
 --
