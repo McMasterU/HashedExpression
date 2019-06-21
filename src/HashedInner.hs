@@ -83,20 +83,10 @@ apply (OperationOption nodeOutcome shapeOutcome) exps =
 -- | General multiplication and sum
 --
 mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-mulMany =
-    apply $
-    OperationOption
-        { nodeOutcome = OpManyElement Mul ElementDefault
-        , shapeOutcome = ShapeDefault
-        }
+mulMany = apply $ naryET Mul ElementDefault
 
 sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-sumMany =
-    apply $
-    OperationOption
-        { nodeOutcome = OpManyElement Sum ElementDefault
-        , shapeOutcome = ShapeDefault
-        }
+sumMany = apply $ naryET Sum ElementDefault
 
 -- |
 --

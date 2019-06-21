@@ -56,11 +56,13 @@ data List
 --
 data Pattern a where
     PHole :: Capture -> Pattern Normal
+    -- MARK: For list capture
     PListHole
         :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
     PSumList :: Pattern List -> Pattern Normal
     -- Ref to a node in the expression
     PRef :: Int -> Pattern Normal
+    PEach :: Capture -> Pattern Normal
     -- Reflex Node in HashedExpression
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
@@ -168,6 +170,24 @@ each = PListHole [] 1
 sum :: Pattern List -> Pattern Normal
 sum = PSumList
 
+-- |
+--
+matchList :: ExpressionMap -> [Int] -> Pattern List -> Maybe [Int]
+matchList mp ns (PListHole fs listCapture)
+    | all isJust maybeSubMatches
+    , let subMatches = catMaybes maybeSubMatches
+    , allEqual $ map otherCaptures subMatches = Just $ nIds subMatches
+    | otherwise = Nothing
+  where
+    uniqueCapture = minBound :: Int
+    eachHole = PHole uniqueCapture
+    pt = foldr ($) eachHole fs
+    matchOne nId = match (mp, nId) pt
+    maybeSubMatches = map matchOne ns
+    otherCaptures = Map.delete uniqueCapture . fst
+    nIds subMatches =
+        catMaybes . map (Map.lookup uniqueCapture . fst) $ subMatches
+
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 --
 type Match = (Map Capture Int, Map ListCapture [Int])
@@ -186,8 +206,10 @@ match (mp, n) wh =
             (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
                 | c == whc -> Just (Map.empty, Map.empty)
-            (Sum _ args, PSumList (PListHole [] listCapture)) ->
-                Just (Map.empty, Map.fromList [(listCapture, args)])
+            (Sum _ args, PSumList pl@(PListHole fs listCapture))
+                | Just innerArgs <- matchList mp args pl ->
+                    Just (Map.empty, Map.fromList [(listCapture, innerArgs)])
+                | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]

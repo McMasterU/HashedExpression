@@ -200,13 +200,14 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
             buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
-                    (PHole capture)
+                    PRef nId -> (originalMp, nId)
+                    PHole capture
                         | Just nId <- Map.lookup capture capturesMap ->
                             (originalMp, nId)
                         | otherwise ->
                             error
                                 "Capture not in the Map Capture Int which should never happens"
-                    (PConst pc) ->
+                    PConst pc ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
                             [size] -> unwrap $ const1d size pc
@@ -214,7 +215,6 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
                             _ -> error "Dimension > 3"
-                    PRef nId -> (originalMp, nId)
                     PSumList ptl -> sumMany . buildFromPatternList $ ptl
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PMul sps -> mulMany . map buildFromPattern $ sps
