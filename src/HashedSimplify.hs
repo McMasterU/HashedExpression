@@ -16,7 +16,6 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
-import HashedOperation
 import HashedPattern
 import HashedUtils
 import Prelude hiding
@@ -45,6 +44,7 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude as Prelude
+import HashedOperation (const, const1d, const2d, const3d)
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --

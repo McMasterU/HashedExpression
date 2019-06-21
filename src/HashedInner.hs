@@ -114,6 +114,9 @@ applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 applyUnary :: OperationOption -> Expression d1 et1 -> Expression d2 et2
 applyUnary option e1 = wrap . apply option $ [unwrap e1]
 
+applyNary :: OperationOption -> [Expression d1 et1] -> Expression d2 et2
+applyNary option = wrap . apply option . map unwrap
+
 -- | binary operations
 --
 binary :: (Arg -> Arg -> Node) -> OperationOption

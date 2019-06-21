@@ -97,6 +97,12 @@ instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
         let op = unaryET Neg ElementDefault
          in applyUnary $ unaryET Neg ElementDefault
 
+sum :: (DimensionType d, Addable et)
+    => [Expression d et]
+    -> Maybe (Expression d et)
+sum [] = Nothing
+sum es = Just . applyNary (naryET Sum ElementDefault) $ es
+
 -- | Element-wise multiplication
 --
 instance (DimensionType d, NumType et) =>
@@ -105,6 +111,12 @@ instance (DimensionType d, NumType et) =>
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
+product :: (DimensionType d, Addable et)
+    => [Expression d et]
+    -> Maybe (Expression d et)
+product [] = Nothing
+product es = Just . applyNary (naryET Mul ElementDefault) $ es
 
 -- | Scale in vector space
 --
