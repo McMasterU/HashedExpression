@@ -207,6 +207,7 @@ hiddenDerivative (Expression n mp) =
                 RealPart arg -> d1Input RealPart arg
                 ImagPart arg -> d1Input ImagPart arg
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
+                InnerProd et arg1 arg2 -> error "haven't implemented"
      in coerce res
 
 -- | Wise-multiply a number with a covector

@@ -90,3 +90,4 @@ hiddenPrettify e@(Expression n mp) =
             RealImag arg1 arg2 -> wrapParentheses . T.concat $ [innerPrettify arg1, "+:", innerPrettify arg2]
             RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
             ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
+            InnerProd et arg1 arg2 -> wrapParentheses . T.concat $ [innerPrettify arg1, "<.>", innerPrettify arg2]

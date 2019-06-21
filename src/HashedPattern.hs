@@ -60,6 +60,9 @@ data Pattern a where
     PListHole
         :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
     PSumList :: Pattern List -> Pattern Normal
+    -- Ref to a node in the expression
+    PRef :: Int -> Pattern Normal
+    --
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
     PMul :: [Pattern Normal] -> Pattern Normal

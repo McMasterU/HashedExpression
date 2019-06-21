@@ -113,13 +113,7 @@ dotProductRules =
 distributiveRules :: Simplification
 distributiveRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
-    [ x * (y + z) |.~~> (x * y + x * z)
-    , (y + z) * x |.~~> (x * y + x * z)
-    , x *. (y + z) |.~~> (x *. y + x *. z)
-    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
-    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
-    -- Updated: can write HashedPattern represent list
-    , x * sum (each) |.~~> sum (x * each)
+    [ x * sum (each) |.~~> sum (x * each)
     , sum (each) * x |.~~> sum (x * each)
     , x <.> sum (each) |.~~> sum (x <.> each)
     , sum (each) <.> x |.~~> sum (x <.> each)
@@ -182,6 +176,14 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
     | Just match <- match ex pattern
     , condition originalMp match =
         let (capturesMap, listCapturesMap) = match
+            turnToPattern ::
+                   [Pattern Normal -> Pattern Normal] -> Int -> Pattern Normal
+            turnToPattern fs nId = foldr ($) (PRef nId) fs
+            buildFromPatternList :: Pattern List -> [(ExpressionMap, Int)]
+            buildFromPatternList (PListHole fs listCapture)
+                | Just ns <- Map.lookup listCapture listCapturesMap =
+                    map (buildFromPattern . turnToPattern fs) ns
+                | otherwise = error "ListCapture not in the Map ListCapture [Int] which should never happens"
             buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
@@ -199,7 +201,8 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
                             _ -> error "Dimension > 3"
-
+                    PRef nId -> (originalMp, nId)
+                    PSumList ptl -> sumMany . buildFromPatternList $ ptl
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PMul sps -> mulMany . map buildFromPattern $ sps
                     PNeg sp ->
