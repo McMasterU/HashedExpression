@@ -62,7 +62,6 @@ data Pattern a where
     PSumList :: Pattern List -> Pattern Normal
     -- Ref to a node in the expression
     PRef :: Int -> Pattern Normal
-    PEach :: Capture -> Pattern Normal
     -- Reflex Node in HashedExpression
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
