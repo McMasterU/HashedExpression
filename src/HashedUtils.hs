@@ -6,6 +6,7 @@ import HashedHash
 import HashedNode
 
 import Data.Complex
+import Data.Maybe
 
 -- | Forward pipe operator in Elm
 --
@@ -76,13 +77,52 @@ expressionNode (Expression n mp) =
         _ -> error "expression not in map"
 
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
-ensureSameShape e1 e2 after =
-    if expressionShape e1 == expressionShape e2
-        then after
-        else error "Ensure same shape failed"
+ensureSameShape e1 e2 after
+    | expressionShape e1 == expressionShape e2 = after
+    | otherwise = error "Ensure same shape failed"
 
 ensureSameShapeList :: [Expression d et] -> a -> a
-ensureSameShapeList es after =
-    if allEqual es
-        then after
-        else error "Ensure same shape failed"
+ensureSameShapeList es after
+    | allEqual es = after
+    | otherwise = error "Ensure same shape failed"
+
+pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
+pullConstant mp n
+    | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)
+    | otherwise = Nothing
+
+pullConstants :: ExpressionMap -> [Int] -> Maybe (Shape, [Double])
+pullConstants mp ns
+    | xs@(x:_) <- mapMaybe (pullConstant mp) ns = Just (fst x, map snd xs)
+    | otherwise = Nothing
+
+isZero :: ExpressionMap -> Int -> Bool
+isZero mp nId
+    | Const 0 <- retrieveNode nId mp = True
+    | otherwise = False
+
+isOne :: ExpressionMap -> Int -> Bool
+isOne mp nId
+    | Const 1 <- retrieveNode nId mp = True
+    | otherwise = False
+
+isConstant :: ExpressionMap -> Int -> Bool
+isConstant mp nId
+    | Const _ <- retrieveNode nId mp = True
+    | otherwise = False
+
+pullSumOperands :: ExpressionMap -> Int -> [Int]
+pullSumOperands mp nId
+    | Sum _ operands <- retrieveNode nId mp = operands
+    | otherwise = [nId]
+
+pullProdOperands :: ExpressionMap -> Int -> [Int]
+pullProdOperands mp nId
+    | Mul _ operands <- retrieveNode nId mp = operands
+    | otherwise = [nId]
+
+aConst :: Shape -> Double -> (ExpressionMap, Int)
+aConst shape val = (IM.fromList [(h, node)], h)
+  where
+    node = (shape, Const val)
+    h = hash node

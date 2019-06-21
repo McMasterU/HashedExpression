@@ -32,6 +32,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import qualified Prelude
 
 -- | Create primitive expressions
 --
@@ -180,3 +181,11 @@ instance (InnerProductSpace d s) =>
                 binaryET InnerProd (ElementSpecific $ expressionElementType e2) `hasShape`
                 scalarShape
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
+-- | Prelude version of * and +
+--
+times :: (Num a) => a -> a -> a
+times a b = Prelude.product [a, b]
+
+plus :: (Num a) => a -> a -> a
+plus a b = Prelude.sum [a, b]

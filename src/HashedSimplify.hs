@@ -2,8 +2,8 @@
 -- | For simplifying expressions
 --
 -------------------------------------------------------------------------------
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedSimplify where
 
@@ -16,7 +16,7 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
-import HashedOperation (const, const1d, const2d, const3d)
+import HashedOperation (const, const1d, const2d, const3d, plus, times)
 import HashedPattern
 import HashedUtils
 import Prelude hiding
@@ -44,7 +44,7 @@ import Prelude hiding
     , tan
     , tanh
     )
-import qualified Prelude as Prelude
+import qualified Prelude
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -136,37 +136,49 @@ exponentRules =
 --
 reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
-    let isZero nId
-            | Const 0 <- retrieveNode nId mp = True
-            | otherwise = False
-        isOne nId
-            | Const 1 <- retrieveNode nId mp = True
-            | otherwise = False
-        pullSumOperands nId
-            | Sum _ operands <- retrieveNode nId mp = operands
-            | otherwise = [nId]
-        pullProdOperands nId
-            | Mul _ operands <- retrieveNode nId mp = operands
-            | otherwise = [nId]
+    let reconstruct' :: [Int] -> (ExpressionMap, Int)
         reconstruct' = reconstruct exp . map (mp, )
      in case retrieveNode n mp of
-            (Sum _ ns)
+            Sum _ ns
                 -- if the sum has only one, collapse it
                 | length ns == 1 -> (mp, head ns)
                 -- if the sum has any zero, remove them
-                | any isZero ns -> reconstruct' . filter (not . isZero) $ ns
+                | any (isZero mp) ns ->
+                    reconstruct' . filter (not . isZero mp) $ ns
                 -- if the sum contains any sum, just flatten them out
-                | otherwise -> reconstruct' . concatMap pullSumOperands $ ns
-            (Mul _ ns)
+                | otherwise ->
+                    reconstruct' . concatMap (pullSumOperands mp) $ ns
+            Mul _ ns
                 -- if the mul has only one, collapse it
                 | length ns == 1 -> (mp, head ns)
                 -- if the product has any one, remove them
-                | any isOne ns -> reconstruct' . filter (not . isOne) $ ns
+                | any (isOne mp) ns ->
+                    reconstruct' . filter (not . isOne mp) $ ns
                 -- if any is zero, collapse to zero
-                | [nId] <- filter isZero ns -> (mp, nId)
+                | nId:_ <- filter (isZero mp) ns -> (mp, nId)
                 -- if the prod contains any prod, just flatten them out
-                | otherwise -> reconstruct' . concatMap pullProdOperands $ ns
+                | otherwise ->
+                    reconstruct' . concatMap (pullProdOperands mp) $ ns
             _ -> (mp, n)
+
+-- | If there are more than one constant in a sum or a product, group them together
+--
+groupConstantsRules :: Simplification
+groupConstantsRules exp@(mp, n) =
+    let nonConstants ns = map (mp, ) . filter (not . isConstant mp) $ ns
+     in case retrieveNode n mp of
+            Sum _ ns
+                | Just (shape, cs) <- pullConstants mp ns
+                , length cs > 1 ->
+                    reconstruct exp $
+                    [aConst shape $ Prelude.sum cs] ++ nonConstants ns
+                | otherwise -> (mp, n)
+            Mul _ ns
+                | Just (shape, cs) <- pullConstants mp ns
+                , length cs > 1 ->
+                    reconstruct exp $
+                    [aConst shape $ Prelude.product cs] ++ nonConstants ns
+                | otherwise -> (mp, n)
 
 -- | Remove unreachable nodes
 --
