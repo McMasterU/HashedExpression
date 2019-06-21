@@ -108,11 +108,6 @@ dotProductRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-    , x * (y + z) |.~~> (x * y + x * z)
-    , (y + z) * x |.~~> (x * y + x * z)
-    , x *. (y + z) |.~~> (x *. y + x *. z)
-    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
-    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
     ]
 
 distributiveRules :: Simplification
@@ -204,6 +199,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
                             _ -> error "Dimension > 3"
+
                     PSum sps -> sumMany . map buildFromPattern $ sps
                     PMul sps -> mulMany . map buildFromPattern $ sps
                     PNeg sp ->

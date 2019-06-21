@@ -58,9 +58,8 @@ data Pattern a where
     PHole :: Capture -> Pattern Normal
     -- Goal: x * sum (each) = sum (x * each)
     PListHole
-        :: (Pattern Normal -> Pattern Normal) -> ListCapture -> Pattern List
+        :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
     PSumList :: Pattern List -> Pattern Normal
-    PIdentity :: Pattern Normal -> Pattern Normal
     PConst :: Double -> Pattern Normal
     PSum :: [Pattern Normal] -> Pattern Normal
     PMul :: [Pattern Normal] -> Pattern Normal
@@ -95,17 +94,17 @@ instance MultiplyOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
 instance MultiplyOp (Pattern Normal) (Pattern List) (Pattern List) where
-    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
+    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) : f) listCapture
 
 instance MultiplyOp (Pattern List) (Pattern Normal) (Pattern List) where
-    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
+    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) : f) listCapture
 
 instance VectorSpaceOp (Pattern Normal) (Pattern Normal) where
     scale = PScale
 
 instance VectorSpaceOp (Pattern Normal) (Pattern List) where
     scale wh1 (PListHole f listCapture) =
-        PListHole ((wh1 `scale`) . f) listCapture
+        PListHole ((wh1 `scale`) : f) listCapture
 
 instance NumOp (Pattern Normal) where
     sqrt = PSqrt
@@ -134,10 +133,10 @@ instance InnerProductSpaceOp (Pattern Normal) (Pattern Normal) (Pattern Normal) 
     (<.>) = PInnerProd
 
 instance InnerProductSpaceOp (Pattern Normal) (Pattern List) (Pattern List) where
-    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
+    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) : f) listCapture
 
 instance InnerProductSpaceOp (Pattern List) (Pattern Normal) (Pattern List) where
-    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
+    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) : f) listCapture
 
 -- | Guarded patterns for simplification
 --
@@ -162,7 +161,7 @@ zero :: Pattern Normal
 zero = PConst 0
 
 each :: Pattern List
-each = PListHole PIdentity 1
+each = PListHole [] 1
 
 sum :: Pattern List -> Pattern Normal
 sum = PSumList
@@ -185,8 +184,8 @@ match (mp, n) wh =
             (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
                 | c == whc -> Just (Map.empty, Map.empty)
---            (Sum _ args, PSum [PListHole listCapture]) -> Just (Map.empty, Map.fromList [(listCapture, args)])
---            (Mul _ args, PMul [PListHole listCapture]) -> Just (Map.empty, Map.fromList [(listCapture, args)])
+            (Sum _ args, PSumList (PListHole [] listCapture)) ->
+                Just (Map.empty, Map.fromList [(listCapture, args)])
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
