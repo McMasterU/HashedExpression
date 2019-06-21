@@ -1,6 +1,7 @@
 module Main where
 
 import Data.Array.Unboxed as U
+import qualified Data.Set as Set
 import HashedDerivative
 import HashedExpression
 import HashedInterp
@@ -18,6 +19,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
+    , const
     , cos
     , cosh
     , exp
@@ -27,7 +29,6 @@ import Prelude hiding
     , sqrt
     , tan
     , tanh
-    , const
     )
 
 import Test.Hspec
@@ -43,7 +44,9 @@ main = do
         fImg = const 0 *. xRe (f +: z)
 --    print $ prettify anotherF
     print $ prettify fImg
-    print $ prettify $ exteriorDerivative fImg
-    print $ prettify $ exteriorDerivative $ simplify fImg
+    print $ prettify $ exteriorDerivative (Set.fromList ["x", "y", "z"]) fImg
+    print $
+        prettify $
+        exteriorDerivative (Set.fromList ["x", "y", "z"]) $ simplify fImg
 --    print $ prettify $ exteriorDerivative fImg
 --    print $ prettify . exteriorDerivative $ f

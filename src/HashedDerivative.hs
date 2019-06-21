@@ -12,6 +12,8 @@ module HashedDerivative
 
 import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import HashedExpression
 import HashedHash
@@ -46,7 +48,10 @@ import Prelude hiding
 -- | Exterior derivative
 --
 exteriorDerivative ::
-       (DimensionType d) => Expression d R -> Expression d Covector
+       (DimensionType d)
+    => Set String
+    -> Expression d R
+    -> Expression d Covector
 exteriorDerivative = hiddenDerivative
 
 -- | Placeholder for any dimension type
@@ -80,30 +85,35 @@ one shape = Expression h (IM.fromList [(h, node)])
 
 -- | Hidden exterior derivative
 --
-hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
-hiddenDerivative (Expression n mp) = coerce res
+hiddenDerivative :: Set String -> Expression d1 et1 -> Expression d2 et2
+hiddenDerivative vars (Expression n mp) = coerce res
   where
+    hiddenDerivative' = hiddenDerivative vars
+    exteriorDerivative' = exteriorDerivative vars
     (shape, node) = retrieveInternal n mp
-    dOne nId = unwrap . hiddenDerivative $ Expression nId mp
+    dOne nId = unwrap . hiddenDerivative' $ Expression nId mp
         -- For cases g = ImagPart, RealPart, FFT, .. that take 1 input
         -- d(g(x)) = g(d(x))
     d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
     d1Input opType arg =
-        let df = hiddenDerivative (Expression arg mp)
+        let df = hiddenDerivative' (Expression arg mp)
          in applyUnary (unary opType) df
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
     d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
     d2Input opType arg1 arg2 =
-        let df1 = hiddenDerivative (Expression arg1 mp)
-            df2 = hiddenDerivative (Expression arg2 mp)
+        let df1 = hiddenDerivative' (Expression arg1 mp)
+            df2 = hiddenDerivative' (Expression arg2 mp)
          in applyBinary (binary opType) df1 df2
     res =
         case node
                 -- dx = dx
               of
             Var name ->
-                let node = DVar name
+                let node =
+                        if Set.member name vars
+                            then DVar name
+                            else Const 0
                     (newMap, h) = fromNode (shape, node)
                  in Expression h newMap
                 -- dc = 0
@@ -129,8 +139,8 @@ hiddenDerivative (Expression n mp) = coerce res
              ->
                 let f = Expression arg1 mp :: Expression D_ R
                     g = Expression arg2 mp :: Expression D_ R
-                    df = exteriorDerivative f
-                    dg = exteriorDerivative g
+                    df = exteriorDerivative' f
+                    dg = exteriorDerivative' g
                     g'2 = g * g
                     part1 = (g / g'2) |*| df
                     part2 = (f / g'2) |*| dg
@@ -139,26 +149,26 @@ hiddenDerivative (Expression n mp) = coerce res
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                     recipSqrtF = c (expressionShape f) 0.5 / sqrt f
                  in recipSqrtF |*| df
             Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in cos f |*| df
             Cos arg
                 -- d(cos(f)) = -sin(f) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in negate (sin f) |*| df
             Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                     cosSqrF = cos f * cos f
                     sqrRecip = one shape / cosSqrF
                  in sqrRecip |*| df
@@ -166,67 +176,67 @@ hiddenDerivative (Expression n mp) = coerce res
                 -- d(exp(f)) = exp(f) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in exp f |*| df
             Log arg
                 -- d(log(f)) = 1 / f * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / f |*| df
             Sinh arg
                 -- d(sinh(f)) = cosh(f) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in cosh f |*| df
             Cosh arg
                 -- d(cosh(f)) = sinh(f) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in sinh f |*| df
             Tanh arg
                 -- d(tanh(f)) = (1 - tanh^2 h) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in (one shape - tanh f * tanh f) |*| df
             Asin arg
                 -- d(asin(f)) = 1 / sqrt(1 - f^2) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / sqrt (one shape - f * f) |*| df
             Acos arg
                 -- d(acos(f)) = -1 / sqrt(1 - f^2) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in negate (one shape / sqrt (one shape - f * f)) |*| df
             Atan arg
                 -- d(atan(f)) = 1 / (1 + f^2) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / (one shape + f * f) |*| df
             Asinh arg
                 -- d(asinh(f)) = 1 / sqrt(f^2 + 1) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / sqrt (f * f + one shape) |*| df
             Acosh arg
                 -- d(acosh(f)) = 1 / sqrt(f^2 - 1) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / sqrt (f * f - one shape) |*| df
             Atanh arg
                 -- d(atanh(f)) = 1 / sqrt(1 - f^2) * d(f)
              ->
                 let f = Expression arg mp :: Expression D_ R
-                    df = exteriorDerivative f
+                    df = exteriorDerivative' f
                  in one shape / (one shape - f * f) |*| df
                 -- d(xRe(f)) = xRe(d(f))
             RealPart arg -> d1Input RealPart arg
@@ -236,9 +246,9 @@ hiddenDerivative (Expression n mp) = coerce res
             RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
             InnerProd et arg1 arg2 ->
                 let f = Expression arg1 mp :: Expression D_ NT_
-                    df = hiddenDerivative f :: Expression D_ Covector
+                    df = hiddenDerivative' f :: Expression D_ Covector
                     g = Expression arg2 mp :: Expression D_ NT_
-                    dg = hiddenDerivative g :: Expression D_ Covector
+                    dg = hiddenDerivative' g :: Expression D_ Covector
                  in coerce $ f |<.>| dg + g |<.>| df
 
 -- | Wise-multiply a number with a covector
@@ -262,6 +272,5 @@ hiddenDerivative (Expression n mp) = coerce res
 (|<.>|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op = binaryET InnerProd (ElementSpecific Covector) `hasShape` []
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
-
 
 infixl 8 |*|, |<.>|
