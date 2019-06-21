@@ -54,6 +54,9 @@ exteriorDerivative = hiddenDerivative
 data WhateverD
     deriving (Typeable, DimensionType)
 
+data WhateverNT
+    deriving (Typeable, ElementType, NumType)
+
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
 coerce :: Expression d1 et1 -> Expression d2 et2
@@ -102,7 +105,8 @@ hiddenDerivative (Expression n mp) =
                      in Expression h newMap
                 -- dc = 0
                 DVar name ->
-                    error "Haven't deal with 1-form yet, only 0-form to 1-form"
+                    error
+                        "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
                 Const _ ->
                     let node = Const 0
                         (newMap, h) = fromNode (shape, node)
@@ -168,46 +172,74 @@ hiddenDerivative (Expression n mp) =
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / f |*| df
-                Sinh arg ->
+                Sinh arg
+                -- d(sinh(f)) = cosh(f) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in cosh f |*| df
-                Cosh arg ->
+                Cosh arg
+                -- d(cosh(f)) = sinh(f) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in sinh f |*| df
-                Tanh arg ->
+                Tanh arg
+                -- d(tanh(f)) = (1 - tanh^2 h) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in (one shape - tanh f * tanh f) |*| df
-                Asin arg ->
+                Asin arg
+                -- d(asin(f)) = 1 / sqrt(1 - f^2) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / sqrt (one shape - f * f) |*| df
-                Acos arg ->
+                Acos arg
+                -- d(acos(f)) = -1 / sqrt(1 - f^2) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in negate (one shape / sqrt (one shape - f * f)) |*| df
-                Atan arg ->
+                Atan arg
+                -- d(atan(f)) = 1 / (1 + f^2) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / (one shape + f * f) |*| df
-                Asinh arg ->
+                Asinh arg
+                -- d(asinh(f)) = 1 / sqrt(f^2 + 1) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / sqrt (f * f + one shape) |*| df
-                Acosh arg ->
+                Acosh arg
+                -- d(acosh(f)) = 1 / sqrt(f^2 - 1) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / sqrt (f * f - one shape) |*| df
-                Atanh arg ->
+                Atanh arg
+                -- d(atanh(f)) = 1 / sqrt(1 - f^2) * d(f)
+                 ->
                     let f = Expression arg mp :: Expression WhateverD R
                         df = exteriorDerivative f
                      in one shape / (one shape - f * f) |*| df
+                -- d(xRe(f)) = xRe(d(f))
                 RealPart arg -> d1Input RealPart arg
+                -- d(xIm(f)) = xIm(d(f))
                 ImagPart arg -> d1Input ImagPart arg
+                -- d(x +: y) = d(x) :+ d(y)
                 RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
-                InnerProd et arg1 arg2 -> error "haven't implemented"
+                InnerProd et arg1 arg2 ->
+                    let f =
+                            Expression arg1 mp :: Expression WhateverD WhateverNT
+                        df = hiddenDerivative f :: Expression WhateverD Covector
+                        g =
+                            Expression arg2 mp :: Expression WhateverD WhateverNT
+                        dg = hiddenDerivative g :: Expression WhateverD Covector
+                     in coerce $ f |<.>| dg + g |<.>| df
      in coerce res
 
 -- | Wise-multiply a number with a covector
