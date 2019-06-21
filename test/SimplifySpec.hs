@@ -57,7 +57,6 @@ spec = do
             simplify ((x * zero) * one) `shouldBe` zero
             simplify ((x * y) * one) `shouldBe` (x * y)
             simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
-            simplify (product [x * y, product [z, t, w], one]) `shouldBe` product [x, y, z, t, w]
             simplify (product [x, y, z, t, w, zero]) `shouldBe` zero
         specify "simplify log and exponential" $ do
             simplify (log (exp x)) `shouldBe` x
@@ -92,6 +91,15 @@ spec = do
                 sum (map (x <.>) [y, z, t, u, v])
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
                 sum (map (x <.>) [y, z, t, u, v])
+        specify "flatten sum and product" $ do
+            simplify (product [x * y, product [z, t, w], one]) `shouldBe`
+                product [x, y, z, t, w]
+            simplify (sum [x + y, sum [z, t, w + s], zero]) `shouldBe`
+                sum [x, y, z, t, w, s]
+        specify "group constants together" $ do
+            simplify (product [one, one, x, y, one, z]) `shouldBe` product [x, y, z]
+            simplify (sum [one, one, x, y, one, z]) `shouldBe` sum [const 3, x, y, z]
+            simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe` product [const 6, x, y, z]
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1
