@@ -99,7 +99,8 @@ instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) => MultiplyOp (Expression d et) where
+instance (DimensionType d, NumType et) =>
+         MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1

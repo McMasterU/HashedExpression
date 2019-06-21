@@ -31,8 +31,12 @@ type ListCapture = Int
 --
 data Pattern
     = PHole Capture
+    --
     | PListHole ListCapture
+    | PSumList (Pattern -> Pattern) Pattern -- Must be PListHole (TODO: GADTs instead ?)
+    --
     | PConst Double
+    --
     | PSum [Pattern]
     | PMul [Pattern]
     | PNeg Pattern
@@ -57,7 +61,6 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
-    deriving (Show, Eq, Ord)
 
 instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
@@ -66,7 +69,7 @@ instance AddableOp Pattern where
 sum :: [Pattern] -> Pattern
 sum = PSum
 --    (+) wh1 wh2 = WHSum [wh1, wh2]
-instance MultiplyOp Pattern where
+instance MultiplyOp Pattern Pattern Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
 product :: [Pattern] -> Pattern
