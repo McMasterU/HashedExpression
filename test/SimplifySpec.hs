@@ -71,6 +71,14 @@ spec = do
             simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
             simplify (x <.> (y + z)) `shouldBe` ((x <.> y) + (x <.> z))
             simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
+        specify "distributivity" $ do
+            simplify (x * (y + z)) `shouldBe` (x * y + x * z)
+            simplify ((y + z) * x) `shouldBe` (x * y + x * z)
+            simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
+            simplify (x <.> (y + z)) `shouldBe` ((x <.> y) + (x <.> z))
+            simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
+
+
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1

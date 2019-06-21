@@ -64,20 +64,19 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
+            (multipleTimes 10 . makeRecursive $
             zeroOneRules >>>
             dotProductRules >>>
             exponentRules >>>
             complexNumRules >>>
-            distributiveRules >>>
-            (multipleTimes 100 . makeRecursive $ reduceSumProdRules) >>>
-            removeUnreachable
+            distributiveRules >>> reduceSumProdRules) >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
 
 -- | Simplifications below
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [ x *. (y *. z) |.~~> (x * y) *. z
     , one *. x |.~~> x
     , one * x |.~~> x
@@ -95,7 +94,7 @@ zeroOneRules =
 
 complexNumRules :: Simplification
 complexNumRules =
-    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [ xRe (x +: y) |.~~> x
     , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
@@ -105,14 +104,14 @@ complexNumRules =
 
 dotProductRules :: Simplification
 dotProductRules =
-    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     ]
 
 distributiveRules :: Simplification
 distributiveRules =
-    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [ x * sum (each) |.~~> sum (x * each)
     , sum (each) * x |.~~> sum (x * each)
     , x <.> sum (each) |.~~> sum (x <.> each)
@@ -122,7 +121,7 @@ distributiveRules =
 
 exponentRules :: Simplification
 exponentRules =
-    multipleTimes 100 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
 
 reduceSumProdRules :: Simplification
@@ -183,7 +182,9 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
             buildFromPatternList (PListHole fs listCapture)
                 | Just ns <- Map.lookup listCapture listCapturesMap =
                     map (buildFromPattern . turnToPattern fs) ns
-                | otherwise = error "ListCapture not in the Map ListCapture [Int] which should never happens"
+                | otherwise =
+                    error
+                        "ListCapture not in the Map ListCapture [Int] which should never happens"
             buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of

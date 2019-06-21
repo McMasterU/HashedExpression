@@ -56,7 +56,6 @@ data List
 --
 data Pattern a where
     PHole :: Capture -> Pattern Normal
-    -- Goal: x * sum (each) = sum (x * each)
     PListHole
         :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
     PSumList :: Pattern List -> Pattern Normal
