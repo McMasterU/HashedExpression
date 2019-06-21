@@ -99,7 +99,8 @@ instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) => MultiplyOp (Expression d et) where
+instance (DimensionType d, NumType et) =>
+         MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
@@ -158,7 +159,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
 instance (InnerProductSpace d s) =>
-         InnerProductSpaceOp (Expression d s) (Expression Zero s) where
+         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Zero s) where
     (<.>) :: Expression d s -> Expression d s -> Expression Zero s
     (<.>) e1 e2 =
         let scalarShape = []

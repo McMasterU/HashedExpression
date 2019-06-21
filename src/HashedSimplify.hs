@@ -3,6 +3,7 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE GADTs #-}
 
 module HashedSimplify where
 
@@ -10,6 +11,7 @@ import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
+import qualified Data.Map.Strict as Map
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -106,21 +108,16 @@ dotProductRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
     [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
     , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-    , x * (y + z) |.~~> (x * y + x * z)
-    , (y + z) * x |.~~> (x * y + x * z)
-    , x *. (y + z) |.~~> (x *. y + x *. z)
-    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
-    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
     ]
 
 distributiveRules :: Simplification
 distributiveRules =
     multipleTimes 100 . makeRecursive . chain . map fromPattern $
-    [ x * (y + z) |.~~> (x * y + x * z)
-    , (y + z) * x |.~~> (x * y + x * z)
-    , x *. (y + z) |.~~> (x *. y + x *. z)
-    , (x <.> (y + z)) |.~~> ((x <.> y) + (x <.> z))
-    , ((y + z) <.> x) |.~~> ((x <.> y) + (x <.> z))
+    [ x * sum (each) |.~~> sum (x * each)
+    , sum (each) * x |.~~> sum (x * each)
+    , x <.> sum (each) |.~~> sum (x <.> each)
+    , sum (each) <.> x |.~~> sum (x <.> each)
+    , x *. sum (each) |.~~> sum (x *. each)
     ]
 
 exponentRules :: Simplification
@@ -143,22 +140,21 @@ reduceSumProdRules exp@(mp, n) =
             | Mul _ operands <- retrieveNode nId mp = operands
             | otherwise = [nId]
         reconstruct' = reconstruct exp . map (mp, )
-     in case retrieveNode n mp
-            -- if the sum has only one, collapse it
-              of
-            (Sum _ [nId]) -> (mp, nId)
-            -- if the mul has only one, collapse it
-            (Mul _ [nId]) -> (mp, nId)
-            -- if the sum has any zero, remove them
+     in case retrieveNode n mp of
             (Sum _ ns)
+                -- if the sum has only one, collapse it
+                | length ns == 1 -> (mp, head ns)
+                -- if the sum has any zero, remove them
                 | any isZero ns -> reconstruct' . filter (not . isZero) $ ns
-            -- if the product has any one, remove them
+                -- if the sum contains any sum, just flatten them out
+                | otherwise -> reconstruct' . concatMap pullSumOperands $ ns
             (Mul _ ns)
+                -- if the mul has only one, collapse it
+                | length ns == 1 -> (mp, head ns)
+                -- if the product has any one, remove them
                 | any isOne ns -> reconstruct' . filter (not . isOne) $ ns
-            -- if the sum contains any sum, just flatten them out
-            (Sum _ ns) -> reconstruct' . concatMap pullSumOperands $ ns
-            -- if the sum contains any sum, just flatten them out
-            (Mul _ ns) -> reconstruct' . concatMap pullProdOperands $ ns
+                -- if the prod contains any prod, just flatten them out
+                | otherwise -> reconstruct' . concatMap pullProdOperands $ ns
             _ -> (mp, n)
 
 -- | Remove unreachable nodes
@@ -175,19 +171,28 @@ removeUnreachable (mp, n) =
 
 -- | Turn HashedPattern to a simplification
 --
-fromPattern :: (GuardedPattern, Pattern) -> Simplification
+fromPattern :: (GuardedPattern, Pattern Normal) -> Simplification
 fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
-    | Just capturesMap <- match ex pattern
-    , condition originalMp capturesMap =
-        let buildFromPattern :: Pattern -> (ExpressionMap, Int)
+    | Just match <- match ex pattern
+    , condition originalMp match =
+        let (capturesMap, listCapturesMap) = match
+            turnToPattern ::
+                   [Pattern Normal -> Pattern Normal] -> Int -> Pattern Normal
+            turnToPattern fs nId = foldr ($) (PRef nId) fs
+            buildFromPatternList :: Pattern List -> [(ExpressionMap, Int)]
+            buildFromPatternList (PListHole fs listCapture)
+                | Just ns <- Map.lookup listCapture listCapturesMap =
+                    map (buildFromPattern . turnToPattern fs) ns
+                | otherwise = error "ListCapture not in the Map ListCapture [Int] which should never happens"
+            buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
                     (PHole capture)
-                        | Just nId <- lookupCapture capture capturesMap ->
+                        | Just nId <- Map.lookup capture capturesMap ->
                             (originalMp, nId)
                         | otherwise ->
                             error
-                                "Capture not in the [(Capture, Int)] which should never happens"
+                                "Capture not in the Map Capture Int which should never happens"
                     (PConst pc) ->
                         case retrieveShape originalN originalMp of
                             [] -> unwrap $ const pc
@@ -196,8 +201,10 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
                             [size1, size2, size3] ->
                                 unwrap $ const3d (size1, size2, size3) pc
                             _ -> error "Dimension > 3"
-                    PMul sps -> mulMany . map buildFromPattern $ sps
+                    PRef nId -> (originalMp, nId)
+                    PSumList ptl -> sumMany . buildFromPatternList $ ptl
                     PSum sps -> sumMany . map buildFromPattern $ sps
+                    PMul sps -> mulMany . map buildFromPattern $ sps
                     PNeg sp ->
                         apply (unaryET Neg ElementDefault) [buildFromPattern sp]
                     PScale sp1 sp2 ->

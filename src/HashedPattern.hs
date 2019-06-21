@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -14,65 +15,101 @@
 -------------------------------------------------------------------------------
 module HashedPattern where
 
-import qualified Data.IntMap as I
-import qualified Data.List as L
+import Data.Map (Map, union)
+import qualified Data.Map.Strict as Map
 import Data.Maybe
 import HashedExpression
 import HashedNode
 import HashedUtils
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , cos
+    , cosh
+    , exp
+    , negate
+    , sin
+    , sinh
+    , tan
+    , tanh
+    )
 
 -- | Pattern for simplification
 --
 type Capture = Int
 
+type ListCapture = Int
+
+data Normal
+
+data List
+
 -- | This reflexes Node in HashedExpression
 --
-data Pattern
-    = PHole Capture
-    | PConst Double
-    | PSum [Pattern]
-    | PMul [Pattern]
-    | PNeg Pattern
-    | PScale Pattern Pattern
-    | PDiv Pattern Pattern
-    | PSqrt Pattern
-    | PSin Pattern
-    | PCos Pattern
-    | PTan Pattern
-    | PExp Pattern
-    | PLog Pattern
-    | PSinh Pattern
-    | PCosh Pattern
-    | PTanh Pattern
-    | PAsin Pattern
-    | PAcos Pattern
-    | PAtan Pattern
-    | PAsinh Pattern
-    | PAcosh Pattern
-    | PAtanh Pattern
-    | PRealImag Pattern Pattern
-    | PRealPart Pattern
-    | PImagPart Pattern
-    | PInnerProd Pattern Pattern
-    deriving (Show, Eq, Ord)
+data Pattern a where
+    PHole :: Capture -> Pattern Normal
+    -- Goal: x * sum (each) = sum (x * each)
+    PListHole
+        :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
+    PSumList :: Pattern List -> Pattern Normal
+    -- Ref to a node in the expression
+    PRef :: Int -> Pattern Normal
+    --
+    PConst :: Double -> Pattern Normal
+    PSum :: [Pattern Normal] -> Pattern Normal
+    PMul :: [Pattern Normal] -> Pattern Normal
+    PNeg :: Pattern Normal -> Pattern Normal
+    PScale :: (Pattern Normal) -> (Pattern Normal) -> Pattern Normal
+    PDiv :: (Pattern Normal) -> (Pattern Normal) -> Pattern Normal
+    PSqrt :: Pattern Normal -> Pattern Normal
+    PSin :: Pattern Normal -> Pattern Normal
+    PCos :: Pattern Normal -> Pattern Normal
+    PTan :: Pattern Normal -> Pattern Normal
+    PExp :: Pattern Normal -> Pattern Normal
+    PLog :: Pattern Normal -> Pattern Normal
+    PSinh :: Pattern Normal -> Pattern Normal
+    PCosh :: Pattern Normal -> Pattern Normal
+    PTanh :: Pattern Normal -> Pattern Normal
+    PAsin :: Pattern Normal -> Pattern Normal
+    PAcos :: Pattern Normal -> Pattern Normal
+    PAtan :: Pattern Normal -> Pattern Normal
+    PAsinh :: Pattern Normal -> Pattern Normal
+    PAcosh :: Pattern Normal -> Pattern Normal
+    PAtanh :: Pattern Normal -> Pattern Normal
+    PRealImag :: Pattern Normal -> Pattern Normal -> Pattern Normal
+    PRealPart :: Pattern Normal -> Pattern Normal
+    PImagPart :: Pattern Normal -> Pattern Normal
+    PInnerProd :: Pattern Normal -> Pattern Normal -> Pattern Normal
 
-instance AddableOp Pattern where
+instance AddableOp (Pattern Normal) where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
-sum :: [Pattern] -> Pattern
-sum = PSum
---    (+) wh1 wh2 = WHSum [wh1, wh2]
-instance MultiplyOp Pattern where
+instance MultiplyOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-product :: [Pattern] -> Pattern
-product = PMul
+instance MultiplyOp (Pattern Normal) (Pattern List) (Pattern List) where
+    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) : f) listCapture
 
-instance VectorSpaceOp Pattern Pattern where
+instance MultiplyOp (Pattern List) (Pattern Normal) (Pattern List) where
+    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) : f) listCapture
+
+instance VectorSpaceOp (Pattern Normal) (Pattern Normal) where
     scale = PScale
 
-instance NumOp Pattern where
+instance VectorSpaceOp (Pattern Normal) (Pattern List) where
+    scale wh1 (PListHole f listCapture) =
+        PListHole ((wh1 `scale`) : f) listCapture
+
+instance NumOp (Pattern Normal) where
     sqrt = PSqrt
     exp = PExp
     log = PLog
@@ -90,53 +127,73 @@ instance NumOp Pattern where
     atanh = PAtanh
     (/) = PDiv
 
-instance ComplexRealOp Pattern Pattern where
+instance ComplexRealOp (Pattern Normal) (Pattern Normal) where
     (+:) = PRealImag
     xRe = PRealPart
     xIm = PImagPart
 
-instance InnerProductSpaceOp Pattern Pattern where
+instance InnerProductSpaceOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
     (<.>) = PInnerProd
+
+instance InnerProductSpaceOp (Pattern Normal) (Pattern List) (Pattern List) where
+    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) : f) listCapture
+
+instance InnerProductSpaceOp (Pattern List) (Pattern Normal) (Pattern List) where
+    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) : f) listCapture
 
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
-    GP Pattern (ExpressionMap -> [(Capture, Int)] -> Bool)
+    GP (Pattern Normal) (ExpressionMap -> Match -> Bool)
 
 -- | Helper to make pattern and replacement without condition
 --
-(|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
+(|.~~>) :: Pattern Normal -> Pattern Normal -> (GuardedPattern, Pattern Normal)
 (|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
 
 infix 0 |.~~>
 
+-- |
+--
 [p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
 
-one :: Pattern
+one :: Pattern Normal
 one = PConst 1
 
-zero :: Pattern
+zero :: Pattern Normal
 zero = PConst 0
 
+each :: Pattern List
+each = PListHole [] 1
+
+sum :: Pattern List -> Pattern Normal
+sum = PSumList
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 --
-match :: (ExpressionMap, Int) -> Pattern -> Maybe [(Capture, Int)]
+type Match = (Map Capture Int, Map ListCapture [Int])
+
+match :: (ExpressionMap, Int) -> Pattern Normal -> Maybe Match
 match (mp, n) wh =
-    let recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe [(Capture, Int)]
+    let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
+        catMatch = foldl unionBoth (Map.empty, Map.empty)
+        recursiveAndCombine :: [Arg] -> [Pattern Normal] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
             , let subMatches = zipWith match (map (mp, ) args) whs
-            , all isJust subMatches = Just . concat . catMaybes $ subMatches
+            , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, wh) of
-            (_, PHole capture) -> Just [(capture, n)]
+            (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
-                | c == whc -> Just []
+                | c == whc -> Just (Map.empty, Map.empty)
+            (Sum _ args, PSumList (PListHole [] listCapture)) ->
+                Just (Map.empty, Map.fromList [(listCapture, args)])
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
-            (Scale _ arg1 arg2, PScale wh1 wh2) -> recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (Scale _ arg1 arg2, PScale wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Div arg1 arg2, PDiv wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Sqrt arg, PSqrt wh) -> recursiveAndCombine [arg] [wh]
@@ -158,8 +215,6 @@ match (mp, n) wh =
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (RealPart arg, PRealPart wh) -> recursiveAndCombine [arg] [wh]
             (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
-            (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) -> recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
+                recursiveAndCombine [arg1, arg2] [wh1, wh2]
             _ -> Nothing
-
-lookupCapture :: Capture -> [(Capture, Int)] -> Maybe Int
-lookupCapture = lookup
