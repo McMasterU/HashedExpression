@@ -49,12 +49,14 @@ exteriorDerivative ::
        (DimensionType d) => Expression d R -> Expression d Covector
 exteriorDerivative = hiddenDerivative
 
--- |
+-- | Placeholder for any dimension type
 --
-data WhateverD
+data D_
     deriving (Typeable, DimensionType)
 
-data WhateverNT
+-- | Placeholder for any num type
+--
+data NT_
     deriving (Typeable, ElementType, NumType)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
@@ -125,8 +127,8 @@ hiddenDerivative (Expression n mp) = coerce res
             Div arg1 arg2
                 -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
              ->
-                let f = Expression arg1 mp :: Expression WhateverD R
-                    g = Expression arg2 mp :: Expression WhateverD R
+                let f = Expression arg1 mp :: Expression D_ R
+                    g = Expression arg2 mp :: Expression D_ R
                     df = exteriorDerivative f
                     dg = exteriorDerivative g
                     g'2 = g * g
@@ -136,26 +138,26 @@ hiddenDerivative (Expression n mp) = coerce res
             Sqrt arg
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                     recipSqrtF = c (expressionShape f) 0.5 / sqrt f
                  in recipSqrtF |*| df
             Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in cos f |*| df
             Cos arg
                 -- d(cos(f)) = -sin(f) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in negate (sin f) |*| df
             Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                     cosSqrF = cos f * cos f
                     sqrRecip = one shape / cosSqrF
@@ -163,67 +165,67 @@ hiddenDerivative (Expression n mp) = coerce res
             Exp arg
                 -- d(exp(f)) = exp(f) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in exp f |*| df
             Log arg
                 -- d(log(f)) = 1 / f * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / f |*| df
             Sinh arg
                 -- d(sinh(f)) = cosh(f) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in cosh f |*| df
             Cosh arg
                 -- d(cosh(f)) = sinh(f) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in sinh f |*| df
             Tanh arg
                 -- d(tanh(f)) = (1 - tanh^2 h) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in (one shape - tanh f * tanh f) |*| df
             Asin arg
                 -- d(asin(f)) = 1 / sqrt(1 - f^2) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / sqrt (one shape - f * f) |*| df
             Acos arg
                 -- d(acos(f)) = -1 / sqrt(1 - f^2) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in negate (one shape / sqrt (one shape - f * f)) |*| df
             Atan arg
                 -- d(atan(f)) = 1 / (1 + f^2) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / (one shape + f * f) |*| df
             Asinh arg
                 -- d(asinh(f)) = 1 / sqrt(f^2 + 1) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / sqrt (f * f + one shape) |*| df
             Acosh arg
                 -- d(acosh(f)) = 1 / sqrt(f^2 - 1) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / sqrt (f * f - one shape) |*| df
             Atanh arg
                 -- d(atanh(f)) = 1 / sqrt(1 - f^2) * d(f)
              ->
-                let f = Expression arg mp :: Expression WhateverD R
+                let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative f
                  in one shape / (one shape - f * f) |*| df
                 -- d(xRe(f)) = xRe(d(f))
@@ -233,10 +235,10 @@ hiddenDerivative (Expression n mp) = coerce res
                 -- d(x +: y) = d(x) :+ d(y)
             RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
             InnerProd et arg1 arg2 ->
-                let f = Expression arg1 mp :: Expression WhateverD WhateverNT
-                    df = hiddenDerivative f :: Expression WhateverD Covector
-                    g = Expression arg2 mp :: Expression WhateverD WhateverNT
-                    dg = hiddenDerivative g :: Expression WhateverD Covector
+                let f = Expression arg1 mp :: Expression D_ NT_
+                    df = hiddenDerivative f :: Expression D_ Covector
+                    g = Expression arg2 mp :: Expression D_ NT_
+                    dg = hiddenDerivative g :: Expression D_ Covector
                  in coerce $ f |<.>| dg + g |<.>| df
 
 -- | Wise-multiply a number with a covector
@@ -260,5 +262,6 @@ hiddenDerivative (Expression n mp) = coerce res
 (|<.>|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op = binaryET InnerProd (ElementSpecific Covector) `hasShape` []
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
 
 infixl 8 |*|, |<.>|
