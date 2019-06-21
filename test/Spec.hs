@@ -7,4 +7,4 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-    describe "EvalSpec" SimplifySpec.spec
+    describe "SimplifySpec" SimplifySpec.spec
