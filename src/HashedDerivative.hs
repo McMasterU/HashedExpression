@@ -79,168 +79,165 @@ one shape = Expression h (IM.fromList [(h, node)])
 -- | Hidden exterior derivative
 --
 hiddenDerivative :: Expression d1 et1 -> Expression d2 et2
-hiddenDerivative (Expression n mp) =
-    let (shape, node) = retrieveInternal n mp
-        dOne nId = unwrap . hiddenDerivative $ Expression nId mp
+hiddenDerivative (Expression n mp) = coerce res
+  where
+    (shape, node) = retrieveInternal n mp
+    dOne nId = unwrap . hiddenDerivative $ Expression nId mp
         -- For cases g = ImagPart, RealPart, FFT, .. that take 1 input
         -- d(g(x)) = g(d(x))
-        d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
-        d1Input opType arg =
-            let df = hiddenDerivative (Expression arg mp)
-             in applyUnary (unary opType) df
+    d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
+    d1Input opType arg =
+        let df = hiddenDerivative (Expression arg mp)
+         in applyUnary (unary opType) df
         -- For cases g = RealImag, .. that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
-        d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
-        d2Input opType arg1 arg2 =
-            let df1 = hiddenDerivative (Expression arg1 mp)
-                df2 = hiddenDerivative (Expression arg2 mp)
-             in applyBinary (binary opType) df1 df2
-        res =
-            case node
+    d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
+    d2Input opType arg1 arg2 =
+        let df1 = hiddenDerivative (Expression arg1 mp)
+            df2 = hiddenDerivative (Expression arg2 mp)
+         in applyBinary (binary opType) df1 df2
+    res =
+        case node
                 -- dx = dx
-                  of
-                Var name ->
-                    let node = DVar name
-                        (newMap, h) = fromNode (shape, node)
-                     in Expression h newMap
+              of
+            Var name ->
+                let node = DVar name
+                    (newMap, h) = fromNode (shape, node)
+                 in Expression h newMap
                 -- dc = 0
-                DVar name ->
-                    error
-                        "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
-                Const _ ->
-                    let node = Const 0
-                        (newMap, h) = fromNode (shape, node)
-                     in Expression h newMap
+            DVar name ->
+                error
+                    "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
+            Const _ ->
+                let node = Const 0
+                    (newMap, h) = fromNode (shape, node)
+                 in Expression h newMap
                 -- Sum and multiplication are special cases because they involve multiple arguments
-                Sum _ args -> wrap . sumMany . map dOne $ args
+            Sum _ args -> wrap . sumMany . map dOne $ args
                 -- multiplication rule
-                Mul _ args ->
-                    let mkSub nId = (mp, nId)
-                        dEach (one, rest) =
-                            mulMany (map mkSub rest ++ [dOne one])
-                     in wrap . sumMany . map dEach . removeEach $ args
+            Mul _ args ->
+                let mkSub nId = (mp, nId)
+                    dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
+                 in wrap . sumMany . map dEach . removeEach $ args
                 -- d(-f) = -d(f)
-                Neg et arg -> d1Input (Neg et) arg
-                Scale et arg1 arg2 -> error "Haven't implemented"
-                Div arg1 arg2
+            Neg et arg -> d1Input (Neg et) arg
+            Scale et arg1 arg2 -> error "Haven't implemented"
+            Div arg1 arg2
                 -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
-                 ->
-                    let f = Expression arg1 mp :: Expression WhateverD R
-                        g = Expression arg2 mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                        dg = exteriorDerivative g
-                        g'2 = g * g
-                        part1 = (g / g'2) |*| df
-                        part2 = (f / g'2) |*| dg
-                     in part1 - part2
-                Sqrt arg
+             ->
+                let f = Expression arg1 mp :: Expression WhateverD R
+                    g = Expression arg2 mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                    dg = exteriorDerivative g
+                    g'2 = g * g
+                    part1 = (g / g'2) |*| df
+                    part2 = (f / g'2) |*| dg
+                 in part1 - part2
+            Sqrt arg
                 -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                        recipSqrtF = c (expressionShape f) 0.5 / sqrt f
-                     in recipSqrtF |*| df
-                Sin arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                    recipSqrtF = c (expressionShape f) 0.5 / sqrt f
+                 in recipSqrtF |*| df
+            Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in cos f |*| df
-                Cos arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in cos f |*| df
+            Cos arg
                 -- d(cos(f)) = -sin(f) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in negate (sin f) |*| df
-                Tan arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in negate (sin f) |*| df
+            Tan arg
                 -- d(tan(f)) = -1/(cos^2(f)) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                        cosSqrF = cos f * cos f
-                        sqrRecip = one shape / cosSqrF
-                     in sqrRecip |*| df
-                Exp arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                    cosSqrF = cos f * cos f
+                    sqrRecip = one shape / cosSqrF
+                 in sqrRecip |*| df
+            Exp arg
                 -- d(exp(f)) = exp(f) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in exp f |*| df
-                Log arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in exp f |*| df
+            Log arg
                 -- d(log(f)) = 1 / f * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / f |*| df
-                Sinh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / f |*| df
+            Sinh arg
                 -- d(sinh(f)) = cosh(f) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in cosh f |*| df
-                Cosh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in cosh f |*| df
+            Cosh arg
                 -- d(cosh(f)) = sinh(f) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in sinh f |*| df
-                Tanh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in sinh f |*| df
+            Tanh arg
                 -- d(tanh(f)) = (1 - tanh^2 h) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in (one shape - tanh f * tanh f) |*| df
-                Asin arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in (one shape - tanh f * tanh f) |*| df
+            Asin arg
                 -- d(asin(f)) = 1 / sqrt(1 - f^2) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / sqrt (one shape - f * f) |*| df
-                Acos arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / sqrt (one shape - f * f) |*| df
+            Acos arg
                 -- d(acos(f)) = -1 / sqrt(1 - f^2) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in negate (one shape / sqrt (one shape - f * f)) |*| df
-                Atan arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in negate (one shape / sqrt (one shape - f * f)) |*| df
+            Atan arg
                 -- d(atan(f)) = 1 / (1 + f^2) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / (one shape + f * f) |*| df
-                Asinh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / (one shape + f * f) |*| df
+            Asinh arg
                 -- d(asinh(f)) = 1 / sqrt(f^2 + 1) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / sqrt (f * f + one shape) |*| df
-                Acosh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / sqrt (f * f + one shape) |*| df
+            Acosh arg
                 -- d(acosh(f)) = 1 / sqrt(f^2 - 1) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / sqrt (f * f - one shape) |*| df
-                Atanh arg
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / sqrt (f * f - one shape) |*| df
+            Atanh arg
                 -- d(atanh(f)) = 1 / sqrt(1 - f^2) * d(f)
-                 ->
-                    let f = Expression arg mp :: Expression WhateverD R
-                        df = exteriorDerivative f
-                     in one shape / (one shape - f * f) |*| df
+             ->
+                let f = Expression arg mp :: Expression WhateverD R
+                    df = exteriorDerivative f
+                 in one shape / (one shape - f * f) |*| df
                 -- d(xRe(f)) = xRe(d(f))
-                RealPart arg -> d1Input RealPart arg
+            RealPart arg -> d1Input RealPart arg
                 -- d(xIm(f)) = xIm(d(f))
-                ImagPart arg -> d1Input ImagPart arg
+            ImagPart arg -> d1Input ImagPart arg
                 -- d(x +: y) = d(x) :+ d(y)
-                RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
-                InnerProd et arg1 arg2 ->
-                    let f =
-                            Expression arg1 mp :: Expression WhateverD WhateverNT
-                        df = hiddenDerivative f :: Expression WhateverD Covector
-                        g =
-                            Expression arg2 mp :: Expression WhateverD WhateverNT
-                        dg = hiddenDerivative g :: Expression WhateverD Covector
-                     in coerce $ f |<.>| dg + g |<.>| df
-     in coerce res
+            RealImag arg1 arg2 -> d2Input RealImag arg1 arg2
+            InnerProd et arg1 arg2 ->
+                let f = Expression arg1 mp :: Expression WhateverD WhateverNT
+                    df = hiddenDerivative f :: Expression WhateverD Covector
+                    g = Expression arg2 mp :: Expression WhateverD WhateverNT
+                    dg = hiddenDerivative g :: Expression WhateverD Covector
+                 in coerce $ f |<.>| dg + g |<.>| df
 
 -- | Wise-multiply a number with a covector
 --
