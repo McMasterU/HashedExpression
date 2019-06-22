@@ -41,6 +41,8 @@ sum = fromJust . HashedOperation.sum
 product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 product = fromJust . HashedOperation.product
 
+
+
 spec :: Spec
 spec = do
     describe "Simplify spec" $ do
@@ -62,8 +64,8 @@ spec = do
             simplify (log (exp x)) `shouldBe` x
             simplify (exp (log x)) `shouldBe` x
         specify "complex related" $ do
-            simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +:
-                (x * w + y * z)
+            prettify (simplify ((x +: y) * (z +: w))) `shouldBe` prettify ((x * z - y * w) +:
+                (x * w + y * z))
             simplify (xRe (x +: y)) `shouldBe` x
             simplify (xIm (x +: y)) `shouldBe` y
             simplify ((x +: y) + (u +: v)) `shouldBe` (x + u) +: (y + v)
@@ -108,6 +110,7 @@ spec = do
                 sum [const 3 *. x, const 4 *. y]
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
                 sum [const 4 *. y, z]
+            simplify (x - x) `shouldBe` zero
         specify "scale rules" $ do
             simplify (x *. (y *. v)) `shouldBe` (x * y) *. v
             simplify (xRe (x *. cx)) `shouldBe` simplify (x *. xRe cx)

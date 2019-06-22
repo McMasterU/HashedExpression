@@ -212,11 +212,13 @@ combineTermsRules exp@(mp, n)
     cntAppr nId
         | Scale _ scalerN scaleeN <- retrieveNode nId mp
         , Const val <- retrieveNode scalerN mp = (scaleeN, val)
+        | Neg _ negatee <- retrieveNode nId mp = (negatee, -1)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
     toExp (nId, val)
         | val == 1 = (mp, nId)
+        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
 
