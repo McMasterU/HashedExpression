@@ -97,7 +97,12 @@ zeroOneRules =
     ]
 
 scaleRules =
-    makeRecursive . chain . map fromPattern $ [x *. (y *. z) |.~~> (x * y) *. z]
+    makeRecursive . chain . map fromPattern $
+    [ x *. (y *. z) |.~~> (x * y) *. z
+    , negate (s *. x) |.~~> s *. negate (x)
+    , xRe (s *. x) |.~~> s *. xRe (x)
+    , xIm (s *. x) |.~~> s *. xIm (x)
+    ]
 
 -- | Rules with complex operation
 --
