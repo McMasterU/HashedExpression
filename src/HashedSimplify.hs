@@ -195,22 +195,22 @@ removeUnreachable (mp, n) =
 
 -- | Turn HashedPattern to a simplification
 --
-fromPattern :: (GuardedPattern, Pattern Normal) -> Simplification
+fromPattern :: (GuardedPattern, Pattern) -> Simplification
 fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
     | Just match <- match ex pattern
     , condition originalMp match =
         let (capturesMap, listCapturesMap) = match
             turnToPattern ::
-                   [Pattern Normal -> Pattern Normal] -> Int -> Pattern Normal
+                   [Pattern -> Pattern] -> Int -> Pattern
             turnToPattern fs nId = foldr ($) (PRef nId) fs
-            buildFromPatternList :: Pattern List -> [(ExpressionMap, Int)]
+            buildFromPatternList :: PatternList -> [(ExpressionMap, Int)]
             buildFromPatternList (PListHole fs listCapture)
                 | Just ns <- Map.lookup listCapture listCapturesMap =
                     map (buildFromPattern . turnToPattern fs) ns
                 | otherwise =
                     error
                         "ListCapture not in the Map ListCapture [Int] which should never happens"
-            buildFromPattern :: Pattern Normal -> (ExpressionMap, Int)
+            buildFromPattern :: Pattern -> (ExpressionMap, Int)
             buildFromPattern pattern =
                 case pattern of
                     PRef nId -> (originalMp, nId)

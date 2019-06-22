@@ -48,68 +48,65 @@ type Capture = Int
 
 type ListCapture = Int
 
-data Normal
-
-data List
+data PatternList =
+    PListHole [Pattern -> Pattern] ListCapture
 
 -- |
 --
-data Pattern a where
-    PHole :: Capture -> Pattern Normal
+data Pattern
+    = PHole Capture
     -- MARK: For list capture
-    PListHole
-        :: [Pattern Normal -> Pattern Normal] -> ListCapture -> Pattern List
-    PSumList :: Pattern List -> Pattern Normal
-    -- Ref to a node in the expression
-    PRef :: Int -> Pattern Normal
+    | PSumList PatternList
+     -- Ref to a node in the expression
+    | PRef Int
     -- MARK: Reflex Node in HashedExpression
-    PConst :: Double -> Pattern Normal
-    PSum :: [Pattern Normal] -> Pattern Normal
-    PMul :: [Pattern Normal] -> Pattern Normal
-    PNeg :: Pattern Normal -> Pattern Normal
-    PScale :: (Pattern Normal) -> (Pattern Normal) -> Pattern Normal
-    PDiv :: (Pattern Normal) -> (Pattern Normal) -> Pattern Normal
-    PSqrt :: Pattern Normal -> Pattern Normal
-    PSin :: Pattern Normal -> Pattern Normal
-    PCos :: Pattern Normal -> Pattern Normal
-    PTan :: Pattern Normal -> Pattern Normal
-    PExp :: Pattern Normal -> Pattern Normal
-    PLog :: Pattern Normal -> Pattern Normal
-    PSinh :: Pattern Normal -> Pattern Normal
-    PCosh :: Pattern Normal -> Pattern Normal
-    PTanh :: Pattern Normal -> Pattern Normal
-    PAsin :: Pattern Normal -> Pattern Normal
-    PAcos :: Pattern Normal -> Pattern Normal
-    PAtan :: Pattern Normal -> Pattern Normal
-    PAsinh :: Pattern Normal -> Pattern Normal
-    PAcosh :: Pattern Normal -> Pattern Normal
-    PAtanh :: Pattern Normal -> Pattern Normal
-    PRealImag :: Pattern Normal -> Pattern Normal -> Pattern Normal
-    PRealPart :: Pattern Normal -> Pattern Normal
-    PImagPart :: Pattern Normal -> Pattern Normal
-    PInnerProd :: Pattern Normal -> Pattern Normal -> Pattern Normal
+    | PConst Double
+    | PSum [Pattern]
+    | PMul [Pattern]
+    | PNeg Pattern
+    | PScale (Pattern) Pattern
+    | PDiv (Pattern) Pattern
+    | PSqrt Pattern
+    | PSin Pattern
+    | PCos Pattern
+    | PTan Pattern
+    | PExp Pattern
+    | PLog Pattern
+    | PSinh Pattern
+    | PCosh Pattern
+    | PTanh Pattern
+    | PAsin Pattern
+    | PAcos Pattern
+    | PAtan Pattern
+    | PAsinh Pattern
+    | PAcosh Pattern
+    | PAtanh Pattern
+    | PRealImag Pattern Pattern
+    | PRealPart Pattern
+    | PImagPart Pattern
+    | PInnerProd Pattern Pattern
 
-instance AddableOp (Pattern Normal) where
+instance AddableOp (Pattern) where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
-instance MultiplyOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
+instance MultiplyOp (Pattern) (Pattern) (Pattern) where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-instance MultiplyOp (Pattern Normal) (Pattern List) (Pattern List) where
+instance MultiplyOp (Pattern) (PatternList) (PatternList) where
     (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) : f) listCapture
 
-instance MultiplyOp (Pattern List) (Pattern Normal) (Pattern List) where
+instance MultiplyOp (PatternList) (Pattern) (PatternList) where
     (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) : f) listCapture
 
-instance VectorSpaceOp (Pattern Normal) (Pattern Normal) where
+instance VectorSpaceOp (Pattern) (Pattern) where
     scale = PScale
 
-instance VectorSpaceOp (Pattern Normal) (Pattern List) where
+instance VectorSpaceOp (Pattern) (PatternList) where
     scale wh1 (PListHole f listCapture) =
         PListHole ((wh1 `scale`) : f) listCapture
 
-instance NumOp (Pattern Normal) where
+instance NumOp (Pattern) where
     sqrt = PSqrt
     exp = PExp
     log = PLog
@@ -127,65 +124,65 @@ instance NumOp (Pattern Normal) where
     atanh = PAtanh
     (/) = PDiv
 
-instance ComplexRealOp (Pattern Normal) (Pattern Normal) where
+instance ComplexRealOp (Pattern) (Pattern) where
     (+:) = PRealImag
     xRe = PRealPart
     xIm = PImagPart
 
-instance InnerProductSpaceOp (Pattern Normal) (Pattern Normal) (Pattern Normal) where
+instance InnerProductSpaceOp (Pattern) (Pattern) (Pattern) where
     (<.>) = PInnerProd
 
-instance InnerProductSpaceOp (Pattern Normal) (Pattern List) (Pattern List) where
+instance InnerProductSpaceOp (Pattern) (PatternList) (PatternList) where
     (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) : f) listCapture
 
-instance InnerProductSpaceOp (Pattern List) (Pattern Normal) (Pattern List) where
+instance InnerProductSpaceOp (PatternList) (Pattern) (PatternList) where
     (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) : f) listCapture
 
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
-    GP (Pattern Normal) (ExpressionMap -> Match -> Bool)
+    GP (Pattern) (ExpressionMap -> Match -> Bool)
 
 -- | Helper to make pattern and replacement without condition
 --
-(|.~~>) :: Pattern Normal -> Pattern Normal -> (GuardedPattern, Pattern Normal)
+(|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
 (|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
 
 infix 0 |.~~>, ~~>
 
-(~~>) :: GuardedPattern -> Pattern Normal -> (GuardedPattern, Pattern Normal)
+(~~>) :: GuardedPattern -> Pattern -> (GuardedPattern, Pattern)
 (~~>) gPattern replacement = (gPattern, replacement)
 
-(|.) :: Pattern Normal -> Condition -> GuardedPattern
+(|.) :: Pattern -> Condition -> GuardedPattern
 (|.) pattern condition = GP pattern $ condition pattern
 
 infixl 1 |.
 
-type Condition = Pattern Normal -> ExpressionMap -> Match -> Bool
+type Condition = Pattern -> ExpressionMap -> Match -> Bool
 
 -- |
 --
 [p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
 
-one :: Pattern Normal
+one :: Pattern
 one = PConst 1
 
-zero :: Pattern Normal
+zero :: Pattern
 zero = PConst 0
 
-each :: Pattern List
+each :: PatternList
 each = PListHole [] 1
 
-sum :: Pattern List -> Pattern Normal
+sum :: PatternList -> Pattern
 sum = PSumList
 
--- | Matches all nodes in the expression to see if they all match the pattern list, if they match, return
+-- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual node
 -- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
 --      matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
 --      matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
 --
-matchList :: ExpressionMap -> [Int] -> Pattern List -> Maybe [Int]
+matchList :: ExpressionMap -> [Int] -> PatternList -> Maybe [Int]
 matchList mp ns (PListHole fs listCapture)
     | all isJust maybeSubMatches
     , let subMatches = catMaybes maybeSubMatches
@@ -206,11 +203,11 @@ type Match = (Map Capture Int, Map ListCapture [Int])
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-match :: (ExpressionMap, Int) -> Pattern Normal -> Maybe Match
+match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) wh =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
         catMatch = foldl unionBoth (Map.empty, Map.empty)
-        recursiveAndCombine :: [Arg] -> [Pattern Normal] -> Maybe Match
+        recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
             , let subMatches = zipWith match (map (mp, ) args) whs
