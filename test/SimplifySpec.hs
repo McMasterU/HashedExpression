@@ -97,9 +97,17 @@ spec = do
             simplify (sum [x + y, sum [z, t, w + s], zero]) `shouldBe`
                 sum [x, y, z, t, w, s]
         specify "group constants together" $ do
-            simplify (product [one, one, x, y, one, z]) `shouldBe` product [x, y, z]
-            simplify (sum [one, one, x, y, one, z]) `shouldBe` sum [const 3, x, y, z]
-            simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe` product [const 6, x, y, z]
+            simplify (product [one, one, x, y, one, z]) `shouldBe`
+                product [x, y, z]
+            simplify (sum [one, one, x, y, one, z]) `shouldBe`
+                sum [const 3, x, y, z]
+            simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
+                product [const 6, x, y, z]
+        specify "combine same terms" $ do
+            simplify (sum [one *. x, x, x, const 3 *. y, y]) `shouldBe`
+                sum [const 3 *. x, const 4 *. y]
+            simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
+                sum [const 4 *. y, z]
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1

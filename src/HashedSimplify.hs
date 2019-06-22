@@ -11,6 +11,8 @@ import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
+import Data.List (group, groupBy)
+import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
 import HashedExpression
 import HashedHash
@@ -64,13 +66,14 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            (multipleTimes 10 . makeRecursive $ zeroOneRules >>>
+            (multipleTimes 10 . makeRecursive $
+             scaleRules >>>
+             zeroOneRules >>>
              groupConstantsRules >>>
              dotProductRules >>>
              exponentRules >>>
-             complexNumRules >>>
-             distributiveRules >>>
-             reduceSumProdRules) >>>
+             combineTermsRules >>>
+             complexNumRules >>> distributiveRules >>> reduceSumProdRules) >>>
             removeUnreachable
      in wrap . applyRules . unwrap $ e
 
@@ -79,8 +82,7 @@ simplify e =
 zeroOneRules :: Simplification
 zeroOneRules =
     makeRecursive . chain . map fromPattern $
-    [ x *. (y *. z) |.~~> (x * y) *. z
-    , one *. x |.~~> x
+    [ one *. x |.~~> x
     , one * x |.~~> x
     , x * one |.~~> x
     , zero * x |.~~> zero
@@ -93,6 +95,9 @@ zeroOneRules =
     , (x <.> zero) |.~~> zero
     , zero <.> x |.~~> zero
     ]
+
+scaleRules =
+    makeRecursive . chain . map fromPattern $ [x *. (y *. z) |.~~> (x * y) *. z]
 
 -- | Rules with complex operation
 --
@@ -172,14 +177,36 @@ groupConstantsRules exp@(mp, n) =
             Sum _ ns
                 | Just (shape, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $ [aConst shape $ Prelude.sum cs] ++
-                    nonConstants ns
+                    reconstruct exp $
+                    [aConst shape $ Prelude.sum cs] ++ nonConstants ns
             Mul _ ns
                 | Just (shape, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $ [aConst shape $ Prelude.product cs] ++
-                    nonConstants ns
+                    reconstruct exp $
+                    [aConst shape $ Prelude.product cs] ++ nonConstants ns
             _ -> (mp, n)
+
+-- |
+--
+-- Sum(x,(-1) *. x,y) -> Sum(y)
+-- Sum(2 *. x, (-1) *. x,y) -> Sum(x,y)
+-- Sum(x,x,y) -> Sum(2 *. x,y)
+combineTermsRules :: Simplification
+combineTermsRules exp@(mp, n)
+    | Sum _ ns <- retrieveNode n mp =
+        reconstruct exp $ map (toExp . combine) . groupBy fn . map cntAppr $ ns
+    | otherwise = (mp, n)
+  where
+    cntAppr nId
+        | Scale _ scalerN scaleeN <- retrieveNode nId mp
+        , Const val <- retrieveNode scalerN mp = (scaleeN, val)
+        | otherwise = (nId, 1)
+    combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
+    fn x y = fst x == fst y
+    toExp (nId, val)
+        | val == 1 = (mp, nId)
+        | otherwise =
+            apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
 
 -- | Remove unreachable nodes
 --
@@ -200,8 +227,7 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
     | Just match <- match ex pattern
     , condition originalMp match =
         let (capturesMap, listCapturesMap) = match
-            turnToPattern ::
-                   [Pattern -> Pattern] -> Int -> Pattern
+            turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
             turnToPattern fs nId = foldr ($) (PRef nId) fs
             buildFromPatternList :: PatternList -> [(ExpressionMap, Int)]
             buildFromPatternList (PListHole fs listCapture)

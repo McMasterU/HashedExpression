@@ -48,6 +48,10 @@ type Capture = Int
 
 type ListCapture = Int
 
+
+-- | List holes to captures many elements
+--
+
 data PatternList =
     PListHole [Pattern -> Pattern] ListCapture
 
