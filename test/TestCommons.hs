@@ -41,6 +41,9 @@ import Test.Hspec
 [x3, y3, z3, t3, u3, v3, w3] =
     map (var3d (10, 10, 10)) ["X3", "Y3", "Z3", "T3", "U3", "V3", "W3"]
 
+cx = var "rx" +: var "ix"
+
+
 [zero, one] = map const [0, 1]
 
 [zero1, one1] = map (const1d 10) [0, 1]

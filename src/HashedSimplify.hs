@@ -153,22 +153,29 @@ reduceSumProdRules exp@(mp, n) =
      in case retrieveNode n mp of
             Sum _ ns
                 -- if the sum has only one, collapse it
+                -- sum(x) -> x
                 | length ns == 1 -> (mp, head ns)
                 -- if the sum has any zero, remove them
+                -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
                     reconstruct' . filter (not . isZero mp) $ ns
                 -- if the sum contains any sum, just flatten them out
+                -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
                 | otherwise ->
                     reconstruct' . concatMap (pullSumOperands mp) $ ns
             Mul _ ns
                 -- if the mul has only one, collapse it
+                -- product(x) -> x
                 | length ns == 1 -> (mp, head ns)
                 -- if the product has any one, remove them
+                -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->
                     reconstruct' . filter (not . isOne mp) $ ns
                 -- if any is zero, collapse to zero
+                -- product(x, y, z, 0, t, u, v) = 0
                 | nId:_ <- filter (isZero mp) ns -> (mp, nId)
                 -- if the prod contains any prod, just flatten them out
+                -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
                 | otherwise ->
                     reconstruct' . concatMap (pullProdOperands mp) $ ns
             _ -> (mp, n)

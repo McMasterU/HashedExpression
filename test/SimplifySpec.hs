@@ -108,6 +108,10 @@ spec = do
                 sum [const 3 *. x, const 4 *. y]
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
                 sum [const 4 *. y, z]
+        specify "scale rules" $ do
+            simplify (x *. (y *. v)) `shouldBe` (x * y) *. v
+            simplify (xRe (x *. cx)) `shouldBe` simplify (x *. xRe cx)
+            simplify (xIm (x *. cx)) `shouldBe` simplify (x *. xIm cx)
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1
