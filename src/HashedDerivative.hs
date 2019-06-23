@@ -140,7 +140,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     ds = hiddenDerivative' s :: Expression Zero Covector
                     df = hiddenDerivative' f :: Expression D_ Covector
                 in
-                    f |.*| ds + s *. df
+                    ds |*.| f + s *. df
             Div arg1 arg2
                 -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
              ->
@@ -282,13 +282,13 @@ hiddenDerivative vars (Expression n mp) = coerce res
 
 -- | Our defined custom scale with covector, f |.*| ds is like multiply every element of f with ds
 --
-(|.*|) ::
+(|*.|) ::
        (DimensionType d, NumType nt)
-    => Expression d nt
-    -> Expression Zero Covector
+    => Expression Zero Covector
+    -> Expression d nt
     -> Expression d Covector
-(|.*|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
+(|*.|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op = binaryET Scale (ElementSpecific Covector) `hasShape` expressionShape e1
      in applyBinary op e1 e2
 
-infixl 8 |*|, |<.>|, |.*|
+infixl 8 |*|, |<.>|, |*.|
