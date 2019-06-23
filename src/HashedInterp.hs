@@ -398,12 +398,61 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                         fmap DC.realPart . eval valMap $ expTwoC mp arg
                     ImagPart arg ->
                         fmap DC.imagPart . eval valMap $ expTwoC mp arg
-                    _ -> error "expression structure One R is wrong"
-        | otherwise = error "one r but shape is not [size] ??"
+                    _ -> error "expression structure Two R is wrong"
+        | otherwise = error "Two r but shape is not [size1, size2] ??"
 
 instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
     eval :: ValMaps -> Expression Two C -> Array (Int, Int) (DC.Complex Double)
-    eval valMap e@(Expression n mp) = undefined
+    eval valMap e@(Expression n mp)
+        | [size1, size2] <- retrieveShape n mp =
+            let fmap :: (a -> c) -> Array (Int, Int) a -> Array (Int, Int) c
+                fmap f arr =
+                    listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ f x
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , let x = arr ! (i, j)
+                        ]
+                zipWith ::
+                       (a -> b -> c)
+                    -> Array (Int, Int) a
+                    -> Array (Int, Int) b
+                    -> Array (Int, Int) c
+                zipWith f arr1 arr2 =
+                    listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ f x y
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , let x = arr1 ! (i, j)
+                        , let y = arr2 ! (i, j)
+                        ]
+                foldl1' :: (a -> a -> a) -> [Array (Int, Int) a] -> Array (Int, Int) a
+                foldl1' f [x] = x
+                foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
+             in case retrieveNode n mp of
+                    Sum C args -> foldl1' (+) . map (eval valMap . expTwoC mp) $ args
+                    Mul C args -> foldl1' (+) . map (eval valMap . expTwoC mp) $ args
+                    Neg C arg -> fmap negate . eval valMap $ expTwoC mp arg
+                    Scale C arg1 arg2 ->
+                        case retrieveElementType arg1 mp of
+                            R ->
+                                let scalar =
+                                        fromR . eval valMap $ expZeroR mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expTwoC mp arg2
+                            C ->
+                                let scalar = eval valMap $ expZeroC mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expTwoC mp arg2
+                    RealImag arg1 arg2 ->
+                        zipWith
+                            (:+)
+                            (eval valMap $ expTwoR mp arg1)
+                            (eval valMap $ expTwoR mp arg2)
+                    _ -> error "expression structure Two C is wrong"
+        | otherwise = error "Two C but shape is not [size1, size2] ??"
 
 instance Evaluable Three R (Array (Int, Int, Int) Double) where
     eval :: ValMaps -> Expression Three R -> Array (Int, Int, Int) Double
