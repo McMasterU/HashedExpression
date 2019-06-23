@@ -86,26 +86,47 @@ instance Evaluable Zero R Double where
                     case Map.lookup name $ vm0 valMap of
                         Just val -> val
                         _ -> error "no value associated with the variable"
-                Sum R ns -> sum . map (eval valMap . expZeroR mp) $ ns
-                Mul R ns -> product . map (eval valMap . expZeroR mp) $ ns
-                Scale R n1 n2 ->
-                    eval valMap (expZeroR mp n1) * eval valMap (expZeroR mp n2)
-                InnerProd R n1 n2 ->
-                    case retrieveShape n1 mp of
+                Const val -> val
+                Sum R args -> sum . map (eval valMap . expZeroR mp) $ args
+                Mul R args -> product . map (eval valMap . expZeroR mp) $ args
+                Neg R arg -> -(eval valMap $ expZeroR mp arg)
+                Scale R arg1 arg2 ->
+                    eval valMap (expZeroR mp arg1) *
+                    eval valMap (expZeroR mp arg2)
+                Div arg1 arg2 ->
+                    eval valMap (expZeroR mp arg1) /
+                    eval valMap (expZeroR mp arg2)
+                Sqrt arg -> sqrt (eval valMap (expZeroR mp arg))
+                Sin arg -> sin (eval valMap (expZeroR mp arg))
+                Cos arg -> cos (eval valMap (expZeroR mp arg))
+                Tan arg -> tan (eval valMap (expZeroR mp arg))
+                Exp arg -> exp (eval valMap (expZeroR mp arg))
+                Log arg -> log (eval valMap (expZeroR mp arg))
+                Sinh arg -> sinh (eval valMap (expZeroR mp arg))
+                Cosh arg -> cosh (eval valMap (expZeroR mp arg))
+                Tanh arg -> tanh (eval valMap (expZeroR mp arg))
+                Asin arg -> asin (eval valMap (expZeroR mp arg))
+                Acos arg -> acos (eval valMap (expZeroR mp arg))
+                Atan arg -> atan (eval valMap (expZeroR mp arg))
+                Asinh arg -> asinh (eval valMap (expZeroR mp arg))
+                Acosh arg -> acosh (eval valMap (expZeroR mp arg))
+                Atanh arg -> atanh (eval valMap (expZeroR mp arg))
+                InnerProd R arg1 arg2 ->
+                    case retrieveShape arg1 mp of
                         [] ->
-                            eval valMap (expZeroR mp n1) *
-                            eval valMap (expZeroR mp n2)
+                            eval valMap (expZeroR mp arg1) *
+                            eval valMap (expZeroR mp arg2)
                         [size] ->
-                            let res1 = eval valMap $ expOneR mp n1
-                                res2 = eval valMap $ expOneR mp n2
+                            let res1 = eval valMap $ expOneR mp arg1
+                                res2 = eval valMap $ expOneR mp arg2
                              in sum [ x * y
                                     | i <- [0 .. size - 1]
                                     , let x = res1 ! i
                                     , let y = res2 ! i
                                     ]
                         [size1, size2] ->
-                            let res1 = eval valMap $ expTwoR mp n1
-                                res2 = eval valMap $ expTwoR mp n2
+                            let res1 = eval valMap $ expTwoR mp arg1
+                                res2 = eval valMap $ expTwoR mp arg2
                              in sum [ x * y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -113,8 +134,8 @@ instance Evaluable Zero R Double where
                                     , let y = res2 ! (i, j)
                                     ]
                         [size1, size2, size3] ->
-                            let res1 = eval valMap $ expThreeR mp n1
-                                res2 = eval valMap $ expThreeR mp n2
+                            let res1 = eval valMap $ expThreeR mp arg1
+                                res2 = eval valMap $ expThreeR mp arg2
                              in sum [ x * y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -123,29 +144,6 @@ instance Evaluable Zero R Double where
                                     , let y = res2 ! (i, j, k)
                                     ]
                 _ -> error "expression structure Scalar R is wrong"
-        --                Scale R n1 n2 ->
-        --            Just ([], Mul R [node1, node2]) ->
-        --                let subExp1 = Expression node1 mp :: Expression Scalar R
-        --                    subExp2 = Expression node2 mp :: Expression Scalar R
-        --                 in eval valMap subExp1 * eval valMap subExp2
-        --            Just ([], Scale R node1 node2) ->
-        --                let subExp1 = Expression node1 mp :: Expression Zero R
-        --                    subExp2 = Expression node2 mp :: Expression Zero R
-        --                 in eval valMap subExp1 * eval valMap subExp2
-        --            Just ([], InnerProd R node1 node2) ->
-        --                case IM.lookup node1 mp of
-        --                    Just ([], _) ->
-        --                        let subExp1 = Expression node1 mp :: Expression Scalar R -- shape is [], so must be Scalar R
-        --                            subExp2 = Expression node2 mp :: Expression Scalar R -- shape is [], so must be Scalar R
-        --                         in eval valMap subExp1 * eval valMap subExp2
-        --                    Just ([size], _) ->
-        --                        let subExp1 = Expression node1 mp :: Expression One R -- shape is [size], so must be One R
-        --                            subExp2 = Expression node2 mp :: Expression One R -- shape is [size], so must be One R
-        --                            lst1 = A.elems $ eval valMap subExp1
-        --                            lst2 = A.elems $ eval valMap subExp2
-        --                         in sum $ zipWith (*) lst1 lst2
-        -- |
-        --
 
 instance Evaluable Zero C (DC.Complex Double) where
     eval :: ValMaps -> Expression Zero C -> DC.Complex Double
