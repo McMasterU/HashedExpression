@@ -220,16 +220,16 @@ instance Evaluable One R (Array Int Double) where
     eval :: ValMaps -> Expression One R -> Array Int Double
     eval valMap e@(Expression n mp)
         | [size] <- retrieveShape n mp =
-            let fmap :: (a -> Double) -> Array Int a -> Array Int Double
+            let fmap :: (a -> c) -> Array Int a -> Array Int c
                 fmap f arr =
                     listArray
                         (0, size - 1)
                         [f x | i <- [0 .. size - 1], let x = arr ! i]
                 zipWith ::
-                       (a -> b -> Double)
+                       (a -> b -> c)
                     -> Array Int a
                     -> Array Int b
-                    -> Array Int Double
+                    -> Array Int c
                 zipWith f arr1 arr2 =
                     listArray
                         (0, size - 1)
@@ -274,51 +274,56 @@ instance Evaluable One R (Array Int Double) where
                         fmap DC.realPart . eval valMap $ expOneC mp arg
                     ImagPart arg ->
                         fmap DC.imagPart . eval valMap $ expOneC mp arg
-                    _ -> error "expression structure Scalar R is wrong"
-        | otherwise = error "one r but shape is not [] ??"
+                    _ -> error "expression structure One R is wrong"
+        | otherwise = error "one r but shape is not [size] ??"
 
 -- |
 --
 instance Evaluable One C (Array Int (DC.Complex Double)) where
     eval :: ValMaps -> Expression One C -> Array Int (DC.Complex Double)
-    eval valMap e@(Expression n mp) =
-        case IM.lookup n mp of
-            Just ([size], Sum C [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression One C
-                    subExp2 = Expression node2 mp :: Expression One C
-                    lst1 = A.elems $ eval valMap subExp1
-                    lst2 = A.elems $ eval valMap subExp2
-                    lstRes = zipWith (+) lst1 lst2
-                 in A.listArray (0, size - 1) lstRes
-            Just ([size], RealImag node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression One R
-                    subExp2 = Expression node2 mp :: Expression One R
-                    lst1 = A.elems $ eval valMap subExp1
-                    lst2 = A.elems $ eval valMap subExp2
-                    lstRes = zipWith (:+) lst1 lst2
-                 in A.listArray (0, size - 1) lstRes
-            _ -> error "expression structure One C is wrong"
+    eval valMap e@(Expression n mp)
+        | [size] <- retrieveShape n mp =
+            let fmap :: (a -> b) -> Array Int a -> Array Int b
+                fmap f arr =
+                    listArray
+                        (0, size - 1)
+                        [f x | i <- [0 .. size - 1], let x = arr ! i]
+                zipWith ::
+                       (a -> b -> c)
+                    -> Array Int a
+                    -> Array Int b
+                    -> Array Int c
+                zipWith f arr1 arr2 =
+                    listArray
+                        (0, size - 1)
+                        [ f x y
+                        | i <- [0 .. size - 1]
+                        , let x = arr1 ! i
+                        , let y = arr2 ! i
+                        ]
+             in case retrieveNode n mp of
+                    Sum R args -> undefined
+                    Mul R args -> undefined
+                    Neg R arg -> fmap negate . eval valMap $ expOneC mp arg
+                    Scale R arg1 arg2 ->
+                        case retrieveElementType arg1 mp of
+                            R ->
+                                let scalar =
+                                        fromR . eval valMap $ expZeroR mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expOneC mp arg2
+                            C ->
+                                let scalar = eval valMap $ expZeroC mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expOneC mp arg2
+                    RealImag arg1 arg2 ->
+                        zipWith
+                            (:+)
+                            (eval valMap $ expOneR mp arg1)
+                            (eval valMap $ expOneR mp arg2)
+                    _ -> error "expression structure One R is wrong"
+        | otherwise = error "one r but shape is not [size] ??"
 
---            Just ([size], Mul C [node1, node2]) ->
---                let subExp1 = Expression node1 mp :: Expression One C
---                    subExp2 = Expression node2 mp :: Expression One C
---                    lst1 = A.elems $ eval valMap subExp1
---                    lst2 = A.elems $ eval valMap subExp2
---                    lstRes = zipWith (*) lst1 lst2
---                 in A.listArray (0, size - 1) lstRes
---            Just ([size], Scale C node1 node2) ->
---                let subExp2 = Expression node2 mp :: Expression One C
---                    lst = A.elems $ eval valMap subExp2
---                    scale =
---                        case nodeElementType . retrieveNode mp $ node1 of
---                            R ->
---                                fromR . eval valMap $
---                                (Expression node1 mp :: Expression Zero R)
---                            C ->
---                                eval
---                                    valMap
---                                    (Expression node1 mp :: Expression Zero C)
---                 in A.listArray (0, size - 1) $ map (* scale) lst
 instance Evaluable Two R (Array (Int, Int) Double) where
     eval :: ValMaps -> Expression Two R -> Array (Int, Int) Double
     eval valMap e@(Expression n mp) = undefined
