@@ -238,14 +238,17 @@ instance Evaluable One R (Array Int Double) where
                         , let x = arr1 ! i
                         , let y = arr2 ! i
                         ]
+                foldl1' :: (a -> a -> a) -> [Array Int a] -> Array Int a
+                foldl1' f [x] = x
+                foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
              in case retrieveNode n mp of
                     Var name ->
                         case Map.lookup name $ vm1 valMap of
                             Just val -> val
                             _ -> error "no value associated with the variable"
                     Const val -> listArray (0, size - 1) $ replicate size val
-                    Sum R args -> undefined
-                    Mul R args -> undefined
+                    Sum R args -> foldl1' (+) . map (eval valMap . expOneR mp) $ args
+                    Mul R args -> foldl1' (+) . map (eval valMap . expOneR mp) $ args
                     Neg R arg -> fmap negate . eval valMap $ expOneR mp arg
                     Scale R arg1 arg2 ->
                         let scalar = eval valMap $ expZeroR mp arg1
@@ -301,11 +304,14 @@ instance Evaluable One C (Array Int (DC.Complex Double)) where
                         , let x = arr1 ! i
                         , let y = arr2 ! i
                         ]
+                foldl1' :: (a -> a -> a) -> [Array Int a] -> Array Int a
+                foldl1' f [x] = x
+                foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
              in case retrieveNode n mp of
-                    Sum R args -> undefined
-                    Mul R args -> undefined
-                    Neg R arg -> fmap negate . eval valMap $ expOneC mp arg
-                    Scale R arg1 arg2 ->
+                    Sum C args -> foldl1' (+) . map (eval valMap . expOneC mp) $ args
+                    Mul C args -> foldl1' (+) . map (eval valMap . expOneC mp) $ args
+                    Neg C arg -> fmap negate . eval valMap $ expOneC mp arg
+                    Scale C arg1 arg2 ->
                         case retrieveElementType arg1 mp of
                             R ->
                                 let scalar =
@@ -321,12 +327,79 @@ instance Evaluable One C (Array Int (DC.Complex Double)) where
                             (:+)
                             (eval valMap $ expOneR mp arg1)
                             (eval valMap $ expOneR mp arg2)
-                    _ -> error "expression structure One R is wrong"
-        | otherwise = error "one r but shape is not [size] ??"
+                    _ -> error "expression structure One C is wrong"
+        | otherwise = error "one C but shape is not [size] ??"
 
 instance Evaluable Two R (Array (Int, Int) Double) where
     eval :: ValMaps -> Expression Two R -> Array (Int, Int) Double
-    eval valMap e@(Expression n mp) = undefined
+    eval valMap e@(Expression n mp)
+        | [size1, size2] <- retrieveShape n mp =
+            let fmap :: (a -> c) -> Array (Int, Int) a -> Array (Int, Int) c
+                fmap f arr =
+                    listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ f x
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , let x = arr ! (i, j)
+                        ]
+                zipWith ::
+                       (a -> b -> c)
+                    -> Array (Int, Int) a
+                    -> Array (Int, Int) b
+                    -> Array (Int, Int) c
+                zipWith f arr1 arr2 =
+                    listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ f x y
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , let x = arr1 ! (i, j)
+                        , let y = arr2 ! (i, j)
+                        ]
+                foldl1' :: (a -> a -> a) -> [Array (Int, Int) a] -> Array (Int, Int) a
+                foldl1' f [x] = x
+                foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
+             in case retrieveNode n mp of
+                    Var name ->
+                        case Map.lookup name $ vm2 valMap of
+                            Just val -> val
+                            _ -> error "no value associated with the variable"
+                    Const val ->
+                        listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                        replicate (size1 * size2) val
+                    Sum R args -> foldl1' (+) . map (eval valMap . expTwoR mp) $ args
+                    Mul R args -> foldl1' (+) . map (eval valMap . expTwoR mp) $ args
+                    Neg R arg -> fmap negate . eval valMap $ expTwoR mp arg
+                    Scale R arg1 arg2 ->
+                        let scalar = eval valMap $ expZeroR mp arg1
+                         in fmap (scalar *) . eval valMap $ expTwoR mp arg2
+                    Div arg1 arg2 ->
+                        zipWith
+                            (/)
+                            (eval valMap $ expTwoR mp arg2)
+                            (eval valMap $ expTwoR mp arg2)
+                    Sqrt arg -> fmap sqrt . eval valMap $ expTwoR mp arg
+                    Sin arg -> fmap sin . eval valMap $ expTwoR mp arg
+                    Cos arg -> fmap cos . eval valMap $ expTwoR mp arg
+                    Tan arg -> fmap tan . eval valMap $ expTwoR mp arg
+                    Exp arg -> fmap exp . eval valMap $ expTwoR mp arg
+                    Log arg -> fmap log . eval valMap $ expTwoR mp arg
+                    Sinh arg -> fmap sinh . eval valMap $ expTwoR mp arg
+                    Cosh arg -> fmap cosh . eval valMap $ expTwoR mp arg
+                    Tanh arg -> fmap tanh . eval valMap $ expTwoR mp arg
+                    Asin arg -> fmap asin . eval valMap $ expTwoR mp arg
+                    Acos arg -> fmap acos . eval valMap $ expTwoR mp arg
+                    Atan arg -> fmap atan . eval valMap $ expTwoR mp arg
+                    Asinh arg -> fmap asinh . eval valMap $ expTwoR mp arg
+                    Acosh arg -> fmap acosh . eval valMap $ expTwoR mp arg
+                    Atanh arg -> fmap atanh . eval valMap $ expTwoR mp arg
+                    RealPart arg ->
+                        fmap DC.realPart . eval valMap $ expTwoC mp arg
+                    ImagPart arg ->
+                        fmap DC.imagPart . eval valMap $ expTwoC mp arg
+                    _ -> error "expression structure One R is wrong"
+        | otherwise = error "one r but shape is not [size] ??"
 
 instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
     eval :: ValMaps -> Expression Two C -> Array (Int, Int) (DC.Complex Double)
