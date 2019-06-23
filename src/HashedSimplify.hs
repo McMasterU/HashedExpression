@@ -212,7 +212,7 @@ combineTermsRules exp@(mp, n)
     cntAppr nId
         | Scale _ scalerN scaleeN <- retrieveNode nId mp
         , Const val <- retrieveNode scalerN mp = (scaleeN, val)
-        | Neg _ negatee <- retrieveNode nId mp = (negatee, -1)
+        | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
