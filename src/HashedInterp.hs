@@ -554,4 +554,63 @@ instance Evaluable Three C (Array (Int, Int, Int) (DC.Complex Double)) where
            ValMaps
         -> Expression Three C
         -> Array (Int, Int, Int) (DC.Complex Double)
-    eval valMap e@(Expression n mp) = undefined
+    eval valMap e@(Expression n mp)
+        | [size1, size2, size3] <- retrieveShape n mp =
+            let fmap ::
+                       (a -> c)
+                    -> Array (Int, Int, Int) a
+                    -> Array (Int, Int, Int) c
+                fmap f arr =
+                    listArray
+                        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                        [ f x
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , k <- [0 .. size3 - 1]
+                        , let x = arr ! (i, j, k)
+                        ]
+                zipWith ::
+                       (a -> b -> c)
+                    -> Array (Int, Int, Int) a
+                    -> Array (Int, Int, Int) b
+                    -> Array (Int, Int, Int) c
+                zipWith f arr1 arr2 =
+                    listArray
+                        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                        [ f x y
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , k <- [0 .. size3 - 1]
+                        , let x = arr1 ! (i, j, k)
+                        , let y = arr2 ! (i, j, k)
+                        ]
+                foldl1' ::
+                       (a -> a -> a)
+                    -> [Array (Int, Int, Int) a]
+                    -> Array (Int, Int, Int) a
+                foldl1' f [x] = x
+                foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
+             in case retrieveNode n mp of
+                    Sum C args ->
+                        foldl1' (+) . map (eval valMap . expThreeC mp) $ args
+                    Mul C args ->
+                        foldl1' (+) . map (eval valMap . expThreeC mp) $ args
+                    Neg C arg -> fmap negate . eval valMap $ expThreeC mp arg
+                    Scale C arg1 arg2 ->
+                        case retrieveElementType arg1 mp of
+                            R ->
+                                let scalar =
+                                        fromR . eval valMap $ expZeroR mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expThreeC mp arg2
+                            C ->
+                                let scalar = eval valMap $ expZeroC mp arg1
+                                 in fmap (scalar *) . eval valMap $
+                                    expThreeC mp arg2
+                    RealImag arg1 arg2 ->
+                        zipWith
+                            (:+)
+                            (eval valMap $ expThreeR mp arg1)
+                            (eval valMap $ expThreeR mp arg2)
+                    _ -> error "expression structure Two C is wrong"
+        | otherwise = error "Two C but shape is not [size1, size2] ??"
