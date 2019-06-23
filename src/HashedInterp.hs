@@ -56,7 +56,7 @@ withVm2 vm2 (ValMaps vm0 vm1 _ vm3) = ValMaps vm0 vm1 vm2 vm3
 withVm3 :: Map String (Array (Int, Int, Int) Double) -> ValMaps -> ValMaps
 withVm3 vm3 (ValMaps vm0 vm1 vm2 _) = ValMaps vm0 vm1 vm2 vm3
 
--- | 
+-- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R
 expZeroR = flip Expression
@@ -69,6 +69,18 @@ expTwoR = flip Expression
 
 expThreeR :: ExpressionMap -> Int -> Expression Three R
 expThreeR = flip Expression
+
+expZeroC :: ExpressionMap -> Int -> Expression Zero C
+expZeroC = flip Expression
+
+expOneC :: ExpressionMap -> Int -> Expression One C
+expOneC = flip Expression
+
+expTwoC :: ExpressionMap -> Int -> Expression Two C
+expTwoC = flip Expression
+
+expThreeC :: ExpressionMap -> Int -> Expression Three C
+expThreeC = flip Expression
 
 -- |
 --
@@ -111,6 +123,8 @@ instance Evaluable Zero R Double where
                 Asinh arg -> asinh (eval valMap (expZeroR mp arg))
                 Acosh arg -> acosh (eval valMap (expZeroR mp arg))
                 Atanh arg -> atanh (eval valMap (expZeroR mp arg))
+                RealPart arg -> DC.realPart (eval valMap (expZeroC mp arg))
+                ImagPart arg -> DC.imagPart (eval valMap (expZeroC mp arg))
                 InnerProd R arg1 arg2 ->
                     case retrieveShape arg1 mp of
                         [] ->
@@ -144,49 +158,62 @@ instance Evaluable Zero R Double where
                                     , let y = res2 ! (i, j, k)
                                     ]
                 _ -> error "expression structure Scalar R is wrong"
+        | otherwise = error "one r but shape is not [] ??"
 
 instance Evaluable Zero C (DC.Complex Double) where
     eval :: ValMaps -> Expression Zero C -> DC.Complex Double
-    eval valMap e@(Expression n mp) =
-        case IM.lookup n mp of
-            Just ([], Sum C [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression Zero C
-                    subExp2 = Expression node2 mp :: Expression Zero C
-                 in eval valMap subExp1 + eval valMap subExp2
-            Just ([], RealImag node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression Zero R
-                    subExp2 = Expression node2 mp :: Expression Zero R
-                 in eval valMap subExp1 :+ eval valMap subExp2
-            _ -> error "expression structure Scalar C is wrong"
+    eval valMap e@(Expression n mp)
+        | [] <- retrieveShape n mp =
+            case retrieveNode n mp of
+                Sum C args -> sum . map (eval valMap . expZeroC mp) $ args
+                Mul C args -> product . map (eval valMap . expZeroC mp) $ args
+                Neg C arg -> -(eval valMap $ expZeroC mp arg)
+                Scale C arg1 arg2 ->
+                    case retrieveElementType arg1 mp of
+                        R ->
+                            fromR (eval valMap (expZeroR mp arg1)) *
+                            eval valMap (expZeroC mp arg2)
+                        C ->
+                            eval valMap (expZeroC mp arg1) *
+                            eval valMap (expZeroC mp arg2)
+                RealImag arg1 arg2 ->
+                    eval valMap (expZeroR mp arg1) :+
+                    eval valMap (expZeroR mp arg2)
+                InnerProd C arg1 arg2 ->
+                    case retrieveShape arg1 mp of
+                        [] ->
+                            eval valMap (expZeroC mp arg1) *
+                            eval valMap (expZeroC mp arg2)
+                        [size] ->
+                            let res1 = eval valMap $ expOneC mp arg1
+                                res2 = eval valMap $ expOneC mp arg2
+                             in sum [ x * y
+                                    | i <- [0 .. size - 1]
+                                    , let x = res1 ! i
+                                    , let y = res2 ! i
+                                    ]
+                        [size1, size2] ->
+                            let res1 = eval valMap $ expTwoC mp arg1
+                                res2 = eval valMap $ expTwoC mp arg2
+                             in sum [ x * y
+                                    | i <- [0 .. size1 - 1]
+                                    , j <- [0 .. size2 - 1]
+                                    , let x = res1 ! (i, j)
+                                    , let y = res2 ! (i, j)
+                                    ]
+                        [size1, size2, size3] ->
+                            let res1 = eval valMap $ expThreeC mp arg1
+                                res2 = eval valMap $ expThreeC mp arg2
+                             in sum [ x * y
+                                    | i <- [0 .. size1 - 1]
+                                    , j <- [0 .. size2 - 1]
+                                    , k <- [0 .. size3 - 1]
+                                    , let x = res1 ! (i, j, k)
+                                    , let y = res2 ! (i, j, k)
+                                    ]
+                _ -> error "expression structure Scalar C is wrong"
+        | otherwise = error "One C but shape is not [] ??"
 
---            Just ([], Mul C [node1, node2]) ->
---                let subExp1 = Expression node1 mp :: Expression Scalar C
---                    subExp2 = Expression node2 mp :: Expression Scalar C
---                 in eval valMap subExp1 * eval valMap subExp2
---            Just ([], Scale C node1 node2) ->
---                let subExp2 = Expression node2 mp :: Expression Zero C
---                    scale =
---                        case nodeElementType . retrieveNode mp $ node1 of
---                            R ->
---                                fromR . eval valMap $
---                                (Expression node1 mp :: Expression Zero R)
---                            C ->
---                                eval
---                                    valMap
---                                    (Expression node1 mp :: Expression Zero C)
---                 in scale * eval valMap subExp2
---            Just ([], InnerProd C node1 node2) ->
---                case IM.lookup node1 mp of
---                    Just ([], _) ->
---                        let subExp1 = Expression node1 mp :: Expression Scalar C -- shape is [], so must be Scalar C
---                            subExp2 = Expression node2 mp :: Expression Scalar C -- shape is [], so must be Scalar C
---                         in eval valMap subExp1 * eval valMap subExp2
---                    Just ([size], _) ->
---                        let subExp1 = Expression node1 mp :: Expression One C -- shape is [size], so must be One C
---                            subExp2 = Expression node2 mp :: Expression One C -- shape is [size], so must be One C
---                            lst1 = A.elems $ eval valMap subExp1
---                            lst2 = A.elems $ eval valMap subExp2
---                         in sum $ zipWith (*) lst1 lst2
 -- |
 --
 instance Evaluable One R (Array Int Double) where
