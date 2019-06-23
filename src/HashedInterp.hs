@@ -218,33 +218,65 @@ instance Evaluable Zero C (DC.Complex Double) where
 --
 instance Evaluable One R (Array Int Double) where
     eval :: ValMaps -> Expression One R -> Array Int Double
-    eval valMap e@(Expression n mp) =
-        case IM.lookup n mp of
-            Just ([size], Var name) ->
-                case Map.lookup name $ vm1 valMap of
-                    Just val -> val
-                    _ -> error "no value associated with the variable"
-            Just ([size], Sum R [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression One R
-                    subExp2 = Expression node2 mp :: Expression One R
-                    lst1 = A.elems $ eval valMap subExp1
-                    lst2 = A.elems $ eval valMap subExp2
-                    lstRes = zipWith (+) lst1 lst2
-                 in A.listArray (0, size - 1) lstRes
-            _ -> error "expression structure One R is wrong"
+    eval valMap e@(Expression n mp)
+        | [size] <- retrieveShape n mp =
+            let fmap :: (a -> Double) -> Array Int a -> Array Int Double
+                fmap f arr =
+                    listArray
+                        (0, size - 1)
+                        [f x | i <- [0 .. size - 1], let x = arr ! i]
+                zipWith ::
+                       (a -> b -> Double)
+                    -> Array Int a
+                    -> Array Int b
+                    -> Array Int Double
+                zipWith f arr1 arr2 =
+                    listArray
+                        (0, size - 1)
+                        [ f x y
+                        | i <- [0 .. size - 1]
+                        , let x = arr1 ! i
+                        , let y = arr2 ! i
+                        ]
+             in case retrieveNode n mp of
+                    Var name ->
+                        case Map.lookup name $ vm1 valMap of
+                            Just val -> val
+                            _ -> error "no value associated with the variable"
+                    Const val -> listArray (0, size - 1) $ replicate size val
+                    Sum R args -> undefined
+                    Mul R args -> undefined
+                    Neg R arg -> fmap negate . eval valMap $ expOneR mp arg
+                    Scale R arg1 arg2 ->
+                        let scalar = eval valMap $ expZeroR mp arg1
+                         in fmap (scalar *) . eval valMap $ expOneR mp arg2
+                    Div arg1 arg2 ->
+                        zipWith
+                            (/)
+                            (eval valMap $ expOneR mp arg2)
+                            (eval valMap $ expOneR mp arg2)
+                    Sqrt arg -> fmap sqrt . eval valMap $ expOneR mp arg
+                    Sin arg -> fmap sin . eval valMap $ expOneR mp arg
+                    Cos arg -> fmap cos . eval valMap $ expOneR mp arg
+                    Tan arg -> fmap tan . eval valMap $ expOneR mp arg
+                    Exp arg -> fmap exp . eval valMap $ expOneR mp arg
+                    Log arg -> fmap log . eval valMap $ expOneR mp arg
+                    Sinh arg -> fmap sinh . eval valMap $ expOneR mp arg
+                    Cosh arg -> fmap cosh . eval valMap $ expOneR mp arg
+                    Tanh arg -> fmap tanh . eval valMap $ expOneR mp arg
+                    Asin arg -> fmap asin . eval valMap $ expOneR mp arg
+                    Acos arg -> fmap acos . eval valMap $ expOneR mp arg
+                    Atan arg -> fmap atan . eval valMap $ expOneR mp arg
+                    Asinh arg -> fmap asinh . eval valMap $ expOneR mp arg
+                    Acosh arg -> fmap acosh . eval valMap $ expOneR mp arg
+                    Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
+                    RealPart arg ->
+                        fmap DC.realPart . eval valMap $ expOneC mp arg
+                    ImagPart arg ->
+                        fmap DC.imagPart . eval valMap $ expOneC mp arg
+                    _ -> error "expression structure Scalar R is wrong"
+        | otherwise = error "one r but shape is not [] ??"
 
---            Just ([size], Mul R [node1, node2]) ->
---                let subExp1 = Expression node1 mp :: Expression One R
---                    subExp2 = Expression node2 mp :: Expression One R
---                    lst1 = A.elems $ eval valMap subExp1
---                    lst2 = A.elems $ eval valMap subExp2
---                    lstRes = zipWith (*) lst1 lst2
---                 in A.listArray (0, size - 1) lstRes
---            Just ([size], Scale R node1 node2) ->
---                let subExp1 = Expression node1 mp :: Expression Zero R
---                    subExp2 = Expression node2 mp :: Expression One R
---                    scale = eval valMap subExp1
---                 in fmap (* scale) $ eval valMap subExp2
 -- |
 --
 instance Evaluable One C (Array Int (DC.Complex Double)) where
