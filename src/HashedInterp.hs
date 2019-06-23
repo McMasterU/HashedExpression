@@ -12,7 +12,19 @@ import Data.Complex as DC
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
-import HashedExpression hiding ((+), (-))
+import HashedExpression
+    ( C
+    , ET(..)
+    , Expression(..)
+    , ExpressionMap
+    , Node(..)
+    , One
+    , R
+    , Three
+    , Two
+    , Zero
+    )
+import HashedUtils
 
 -- |
 --
@@ -32,7 +44,6 @@ emptyVms =
 -- | Helpers so we can write things like
 -- emptyVms |> withVm0 (..) |> withVm1 (..) |> withVM2 (..)
 --
-
 withVm0 :: Map String Double -> ValMaps -> ValMaps
 withVm0 vm0 (ValMaps _ vm1 vm2 vm3) = ValMaps vm0 vm1 vm2 vm3
 
@@ -45,6 +56,20 @@ withVm2 vm2 (ValMaps vm0 vm1 _ vm3) = ValMaps vm0 vm1 vm2 vm3
 withVm3 :: Map String (Array (Int, Int, Int) Double) -> ValMaps -> ValMaps
 withVm3 vm3 (ValMaps vm0 vm1 vm2 _) = ValMaps vm0 vm1 vm2 vm3
 
+-- | 
+--
+expZeroR :: ExpressionMap -> Int -> Expression Zero R
+expZeroR = flip Expression
+
+expOneR :: ExpressionMap -> Int -> Expression One R
+expOneR = flip Expression
+
+expTwoR :: ExpressionMap -> Int -> Expression Two R
+expTwoR = flip Expression
+
+expThreeR :: ExpressionMap -> Int -> Expression Three R
+expThreeR = flip Expression
+
 -- |
 --
 class Evaluable d rc output | d rc -> output where
@@ -54,40 +79,74 @@ class Evaluable d rc output | d rc -> output where
 --
 instance Evaluable Zero R Double where
     eval :: ValMaps -> Expression Zero R -> Double
-    eval valMap e@(Expression n mp) =
-        case IM.lookup n mp of
-            Just ([], Var name) ->
-                case Map.lookup name $ vm0 valMap of
-                    Just val -> val
-                    _ -> error "no value associated with the variable"
-            Just ([], Sum R [node1, node2]) ->
-                let subExp1 = Expression node1 mp :: Expression Zero R
-                    subExp2 = Expression node2 mp :: Expression Zero R
-                 in eval valMap subExp1 + eval valMap subExp2
-            _ -> error "expression structure Scalar R is wrong"
+    eval valMap e@(Expression n mp)
+        | [] <- retrieveShape n mp =
+            case retrieveNode n mp of
+                Var name ->
+                    case Map.lookup name $ vm0 valMap of
+                        Just val -> val
+                        _ -> error "no value associated with the variable"
+                Sum R ns -> sum . map (eval valMap . expZeroR mp) $ ns
+                Mul R ns -> product . map (eval valMap . expZeroR mp) $ ns
+                Scale R n1 n2 ->
+                    eval valMap (expZeroR mp n1) * eval valMap (expZeroR mp n2)
+                InnerProd R n1 n2 ->
+                    case retrieveShape n1 mp of
+                        [] ->
+                            eval valMap (expZeroR mp n1) *
+                            eval valMap (expZeroR mp n2)
+                        [size] ->
+                            let res1 = eval valMap $ expOneR mp n1
+                                res2 = eval valMap $ expOneR mp n2
+                             in sum [ x * y
+                                    | i <- [0 .. size - 1]
+                                    , let x = res1 ! i
+                                    , let y = res2 ! i
+                                    ]
+                        [size1, size2] ->
+                            let res1 = eval valMap $ expTwoR mp n1
+                                res2 = eval valMap $ expTwoR mp n2
+                             in sum [ x * y
+                                    | i <- [0 .. size1 - 1]
+                                    , j <- [0 .. size2 - 1]
+                                    , let x = res1 ! (i, j)
+                                    , let y = res2 ! (i, j)
+                                    ]
+                        [size1, size2, size3] ->
+                            let res1 = eval valMap $ expThreeR mp n1
+                                res2 = eval valMap $ expThreeR mp n2
+                             in sum [ x * y
+                                    | i <- [0 .. size1 - 1]
+                                    , j <- [0 .. size2 - 1]
+                                    , k <- [0 .. size3 - 1]
+                                    , let x = res1 ! (i, j, k)
+                                    , let y = res2 ! (i, j, k)
+                                    ]
+                _ -> error "expression structure Scalar R is wrong"
+        --                Scale R n1 n2 ->
+        --            Just ([], Mul R [node1, node2]) ->
+        --                let subExp1 = Expression node1 mp :: Expression Scalar R
+        --                    subExp2 = Expression node2 mp :: Expression Scalar R
+        --                 in eval valMap subExp1 * eval valMap subExp2
+        --            Just ([], Scale R node1 node2) ->
+        --                let subExp1 = Expression node1 mp :: Expression Zero R
+        --                    subExp2 = Expression node2 mp :: Expression Zero R
+        --                 in eval valMap subExp1 * eval valMap subExp2
+        --            Just ([], InnerProd R node1 node2) ->
+        --                case IM.lookup node1 mp of
+        --                    Just ([], _) ->
+        --                        let subExp1 = Expression node1 mp :: Expression Scalar R -- shape is [], so must be Scalar R
+        --                            subExp2 = Expression node2 mp :: Expression Scalar R -- shape is [], so must be Scalar R
+        --                         in eval valMap subExp1 * eval valMap subExp2
+        --                    Just ([size], _) ->
+        --                        let subExp1 = Expression node1 mp :: Expression One R -- shape is [size], so must be One R
+        --                            subExp2 = Expression node2 mp :: Expression One R -- shape is [size], so must be One R
+        --                            lst1 = A.elems $ eval valMap subExp1
+        --                            lst2 = A.elems $ eval valMap subExp2
+        --                         in sum $ zipWith (*) lst1 lst2
+        -- |
+        --
 
---            Just ([], Mul R [node1, node2]) ->
---                let subExp1 = Expression node1 mp :: Expression Scalar R
---                    subExp2 = Expression node2 mp :: Expression Scalar R
---                 in eval valMap subExp1 * eval valMap subExp2
---            Just ([], Scale R node1 node2) ->
---                let subExp1 = Expression node1 mp :: Expression Zero R
---                    subExp2 = Expression node2 mp :: Expression Zero R
---                 in eval valMap subExp1 * eval valMap subExp2
---            Just ([], InnerProd R node1 node2) ->
---                case IM.lookup node1 mp of
---                    Just ([], _) ->
---                        let subExp1 = Expression node1 mp :: Expression Scalar R -- shape is [], so must be Scalar R
---                            subExp2 = Expression node2 mp :: Expression Scalar R -- shape is [], so must be Scalar R
---                         in eval valMap subExp1 * eval valMap subExp2
---                    Just ([size], _) ->
---                        let subExp1 = Expression node1 mp :: Expression One R -- shape is [size], so must be One R
---                            subExp2 = Expression node2 mp :: Expression One R -- shape is [size], so must be One R
---                            lst1 = A.elems $ eval valMap subExp1
---                            lst2 = A.elems $ eval valMap subExp2
---                         in sum $ zipWith (*) lst1 lst2
--- |
---
 instance Evaluable Zero C (DC.Complex Double) where
     eval :: ValMaps -> Expression Zero C -> DC.Complex Double
     eval valMap e@(Expression n mp) =
@@ -174,6 +233,15 @@ instance Evaluable One C (Array Int (DC.Complex Double)) where
                     lst2 = A.elems $ eval valMap subExp2
                     lstRes = zipWith (+) lst1 lst2
                  in A.listArray (0, size - 1) lstRes
+            Just ([size], RealImag node1 node2) ->
+                let subExp1 = Expression node1 mp :: Expression One R
+                    subExp2 = Expression node2 mp :: Expression One R
+                    lst1 = A.elems $ eval valMap subExp1
+                    lst2 = A.elems $ eval valMap subExp2
+                    lstRes = zipWith (:+) lst1 lst2
+                 in A.listArray (0, size - 1) lstRes
+            _ -> error "expression structure One C is wrong"
+
 --            Just ([size], Mul C [node1, node2]) ->
 --                let subExp1 = Expression node1 mp :: Expression One C
 --                    subExp2 = Expression node2 mp :: Expression One C
@@ -194,11 +262,21 @@ instance Evaluable One C (Array Int (DC.Complex Double)) where
 --                                    valMap
 --                                    (Expression node1 mp :: Expression Zero C)
 --                 in A.listArray (0, size - 1) $ map (* scale) lst
-            Just ([size], RealImag node1 node2) ->
-                let subExp1 = Expression node1 mp :: Expression One R
-                    subExp2 = Expression node2 mp :: Expression One R
-                    lst1 = A.elems $ eval valMap subExp1
-                    lst2 = A.elems $ eval valMap subExp2
-                    lstRes = zipWith (:+) lst1 lst2
-                 in A.listArray (0, size - 1) lstRes
-            _ -> error "expression structure One C is wrong"
+instance Evaluable Two R (Array (Int, Int) Double) where
+    eval :: ValMaps -> Expression Two R -> Array (Int, Int) Double
+    eval valMap e@(Expression n mp) = undefined
+
+instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
+    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (DC.Complex Double)
+    eval valMap e@(Expression n mp) = undefined
+
+instance Evaluable Three R (Array (Int, Int, Int) Double) where
+    eval :: ValMaps -> Expression Three R -> Array (Int, Int, Int) Double
+    eval valMap e@(Expression n mp) = undefined
+
+instance Evaluable Three C (Array (Int, Int, Int) (DC.Complex Double)) where
+    eval ::
+           ValMaps
+        -> Expression Three C
+        -> Array (Int, Int, Int) (DC.Complex Double)
+    eval valMap e@(Expression n mp) = undefined
