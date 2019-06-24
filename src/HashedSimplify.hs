@@ -54,7 +54,7 @@ type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
 -- | Chain n simplifications together to a simplification
 --
-chain :: [Simplification] -> Simplification
+chain :: [a -> a] -> a -> a
 chain = flip $ foldl (|>)
 
 multipleTimes :: Int -> Simplification -> Simplification

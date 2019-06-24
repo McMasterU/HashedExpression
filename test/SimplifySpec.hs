@@ -113,8 +113,8 @@ spec = do
             simplify (x - x) `shouldBe` zero
         specify "scale rules" $ do
             simplify (x *. (y *. v)) `shouldBe` (x * y) *. v
-            simplify (xRe (x *. cx)) `shouldBe` simplify (x *. xRe cx)
-            simplify (xIm (x *. cx)) `shouldBe` simplify (x *. xIm cx)
+            simplify (xRe (x *. xc)) `shouldBe` simplify (x *. xRe xc)
+            simplify (xIm (x *. xc)) `shouldBe` simplify (x *. xIm xc)
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1

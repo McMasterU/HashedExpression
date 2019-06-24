@@ -1,5 +1,11 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module TestCommons where
 
+import Control.Monad (forM)
+import Data.Function.HT (nest)
+import Data.Maybe (catMaybes, mapMaybe)
+import Data.Set (Set)
 import HashedExpression
 import HashedOperation
 import HashedPrettify
@@ -29,6 +35,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
+import Test.QuickCheck
 
 [x, y, z, t, u, v, w, s] = map var ["x", "y", "z", "t", "u", "v", "w", "s"]
 
@@ -41,8 +48,16 @@ import Test.Hspec
 [x3, y3, z3, t3, u3, v3, w3] =
     map (var3d (10, 10, 10)) ["X3", "Y3", "Z3", "T3", "U3", "V3", "W3"]
 
-cx = var "rx" +: var "ix"
-
+[xc, yc, zc, tc, uc, vc, wc, sc] =
+    [ var "xr" +: var "xi"
+    , var "yr" +: var "yi"
+    , var "zr" +: var "zi"
+    , var "tr" +: var "ti"
+    , var "ur" +: var "ui"
+    , var "vr" +: var "vi"
+    , var "wr" +: var "wi"
+    , var "sr" +: var "si"
+    ]
 
 [zero, one] = map const [0, 1]
 
@@ -51,3 +66,50 @@ cx = var "rx" +: var "ix"
 [zero2, one2] = map (const2d (10, 10)) [0, 1]
 
 [zero3, one3] = map (const3d (10, 10, 10)) [0, 1]
+
+genVarZero :: Gen (Expression Zero R, String)
+genVarZero = do
+    name <- elements ["x", "y", "z", "t", "u", "v", "w", "s"]
+    return (var name, name)
+
+genTransformZeroR :: Gen (Expression Zero R -> Expression Zero R, Maybe String)
+genTransformZeroR = do
+    (other, name) <- genVarZero
+    unaryOp <-
+        elements
+            [ sqrt
+            , exp
+            , log
+            , sin
+            , cos
+            , tan
+            , asin
+            , acos
+            , atan
+            , sinh
+            , cosh
+            , tanh
+            , asinh
+            , acosh
+            , atanh
+            ] :: Gen (Expression Zero R -> Expression Zero R)
+    binaryWithOther <-
+        elements [(other *), (other +), (other *.)] :: Gen (Expression Zero R -> Expression Zero R)
+    pickUnary <- arbitrary
+    if pickUnary
+        then return (unaryOp, Nothing)
+        else return (binaryWithOther, Just name)
+
+--    elements [unaryOp, binaryWithOther]
+data SuiteZeroR =
+    SuiteZeroR (Expression Zero R) [(String, Double)]
+
+instance Arbitrary SuiteZeroR where
+    arbitrary = do
+        (baseExp, baseVarName) <- genVarZero
+        numTransform <- elements [5 .. 15]
+        transformsWithVar <- vectorOf numTransform genTransformZeroR
+        let finalExp = ($ baseExp) . chain . map fst $ transformsWithVar
+            varNames = mapMaybe snd transformsWithVar
+        doubles <- vectorOf (length varNames) arbitrary
+        return $ SuiteZeroR finalExp (zip varNames doubles)

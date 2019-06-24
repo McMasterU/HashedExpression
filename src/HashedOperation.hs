@@ -4,7 +4,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE InstanceSigs #-} --
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE UndecidableInstances #-} --
 
 module HashedOperation where
 
@@ -189,3 +190,28 @@ times a b = Prelude.product [a, b]
 
 plus :: (Num a) => a -> a -> a
 plus a b = Prelude.sum [a, b]
+
+instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
+    (+) = plus
+    negate = Prelude.negate
+
+instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
+    (*) = times
+
+instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
+    sqrt = Prelude.sqrt
+    exp = Prelude.exp
+    log = Prelude.log
+    sin = Prelude.sin
+    cos = Prelude.cos
+    tan = Prelude.tan
+    asin = Prelude.asin
+    acos = Prelude.acos
+    atan = Prelude.atan
+    sinh = Prelude.sinh
+    cosh = Prelude.cosh
+    tanh = Prelude.tanh
+    asinh = Prelude.asinh
+    acosh = Prelude.acosh
+    atanh = Prelude.atanh
+    (/) x y = x Prelude./ y

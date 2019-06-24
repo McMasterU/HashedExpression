@@ -280,7 +280,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
     let op = binaryET InnerProd (ElementSpecific Covector) `hasShape` []
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
--- | Our defined custom scale with covector, f |.*| ds is like multiply every element of f with ds
+-- | Our defined custom scale with Covector, ds |*.| f is like multiply every element of f with ds
 --
 (|*.|) ::
        (DimensionType d, NumType nt)
