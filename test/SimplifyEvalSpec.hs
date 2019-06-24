@@ -41,13 +41,43 @@ import TestCommons
 
 infix 4 ~=
 
-(~=) :: Double -> Double -> Property
-a ~= b = (Prelude.abs (a - b) < 0.0001) === True
+(~=) :: Double -> Double -> Bool
+a ~= b
+    | a == b = True
+    | otherwise = relativeError a b < 0.001
 
-prop_SimplifyThenEval :: SuiteZeroR -> Property
-prop_SimplifyThenEval (SuiteZeroR exp v0s str) =
-    let valMaps = emptyVms |> withVm0 (fromList v0s)
-     in (eval valMaps exp ~= eval valMaps (simplify exp))
+-- |
+--
+data SuiteZeroR =
+    SuiteZeroR (Expression Zero R) (Map String Double)
+
+instance Show SuiteZeroR where
+    show (SuiteZeroR e valMap) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("Eval", show evalExp)
+            , ("EvalSimplified", show evalSimplified)
+            , ("ValMap", show valMap)
+            , ("Abs", show . abs $ evalExp - evalSimplified)
+            ]
+      where
+        exp = prettify e
+        simplifiedExp = prettify . simplify $ e
+        evalExp = eval (emptyVms |> withVm0 valMap) e
+        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
+
+instance Arbitrary SuiteZeroR where
+    arbitrary = do
+        (exp, names) <- genZeroR
+        doubles <- vectorOf (length names) arbitrary
+        let valMap = fromList $ zip names doubles
+        return $ SuiteZeroR exp valMap
+
+prop_SimplifyThenEval :: SuiteZeroR -> Bool
+prop_SimplifyThenEval (SuiteZeroR exp valMap) =
+    eval (emptyVms |> withVm0 valMap) exp ~=
+    eval (emptyVms |> withVm0 valMap) (simplify exp)
 
 spec :: Spec
 spec =

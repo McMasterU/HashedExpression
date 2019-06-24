@@ -4,12 +4,17 @@ module TestCommons where
 
 import Control.Monad (forM)
 import Data.Function.HT (nest)
-import Data.Maybe (catMaybes, mapMaybe)
-import Data.Set (Set)
+import Data.List (intercalate)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes, fromJust, mapMaybe)
+import Data.Set (Set, fromList, toList)
 import HashedExpression
-import HashedOperation
+import HashedInterp
+import HashedOperation hiding (product, sum)
+import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
+import HashedUtils ((|>))
 import Prelude hiding
     ( (*)
     , (+)
@@ -27,6 +32,7 @@ import Prelude hiding
     , exp
     , log
     , negate
+    , product
     , sin
     , sinh
     , sqrt
@@ -37,6 +43,78 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
+-- | Remove duplicate but also sort
+--
+removeDuplicate :: (Ord a) => [a] -> [a]
+removeDuplicate = toList . fromList
+
+-- | Format
+--
+format :: [(String, String)] -> String
+format = intercalate "\n" . map oneLine
+  where
+    oneLine (f, s) = f ++ ": " ++ s
+
+-- |
+--
+relativeError :: Double -> Double -> Double
+relativeError a b = abs (a - b) / max (abs a) (abs b)
+
+-- |
+--
+sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
+sum = fromJust . HashedOperation.sum
+
+product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
+product = fromJust . HashedOperation.product
+
+-- | Gen functions and Arbitrary instances
+--
+primitiveZeroR :: Gen (Expression Zero R, [String])
+primitiveZeroR = do
+    name <- elements . map pure $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements [(var name, [name]), (const dbl, [])]
+
+fromNaryZeroR ::
+       ([Expression Zero R] -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromNaryZeroR f = do
+    numOperands <- elements [3 .. 6]
+    -- 90% getting a primitive, 10% probably get a nested expression
+    ons <- vectorOf numOperands $ oneof (replicate 9 primitiveZeroR ++ replicate 1 genZeroR)
+    let exp = f . map fst $ ons
+        names = removeDuplicate . concatMap snd $ ons
+    return (exp, names)
+
+fromUnaryZeroR ::
+       (Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromUnaryZeroR f = do
+    on <- genZeroR
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryZeroR ::
+       (Expression Zero R -> Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromBinaryZeroR f = do
+    on1 <- genZeroR
+    on2 <- genZeroR
+    let exp = f (fst on1) (fst on2)
+        names = removeDuplicate $ snd on1 ++ snd on2
+    return (exp, names)
+
+genZeroR :: Gen (Expression Zero R, [String])
+genZeroR = do
+    let nary = map fromNaryZeroR [sum, product]
+        binary = map fromBinaryZeroR [(*.)]
+        unary = map fromUnaryZeroR [negate]
+    oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
+
+-- |
+--
 [x, y, z, t, u, v, w, s] = map var ["x", "y", "z", "t", "u", "v", "w", "s"]
 
 [x1, y1, z1, t1, u1, v1, w1] =
@@ -66,43 +144,3 @@ import Test.QuickCheck
 [zero2, one2] = map (const2d (10, 10)) [0, 1]
 
 [zero3, one3] = map (const3d (10, 10, 10)) [0, 1]
-
-genVarZero :: Gen (Expression Zero R, String)
-genVarZero = do
-    name <- elements ["x", "y", "z", "t", "u", "v", "w", "s"]
-    return (var name, name)
-
-genTransformZeroR :: Gen (Expression Zero R -> Expression Zero R, Maybe String)
-genTransformZeroR = do
-    (other, name) <- genVarZero
-    unaryOp <-
-        elements [sin, cos, tan] :: Gen (Expression Zero R -> Expression Zero R)
-    binaryWithOther <-
-        elements
-            [ (other *)
-            , (other +)
-            , (other *.)
-            , (other -)
-            , (-) other
-            , (* other)
-            , (*. other)
-            ] :: Gen (Expression Zero R -> Expression Zero R)
-    pickUnary <- arbitrary
-    if pickUnary
-        then return (unaryOp, Nothing)
-        else return (binaryWithOther, Just name)
-
---    elements [unaryOp, binaryWithOther]
-data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) [(String, Double)] String
-    deriving (Show, Ord, Eq)
-
-instance Arbitrary SuiteZeroR where
-    arbitrary = do
-        (baseExp, baseVarName) <- genVarZero
-        numTransform <- elements [5 .. 15]
-        transformsWithVar <- vectorOf numTransform genTransformZeroR
-        let finalExp = ($ baseExp) . chain . map fst $ transformsWithVar
-            varNames = baseVarName : mapMaybe snd transformsWithVar
-        doubles <- vectorOf (length varNames) arbitrary
-        return $ SuiteZeroR finalExp (zip varNames doubles) (prettify finalExp)

@@ -1,6 +1,7 @@
 module HashedUtils where
 
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Set as Set
 import HashedExpression
 import HashedHash
 import HashedNode
@@ -25,6 +26,7 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
+
 
 -- | Auxiliary functions for operations
 --

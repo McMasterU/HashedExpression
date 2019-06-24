@@ -35,11 +35,6 @@ import Prelude hiding
 import Test.Hspec
 import TestCommons
 
-sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum = fromJust . HashedOperation.sum
-
-product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-product = fromJust . HashedOperation.product
 
 
 
