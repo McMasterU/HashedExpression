@@ -24,6 +24,7 @@ import HashedExpression
     , Zero
     )
 import HashedUtils
+import Debug.Trace (traceId, traceShowId)
 
 -- |
 --

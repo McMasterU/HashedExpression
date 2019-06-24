@@ -76,25 +76,17 @@ genTransformZeroR :: Gen (Expression Zero R -> Expression Zero R, Maybe String)
 genTransformZeroR = do
     (other, name) <- genVarZero
     unaryOp <-
-        elements
-            [ sqrt
-            , exp
-            , log
-            , sin
-            , cos
-            , tan
-            , asin
-            , acos
-            , atan
-            , sinh
-            , cosh
-            , tanh
-            , asinh
-            , acosh
-            , atanh
-            ] :: Gen (Expression Zero R -> Expression Zero R)
+        elements [sin, cos, tan] :: Gen (Expression Zero R -> Expression Zero R)
     binaryWithOther <-
-        elements [(other *), (other +), (other *.)] :: Gen (Expression Zero R -> Expression Zero R)
+        elements
+            [ (other *)
+            , (other +)
+            , (other *.)
+            , (other -)
+            , (-) other
+            , (* other)
+            , (*. other)
+            ] :: Gen (Expression Zero R -> Expression Zero R)
     pickUnary <- arbitrary
     if pickUnary
         then return (unaryOp, Nothing)
@@ -102,7 +94,8 @@ genTransformZeroR = do
 
 --    elements [unaryOp, binaryWithOther]
 data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) [(String, Double)]
+    SuiteZeroR (Expression Zero R) [(String, Double)] String
+    deriving (Show, Ord, Eq)
 
 instance Arbitrary SuiteZeroR where
     arbitrary = do
@@ -110,6 +103,6 @@ instance Arbitrary SuiteZeroR where
         numTransform <- elements [5 .. 15]
         transformsWithVar <- vectorOf numTransform genTransformZeroR
         let finalExp = ($ baseExp) . chain . map fst $ transformsWithVar
-            varNames = mapMaybe snd transformsWithVar
+            varNames = baseVarName : mapMaybe snd transformsWithVar
         doubles <- vectorOf (length varNames) arbitrary
-        return $ SuiteZeroR finalExp (zip varNames doubles)
+        return $ SuiteZeroR finalExp (zip varNames doubles) (prettify finalExp)
