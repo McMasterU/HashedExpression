@@ -33,7 +33,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
-import TestCommons
+import Commons
 
 
 
