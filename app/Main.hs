@@ -34,19 +34,36 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
+[a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z] =
+    map var
+        [ "a"
+        , "b"
+        , "c"
+        , "d"
+        , "e"
+        , "f"
+        , "g"
+        , "h"
+        , "i"
+        , "j"
+        , "k"
+        , "l"
+        , "m"
+        , "n"
+        , "o"
+        , "p"
+        , "q"
+        , "r"
+        , "s"
+        , "t"
+        , "u"
+        , "v"
+        , "w"
+        , "x"
+        , "y"
+        , "z"
+        ]
+
 main = do
-    let x = var1d 10 "x"
-        y = var1d 10 "y"
-        z = var1d 10 "z"
-        s = var "s"
-        f = log $ exp $ sqrt $ cos $ s *. (x * y) / y
-        anotherF = const 0 *. f
-        fImg = const 0 *. xRe (f +: z)
---    print $ prettify anotherF
-    print $ prettify fImg
-    print $ prettify $ exteriorDerivative (Set.fromList ["x", "y", "z"]) fImg
-    print $
-        prettify $
-        exteriorDerivative (Set.fromList ["x", "y", "z"]) $ simplify fImg
---    print $ prettify $ exteriorDerivative fImg
---    print $ prettify . exteriorDerivative $ f
+    print "Hello World"
+    print "Hashed Exression rocks!!"

@@ -1,5 +1,7 @@
 module DerivativeSpec where
 
+import Commons
+import Data.List
 import Data.Maybe (fromJust)
 import HashedExpression
 import HashedOperation hiding (product, sum)
@@ -33,4 +35,3 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
-import Commons
