@@ -42,78 +42,7 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-
--- | Remove duplicate but also sort
---
-removeDuplicate :: (Ord a) => [a] -> [a]
-removeDuplicate = toList . fromList
-
--- | Format
---
-format :: [(String, String)] -> String
-format = intercalate "\n" . map oneLine
-  where
-    oneLine (f, s) = f ++ ": " ++ s
-
--- |
---
-relativeError :: Double -> Double -> Double
-relativeError a b = abs (a - b) / max (abs a) (abs b)
-
--- |
---
-sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum = fromJust . HashedOperation.sum
-
-product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-product = fromJust . HashedOperation.product
-
--- | Gen functions and Arbitrary instances
---
-primitiveZeroR :: Gen (Expression Zero R, [String])
-primitiveZeroR = do
-    name <- elements . map pure $ ['a' .. 'z']
-    dbl <- arbitrary
-    elements [(var name, [name]), (const dbl, [])]
-
-fromNaryZeroR ::
-       ([Expression Zero R] -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
-fromNaryZeroR f = do
-    numOperands <- elements [3 .. 6]
-    -- 90% getting a primitive, 10% probably get a nested expression
-    ons <-
-        vectorOf numOperands $
-        oneof (replicate 9 primitiveZeroR ++ replicate 1 genZeroR)
-    let exp = f . map fst $ ons
-        names = removeDuplicate . concatMap snd $ ons
-    return (exp, names)
-
-fromUnaryZeroR ::
-       (Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
-fromUnaryZeroR f = do
-    on <- genZeroR
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryZeroR ::
-       (Expression Zero R -> Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
-fromBinaryZeroR f = do
-    on1 <- genZeroR
-    on2 <- genZeroR
-    let exp = f (fst on1) (fst on2)
-        names = removeDuplicate $ snd on1 ++ snd on2
-    return (exp, names)
-
-genZeroR :: Gen (Expression Zero R, [String])
-genZeroR = do
-    let nary = map fromNaryZeroR [sum, product]
-        binary = map fromBinaryZeroR [(*.)]
-        unary = map fromUnaryZeroR [negate]
-    oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
+import Control.Applicative (liftA2)
 
 -- |
 --
@@ -273,3 +202,125 @@ genZeroR = do
 [zero2, one2] = map (const2d (10, 10)) [0, 1]
 
 [zero3, one3] = map (const3d (10, 10, 10)) [0, 1]
+
+-- | Remove duplicate but also sort
+--
+removeDuplicate :: (Ord a) => [a] -> [a]
+removeDuplicate = toList . fromList
+
+-- | Format
+--
+format :: [(String, String)] -> String
+format = intercalate "\n" . map oneLine
+  where
+    oneLine (f, s) = f ++ ": " ++ s
+
+-- |
+--
+relativeError :: Double -> Double -> Double
+relativeError a b = abs (a - b) / max (abs a) (abs b)
+
+-- |
+--
+sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
+sum = fromJust . HashedOperation.sum
+
+product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
+product = fromJust . HashedOperation.product
+
+-- | Gen functions R
+--
+primitiveZeroR :: Gen (Expression Zero R, [String])
+primitiveZeroR = do
+    name <- elements . map pure $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements [(var name, [name]), (const dbl, [])]
+
+fromNaryZeroR ::
+       ([Expression Zero R] -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromNaryZeroR f = do
+    numOperands <- elements [3 .. 6]
+    -- 90% getting a primitive, 10% probably get a nested expression
+    ons <-
+        vectorOf numOperands $
+        oneof (replicate 9 primitiveZeroR ++ replicate 1 genZeroR)
+    let exp = f . map fst $ ons
+        names = removeDuplicate . concatMap snd $ ons
+    return (exp, names)
+
+fromUnaryZeroR ::
+       (Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromUnaryZeroR f = do
+    on <- genZeroR
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryZeroR ::
+       (Expression Zero R -> Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, [String])
+fromBinaryZeroR f = do
+    on1 <- genZeroR
+    on2 <- genZeroR
+    let exp = f (fst on1) (fst on2)
+        names = removeDuplicate $ snd on1 ++ snd on2
+    return (exp, names)
+
+genZeroR :: Gen (Expression Zero R, [String])
+genZeroR = do
+    let nary = map fromNaryZeroR [sum, product]
+        binary = map fromBinaryZeroR [(*.)]
+        unary = map fromUnaryZeroR [negate]
+    oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
+
+-- | Gen functions C
+--
+primitiveZeroC :: Gen (Expression Zero C, [String])
+primitiveZeroC = do
+    name1 <- elements . map pure $ ['a' .. 'z']
+    name2 <- elements . map pure $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements [(var name1 +: var name2, [name1, name2]), (const dbl +: const 0, [])]
+
+fromNaryZeroC ::
+       ([Expression Zero C] -> Expression Zero C)
+    -> Gen (Expression Zero C, [String])
+fromNaryZeroC f = do
+    numOperands <- elements [3 .. 6]
+    -- 90% getting a primitive, 10% probably get a nested expression
+    ons <-
+        vectorOf numOperands $
+        oneof (replicate 9 primitiveZeroC ++ replicate 1 genZeroC)
+    let exp = f . map fst $ ons
+        names = removeDuplicate . concatMap snd $ ons
+    return (exp, names)
+
+fromUnaryZeroC ::
+       (Expression Zero C -> Expression Zero C)
+    -> Gen (Expression Zero C, [String])
+fromUnaryZeroC f = do
+    on <- genZeroC
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryZeroC ::
+       (Expression Zero C -> Expression Zero C -> Expression Zero C)
+    -> Gen (Expression Zero C, [String])
+fromBinaryZeroC f = do
+    on1 <- genZeroC
+    on2 <- genZeroC
+    let exp = f (fst on1) (fst on2)
+        names = removeDuplicate $ snd on1 ++ snd on2
+    return (exp, names)
+
+genZeroC :: Gen (Expression Zero C, [String])
+genZeroC = do
+    let nary = map fromNaryZeroC [sum, product]
+        binary = map fromBinaryZeroC [(*.)]
+        unary = map fromUnaryZeroC [negate]
+--        fromReal = liftA2 (+:) genZeroR genZeroR
+    oneof ([primitiveZeroC] ++ nary ++ binary ++ unary)
+

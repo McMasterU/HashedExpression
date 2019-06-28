@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 module Main where
 
 import Data.Array.Unboxed as U
@@ -65,7 +66,6 @@ import Test.QuickCheck hiding (scale)
         ]
 
 main
---    print "Hello World"
---    print "Hashed Exression rocks!!"
  = do
     print $ (x + y) + (x + y)
+
