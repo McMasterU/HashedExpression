@@ -39,6 +39,7 @@ spec :: Spec
 spec = do
     describe "Simplify spec" $ do
         specify "simplify scalar one zero" $ do
+            simplify (const 0.0 *. const 9.0) `shouldBe` const 0.0
             simplify (x * one) `shouldBe` x
             simplify (one * x) `shouldBe` x
             simplify (x * zero) `shouldBe` zero

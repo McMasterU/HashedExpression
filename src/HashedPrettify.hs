@@ -6,6 +6,7 @@ module HashedPrettify
     ) where
 
 import Data.List (intercalate)
+import HashedNode
 import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression
@@ -94,3 +95,23 @@ hiddenPrettify e@(Expression n mp) =
             InnerProd et arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
+            Piecewise conditionArg marks branches ->
+                let appendedMarks = ("-infinity" : map show marks) ++ ["+infinity"]
+                    intervals = zip appendedMarks (tail appendedMarks)
+                    cases = zip intervals branches
+                    printCase ((left, right), val) =
+                        T.concat
+                            [ "("
+                            , T.pack left
+                            , ", "
+                            , T.pack right
+                            , ") -> "
+                            , innerPrettify val
+                            , ", "
+                            ]
+                 in T.concat
+                        ([ "case "
+                         , wrapParentheses $ innerPrettify conditionArg
+                         , " of ["
+                         ] ++
+                         map printCase cases ++ ["]"])

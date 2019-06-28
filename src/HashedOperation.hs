@@ -9,7 +9,8 @@
 
 module HashedOperation where
 
-import Data.IntMap.Strict (fromList, union)
+import Data.IntMap.Strict (fromList, union, unions)
+import HashedNode
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -17,6 +18,7 @@ import HashedUtils
 import Prelude hiding
     ( (*)
     , (+)
+    , (-)
     , (/)
     , acos
     , acosh
@@ -24,6 +26,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
+    , const
     , cos
     , cosh
     , exp
@@ -85,6 +88,12 @@ const3d :: (Int, Int, Int) -> Double -> Expression Three R
 const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
   where
     node = ([size1, size2, size3], Const val)
+    h = hash node
+
+constWithShape :: Shape -> Double -> Expression d R
+constWithShape shape val = Expression h (fromList [(h, node)])
+  where
+    node = (shape, Const val)
     h = hash node
 
 -- | Element-wise sum
@@ -183,14 +192,32 @@ instance (InnerProductSpace d s) =>
                 scalarShape
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
-
-
-
+-- | TODO - HuberOp type class is necessary ???
+--
 instance (DimensionType d) => HuberOp (Expression d R) where
     huber :: Double -> Expression d R -> Expression d R
-    huber delta = undefined
+    huber delta e = piecewise e [-delta, delta] [lessThan, inRange, largerThan]
+      where
+        deltaVector =
+            constWithShape (expressionShape e) (delta * delta) :: Expression d R
+        inRange = const 0.5 *. (e * e)
+        lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
+        largerThan = e * deltaVector - const 0.5 *. deltaVector
 
-
+-- |
+--
+piecewise ::
+       (DimensionType d)
+    => Expression d R
+    -> [Double]
+    -> [Expression d1 et]
+    -> Expression d1 et
+piecewise (Expression n mp) marks branches = Expression root newMap
+  where
+    mergedMap = union mp . unions . map exMap $ branches
+    shape = highestShape . map unwrap $ branches
+    node = Piecewise n marks $ map exIndex branches
+    (newMap, root) = addEntry mergedMap (shape, node)
 
 -- | Prelude version of * and +
 --
@@ -224,5 +251,3 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
-
-

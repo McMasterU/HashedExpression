@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TupleSections #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -12,6 +13,7 @@ module HashedDerivative
 
 import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
+import HashedNode
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -63,6 +65,11 @@ data D_
 --
 data NT_
     deriving (Typeable, ElementType, NumType)
+
+-- | Placeholder for any num type
+--
+data ET_
+    deriving (Typeable, ElementType)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -118,8 +125,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in Expression h newMap
                 -- dc = 0
             DVar name ->
-                error
-                    "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
+                error "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
             Const _ ->
                 let node = Const 0
                     (newMap, h) = fromNode (shape, node)
@@ -255,6 +261,12 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     g = Expression arg2 mp :: Expression D_ NT_
                     dg = hiddenDerivative' g :: Expression D_ Covector
                  in coerce $ f |<.>| dg + g |<.>| df
+            Piecewise conditionArg marks branches ->
+                let conditionExp = Expression conditionArg mp :: Expression D_ R
+                    branchExp aBranch = Expression aBranch mp :: Expression D_ ET_
+                    branchExps = map branchExp branches
+                 in piecewise conditionExp marks $ map hiddenDerivative' branchExps
+
 
 -- | Wise-multiply a number with a covector
 --

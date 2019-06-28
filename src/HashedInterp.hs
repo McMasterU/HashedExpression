@@ -8,6 +8,7 @@ module HashedInterp where
 
 import Data.Array as A
 import Data.Complex as DC
+import HashedNode
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map

@@ -67,8 +67,8 @@ simplify ::
 simplify e =
     let applyRules =
             (multipleTimes 10 . makeRecursive $
-             scaleRules >>>
              zeroOneRules >>>
+             scaleRules >>>
              groupConstantsRules >>>
              dotProductRules >>>
              exponentRules >>>
@@ -81,7 +81,7 @@ simplify e =
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    makeRecursive . chain . map fromPattern $
+    multipleTimes 1000 . makeRecursive . chain . map fromPattern $
     [ one *. x |.~~> x
     , one * x |.~~> x
     , x * one |.~~> x
@@ -233,6 +233,7 @@ removeUnreachable (mp, n) =
         reducedMap =
             IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
      in (reducedMap, n)
+
 
 -- | Turn HashedPattern to a simplification
 --

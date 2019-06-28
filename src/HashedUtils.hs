@@ -27,55 +27,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
--- | Auxiliary functions for operations
---
-retrieveNode :: Int -> ExpressionMap -> Node
-retrieveNode n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "node not in map"
-
-retrieveInternal :: Int -> ExpressionMap -> Internal
-retrieveInternal n mp =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "node not in map"
-
-retrieveElementType :: Int -> ExpressionMap -> ET
-retrieveElementType n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-retrieveShape :: Int -> ExpressionMap -> Shape
-retrieveShape n mp =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionElementType :: Expression d et -> ET
-expressionElementType (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-expressionShape :: Expression d et -> Shape
-expressionShape (Expression n mp) =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionInternal :: Expression d et -> Internal
-expressionInternal (Expression n mp) =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "expression not in map"
-
-expressionNode :: Expression d et -> Node
-expressionNode (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "expression not in map"
 
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after

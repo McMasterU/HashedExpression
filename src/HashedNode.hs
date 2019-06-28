@@ -1,11 +1,12 @@
 module HashedNode where
 
+import Data.IntMap.Strict as IM
 import HashedExpression
 
 -- | Helpers functions for Expression nodes
 --
-nodeElementType :: Node -> ET
-nodeElementType node =
+nodeElementType :: Node -> ExpressionMap -> ET
+nodeElementType node mp =
     case node of
         Var _ -> R
         DVar _ -> Covector
@@ -34,6 +35,7 @@ nodeElementType node =
         RealPart _ -> R -- extract real part
         ImagPart _ -> R -- extract imaginary part
         InnerProd et _ _ -> et
+        Piecewise _ _ branches -> retrieveElementType (head branches) mp
 
 ---- |
 ----
@@ -97,3 +99,54 @@ nodeArgs node =
         RealPart arg -> [arg]
         ImagPart arg -> [arg]
         InnerProd _ arg1 arg2 -> [arg1, arg2]
+        Piecewise conditionArg _ branches -> conditionArg : branches
+
+-- | Auxiliary functions for operations
+--
+retrieveNode :: Int -> ExpressionMap -> Node
+retrieveNode n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> node
+        _ -> error "node not in map"
+
+retrieveInternal :: Int -> ExpressionMap -> Internal
+retrieveInternal n mp =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "node not in map"
+
+retrieveElementType :: Int -> ExpressionMap -> ET
+retrieveElementType n mp =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node mp
+        _ -> error "expression not in map"
+
+retrieveShape :: Int -> ExpressionMap -> Shape
+retrieveShape n mp =
+    case IM.lookup n mp of
+        Just (dim, _) -> dim
+        _ -> error "expression not in map"
+
+expressionElementType :: Expression d et -> ET
+expressionElementType (Expression n mp) =
+    case IM.lookup n mp of
+        Just (_, node) -> nodeElementType node mp
+        _ -> error "expression not in map"
+
+expressionShape :: Expression d et -> Shape
+expressionShape (Expression n mp) =
+    case IM.lookup n mp of
+        Just (dim, _) -> dim
+        _ -> error "expression not in map"
+
+expressionInternal :: Expression d et -> Internal
+expressionInternal (Expression n mp) =
+    case IM.lookup n mp of
+        Just internal -> internal
+        _ -> error "expression not in map"
+
+expressionNode :: Expression d et -> Node
+expressionNode (Expression n mp) =
+    case IM.lookup n mp of
+        Just (_, node) -> node
+        _ -> error "expression not in map"
