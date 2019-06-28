@@ -11,6 +11,7 @@ import Data.Complex as DC
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
+import Debug.Trace (traceId, traceShowId)
 import HashedExpression
     ( C
     , ET(..)
@@ -24,7 +25,6 @@ import HashedExpression
     , Zero
     )
 import HashedUtils
-import Debug.Trace (traceId, traceShowId)
 
 -- |
 --

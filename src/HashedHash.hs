@@ -5,7 +5,7 @@
 module HashedHash where
 
 import qualified Data.IntMap.Strict as IM
-import HashedExpression hiding ((+), (*))
+import HashedExpression hiding ((*), (+))
 
 -- |
 --

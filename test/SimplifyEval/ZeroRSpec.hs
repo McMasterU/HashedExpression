@@ -1,5 +1,6 @@
 module SimplifyEval.ZeroRSpec where
 
+import Commons
 import Data.Map.Strict
 import Data.Maybe (fromJust)
 import HashedExpression
@@ -37,7 +38,6 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-import Commons
 
 infix 4 ~=
 

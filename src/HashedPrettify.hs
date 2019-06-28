@@ -7,9 +7,9 @@ module HashedPrettify
 
 import Data.List (intercalate)
 import qualified Data.Text as T
-import HashedUtils
 import Data.Typeable
 import HashedExpression
+import HashedUtils
 
 prettify ::
        forall d rc. (Typeable d, Typeable rc)
@@ -64,8 +64,7 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses . T.intercalate "+" . map innerPrettify $ args
             Mul _ args ->
                 wrapParentheses . T.intercalate "*" . map innerPrettify $ args
-            Neg _ arg ->
-                T.concat ["-", wrapParentheses $ innerPrettify arg]
+            Neg _ arg -> T.concat ["-", wrapParentheses $ innerPrettify arg]
             Scale _ arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "*.", innerPrettify arg2]
@@ -87,7 +86,11 @@ hiddenPrettify e@(Expression n mp) =
             Asinh arg -> T.concat ["asinh", wrapParentheses $ innerPrettify arg]
             Acosh arg -> T.concat ["acosh", wrapParentheses $ innerPrettify arg]
             Atanh arg -> T.concat ["atanh", wrapParentheses $ innerPrettify arg]
-            RealImag arg1 arg2 -> wrapParentheses . T.concat $ [innerPrettify arg1, "+:", innerPrettify arg2]
+            RealImag arg1 arg2 ->
+                wrapParentheses . T.concat $
+                [innerPrettify arg1, "+:", innerPrettify arg2]
             RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
             ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
-            InnerProd et arg1 arg2 -> wrapParentheses . T.concat $ [innerPrettify arg1, "<.>", innerPrettify arg2]
+            InnerProd et arg1 arg2 ->
+                wrapParentheses . T.concat $
+                [innerPrettify arg1, "<.>", innerPrettify arg2]

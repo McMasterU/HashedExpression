@@ -4,7 +4,6 @@ import HashedExpression
 
 -- | Helpers functions for Expression nodes
 --
-
 nodeElementType :: Node -> ET
 nodeElementType node =
     case node of
@@ -36,7 +35,6 @@ nodeElementType node =
         ImagPart _ -> R -- extract imaginary part
         InnerProd et _ _ -> et
 
-
 ---- |
 ----
 --sameOp :: Node -> Node -> Bool
@@ -67,7 +65,6 @@ nodeElementType node =
 --        (ImagPart {}, ImagPart {}) -> True
 --        (InnerProd {}, InnerProd {}) -> True
 --        _ -> False
-
 -- | Get list of arguments of this node
 --
 nodeArgs :: Node -> Args
@@ -100,4 +97,3 @@ nodeArgs node =
         RealPart arg -> [arg]
         ImagPart arg -> [arg]
         InnerProd _ arg1 arg2 -> [arg1, arg2]
-

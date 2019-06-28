@@ -64,6 +64,8 @@ import Test.QuickCheck hiding (scale)
         , "z"
         ]
 
-main = do
-    print "Hello World"
-    print "Hashed Exression rocks!!"
+main
+--    print "Hello World"
+--    print "Hashed Exression rocks!!"
+ = do
+    print $ (x + y) + (x + y)

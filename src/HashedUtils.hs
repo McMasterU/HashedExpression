@@ -27,7 +27,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-
 -- | Auxiliary functions for operations
 --
 retrieveNode :: Int -> ExpressionMap -> Node

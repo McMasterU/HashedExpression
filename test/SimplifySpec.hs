@@ -1,5 +1,6 @@
 module SimplifySpec where
 
+import Commons
 import Data.Maybe (fromJust)
 import HashedExpression
 import HashedOperation hiding (product, sum)
@@ -33,10 +34,6 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
-import Commons
-
-
-
 
 spec :: Spec
 spec = do
@@ -59,8 +56,8 @@ spec = do
             simplify (log (exp x)) `shouldBe` x
             simplify (exp (log x)) `shouldBe` x
         specify "complex related" $ do
-            prettify (simplify ((x +: y) * (z +: w))) `shouldBe` prettify ((x * z - y * w) +:
-                (x * w + y * z))
+            prettify (simplify ((x +: y) * (z +: w))) `shouldBe`
+                prettify ((x * z - y * w) +: (x * w + y * z))
             simplify (xRe (x +: y)) `shouldBe` x
             simplify (xIm (x +: y)) `shouldBe` y
             simplify ((x +: y) + (u +: v)) `shouldBe` (x + u) +: (y + v)

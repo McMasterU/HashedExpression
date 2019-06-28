@@ -49,7 +49,6 @@ data R
 data C
     deriving (NumType, ElementType, Addable, Typeable)
 
--- we only allow covector fields derived from real scalar fields
 data Covector
     deriving (ElementType, Addable, Typeable)
 
