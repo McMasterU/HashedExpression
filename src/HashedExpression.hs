@@ -145,6 +145,9 @@ class ComplexRealOp r c | r -> c, c -> r where
 class InnerProductSpaceOp a b c | a b -> c where
     (<.>) :: a -> b -> c
 
+class HuberOp a where
+    huber :: Double -> a -> a
+
 infixl 6 +, -
 
 infixl 7 *
@@ -163,6 +166,10 @@ type Shape = [Int]
 type Args = [Int]
 
 type Arg = Int
+
+type ConditionArg = Int
+
+type Branch = Int
 
 -- | Data representation of element type
 --
@@ -227,4 +234,8 @@ data Node
     | ImagPart Arg -- extract imaginary part
     -- MARK: Inner product Space
     | InnerProd ET Arg Arg
+    -- MARK: Huber
+    | Piecewise ConditionArg [Double] [Branch]
     deriving (Show, Eq, Ord)
+
+

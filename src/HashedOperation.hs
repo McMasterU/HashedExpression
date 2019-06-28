@@ -183,6 +183,15 @@ instance (InnerProductSpace d s) =>
                 scalarShape
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
+
+
+
+instance (DimensionType d) => HuberOp (Expression d R) where
+    huber :: Double -> Expression d R -> Expression d R
+    huber delta = undefined
+
+
+
 -- | Prelude version of * and +
 --
 times :: (Num a) => a -> a -> a
@@ -215,3 +224,5 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
+
+

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+
 module Main where
 
 import Data.Array.Unboxed as U
@@ -65,7 +66,10 @@ import Test.QuickCheck hiding (scale)
         , "z"
         ]
 
-main
- = do
-    print $ (x + y) + (x + y)
-
+main = do
+    print $ x
+    print $ huber 3 x
+--    print $
+--        prettify $ simplify $
+--        exteriorDerivative (Set.fromList ["x", "y"]) $
+--        x + y + const 2 + const 3 * sin (x)
