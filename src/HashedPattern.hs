@@ -41,6 +41,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Debug.Trace (trace)
 
 -- | Pattern for simplification
 --
@@ -52,6 +53,9 @@ type ListCapture = Int
 --
 data PatternList =
     PListHole [Pattern -> Pattern] ListCapture
+
+instance Show PatternList where
+    show p = "Pattern List here"
 
 -- |
 --
@@ -87,6 +91,7 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
+    deriving Show
 
 instance AddableOp (Pattern) where
     (+) wh1 wh2 = PSum [wh1, wh2]
@@ -206,7 +211,7 @@ type Match = (Map Capture Int, Map ListCapture [Int])
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
-match (mp, n) wh =
+match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
         catMatch = foldl unionBoth (Map.empty, Map.empty)
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
@@ -215,7 +220,7 @@ match (mp, n) wh =
             , let subMatches = zipWith match (map (mp, ) args) whs
             , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
-     in case (retrieveNode n mp, wh) of
+     in case (retrieveNode n mp, outerWH) of
             (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
                 | c == whc -> Just (Map.empty, Map.empty)
@@ -225,7 +230,7 @@ match (mp, n) wh =
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
-            (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
+            (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Div arg1 arg2, PDiv wh1 wh2) ->

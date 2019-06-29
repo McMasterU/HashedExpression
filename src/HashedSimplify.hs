@@ -81,7 +81,7 @@ simplify e =
 --
 zeroOneRules :: Simplification
 zeroOneRules =
-    multipleTimes 1000 . makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromPattern $
     [ one *. x |.~~> x
     , one * x |.~~> x
     , x * one |.~~> x
@@ -94,6 +94,7 @@ zeroOneRules =
     , zero + x |.~~> x
     , (x <.> zero) |.~~> zero
     , zero <.> x |.~~> zero
+    , negate zero |.~~> zero
     ]
 
 scaleRules =
@@ -314,5 +315,5 @@ makeRecursive smp exp@(mp, n)
     | otherwise =
         let shape = retrieveShape n mp
             simplifiedChildren =
-                map smp . map (mp, ) . nodeArgs $ retrieveNode n mp
+                map (makeRecursive smp) . map (mp, ) . nodeArgs $ retrieveNode n mp
          in reconstruct exp simplifiedChildren

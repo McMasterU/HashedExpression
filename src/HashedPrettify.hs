@@ -112,6 +112,6 @@ hiddenPrettify e@(Expression n mp) =
                  in T.concat
                         ([ "case "
                          , wrapParentheses $ innerPrettify conditionArg
-                         , " of ["
+                         , " in ["
                          ] ++
                          map printCase cases ++ ["]"])
