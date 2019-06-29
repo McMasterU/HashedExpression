@@ -66,10 +66,6 @@ data D_
 data NT_
     deriving (Typeable, ElementType, NumType)
 
--- | Placeholder for any num type
---
-data ET_
-    deriving (Typeable, ElementType)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -114,7 +110,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
          in applyBinary (binary opType) df1 df2
     res =
         case node
-                -- dx = dx
+                -- dx = dx if x is in vars, otherwise 0
               of
             Var name ->
                 let node =
@@ -263,7 +259,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in coerce $ f |<.>| dg + g |<.>| df
             Piecewise conditionArg marks branches ->
                 let conditionExp = Expression conditionArg mp :: Expression D_ R
-                    branchExp aBranch = Expression aBranch mp :: Expression D_ ET_
+                    branchExp aBranch = Expression aBranch mp
                     branchExps = map branchExp branches
                  in piecewise conditionExp marks $ map hiddenDerivative' branchExps
 

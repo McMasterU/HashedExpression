@@ -106,7 +106,7 @@ hiddenPrettify e@(Expression n mp) =
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
             Piecewise conditionArg marks branches ->
                 let appendedMarks =
-                        ("-infinity" : map show marks) ++ ["+infinity"]
+                        ("-∞" : map show marks) ++ ["+∞"]
                     intervals = zip appendedMarks (tail appendedMarks)
                     cases = zip intervals branches
                     printCase ((left, right), val) =

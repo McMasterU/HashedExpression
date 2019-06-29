@@ -66,7 +66,7 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            (multipleTimes 10 . makeRecursive $
+            (multipleTimes 15 . makeRecursive $
              zeroOneRules >>>
              scaleRules >>>
              groupConstantsRules >>>
