@@ -68,13 +68,6 @@ import Test.QuickCheck hiding (scale)
         ]
 
 main = do
---    print $ x
-    print $ prettify $ huber 3 x
-    print $ prettify $  exteriorDerivative (Set.fromList ["x"]) $ huber 3 x
-    print $ prettify $ simplify $ exteriorDerivative (Set.fromList ["x"]) $ huber 3 x
---    print $ negate (const 0)
---    print $ prettify $ simplify $ negate (const 0)
---    print $
---        prettify $ simplify $
---        exteriorDerivative (Set.fromList ["x", "y"]) $
---        x + y + const 2 + const 3 * sin (x)
+    showExp $ huber 3 x
+    showExp $ exteriorDerivative (Set.fromList ["x"]) $ huber 3 x
+    showExp $ simplify $ exteriorDerivative (Set.fromList ["x"]) $ huber 3 x

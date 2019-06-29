@@ -3,6 +3,7 @@
 
 module HashedPrettify
     ( prettify
+    , showExp
     ) where
 
 import Data.List (intercalate)
@@ -11,6 +12,14 @@ import Data.Typeable
 import HashedExpression
 import HashedNode
 import HashedUtils
+
+
+
+showExp ::
+       forall d rc. (Typeable d, Typeable rc)
+    => Expression d rc
+    -> IO ()
+showExp = putStrLn . prettify
 
 prettify ::
        forall d rc. (Typeable d, Typeable rc)
@@ -102,7 +111,7 @@ hiddenPrettify e@(Expression n mp) =
                     cases = zip intervals branches
                     printCase ((left, right), val) =
                         T.concat
-                            [ "("
+                            [ "\n    ("
                             , T.pack left
                             , ", "
                             , T.pack right
@@ -113,5 +122,5 @@ hiddenPrettify e@(Expression n mp) =
                         [ "case "
                         , wrapParentheses $ innerPrettify conditionArg
                         , " in "
-                        , T.intercalate " | " $ map printCase cases
+                        , T.intercalate "" $ map printCase cases
                         ]
