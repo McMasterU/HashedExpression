@@ -6,10 +6,10 @@ module HashedPrettify
     ) where
 
 import Data.List (intercalate)
-import HashedNode
 import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression
+import HashedNode
 import HashedUtils
 
 prettify ::
@@ -96,7 +96,8 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
             Piecewise conditionArg marks branches ->
-                let appendedMarks = ("-infinity" : map show marks) ++ ["+infinity"]
+                let appendedMarks =
+                        ("-infinity" : map show marks) ++ ["+infinity"]
                     intervals = zip appendedMarks (tail appendedMarks)
                     cases = zip intervals branches
                     printCase ((left, right), val) =
@@ -107,11 +108,10 @@ hiddenPrettify e@(Expression n mp) =
                             , T.pack right
                             , ") -> "
                             , innerPrettify val
-                            , ", "
                             ]
                  in T.concat
-                        ([ "case "
-                         , wrapParentheses $ innerPrettify conditionArg
-                         , " in ["
-                         ] ++
-                         map printCase cases ++ ["]"])
+                        [ "case "
+                        , wrapParentheses $ innerPrettify conditionArg
+                        , " in "
+                        , T.intercalate " | " $ map printCase cases
+                        ]

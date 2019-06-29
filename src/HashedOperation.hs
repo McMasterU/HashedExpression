@@ -210,8 +210,8 @@ piecewise ::
        (DimensionType d)
     => Expression d R
     -> [Double]
-    -> [Expression d1 et]
-    -> Expression d1 et
+    -> [Expression d et]
+    -> Expression d et
 piecewise (Expression n mp) marks branches = Expression root newMap
   where
     mergedMap = union mp . unions . map exMap $ branches
