@@ -66,16 +66,17 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            (multipleTimes 15 . makeRecursive $
-             zeroOneRules >>>
-             scaleRules >>>
-             groupConstantsRules >>>
-             dotProductRules >>>
-             exponentRules >>>
-             combineTermsRules >>>
-             complexNumRules >>> distributiveRules >>> reduceSumProdRules) >>>
-            removeUnreachable
-     in wrap . applyRules . unwrap $ e
+            multipleTimes 10 $
+            zeroOneRules >>>
+            scaleRules >>>
+            dotProductRules >>>
+            exponentRules >>>
+            complexNumRules >>>
+            distributiveRules >>>
+            (makeRecursive groupConstantsRules) >>>
+            (makeRecursive combineTermsRules) >>>
+            (makeRecursive reduceSumProdRules)
+     in wrap . removeUnreachable . applyRules . unwrap $ e
 
 -- | Rules with zero and one
 --
@@ -235,7 +236,6 @@ removeUnreachable (mp, n) =
             IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
      in (reducedMap, n)
 
-
 -- | Turn HashedPattern to a simplification
 --
 fromPattern :: (GuardedPattern, Pattern) -> Simplification
@@ -306,14 +306,13 @@ fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, origin
          in buildFromPattern replacementPattern
     | otherwise = (originalMp, originalN)
 
--- | Turn a simplification to a recursive one, that is if the rule can't apply to the root node, then apply to it's children
+-- | Turn a simplification to a recursive one, apply rules bottom up
 --
 makeRecursive :: Simplification -> Simplification
-makeRecursive smp exp@(mp, n)
-    | newExp@(_, newN) <- smp exp
-    , n /= newN = newExp
-    | otherwise =
-        let shape = retrieveShape n mp
-            simplifiedChildren =
-                map (makeRecursive smp) . map (mp, ) . nodeArgs $ retrieveNode n mp
-         in reconstruct exp simplifiedChildren
+makeRecursive smp = recursiveSmp
+  where
+    recursiveSmp :: Simplification
+    recursiveSmp exp@(mp, n) =
+        let children = nodeArgs $ retrieveNode n mp
+            simplifiedChildren = map recursiveSmp . map (mp, ) $ children
+         in smp $ reconstruct exp simplifiedChildren
