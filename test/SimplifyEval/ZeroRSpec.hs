@@ -60,6 +60,7 @@ instance Show SuiteZeroR where
             , ("EvalSimplified", show evalSimplified)
             , ("ValMap", show valMap)
             , ("Abs", show . abs $ evalExp - evalSimplified)
+
             ]
       where
         exp = prettify e

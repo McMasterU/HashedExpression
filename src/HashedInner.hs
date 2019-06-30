@@ -58,7 +58,10 @@ highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 --
 apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 apply (Normal nodeOutcome shapeOutcome) exps =
-    let mergedMap = foldl1 IM.union . map fst $ exps
+    let mergedMap =
+            if null exps
+                then error "List empty here????"
+                else foldl1 IM.union . map fst $ exps
         shape =
             case shapeOutcome of
                 ShapeSpecific s -> s
