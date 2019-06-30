@@ -57,8 +57,16 @@ type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 chain :: [a -> a] -> a -> a
 chain = flip $ foldl (|>)
 
+-- | Apply maximum k times, or stop if the expression doesn't change
+--
 multipleTimes :: Int -> Simplification -> Simplification
-multipleTimes = nest
+multipleTimes k smp exp = go (k - 1) exp (smp exp)
+  where
+    go :: Int -> (ExpressionMap, Int) -> (ExpressionMap, Int) -> (ExpressionMap, Int)
+    go 0 _ curExp = curExp
+    go k lastExp curExp
+        | snd lastExp == snd curExp = curExp
+        | otherwise = go (k - 1) curExp (smp curExp)
 
 -- | Simplify an expression
 --
@@ -66,7 +74,7 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            multipleTimes 10 $
+            multipleTimes 100 $
             zeroOneRules >>>
             scaleRules >>>
             dotProductRules >>>
@@ -114,7 +122,7 @@ complexNumRules =
     [ xRe (x +: y) |.~~> x
     , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
-    , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
+    , s *. (x +: y) |.~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
@@ -123,8 +131,8 @@ complexNumRules =
 dotProductRules :: Simplification
 dotProductRules =
     makeRecursive . chain . map fromPattern $
-    [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-    , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
+    [ (s *. x) <.> y |.~~> s * (x <.> y)
+    , x <.> (s *. y) |.~~> s * (x <.> y)
     ]
 
 -- | Rules of distributive over sum
