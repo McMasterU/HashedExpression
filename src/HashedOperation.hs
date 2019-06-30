@@ -196,7 +196,7 @@ instance (InnerProductSpace d s) =>
 --
 instance (DimensionType d) => HuberOp (Expression d R) where
     huber :: Double -> Expression d R -> Expression d R
-    huber delta e = piecewise e [-delta, delta] [lessThan, inRange, largerThan]
+    huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
       where
         deltaVector =
             constWithShape (expressionShape e) (delta * delta) :: Expression d R
@@ -208,15 +208,15 @@ instance (DimensionType d) => HuberOp (Expression d R) where
 --
 piecewise ::
        (DimensionType d)
-    => Expression d R
-    -> [Double]
+    => [Double]
+    -> Expression d R
     -> [Expression d et]
     -> Expression d et
-piecewise (Expression n mp) marks branches = Expression root newMap
+piecewise marks (Expression n mp) branches = Expression root newMap
   where
     mergedMap = union mp . unions . map exMap $ branches
     shape = highestShape . map unwrap $ branches
-    node = Piecewise n marks $ map exIndex branches
+    node = Piecewise marks n $ map exIndex branches
     (newMap, root) = addEntry mergedMap (shape, node)
 
 -- | Prelude version of * and +

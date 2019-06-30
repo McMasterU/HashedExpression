@@ -99,7 +99,7 @@ nodeArgs node =
         RealPart arg -> [arg]
         ImagPart arg -> [arg]
         InnerProd _ arg1 arg2 -> [arg1, arg2]
-        Piecewise conditionArg _ branches -> conditionArg : branches
+        Piecewise _ conditionArg branches -> conditionArg : branches
 
 -- | Auxiliary functions for operations
 --

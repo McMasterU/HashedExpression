@@ -257,11 +257,11 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     g = Expression arg2 mp :: Expression D_ NT_
                     dg = hiddenDerivative' g :: Expression D_ Covector
                  in coerce $ f |<.>| dg + g |<.>| df
-            Piecewise conditionArg marks branches ->
+            Piecewise marks conditionArg branches ->
                 let conditionExp = Expression conditionArg mp :: Expression D_ R
                     branchExp aBranch = Expression aBranch mp
                     branchExps = map branchExp branches
-                 in piecewise conditionExp marks $ map hiddenDerivative' branchExps
+                 in piecewise marks conditionExp  $ map hiddenDerivative' branchExps
 
 
 -- | Wise-multiply a number with a covector

@@ -68,7 +68,7 @@ instance HasHash Node where
             RealImag arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
             InnerProd et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3187
             -- MARK: Piecewise
-            Piecewise arg marks branches ->
+            Piecewise marks arg branches ->
                 (1 + argHash (foldr moveBase 0 (show marks) : arg : branches)) *
                 269
 

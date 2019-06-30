@@ -104,7 +104,7 @@ hiddenPrettify e@(Expression n mp) =
             InnerProd et arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
-            Piecewise conditionArg marks branches ->
+            Piecewise marks conditionArg branches ->
                 let appendedMarks =
                         ("-∞" : map show marks) ++ ["+∞"]
                     intervals = zip appendedMarks (tail appendedMarks)

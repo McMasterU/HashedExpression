@@ -175,10 +175,10 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
             ImagPart _ -> apply' (unary ImagPart) newChildren
             InnerProd et _ _ ->
                 apply' (binaryET InnerProd (ElementSpecific et)) newChildren
-            Piecewise _ marks _ ->
+            Piecewise marks _ _ ->
                 let mergedMap = IM.unions . map fst $ newChildren
                     conditionArg = snd . head $ newChildren
                     branches = map snd . tail $ newChildren
                     shape = highestShape . tail $ newChildren
-                    node = Piecewise conditionArg marks branches
+                    node = Piecewise marks conditionArg branches
                  in addEntry mergedMap (shape, node)

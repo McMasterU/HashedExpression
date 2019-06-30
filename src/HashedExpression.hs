@@ -169,7 +169,7 @@ type Arg = Int
 
 type ConditionArg = Int
 
-type Branch = Int
+type BranchArg = Int
 
 -- | Data representation of element type
 --
@@ -234,8 +234,8 @@ data Node
     | ImagPart Arg -- extract imaginary part
     -- MARK: Inner product Space
     | InnerProd ET Arg Arg
-    -- MARK: Huber
-    | Piecewise ConditionArg [Double] [Branch]
+    -- MARK: Piecewise
+    | Piecewise [Double] ConditionArg [BranchArg]
     deriving (Show, Eq, Ord)
 
 
