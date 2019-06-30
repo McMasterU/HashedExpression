@@ -35,9 +35,9 @@ import Prelude hiding
     , tanh
     )
 
+import HashedUtils ((|>))
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
-import HashedUtils ((|>))
 
 [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z] =
     map var
@@ -78,7 +78,7 @@ main
 --    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
  = do
     print "Hello World"
-    let exp1 = ((zero+negate(zero))+zero+zero+zero+(zero<.>t))
-        exp2 = (zero*zero*c*c*((zero+c+u+a+(zero<.>i))<.>(((a*.u)*s*((b+negate((n*zero*f*zero*(zero*.j))))<.>e)*(zero+r+zero)*zero)*.zero))*b)
+    let exp1 = (zero + e + (zero <.> zero))
+    let exp2 = z * zero * zero
     let exp = simplify $ exp1 + exp2
     showExp $ exp

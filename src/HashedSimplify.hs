@@ -62,7 +62,10 @@ chain = flip $ foldl (|>)
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes k smp exp = go (k - 1) exp (smp exp)
   where
-    go :: Int -> (ExpressionMap, Int) -> (ExpressionMap, Int) -> (ExpressionMap, Int)
+    go :: Int
+       -> (ExpressionMap, Int)
+       -> (ExpressionMap, Int)
+       -> (ExpressionMap, Int)
     go 0 _ curExp = curExp
     go k lastExp curExp
         | snd lastExp == snd curExp = curExp
@@ -81,9 +84,9 @@ simplify e =
             exponentRules >>>
             complexNumRules >>>
             distributiveRules >>>
+            (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
-            (makeRecursive combineTermsRules) >>>
-            (makeRecursive reduceSumProdRules)
+            (makeRecursive combineTermsRules)
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 -- | Rules with zero and one
@@ -131,9 +134,7 @@ complexNumRules =
 dotProductRules :: Simplification
 dotProductRules =
     makeRecursive . chain . map fromPattern $
-    [ (s *. x) <.> y |.~~> s * (x <.> y)
-    , x <.> (s *. y) |.~~> s * (x <.> y)
-    ]
+    [(s *. x) <.> y |.~~> s * (x <.> y), x <.> (s *. y) |.~~> s * (x <.> y)]
 
 -- | Rules of distributive over sum
 --
@@ -165,6 +166,8 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
                 | length ns == 1 -> (mp, head ns)
+                -- to make sure filter (not . isZero mp) ns is not empty
+                | all (isZero mp) ns -> aConst (retrieveShape n mp) 0
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
@@ -177,6 +180,8 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
                 | length ns == 1 -> (mp, head ns)
+                -- to make sure filter (not . isOne mp) ns is not empty
+                | all (isOne mp) ns -> aConst (retrieveShape n mp) 1
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->

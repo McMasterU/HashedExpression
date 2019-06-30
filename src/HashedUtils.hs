@@ -39,6 +39,12 @@ ensureSameShapeList es after
     | allEqual es = after
     | otherwise = error "Ensure same shape failed"
 
+constWithShape :: Shape -> Double -> Expression d R
+constWithShape shape val = Expression h (IM.fromList [(h, node)])
+  where
+    node = (shape, Const val)
+    h = hash node
+
 pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
 pullConstant mp n
     | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)

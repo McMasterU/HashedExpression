@@ -56,11 +56,7 @@ instance Show SuiteZeroR where
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
-            , ("Eval", show evalExp)
-            , ("EvalSimplified", show evalSimplified)
             , ("ValMap", show valMap)
-            , ("Abs", show . abs $ evalExp - evalSimplified)
-
             ]
       where
         exp = prettify e

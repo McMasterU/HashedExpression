@@ -90,11 +90,6 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
     node = ([size1, size2, size3], Const val)
     h = hash node
 
-constWithShape :: Shape -> Double -> Expression d R
-constWithShape shape val = Expression h (fromList [(h, node)])
-  where
-    node = (shape, Const val)
-    h = hash node
 
 -- | Element-wise sum
 --
