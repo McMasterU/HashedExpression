@@ -259,8 +259,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in coerce $ f |<.>| dg + g |<.>| df
             Piecewise marks conditionArg branches ->
                 let conditionExp = Expression conditionArg mp :: Expression D_ R
-                    branchExp aBranch = Expression aBranch mp
-                    branchExps = map branchExp branches
+                    branchExps = map (flip Expression mp) branches
                  in piecewise marks conditionExp  $ map hiddenDerivative' branchExps
 
 

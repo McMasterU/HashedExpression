@@ -37,36 +37,6 @@ nodeElementType node mp =
         InnerProd et _ _ -> et
         Piecewise _ _ branches -> retrieveElementType (head branches) mp
 
----- |
-----
---sameOp :: Node -> Node -> Bool
---sameOp node1 node2 =
---    case (node1, node2) of
---        (Sum {}, Sum {}) -> True
---        (Mul {}, Mul {}) -> True
---        (Neg {}, Neg {}) -> True
---        (Scale {}, Scale {}) -> True
---        (Div {}, Div {}) -> True
---        (Sqrt {}, Sqrt {}) -> True
---        (Sin {}, Sin {}) -> True
---        (Cos {}, Cos {}) -> True
---        (Tan {}, Tan {}) -> True
---        (Exp {}, Exp {}) -> True
---        (Log {}, Log {}) -> True
---        (Sinh {}, Sinh {}) -> True
---        (Cosh {}, Cosh {}) -> True
---        (Tanh {}, Tanh {}) -> True
---        (Asin {}, Asin {}) -> True
---        (Acos {}, Acos {}) -> True
---        (Atan {}, Atan {}) -> True
---        (Asinh {}, Asinh {}) -> True
---        (Acosh {}, Acosh {}) -> True
---        (Atanh {}, Atanh {}) -> True
---        (RealImag {}, RealImag {}) -> True
---        (RealPart {}, RealPart {}) -> True
---        (ImagPart {}, ImagPart {}) -> True
---        (InnerProd {}, InnerProd {}) -> True
---        _ -> False
 -- | Get list of arguments of this node
 --
 nodeArgs :: Node -> Args

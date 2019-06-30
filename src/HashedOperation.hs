@@ -212,12 +212,8 @@ piecewise ::
     -> Expression d R
     -> [Expression d et]
     -> Expression d et
-piecewise marks (Expression n mp) branches = Expression root newMap
-  where
-    mergedMap = union mp . unions . map exMap $ branches
-    shape = highestShape . map unwrap $ branches
-    node = Piecewise marks n $ map exIndex branches
-    (newMap, root) = addEntry mergedMap (shape, node)
+piecewise marks = applyConditionAry (conditionAry (Piecewise marks))
+
 
 -- | Prelude version of * and +
 --

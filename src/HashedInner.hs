@@ -30,12 +30,11 @@ data NodeOutcome
 data ShapeOutcome
     = ShapeSpecific Shape
     | ShapeDefault -- Highest shape (shape with longest length)
+    | ShapeBranches -- Same as branches' shape
 
-data OperationOption =
-    OperationOption
-        { nodeOutcome :: NodeOutcome
-        , shapeOutcome :: ShapeOutcome
-        }
+data OperationOption
+    = Normal NodeOutcome ShapeOutcome
+    | Condition (ConditionArg -> [BranchArg] -> Node)
 
 -- |
 --
@@ -58,7 +57,7 @@ highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 -- | The apply function that is used everywhere
 --
 apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-apply (OperationOption nodeOutcome shapeOutcome) exps =
+apply (Normal nodeOutcome shapeOutcome) exps =
     let mergedMap = foldl1 IM.union . map fst $ exps
         shape =
             case shapeOutcome of
@@ -79,6 +78,12 @@ apply (OperationOption nodeOutcome shapeOutcome) exps =
                 (OpManyElement op elm, args) -> op (elementType elm) args
                 _ -> error "HashedInner.apply"
      in addEntry mergedMap (shape, node)
+apply (Condition op) exps@(conditionArg:branchArgs) =
+    let mergedMap = foldl1 IM.union . map fst $ exps
+        (headBranchMp, headBranchN) = head branchArgs
+        shape = retrieveShape headBranchN headBranchMp
+        node = op (snd conditionArg) $ map snd branchArgs
+     in addEntry mergedMap (shape, node)
 
 -- | General multiplication and sum
 --
@@ -91,8 +96,9 @@ sumMany = apply $ naryET Sum ElementDefault
 -- |
 --
 hasShape :: OperationOption -> Shape -> OperationOption
-hasShape (OperationOption nodeOutcome _) specificShape =
-    OperationOption nodeOutcome (ShapeSpecific specificShape)
+hasShape (Normal nodeOutcome _) specificShape =
+    Normal nodeOutcome (ShapeSpecific specificShape)
+hasShape option _ = option
 
 applyBinary ::
        OperationOption
@@ -107,36 +113,42 @@ applyUnary option e1 = wrap . apply option $ [unwrap e1]
 applyNary :: OperationOption -> [Expression d1 et1] -> Expression d2 et2
 applyNary option = wrap . apply option . map unwrap
 
+applyConditionAry ::
+       OperationOption
+    -> Expression d et1
+    -> [Expression d et2]
+    -> Expression d et2
+applyConditionAry option e branches =
+    wrap . apply option $ unwrap e : map unwrap branches
+
 -- | binary operations
 --
 binary :: (Arg -> Arg -> Node) -> OperationOption
-binary op =
-    OperationOption {nodeOutcome = OpTwo op, shapeOutcome = ShapeDefault}
+binary op = Normal (OpTwo op) ShapeDefault
 
 binaryET :: (ET -> Arg -> Arg -> Node) -> ElementOutcome -> OperationOption
-binaryET op elm =
-    OperationOption
-        {nodeOutcome = OpTwoElement op elm, shapeOutcome = ShapeDefault}
+binaryET op elm = Normal (OpTwoElement op elm) ShapeDefault
 
 -- | unary operations
 --
 unary :: (Arg -> Node) -> OperationOption
-unary op = OperationOption {nodeOutcome = OpOne op, shapeOutcome = ShapeDefault}
+unary op = Normal (OpOne op) ShapeDefault
 
 unaryET :: (ET -> Arg -> Node) -> ElementOutcome -> OperationOption
-unaryET op elm =
-    OperationOption
-        {nodeOutcome = OpOneElement op elm, shapeOutcome = ShapeDefault}
+unaryET op elm = Normal (OpOneElement op elm) ShapeDefault
 
 -- | n-ary operations
 --
 nary :: (Args -> Node) -> OperationOption
-nary op = OperationOption {nodeOutcome = OpMany op, shapeOutcome = ShapeDefault}
+nary op = Normal (OpMany op) ShapeDefault
 
 naryET :: (ET -> Args -> Node) -> ElementOutcome -> OperationOption
-naryET op elm =
-    OperationOption
-        {nodeOutcome = OpManyElement op elm, shapeOutcome = ShapeDefault}
+naryET op elm = Normal (OpManyElement op elm) ShapeDefault
+
+-- | branch operation
+--
+conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
+conditionAry = Condition
 
 -- | Reconstruct
 --
@@ -176,9 +188,4 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
             InnerProd et _ _ ->
                 apply' (binaryET InnerProd (ElementSpecific et)) newChildren
             Piecewise marks _ _ ->
-                let mergedMap = IM.unions . map fst $ newChildren
-                    conditionArg = snd . head $ newChildren
-                    branches = map snd . tail $ newChildren
-                    shape = highestShape . tail $ newChildren
-                    node = Piecewise marks conditionArg branches
-                 in addEntry mergedMap (shape, node)
+                apply (conditionAry (Piecewise marks)) newChildren
