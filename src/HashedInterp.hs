@@ -6,8 +6,8 @@
 
 module HashedInterp where
 
-import Data.Array as A
-import Data.Complex as DC
+import Data.Array
+import Data.Complex
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
@@ -24,6 +24,8 @@ import HashedExpression
     , Two
     , Zero
     )
+import HashedNode
+import HashedPrettify (prettify, showExp)
 import HashedUtils
 
 -- |
@@ -82,6 +84,14 @@ expTwoC = flip Expression
 expThreeC :: ExpressionMap -> Int -> Expression Three C
 expThreeC = flip Expression
 
+-- | Choose branch base on condition value
+--
+chooseBranch :: [Double] -> Double -> [a] -> a
+chooseBranch marks val branches
+    | val < head marks = head branches
+    | otherwise =
+        snd . last . filter ((val >=) . fst) $ zip marks (tail branches)
+
 -- |
 --
 class Evaluable d rc output | d rc -> output where
@@ -123,8 +133,8 @@ instance Evaluable Zero R Double where
                 Asinh arg -> asinh (eval valMap (expZeroR mp arg))
                 Acosh arg -> acosh (eval valMap (expZeroR mp arg))
                 Atanh arg -> atanh (eval valMap (expZeroR mp arg))
-                RealPart arg -> DC.realPart (eval valMap (expZeroC mp arg))
-                ImagPart arg -> DC.imagPart (eval valMap (expZeroC mp arg))
+                RealPart arg -> realPart (eval valMap (expZeroC mp arg))
+                ImagPart arg -> imagPart (eval valMap (expZeroC mp arg))
                 InnerProd R arg1 arg2 ->
                     case retrieveShape arg1 mp of
                         [] ->
@@ -157,11 +167,18 @@ instance Evaluable Zero R Double where
                                     , let x = res1 ! (i, j, k)
                                     , let y = res2 ! (i, j, k)
                                     ]
-                _ -> error "expression structure Scalar R is wrong"
+                        _ -> error "4D shape?"
+                Piecewise marks conditionArg branchArgs ->
+                    let cdt = eval valMap $ expZeroR mp conditionArg
+                        branches = map (eval valMap . expZeroR mp) branchArgs
+                     in chooseBranch marks cdt branches
+                _ ->
+                    error
+                        ("expression structure Scalar R is wrong " ++ prettify e)
         | otherwise = error "one r but shape is not [] ??"
 
-instance Evaluable Zero C (DC.Complex Double) where
-    eval :: ValMaps -> Expression Zero C -> DC.Complex Double
+instance Evaluable Zero C (Complex Double) where
+    eval :: ValMaps -> Expression Zero C -> Complex Double
     eval valMap e@(Expression n mp)
         | [] <- retrieveShape n mp =
             case retrieveNode n mp of
@@ -211,7 +228,14 @@ instance Evaluable Zero C (DC.Complex Double) where
                                     , let x = res1 ! (i, j, k)
                                     , let y = res2 ! (i, j, k)
                                     ]
-                _ -> error "expression structure Scalar C is wrong"
+                        _ -> error "4D shape?"
+                Piecewise marks conditionArg branchArgs ->
+                    let cdt = eval valMap $ expZeroR mp conditionArg
+                        branches = map (eval valMap . expZeroC mp) branchArgs
+                     in chooseBranch marks cdt branches
+                _ ->
+                    error
+                        ("expression structure Scalar C is wrong " ++ prettify e)
         | otherwise = error "One C but shape is not [] ??"
 
 -- |
@@ -275,17 +299,26 @@ instance Evaluable One R (Array Int Double) where
                     Asinh arg -> fmap asinh . eval valMap $ expOneR mp arg
                     Acosh arg -> fmap acosh . eval valMap $ expOneR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
-                    RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expOneC mp arg
-                    ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expOneC mp arg
+                    RealPart arg -> fmap realPart . eval valMap $ expOneC mp arg
+                    ImagPart arg -> fmap imagPart . eval valMap $ expOneC mp arg
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expOneR mp conditionArg
+                            branches = map (eval valMap . expOneR mp) branchArgs
+                         in listArray
+                                (0, size - 1)
+                                [ chosen ! i
+                                | i <- [0 .. size - 1]
+                                , let chosen =
+                                          chooseBranch marks (cdt ! i) branches
+                                ]
                     _ -> error "expression structure One R is wrong"
         | otherwise = error "one r but shape is not [size] ??"
 
+--                         in chooseBranch marks cdt branches
 -- |
 --
-instance Evaluable One C (Array Int (DC.Complex Double)) where
-    eval :: ValMaps -> Expression One C -> Array Int (DC.Complex Double)
+instance Evaluable One C (Array Int (Complex Double)) where
+    eval :: ValMaps -> Expression One C -> Array Int (Complex Double)
     eval valMap e@(Expression n mp)
         | [size] <- retrieveShape n mp =
             let fmap :: (a -> b) -> Array Int a -> Array Int b
@@ -331,6 +364,16 @@ instance Evaluable One C (Array Int (DC.Complex Double)) where
                             (:+)
                             (eval valMap $ expOneR mp arg1)
                             (eval valMap $ expOneR mp arg2)
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expOneR mp conditionArg
+                            branches = map (eval valMap . expOneC mp) branchArgs
+                         in listArray
+                                (0, size - 1)
+                                [ chosen ! i
+                                | i <- [0 .. size - 1]
+                                , let chosen =
+                                          chooseBranch marks (cdt ! i) branches
+                                ]
                     _ -> error "expression structure One C is wrong"
         | otherwise = error "one C but shape is not [size] ??"
 
@@ -403,15 +446,27 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Asinh arg -> fmap asinh . eval valMap $ expTwoR mp arg
                     Acosh arg -> fmap acosh . eval valMap $ expTwoR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expTwoR mp arg
-                    RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expTwoC mp arg
-                    ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expTwoC mp arg
+                    RealPart arg -> fmap realPart . eval valMap $ expTwoC mp arg
+                    ImagPart arg -> fmap imagPart . eval valMap $ expTwoC mp arg
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expTwoR mp conditionArg
+                            branches = map (eval valMap . expTwoR mp) branchArgs
+                         in listArray
+                                ((0, 0), (size1 - 1, size2 - 1))
+                                [ chosen ! (i, j)
+                                | i <- [0 .. size1 - 1]
+                                , j <- [0 .. size2 - 1]
+                                , let chosen =
+                                          chooseBranch
+                                              marks
+                                              (cdt ! (i, j))
+                                              branches
+                                ]
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
-instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
-    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (DC.Complex Double)
+instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
+    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (Complex Double)
     eval valMap e@(Expression n mp)
         | [size1, size2] <- retrieveShape n mp =
             let fmap :: (a -> c) -> Array (Int, Int) a -> Array (Int, Int) c
@@ -465,6 +520,20 @@ instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
                             (:+)
                             (eval valMap $ expTwoR mp arg1)
                             (eval valMap $ expTwoR mp arg2)
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expTwoR mp conditionArg
+                            branches = map (eval valMap . expTwoC mp) branchArgs
+                         in listArray
+                                ((0, 0), (size1 - 1, size2 - 1))
+                                [ chosen ! (i, j)
+                                | i <- [0 .. size1 - 1]
+                                , j <- [0 .. size2 - 1]
+                                , let chosen =
+                                          chooseBranch
+                                              marks
+                                              (cdt ! (i, j))
+                                              branches
+                                ]
                     _ -> error "expression structure Two C is wrong"
         | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -543,17 +612,33 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                     Acosh arg -> fmap acosh . eval valMap $ expThreeR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expThreeR mp arg
                     RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expThreeC mp arg
+                        fmap realPart . eval valMap $ expThreeC mp arg
                     ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expThreeC mp arg
-                    _ -> error "expression structure Two R is wrong"
-        | otherwise = error "Two r but shape is not [size1, size2] ??"
+                        fmap imagPart . eval valMap $ expThreeC mp arg
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expThreeR mp conditionArg
+                            branches =
+                                map (eval valMap . expThreeR mp) branchArgs
+                         in listArray
+                                ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                                [ chosen ! (i, j, k)
+                                | i <- [0 .. size1 - 1]
+                                , j <- [0 .. size2 - 1]
+                                , k <- [0 .. size3 - 1]
+                                , let chosen =
+                                          chooseBranch
+                                              marks
+                                              (cdt ! (i, j, k))
+                                              branches
+                                ]
+                    _ -> error "expression structure Three R is wrong"
+        | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
-instance Evaluable Three C (Array (Int, Int, Int) (DC.Complex Double)) where
+instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
     eval ::
            ValMaps
         -> Expression Three C
-        -> Array (Int, Int, Int) (DC.Complex Double)
+        -> Array (Int, Int, Int) (Complex Double)
     eval valMap e@(Expression n mp)
         | [size1, size2, size3] <- retrieveShape n mp =
             let fmap ::
@@ -612,5 +697,21 @@ instance Evaluable Three C (Array (Int, Int, Int) (DC.Complex Double)) where
                             (:+)
                             (eval valMap $ expThreeR mp arg1)
                             (eval valMap $ expThreeR mp arg2)
-                    _ -> error "expression structure Two C is wrong"
-        | otherwise = error "Two C but shape is not [size1, size2] ??"
+                    Piecewise marks conditionArg branchArgs ->
+                        let cdt = eval valMap $ expThreeR mp conditionArg
+                            branches =
+                                map (eval valMap . expThreeC mp) branchArgs
+                         in listArray
+                                ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                                [ chosen ! (i, j, k)
+                                | i <- [0 .. size1 - 1]
+                                , j <- [0 .. size2 - 1]
+                                , k <- [0 .. size3 - 1]
+                                , let chosen =
+                                          chooseBranch
+                                              marks
+                                              (cdt ! (i, j, k))
+                                              branches
+                                ]
+                    _ -> error "expression structure Three C is wrong"
+        | otherwise = error "Three C but shape is not [size1, size2, size3] ??"

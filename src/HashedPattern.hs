@@ -18,9 +18,13 @@ module HashedPattern where
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import Debug.Trace (trace)
 import HashedExpression
+import HashedInner
 import HashedNode
+import HashedOperation
 import HashedUtils
+import qualified Prelude
 import Prelude hiding
     ( (*)
     , (+)
@@ -32,6 +36,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
+    , const
     , cos
     , cosh
     , exp
@@ -52,6 +57,9 @@ type ListCapture = Int
 --
 data PatternList =
     PListHole [Pattern -> Pattern] ListCapture
+
+instance Show PatternList where
+    show p = "Pattern List here"
 
 -- |
 --
@@ -87,6 +95,7 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
+    deriving (Show)
 
 instance AddableOp (Pattern) where
     (+) wh1 wh2 = PSum [wh1, wh2]
@@ -143,12 +152,13 @@ instance InnerProductSpaceOp (PatternList) (Pattern) (PatternList) where
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
-    GP (Pattern) (ExpressionMap -> Match -> Bool)
+    GP Pattern Condition
 
 -- | Helper to make pattern and replacement without condition
 --
 (|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
-(|.~~>) pattern replacement = (GP pattern $ const (const True), replacement)
+(|.~~>) pattern replacement =
+    (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
 infix 0 |.~~>, ~~>
 
@@ -156,11 +166,39 @@ infix 0 |.~~>, ~~>
 (~~>) gPattern replacement = (gPattern, replacement)
 
 (|.) :: Pattern -> Condition -> GuardedPattern
-(|.) pattern condition = GP pattern $ condition pattern
+(|.) pattern condition = GP pattern condition
 
 infixl 1 |.
 
-type Condition = Pattern -> ExpressionMap -> Match -> Bool
+type Condition = (ExpressionMap, Int) -> Match -> Bool
+
+-- |
+--
+isReal :: Pattern -> Condition
+isReal p exp match = retrieveElementType n mp == R
+  where
+    (mp, n) = buildFromPattern exp match p
+
+-- |
+--
+isComplex :: Pattern -> Condition
+isComplex p exp match = retrieveElementType n mp == C
+  where
+    (mp, n) = buildFromPattern exp match p
+
+-- |
+--
+isCovector :: Pattern -> Condition
+isCovector p exp match = retrieveElementType n mp == Covector
+  where
+    (mp, n) = buildFromPattern exp match p
+
+-- |
+--
+sameElementType :: [Pattern] -> Condition
+sameElementType ps exp match = allEqual . map getET $ ps
+  where
+    getET = uncurry (flip retrieveElementType) . buildFromPattern exp match
 
 -- |
 --
@@ -179,7 +217,7 @@ sum :: PatternList -> Pattern
 sum = PSumList
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
--- the inner actual node
+-- the inner actual nodes
 -- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
 --      matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
 --      matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
@@ -206,7 +244,7 @@ type Match = (Map Capture Int, Map ListCapture [Int])
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
-match (mp, n) wh =
+match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
         catMatch = foldl unionBoth (Map.empty, Map.empty)
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
@@ -215,7 +253,7 @@ match (mp, n) wh =
             , let subMatches = zipWith match (map (mp, ) args) whs
             , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
-     in case (retrieveNode n mp, wh) of
+     in case (retrieveNode n mp, outerWH) of
             (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
             (Const c, PConst whc)
                 | c == whc -> Just (Map.empty, Map.empty)
@@ -225,7 +263,7 @@ match (mp, n) wh =
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
-            (Neg _ arg, PNeg whs) -> recursiveAndCombine [arg] [wh]
+            (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Div arg1 arg2, PDiv wh1 wh2) ->
@@ -252,3 +290,70 @@ match (mp, n) wh =
             (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             _ -> Nothing
+
+turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
+turnToPattern fs nId = foldr ($) (PRef nId) fs
+
+buildFromPatternList ::
+       (ExpressionMap, Int) -> Match -> PatternList -> [(ExpressionMap, Int)]
+buildFromPatternList exp match (PListHole fs listCapture)
+    | Just ns <- Map.lookup listCapture (snd match) =
+        map (buildFromPattern exp match . turnToPattern fs) ns
+    | otherwise =
+        error
+            "ListCapture not in the Map ListCapture [Int] which should never happens"
+
+buildFromPattern ::
+       (ExpressionMap, Int) -> Match -> Pattern -> (ExpressionMap, Int)
+buildFromPattern exp@(originalMp, originalN) match@(capturesMap, _) =
+    buildFromPattern'
+  where
+    buildFromPattern' :: Pattern -> (ExpressionMap, Int)
+    buildFromPattern' pattern =
+        case pattern of
+            PRef nId -> (originalMp, nId)
+            PHole capture
+                | Just nId <- Map.lookup capture capturesMap ->
+                    (originalMp, nId)
+                | otherwise ->
+                    error
+                        "Capture not in the Map Capture Int which should never happens"
+            PConst pc ->
+                case retrieveShape originalN originalMp of
+                    [] -> unwrap $ const pc
+                    [size] -> unwrap $ const1d size pc
+                    [size1, size2] -> unwrap $ const2d (size1, size2) pc
+                    [size1, size2, size3] ->
+                        unwrap $ const3d (size1, size2, size3) pc
+                    _ -> error "Dimension > 3"
+            PSumList ptl -> sumMany . buildFromPatternList exp match $ ptl
+            PSum sps -> sumMany . map buildFromPattern' $ sps
+            PMul sps -> mulMany . map buildFromPattern' $ sps
+            PNeg sp -> apply (unaryET Neg ElementDefault) [buildFromPattern' sp]
+            PScale sp1 sp2 ->
+                apply (binaryET Scale ElementDefault) $
+                map buildFromPattern' [sp1, sp2]
+            PDiv sp1 sp2 ->
+                apply (binary Div) $ map buildFromPattern' [sp1, sp2]
+            PSqrt sp -> apply (unary Sqrt) [buildFromPattern' sp]
+            PSin sp -> apply (unary Sin) [buildFromPattern' sp]
+            PCos sp -> apply (unary Cos) [buildFromPattern' sp]
+            PTan sp -> apply (unary Tan) [buildFromPattern' sp]
+            PExp sp -> apply (unary Exp) [buildFromPattern' sp]
+            PLog sp -> apply (unary Log) [buildFromPattern' sp]
+            PSinh sp -> apply (unary Sinh) [buildFromPattern' sp]
+            PCosh sp -> apply (unary Cosh) [buildFromPattern' sp]
+            PTanh sp -> apply (unary Tanh) [buildFromPattern' sp]
+            PAsin sp -> apply (unary Asin) [buildFromPattern' sp]
+            PAcos sp -> apply (unary Acos) [buildFromPattern' sp]
+            PAtan sp -> apply (unary Atan) [buildFromPattern' sp]
+            PAsinh sp -> apply (unary Asinh) [buildFromPattern' sp]
+            PAcosh sp -> apply (unary Acosh) [buildFromPattern' sp]
+            PAtanh sp -> apply (unary Atanh) [buildFromPattern' sp]
+            PRealImag sp1 sp2 ->
+                apply (binary RealImag) $ map buildFromPattern' [sp1, sp2]
+            PRealPart sp -> apply (unary RealPart) [buildFromPattern' sp]
+            PImagPart sp -> apply (unary ImagPart) [buildFromPattern' sp]
+            PInnerProd sp1 sp2 ->
+                apply (binaryET InnerProd ElementDefault `hasShape` []) $
+                map buildFromPattern' [sp1, sp2]

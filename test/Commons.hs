@@ -1,13 +1,19 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Commons where
 
+import Control.Applicative (liftA2)
 import Control.Monad (forM)
+import Data.Array
+import Data.Complex
 import Data.Function.HT (nest)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
+import Data.Typeable (Typeable)
+import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
@@ -42,7 +48,6 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-import Control.Applicative (liftA2)
 
 -- |
 --
@@ -228,7 +233,62 @@ sum = fromJust . HashedOperation.sum
 product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 product = fromJust . HashedOperation.product
 
--- | Gen functions R
+-- |
+--
+inspect :: (Typeable d, Typeable rc) => Expression d rc -> Expression d rc
+inspect x =
+    unsafePerformIO $ do
+        showExp x
+        return x
+
+-- | Approximable class
+--
+class Approximable a where
+    (~=) :: a -> a -> Bool
+
+infix 4 ~=
+
+instance Approximable Double where
+    (~=) :: Double -> Double -> Bool
+    a ~= b
+        | a == b = True
+        | otherwise = relativeError a b < 0.001
+
+instance Approximable (Complex Double) where
+    (~=) :: Complex Double -> Complex Double -> Bool
+    a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
+
+instance Approximable (Array Int Double) where
+    (~=) :: Array Int Double -> Array Int Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array Int (Complex Double)) where
+    (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int) Double) where
+    (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int) (Complex Double)) where
+    (~=) ::
+           Array (Int, Int) (Complex Double)
+        -> Array (Int, Int) (Complex Double)
+        -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int, Int) Double) where
+    (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int, Int) (Complex Double)) where
+    (~=) ::
+           Array (Int, Int, Int) (Complex Double)
+        -> Array (Int, Int, Int) (Complex Double)
+        -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+-- | MARK: Gen functions R
 --
 primitiveZeroR :: Gen (Expression Zero R, [String])
 primitiveZeroR = do
@@ -236,15 +296,17 @@ primitiveZeroR = do
     dbl <- arbitrary
     elements [(var name, [name]), (const dbl, [])]
 
+operandR :: Gen (Expression Zero R, [String])
+operandR
+    -- 70% getting a primitive, 30% get a nested
+ = oneof $ replicate 7 primitiveZeroR ++ replicate 3 genZeroR
+
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
     -> Gen (Expression Zero R, [String])
 fromNaryZeroR f = do
     numOperands <- elements [3 .. 6]
-    -- 90% getting a primitive, 10% probably get a nested expression
-    ons <-
-        vectorOf numOperands $
-        oneof (replicate 9 primitiveZeroR ++ replicate 1 genZeroR)
+    ons <- vectorOf numOperands operandR
     let exp = f . map fst $ ons
         names = removeDuplicate . concatMap snd $ ons
     return (exp, names)
@@ -253,7 +315,7 @@ fromUnaryZeroR ::
        (Expression Zero R -> Expression Zero R)
     -> Gen (Expression Zero R, [String])
 fromUnaryZeroR f = do
-    on <- genZeroR
+    on <- operandR
     let exp = f . fst $ on
         names = snd on
     return (exp, names)
@@ -262,8 +324,8 @@ fromBinaryZeroR ::
        (Expression Zero R -> Expression Zero R -> Expression Zero R)
     -> Gen (Expression Zero R, [String])
 fromBinaryZeroR f = do
-    on1 <- genZeroR
-    on2 <- genZeroR
+    on1 <- operandR
+    on2 <- operandR
     let exp = f (fst on1) (fst on2)
         names = removeDuplicate $ snd on1 ++ snd on2
     return (exp, names)
@@ -271,28 +333,31 @@ fromBinaryZeroR f = do
 genZeroR :: Gen (Expression Zero R, [String])
 genZeroR = do
     let nary = map fromNaryZeroR [sum, product]
-        binary = map fromBinaryZeroR [(*.)]
+        binary = map fromBinaryZeroR [(*.), (+), (-), (<.>)]
         unary = map fromUnaryZeroR [negate]
     oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
 
--- | Gen functions C
+-- | MARK: Gen functions C
 --
 primitiveZeroC :: Gen (Expression Zero C, [String])
 primitiveZeroC = do
     name1 <- elements . map pure $ ['a' .. 'z']
     name2 <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
-    elements [(var name1 +: var name2, [name1, name2]), (const dbl +: const 0, [])]
+    elements
+        [(var name1 +: var name2, [name1, name2]), (const dbl +: const 0, [])]
+
+operandC :: Gen (Expression Zero C, [String])
+operandC
+    -- 70% getting a primitive, 30% get a nested
+ = oneof $ replicate 7 primitiveZeroC ++ replicate 3 genZeroC
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
     -> Gen (Expression Zero C, [String])
 fromNaryZeroC f = do
     numOperands <- elements [3 .. 6]
-    -- 90% getting a primitive, 10% probably get a nested expression
-    ons <-
-        vectorOf numOperands $
-        oneof (replicate 9 primitiveZeroC ++ replicate 1 genZeroC)
+    ons <- vectorOf numOperands operandC
     let exp = f . map fst $ ons
         names = removeDuplicate . concatMap snd $ ons
     return (exp, names)
@@ -301,7 +366,7 @@ fromUnaryZeroC ::
        (Expression Zero C -> Expression Zero C)
     -> Gen (Expression Zero C, [String])
 fromUnaryZeroC f = do
-    on <- genZeroC
+    on <- operandC
     let exp = f . fst $ on
         names = snd on
     return (exp, names)
@@ -310,17 +375,23 @@ fromBinaryZeroC ::
        (Expression Zero C -> Expression Zero C -> Expression Zero C)
     -> Gen (Expression Zero C, [String])
 fromBinaryZeroC f = do
-    on1 <- genZeroC
-    on2 <- genZeroC
+    on1 <- operandC
+    on2 <- operandC
     let exp = f (fst on1) (fst on2)
+        names = removeDuplicate $ snd on1 ++ snd on2
+    return (exp, names)
+
+fromRealImagZeroC :: Gen (Expression Zero C, [String])
+fromRealImagZeroC = do
+    on1 <- genZeroR
+    on2 <- genZeroR
+    let exp = fst on1 +: fst on2
         names = removeDuplicate $ snd on1 ++ snd on2
     return (exp, names)
 
 genZeroC :: Gen (Expression Zero C, [String])
 genZeroC = do
     let nary = map fromNaryZeroC [sum, product]
-        binary = map fromBinaryZeroC [(*.)]
+        binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
         unary = map fromUnaryZeroC [negate]
---        fromReal = liftA2 (+:) genZeroR genZeroR
-    oneof ([primitiveZeroC] ++ nary ++ binary ++ unary)
-
+    oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)

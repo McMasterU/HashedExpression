@@ -3,13 +3,21 @@
 
 module HashedPrettify
     ( prettify
+    , showExp
     ) where
 
 import Data.List (intercalate)
 import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression
+import HashedNode
 import HashedUtils
+
+showExp ::
+       forall d rc. (Typeable d, Typeable rc)
+    => Expression d rc
+    -> IO ()
+showExp = putStrLn . prettify
 
 prettify ::
        forall d rc. (Typeable d, Typeable rc)
@@ -94,3 +102,22 @@ hiddenPrettify e@(Expression n mp) =
             InnerProd et arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
+            Piecewise marks conditionArg branches ->
+                let appendedMarks = ("-∞" : map show marks) ++ ["+∞"]
+                    intervals = zip appendedMarks (tail appendedMarks)
+                    cases = zip intervals branches
+                    printCase ((left, right), val) =
+                        T.concat
+                            [ "\n    ("
+                            , T.pack left
+                            , ", "
+                            , T.pack right
+                            , ") -> "
+                            , innerPrettify val
+                            ]
+                 in T.concat
+                        [ "case "
+                        , wrapParentheses $ innerPrettify conditionArg
+                        , " in "
+                        , T.intercalate "" $ map printCase cases
+                        ]

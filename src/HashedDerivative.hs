@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TupleSections #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -18,6 +19,7 @@ import Data.Typeable (Typeable)
 import HashedExpression
 import HashedHash
 import HashedInner
+import HashedNode
 import HashedOperation
 import HashedUtils
 import Prelude hiding
@@ -107,7 +109,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
          in applyBinary (binary opType) df1 df2
     res =
         case node
-                -- dx = dx
+                -- dx = dx if x is in vars, otherwise 0
               of
             Var name ->
                 let node =
@@ -255,6 +257,11 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     g = Expression arg2 mp :: Expression D_ NT_
                     dg = hiddenDerivative' g :: Expression D_ Covector
                  in coerce $ f |<.>| dg + g |<.>| df
+            Piecewise marks conditionArg branches ->
+                let conditionExp = Expression conditionArg mp :: Expression D_ R
+                    branchExps = map (flip Expression mp) branches
+                 in piecewise marks conditionExp $
+                    map hiddenDerivative' branchExps
 
 -- | Wise-multiply a number with a covector
 --

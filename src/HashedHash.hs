@@ -67,6 +67,10 @@ instance HasHash Node where
             ImagPart arg -> (1 + argHash [arg]) * 227
             RealImag arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
             InnerProd et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3187
+            -- MARK: Piecewise
+            Piecewise marks arg branches ->
+                (1 + argHash (foldr moveBase 0 (show marks) : arg : branches)) *
+                269
 
 -- |
 --
@@ -87,12 +91,12 @@ hashOutcome mp new newHash =
 
 -- |
 --
-addEdge :: ExpressionMap -> Internal -> (ExpressionMap, Int)
-addEdge mp e =
+addEntry :: ExpressionMap -> Internal -> (ExpressionMap, Int)
+addEntry mp e =
     case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
         (IsDuplicate h:_) -> (mp, h)
         (IsNew h:_) -> (IM.insert h e mp, h)
-        _ -> error "addEdge everything clashed!"
+        _ -> error "addEntry everything clashed!"
 
 fromNode :: Internal -> (ExpressionMap, Int)
 fromNode e = (mp, h)

@@ -57,8 +57,15 @@ type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
 chain :: [a -> a] -> a -> a
 chain = flip $ foldl (|>)
 
+-- | Apply maximum k times, or stop if the expression doesn't change
+--
 multipleTimes :: Int -> Simplification -> Simplification
-multipleTimes = nest
+multipleTimes k smp exp = go (k - 1) exp (smp exp)
+  where
+    go 0 _ curExp = curExp
+    go k lastExp curExp
+        | snd lastExp == snd curExp = curExp
+        | otherwise = go (k - 1) curExp (smp curExp)
 
 -- | Simplify an expression
 --
@@ -66,16 +73,17 @@ simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
 simplify e =
     let applyRules =
-            (multipleTimes 10 . makeRecursive $
-             scaleRules >>>
-             zeroOneRules >>>
-             groupConstantsRules >>>
-             dotProductRules >>>
-             exponentRules >>>
-             combineTermsRules >>>
-             complexNumRules >>> distributiveRules >>> reduceSumProdRules) >>>
-            removeUnreachable
-     in wrap . applyRules . unwrap $ e
+            multipleTimes 100 $
+            zeroOneRules >>>
+            scaleRules >>>
+            dotProductRules >>>
+            exponentRules >>>
+            complexNumRules >>>
+            distributiveRules >>>
+            (makeRecursive reduceSumProdRules) >>>
+            (makeRecursive groupConstantsRules) >>>
+            (makeRecursive combineTermsRules)
+     in wrap . removeUnreachable . applyRules . unwrap $ e
 
 -- | Rules with zero and one
 --
@@ -87,21 +95,24 @@ zeroOneRules =
     , x * one |.~~> x
     , zero * x |.~~> zero
     , x * zero |.~~> zero
-    , zero *. x |.~~> zero
+    , zero *. x |. isReal x ~~> zero
+    , zero *. x |. isComplex x ~~> zero +: zero
     , x *. zero |.~~> zero
     , one *. x |.~~> x
     , x + zero |.~~> x
     , zero + x |.~~> x
     , (x <.> zero) |.~~> zero
     , zero <.> x |.~~> zero
+    , negate zero |.~~> zero
+    , negate (negate x) |.~~> x
     ]
 
 scaleRules =
     makeRecursive . chain . map fromPattern $
-    [ x *. (y *. z) |.~~> (x * y) *. z
+    [ x *. (y *. z) |. sameElementType [x, y] ~~> (x * y) *. z
     , negate (s *. x) |.~~> s *. negate (x)
-    , xRe (s *. x) |.~~> s *. xRe (x)
-    , xIm (s *. x) |.~~> s *. xIm (x)
+    , xRe (s *. x) |. isReal s ~~> s *. xRe (x)
+    , xIm (s *. x) |. isReal s ~~> s *. xIm (x)
     ]
 
 -- | Rules with complex operation
@@ -112,7 +123,7 @@ complexNumRules =
     [ xRe (x +: y) |.~~> x
     , xIm (x +: y) |.~~> y
     , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
-    , s *. (x +: y) |.~~> (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
+    , s *. (x +: y) |. isReal s ~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
@@ -121,9 +132,7 @@ complexNumRules =
 dotProductRules :: Simplification
 dotProductRules =
     makeRecursive . chain . map fromPattern $
-    [ (s *. x) <.> y |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-    , x <.> (s *. y) |.~~> s * (x <.> y) -- TB,CD,RF: *. --> * (FIX) 27/05/2015.
-    ]
+    [(s *. x) <.> y |.~~> s * (x <.> y), x <.> (s *. y) |.~~> s * (x <.> y)]
 
 -- | Rules of distributive over sum
 --
@@ -155,6 +164,8 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
                 | length ns == 1 -> (mp, head ns)
+                -- to make sure filter (not . isZero mp) ns is not empty
+                | all (isZero mp) ns -> aConst (retrieveShape n mp) 0
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
@@ -167,6 +178,8 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
                 | length ns == 1 -> (mp, head ns)
+                -- to make sure filter (not . isOne mp) ns is not empty
+                | all (isOne mp) ns -> aConst (retrieveShape n mp) 1
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->
@@ -237,81 +250,18 @@ removeUnreachable (mp, n) =
 -- | Turn HashedPattern to a simplification
 --
 fromPattern :: (GuardedPattern, Pattern) -> Simplification
-fromPattern pt@(GP pattern condition, replacementPattern) ex@(originalMp, originalN)
-    | Just match <- match ex pattern
-    , condition originalMp match =
-        let (capturesMap, listCapturesMap) = match
-            turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
-            turnToPattern fs nId = foldr ($) (PRef nId) fs
-            buildFromPatternList :: PatternList -> [(ExpressionMap, Int)]
-            buildFromPatternList (PListHole fs listCapture)
-                | Just ns <- Map.lookup listCapture listCapturesMap =
-                    map (buildFromPattern . turnToPattern fs) ns
-                | otherwise =
-                    error
-                        "ListCapture not in the Map ListCapture [Int] which should never happens"
-            buildFromPattern :: Pattern -> (ExpressionMap, Int)
-            buildFromPattern pattern =
-                case pattern of
-                    PRef nId -> (originalMp, nId)
-                    PHole capture
-                        | Just nId <- Map.lookup capture capturesMap ->
-                            (originalMp, nId)
-                        | otherwise ->
-                            error
-                                "Capture not in the Map Capture Int which should never happens"
-                    PConst pc ->
-                        case retrieveShape originalN originalMp of
-                            [] -> unwrap $ const pc
-                            [size] -> unwrap $ const1d size pc
-                            [size1, size2] -> unwrap $ const2d (size1, size2) pc
-                            [size1, size2, size3] ->
-                                unwrap $ const3d (size1, size2, size3) pc
-                            _ -> error "Dimension > 3"
-                    PSumList ptl -> sumMany . buildFromPatternList $ ptl
-                    PSum sps -> sumMany . map buildFromPattern $ sps
-                    PMul sps -> mulMany . map buildFromPattern $ sps
-                    PNeg sp ->
-                        apply (unaryET Neg ElementDefault) [buildFromPattern sp]
-                    PScale sp1 sp2 ->
-                        apply (binaryET Scale ElementDefault) $
-                        map buildFromPattern [sp1, sp2]
-                    PDiv sp1 sp2 ->
-                        apply (binary Div) $ map buildFromPattern [sp1, sp2]
-                    PSqrt sp -> apply (unary Sqrt) [buildFromPattern sp]
-                    PSin sp -> apply (unary Sin) [buildFromPattern sp]
-                    PCos sp -> apply (unary Cos) [buildFromPattern sp]
-                    PTan sp -> apply (unary Tan) [buildFromPattern sp]
-                    PExp sp -> apply (unary Exp) [buildFromPattern sp]
-                    PLog sp -> apply (unary Log) [buildFromPattern sp]
-                    PSinh sp -> apply (unary Sinh) [buildFromPattern sp]
-                    PCosh sp -> apply (unary Cosh) [buildFromPattern sp]
-                    PTanh sp -> apply (unary Tanh) [buildFromPattern sp]
-                    PAsin sp -> apply (unary Asin) [buildFromPattern sp]
-                    PAcos sp -> apply (unary Acos) [buildFromPattern sp]
-                    PAtan sp -> apply (unary Atan) [buildFromPattern sp]
-                    PAsinh sp -> apply (unary Asinh) [buildFromPattern sp]
-                    PAcosh sp -> apply (unary Acosh) [buildFromPattern sp]
-                    PAtanh sp -> apply (unary Atanh) [buildFromPattern sp]
-                    PRealImag sp1 sp2 ->
-                        apply (binary RealImag) $
-                        map buildFromPattern [sp1, sp2]
-                    PRealPart sp -> apply (unary RealPart) [buildFromPattern sp]
-                    PImagPart sp -> apply (unary ImagPart) [buildFromPattern sp]
-                    PInnerProd sp1 sp2 ->
-                        apply (binaryET InnerProd ElementDefault `hasShape` []) $
-                        map buildFromPattern [sp1, sp2]
-         in buildFromPattern replacementPattern
-    | otherwise = (originalMp, originalN)
+fromPattern pt@(GP pattern condition, replacementPattern) exp
+    | Just match <- match exp pattern
+    , condition exp match = buildFromPattern exp match replacementPattern
+    | otherwise = exp
 
--- | Turn a simplification to a recursive one, that is if the rule can't apply to the root node, then apply to it's children
+-- | Turn a simplification to a recursive one, apply rules bottom up
 --
 makeRecursive :: Simplification -> Simplification
-makeRecursive smp exp@(mp, n)
-    | newExp@(_, newN) <- smp exp
-    , n /= newN = newExp
-    | otherwise =
-        let shape = retrieveShape n mp
-            simplifiedChildren =
-                map smp . map (mp, ) . nodeArgs $ retrieveNode n mp
-         in reconstruct exp simplifiedChildren
+makeRecursive smp = recursiveSmp
+  where
+    recursiveSmp :: Simplification
+    recursiveSmp exp@(mp, n) =
+        let children = nodeArgs $ retrieveNode n mp
+            simplifiedChildren = map recursiveSmp . map (mp, ) $ children
+         in smp $ reconstruct exp simplifiedChildren

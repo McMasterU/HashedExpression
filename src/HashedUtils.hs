@@ -8,6 +8,7 @@ import HashedNode
 
 import Data.Complex
 import Data.Maybe
+import GHC.IO.Unsafe (unsafePerformIO)
 
 -- | Forward pipe operator in Elm
 --
@@ -27,56 +28,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
--- | Auxiliary functions for operations
---
-retrieveNode :: Int -> ExpressionMap -> Node
-retrieveNode n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "node not in map"
-
-retrieveInternal :: Int -> ExpressionMap -> Internal
-retrieveInternal n mp =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "node not in map"
-
-retrieveElementType :: Int -> ExpressionMap -> ET
-retrieveElementType n mp =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-retrieveShape :: Int -> ExpressionMap -> Shape
-retrieveShape n mp =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionElementType :: Expression d et -> ET
-expressionElementType (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> nodeElementType node
-        _ -> error "expression not in map"
-
-expressionShape :: Expression d et -> Shape
-expressionShape (Expression n mp) =
-    case IM.lookup n mp of
-        Just (dim, _) -> dim
-        _ -> error "expression not in map"
-
-expressionInternal :: Expression d et -> Internal
-expressionInternal (Expression n mp) =
-    case IM.lookup n mp of
-        Just internal -> internal
-        _ -> error "expression not in map"
-
-expressionNode :: Expression d et -> Node
-expressionNode (Expression n mp) =
-    case IM.lookup n mp of
-        Just (_, node) -> node
-        _ -> error "expression not in map"
-
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after
     | expressionShape e1 == expressionShape e2 = after
@@ -86,6 +37,12 @@ ensureSameShapeList :: [Expression d et] -> a -> a
 ensureSameShapeList es after
     | allEqual es = after
     | otherwise = error "Ensure same shape failed"
+
+constWithShape :: Shape -> Double -> Expression d R
+constWithShape shape val = Expression h (IM.fromList [(h, node)])
+  where
+    node = (shape, Const val)
+    h = hash node
 
 pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
 pullConstant mp n
