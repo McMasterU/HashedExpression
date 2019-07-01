@@ -73,6 +73,6 @@ zero = const 0
 
 main = do
     let f = huber 3 (x + y)
-    showExp $ f
-    showExp $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
-    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
+    showExp f
+    showExp $ exteriorDerivative (Set.fromList ["x", "y"]) f
+    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) f

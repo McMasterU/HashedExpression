@@ -62,10 +62,6 @@ chain = flip $ foldl (|>)
 multipleTimes :: Int -> Simplification -> Simplification
 multipleTimes k smp exp = go (k - 1) exp (smp exp)
   where
-    go :: Int
-       -> (ExpressionMap, Int)
-       -> (ExpressionMap, Int)
-       -> (ExpressionMap, Int)
     go 0 _ curExp = curExp
     go k lastExp curExp
         | snd lastExp == snd curExp = curExp

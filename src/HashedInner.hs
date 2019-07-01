@@ -65,11 +65,11 @@ apply (Normal nodeOutcome shapeOutcome) exps =
         shape =
             case shapeOutcome of
                 ShapeSpecific s -> s
-                ShapeDefault -> highestShape exps
+                _ -> highestShape exps
         elementType elementOutcome =
             case elementOutcome of
                 ElementSpecific et -> et
-                ElementDefault -> highestElementType exps
+                _ -> highestElementType exps
         node =
             case (nodeOutcome, map snd exps) of
                 (OpOne op, [arg]) -> op arg
