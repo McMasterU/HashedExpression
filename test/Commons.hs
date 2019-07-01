@@ -46,6 +46,8 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
+import Data.Typeable (Typeable)
+import GHC.IO.Unsafe (unsafePerformIO)
 
 -- |
 --
@@ -231,6 +233,14 @@ sum = fromJust . HashedOperation.sum
 product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 product = fromJust . HashedOperation.product
 
+-- |
+--
+
+inspect :: (Typeable d, Typeable rc) => Expression d rc -> Expression d rc
+inspect x =
+    unsafePerformIO $ do
+        showExp x
+        return x
 
 -- | Approximable class
 --
@@ -248,7 +258,7 @@ instance Approximable Double where
 
 instance Approximable (Complex Double) where
     (~=) :: Complex Double -> Complex Double -> Bool
-    a ~= b = (realPart a ~= realPart b) && (imagPart a ~= realPart b)
+    a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
 
 instance Approximable (Array Int Double) where
     (~=) :: Array Int Double -> Array Int Double -> Bool

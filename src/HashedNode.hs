@@ -13,7 +13,7 @@ nodeElementType node mp =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
-        Neg _ _ -> R
+        Neg et _ -> et
         Scale et _ _ -> et
         Div _ _ -> R
         Sqrt _ -> R

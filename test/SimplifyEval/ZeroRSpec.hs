@@ -95,9 +95,9 @@ prop_Add (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplif
 
 prop_Multiply :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplify2, simplifyMul) =
-    eval (emptyVms |> withVm0 valMap) exp1' *
-    eval (emptyVms |> withVm0 valMap) exp2' ~=
-    eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expMul'
+    if lhs ~= rhs
+        then True
+        else error (show lhs ++ " not equal " ++ show rhs)
   where
     valMap = valMap1 `union` valMap2
     exp1' =
@@ -112,6 +112,10 @@ prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, si
         if simplifyMul
             then simplify (exp1 * exp2)
             else exp1 * exp2
+    lhs =
+        eval (emptyVms |> withVm0 valMap) exp1' *
+        eval (emptyVms |> withVm0 valMap) exp2'
+    rhs = eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expMul'
 
 prop_AddMultiply :: SuiteZeroR -> Bool
 prop_AddMultiply (SuiteZeroR exp valMap) =

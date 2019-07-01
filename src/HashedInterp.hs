@@ -26,6 +26,7 @@ import HashedExpression
     )
 import HashedNode
 import HashedUtils
+import HashedPrettify (showExp, prettify)
 
 -- |
 --
@@ -171,7 +172,7 @@ instance Evaluable Zero R Double where
                     let cdt = eval valMap $ expZeroR mp conditionArg
                         branches = map (eval valMap . expZeroR mp) branchArgs
                      in chooseBranch marks cdt branches
-                _ -> error "expression structure Scalar R is wrong"
+                _ -> error ("expression structure Scalar R is wrong " ++ prettify e)
         | otherwise = error "one r but shape is not [] ??"
 
 instance Evaluable Zero C (Complex Double) where
@@ -230,7 +231,7 @@ instance Evaluable Zero C (Complex Double) where
                     let cdt = eval valMap $ expZeroR mp conditionArg
                         branches = map (eval valMap . expZeroC mp) branchArgs
                      in chooseBranch marks cdt branches
-                _ -> error "expression structure Scalar C is wrong"
+                _ -> error ("expression structure Scalar C is wrong " ++ prettify e)
         | otherwise = error "One C but shape is not [] ??"
 
 -- |

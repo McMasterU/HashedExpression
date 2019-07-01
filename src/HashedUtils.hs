@@ -60,10 +60,6 @@ isZero mp nId
     | Const 0 <- retrieveNode nId mp = True
     | otherwise = False
 
-inspect :: Show a => a -> a
-inspect x = unsafePerformIO $ do
-    print x
-    return x
 
 isOne :: ExpressionMap -> Int -> Bool
 isOne mp nId

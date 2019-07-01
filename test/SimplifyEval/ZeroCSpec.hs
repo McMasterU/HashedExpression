@@ -3,6 +3,8 @@ module SimplifyEval.ZeroCSpec where
 import Commons
 import Data.Map.Strict
 import Data.Maybe (fromJust)
+import Data.Typeable (Typeable)
+import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
@@ -38,7 +40,6 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-
 
 -- |
 --
