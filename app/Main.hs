@@ -71,14 +71,8 @@ import Test.QuickCheck hiding (scale)
 
 zero = const 0
 
-main
---    let f = huber 3 (x + y)
---    showExp $ f
---    showExp $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
---    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
- = do
-    print "Hello World"
-    let exp1 = (zero + e + (zero <.> zero))
-    let exp2 = z * zero * zero
-    let exp = simplify $ exp1 + exp2
-    showExp $ exp
+main = do
+    let f = huber 3 (x + y)
+    showExp $ f
+    showExp $ exteriorDerivative (Set.fromList ["x", "y"]) $ f
+    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) $ f

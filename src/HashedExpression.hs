@@ -145,8 +145,6 @@ class ComplexRealOp r c | r -> c, c -> r where
 class InnerProductSpaceOp a b c | a b -> c where
     (<.>) :: a -> b -> c
 
-class HuberOp a where
-    huber :: Double -> a -> a
 
 infixl 6 +, -
 

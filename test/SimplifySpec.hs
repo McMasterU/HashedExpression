@@ -108,6 +108,10 @@ spec = do
             simplify (x *. (y *. v)) `shouldBe` (x * y) *. v
             simplify (xRe (x *. xc)) `shouldBe` simplify (x *. xRe xc)
             simplify (xIm (x *. xc)) `shouldBe` simplify (x *. xIm xc)
+        specify "negate rules" $ do
+            simplify (negate (negate x)) `shouldBe` x
+            simplify (negate (negate (x + y))) `shouldBe` x + y
+            simplify (negate zero) `shouldBe` zero
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             simplify (x1 * one1) `shouldBe` x1

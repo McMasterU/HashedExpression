@@ -107,6 +107,7 @@ zeroOneRules =
     , (x <.> zero) |.~~> zero
     , zero <.> x |.~~> zero
     , negate zero |.~~> zero
+    , negate (negate x) |.~~> x
     ]
 
 scaleRules =

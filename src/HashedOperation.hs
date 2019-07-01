@@ -153,8 +153,6 @@ instance (DimensionType d) =>
         let op = unary ImagPart
          in applyUnary op
 
--- | Element-wise division for R
---
 -- | NumOp for R
 --
 instance (DimensionType d) => NumOp (Expression d R) where
@@ -177,6 +175,9 @@ instance (DimensionType d) => NumOp (Expression d R) where
         let op = binary Div
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
+
+-- | inner product
+--
 instance (InnerProductSpace d s) =>
          InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Zero s) where
     (<.>) :: Expression d s -> Expression d s -> Expression Zero s
@@ -187,19 +188,19 @@ instance (InnerProductSpace d s) =>
                 scalarShape
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
--- | TODO - HuberOp type class is necessary ???
+-- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss
 --
-instance (DimensionType d) => HuberOp (Expression d R) where
-    huber :: Double -> Expression d R -> Expression d R
-    huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
-      where
-        deltaVector =
-            constWithShape (expressionShape e) (delta * delta) :: Expression d R
-        inRange = const 0.5 *. (e * e)
-        lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
-        largerThan = e * deltaVector - const 0.5 *. deltaVector
+huber :: (DimensionType d) => Double -> Expression d R -> Expression d R
+huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
+  where
+    deltaVector =
+        constWithShape (expressionShape e) (delta * delta) :: Expression d R
+    inRange = const 0.5 *. (e * e)
+    lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
+    largerThan = e * deltaVector - const 0.5 *. deltaVector
 
--- |
+-- | Piecewise, with a condition expression and branch expressions
+-- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
 piecewise ::
        (DimensionType d)
@@ -207,8 +208,10 @@ piecewise ::
     -> Expression d R
     -> [Expression d et]
     -> Expression d et
-piecewise marks = applyConditionAry (conditionAry (Piecewise marks))
-
+piecewise marks conditionExp branchExps =
+    guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
+  where
+    guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
 
 -- | Prelude version of * and +
 --
@@ -217,6 +220,10 @@ times a b = Prelude.product [a, b]
 
 plus :: (Num a) => a -> a -> a
 plus a b = Prelude.sum [a, b]
+
+
+-- | Our instance of operation of built-in types likes Int, Double
+--
 
 instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
     (+) = plus
