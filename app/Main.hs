@@ -93,7 +93,9 @@ main
 --    showExp $ exteriorDerivative (Set.fromList ["x", "y"]) f
 --    showExp $ simplify $ exteriorDerivative (Set.fromList ["x", "y"]) f
  = do
-    let f = (((const 1.0327603950665392+: const 0.0)*.(d+:p))+((const 1.0327603950665392+:const 0.0)*.(d+:p)))
+    let f =
+            (((const 1.0327603950665392 +: const 0.0) *. (d +: p)) +
+             ((const 1.0327603950665392 +: const 0.0) *. (d +: p)))
 --    print $
 --        eval (emptyVms |> withVm0 (fromList [("h", 1), ("o", 1)])) $ f + f
     showExp f

@@ -10,10 +10,10 @@
 module HashedOperation where
 
 import Data.IntMap.Strict (fromList, union, unions)
-import HashedNode
 import HashedExpression
 import HashedHash
 import HashedInner
+import HashedNode
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -89,7 +89,6 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
   where
     node = ([size1, size2, size3], Const val)
     h = hash node
-
 
 -- | Element-wise sum
 --
@@ -175,7 +174,6 @@ instance (DimensionType d) => NumOp (Expression d R) where
         let op = binary Div
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
-
 -- | inner product
 --
 instance (InnerProductSpace d s) =>
@@ -209,9 +207,12 @@ piecewise ::
     -> [Expression d et]
     -> Expression d et
 piecewise marks conditionExp branchExps =
-    guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
+    guard $
+    applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
   where
-    guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
+    guard =
+        ensureSameShapeList branchExps .
+        ensureSameShape conditionExp (head branchExps)
 
 -- | Prelude version of * and +
 --
@@ -221,10 +222,8 @@ times a b = Prelude.product [a, b]
 plus :: (Num a) => a -> a -> a
 plus a b = Prelude.sum [a, b]
 
-
 -- | Our instance of operation of built-in types likes Int, Double
 --
-
 instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
     (+) = plus
     negate = Prelude.negate

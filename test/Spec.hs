@@ -1,5 +1,5 @@
-import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
 import qualified SimplifyEval.ZeroCSpec as ZeroCSpec
+import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
 import qualified SimplifySpec
 import Test.Hspec
 

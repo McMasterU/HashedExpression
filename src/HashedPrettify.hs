@@ -13,8 +13,6 @@ import HashedExpression
 import HashedNode
 import HashedUtils
 
-
-
 showExp ::
        forall d rc. (Typeable d, Typeable rc)
     => Expression d rc
@@ -105,8 +103,7 @@ hiddenPrettify e@(Expression n mp) =
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "<.>", innerPrettify arg2]
             Piecewise marks conditionArg branches ->
-                let appendedMarks =
-                        ("-∞" : map show marks) ++ ["+∞"]
+                let appendedMarks = ("-∞" : map show marks) ++ ["+∞"]
                     intervals = zip appendedMarks (tail appendedMarks)
                     cases = zip intervals branches
                     printCase ((left, right), val) =

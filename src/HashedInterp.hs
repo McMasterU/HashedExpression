@@ -25,8 +25,8 @@ import HashedExpression
     , Zero
     )
 import HashedNode
+import HashedPrettify (prettify, showExp)
 import HashedUtils
-import HashedPrettify (showExp, prettify)
 
 -- |
 --
@@ -172,7 +172,9 @@ instance Evaluable Zero R Double where
                     let cdt = eval valMap $ expZeroR mp conditionArg
                         branches = map (eval valMap . expZeroR mp) branchArgs
                      in chooseBranch marks cdt branches
-                _ -> error ("expression structure Scalar R is wrong " ++ prettify e)
+                _ ->
+                    error
+                        ("expression structure Scalar R is wrong " ++ prettify e)
         | otherwise = error "one r but shape is not [] ??"
 
 instance Evaluable Zero C (Complex Double) where
@@ -231,7 +233,9 @@ instance Evaluable Zero C (Complex Double) where
                     let cdt = eval valMap $ expZeroR mp conditionArg
                         branches = map (eval valMap . expZeroC mp) branchArgs
                      in chooseBranch marks cdt branches
-                _ -> error ("expression structure Scalar C is wrong " ++ prettify e)
+                _ ->
+                    error
+                        ("expression structure Scalar C is wrong " ++ prettify e)
         | otherwise = error "One C but shape is not [] ??"
 
 -- |
@@ -295,10 +299,8 @@ instance Evaluable One R (Array Int Double) where
                     Asinh arg -> fmap asinh . eval valMap $ expOneR mp arg
                     Acosh arg -> fmap acosh . eval valMap $ expOneR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
-                    RealPart arg ->
-                        fmap realPart . eval valMap $ expOneC mp arg
-                    ImagPart arg ->
-                        fmap imagPart . eval valMap $ expOneC mp arg
+                    RealPart arg -> fmap realPart . eval valMap $ expOneC mp arg
+                    ImagPart arg -> fmap imagPart . eval valMap $ expOneC mp arg
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expOneR mp conditionArg
                             branches = map (eval valMap . expOneR mp) branchArgs
@@ -444,10 +446,8 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Asinh arg -> fmap asinh . eval valMap $ expTwoR mp arg
                     Acosh arg -> fmap acosh . eval valMap $ expTwoR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expTwoR mp arg
-                    RealPart arg ->
-                        fmap realPart . eval valMap $ expTwoC mp arg
-                    ImagPart arg ->
-                        fmap imagPart . eval valMap $ expTwoC mp arg
+                    RealPart arg -> fmap realPart . eval valMap $ expTwoC mp arg
+                    ImagPart arg -> fmap imagPart . eval valMap $ expTwoC mp arg
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expTwoR mp conditionArg
                             branches = map (eval valMap . expTwoR mp) branchArgs

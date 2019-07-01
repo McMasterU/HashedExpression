@@ -13,13 +13,13 @@ module HashedDerivative
 
 import qualified Data.IntMap.Strict as IM
 import Data.List.HT (removeEach)
-import HashedNode
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import HashedExpression
 import HashedHash
 import HashedInner
+import HashedNode
 import HashedOperation
 import HashedUtils
 import Prelude hiding
@@ -65,7 +65,6 @@ data D_
 --
 data NT_
     deriving (Typeable, ElementType, NumType)
-
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -121,7 +120,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in Expression h newMap
                 -- dc = 0
             DVar name ->
-                error "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
+                error
+                    "Haven't deal with 1-form yet, only 0-form to 1-form, but this shouldn't be in Expression d R"
             Const _ ->
                 let node = Const 0
                     (newMap, h) = fromNode (shape, node)
@@ -260,8 +260,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
             Piecewise marks conditionArg branches ->
                 let conditionExp = Expression conditionArg mp :: Expression D_ R
                     branchExps = map (flip Expression mp) branches
-                 in piecewise marks conditionExp  $ map hiddenDerivative' branchExps
-
+                 in piecewise marks conditionExp $
+                    map hiddenDerivative' branchExps
 
 -- | Wise-multiply a number with a covector
 --

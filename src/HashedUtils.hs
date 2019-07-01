@@ -28,7 +28,6 @@ allEqual xs = and $ zipWith (==) (safeTail xs) xs
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after
     | expressionShape e1 == expressionShape e2 = after
@@ -59,7 +58,6 @@ isZero :: ExpressionMap -> Int -> Bool
 isZero mp nId
     | Const 0 <- retrieveNode nId mp = True
     | otherwise = False
-
 
 isOne :: ExpressionMap -> Int -> Bool
 isOne mp nId

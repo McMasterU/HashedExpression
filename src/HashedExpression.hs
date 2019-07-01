@@ -145,7 +145,6 @@ class ComplexRealOp r c | r -> c, c -> r where
 class InnerProductSpaceOp a b c | a b -> c where
     (<.>) :: a -> b -> c
 
-
 infixl 6 +, -
 
 infixl 7 *
@@ -235,5 +234,3 @@ data Node
     -- MARK: Piecewise
     | Piecewise [Double] ConditionArg [BranchArg]
     deriving (Show, Eq, Ord)
-
-

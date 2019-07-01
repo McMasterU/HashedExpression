@@ -12,6 +12,8 @@ import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
+import Data.Typeable (Typeable)
+import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
@@ -46,8 +48,6 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-import Data.Typeable (Typeable)
-import GHC.IO.Unsafe (unsafePerformIO)
 
 -- |
 --
@@ -235,7 +235,6 @@ product = fromJust . HashedOperation.product
 
 -- |
 --
-
 inspect :: (Typeable d, Typeable rc) => Expression d rc -> Expression d rc
 inspect x =
     unsafePerformIO $ do
@@ -244,7 +243,6 @@ inspect x =
 
 -- | Approximable class
 --
-
 class Approximable a where
     (~=) :: a -> a -> Bool
 
@@ -273,7 +271,10 @@ instance Approximable (Array (Int, Int) Double) where
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 instance Approximable (Array (Int, Int) (Complex Double)) where
-    (~=) :: Array (Int, Int) (Complex Double) -> Array (Int, Int) (Complex Double) -> Bool
+    (~=) ::
+           Array (Int, Int) (Complex Double)
+        -> Array (Int, Int) (Complex Double)
+        -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 instance Approximable (Array (Int, Int, Int) Double) where
@@ -281,7 +282,10 @@ instance Approximable (Array (Int, Int, Int) Double) where
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
-    (~=) :: Array (Int, Int, Int) (Complex Double) -> Array (Int, Int, Int) (Complex Double) -> Bool
+    (~=) ::
+           Array (Int, Int, Int) (Complex Double)
+        -> Array (Int, Int, Int) (Complex Double)
+        -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 -- | MARK: Gen functions R
