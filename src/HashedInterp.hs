@@ -6,8 +6,8 @@
 
 module HashedInterp where
 
-import Data.Array as A
-import Data.Complex as DC
+import Data.Array
+import Data.Complex
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
@@ -86,10 +86,10 @@ expThreeC = flip Expression
 -- | Choose branch base on condition value
 --
 chooseBranch :: [Double] -> Double -> [a] -> a
-chooseBranch marks val branches =
-    snd . last . filter ((val >) . fst) $ zip (-oo : marks) branches
-  where
-    oo = 9e100
+chooseBranch marks val branches
+    | val < head marks = head branches
+    | otherwise =
+        snd . last . filter ((val >=) . fst) $ zip marks (tail branches)
 
 -- |
 --
@@ -132,8 +132,8 @@ instance Evaluable Zero R Double where
                 Asinh arg -> asinh (eval valMap (expZeroR mp arg))
                 Acosh arg -> acosh (eval valMap (expZeroR mp arg))
                 Atanh arg -> atanh (eval valMap (expZeroR mp arg))
-                RealPart arg -> DC.realPart (eval valMap (expZeroC mp arg))
-                ImagPart arg -> DC.imagPart (eval valMap (expZeroC mp arg))
+                RealPart arg -> realPart (eval valMap (expZeroC mp arg))
+                ImagPart arg -> imagPart (eval valMap (expZeroC mp arg))
                 InnerProd R arg1 arg2 ->
                     case retrieveShape arg1 mp of
                         [] ->
@@ -174,8 +174,8 @@ instance Evaluable Zero R Double where
                 _ -> error "expression structure Scalar R is wrong"
         | otherwise = error "one r but shape is not [] ??"
 
-instance Evaluable Zero C (DC.Complex Double) where
-    eval :: ValMaps -> Expression Zero C -> DC.Complex Double
+instance Evaluable Zero C (Complex Double) where
+    eval :: ValMaps -> Expression Zero C -> Complex Double
     eval valMap e@(Expression n mp)
         | [] <- retrieveShape n mp =
             case retrieveNode n mp of
@@ -295,9 +295,9 @@ instance Evaluable One R (Array Int Double) where
                     Acosh arg -> fmap acosh . eval valMap $ expOneR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
                     RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expOneC mp arg
+                        fmap realPart . eval valMap $ expOneC mp arg
                     ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expOneC mp arg
+                        fmap imagPart . eval valMap $ expOneC mp arg
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expOneR mp conditionArg
                             branches = map (eval valMap . expOneR mp) branchArgs
@@ -314,8 +314,8 @@ instance Evaluable One R (Array Int Double) where
 --                         in chooseBranch marks cdt branches
 -- |
 --
-instance Evaluable One C (Array Int (DC.Complex Double)) where
-    eval :: ValMaps -> Expression One C -> Array Int (DC.Complex Double)
+instance Evaluable One C (Array Int (Complex Double)) where
+    eval :: ValMaps -> Expression One C -> Array Int (Complex Double)
     eval valMap e@(Expression n mp)
         | [size] <- retrieveShape n mp =
             let fmap :: (a -> b) -> Array Int a -> Array Int b
@@ -444,9 +444,9 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Acosh arg -> fmap acosh . eval valMap $ expTwoR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expTwoR mp arg
                     RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expTwoC mp arg
+                        fmap realPart . eval valMap $ expTwoC mp arg
                     ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expTwoC mp arg
+                        fmap imagPart . eval valMap $ expTwoC mp arg
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expTwoR mp conditionArg
                             branches = map (eval valMap . expTwoR mp) branchArgs
@@ -464,8 +464,8 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
-instance Evaluable Two C (Array (Int, Int) (DC.Complex Double)) where
-    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (DC.Complex Double)
+instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
+    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (Complex Double)
     eval valMap e@(Expression n mp)
         | [size1, size2] <- retrieveShape n mp =
             let fmap :: (a -> c) -> Array (Int, Int) a -> Array (Int, Int) c
@@ -611,9 +611,9 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                     Acosh arg -> fmap acosh . eval valMap $ expThreeR mp arg
                     Atanh arg -> fmap atanh . eval valMap $ expThreeR mp arg
                     RealPart arg ->
-                        fmap DC.realPart . eval valMap $ expThreeC mp arg
+                        fmap realPart . eval valMap $ expThreeC mp arg
                     ImagPart arg ->
-                        fmap DC.imagPart . eval valMap $ expThreeC mp arg
+                        fmap imagPart . eval valMap $ expThreeC mp arg
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expThreeR mp conditionArg
                             branches =
@@ -633,11 +633,11 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                     _ -> error "expression structure Three R is wrong"
         | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
-instance Evaluable Three C (Array (Int, Int, Int) (DC.Complex Double)) where
+instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
     eval ::
            ValMaps
         -> Expression Three C
-        -> Array (Int, Int, Int) (DC.Complex Double)
+        -> Array (Int, Int, Int) (Complex Double)
     eval valMap e@(Expression n mp)
         | [size1, size2, size3] <- retrieveShape n mp =
             let fmap ::

@@ -1,4 +1,4 @@
-module SimplifyEval.ZeroRSpec where
+module SimplifyEval.ZeroCSpec where
 
 import Commons
 import Data.Map.Strict
@@ -39,13 +39,14 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
+
 -- |
 --
-data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) (Map String Double)
+data SuiteZeroC =
+    SuiteZeroC (Expression Zero C) (Map String Double)
 
-instance Show SuiteZeroR where
-    show (SuiteZeroR e valMap) =
+instance Show SuiteZeroC where
+    show (SuiteZeroC e valMap) =
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
@@ -57,24 +58,24 @@ instance Show SuiteZeroR where
         evalExp = eval (emptyVms |> withVm0 valMap) e
         evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
 
-instance Arbitrary SuiteZeroR where
+instance Arbitrary SuiteZeroC where
     arbitrary = do
-        (exp, names) <- genZeroR
+        (exp, names) <- genZeroC
         doubles <- vectorOf (length names) arbitrary
         let valMap = fromList $ zip names doubles
-        return $ SuiteZeroR exp valMap
+        return $ SuiteZeroC exp valMap
 
 -- |
 --
-prop_SimplifyThenEval :: SuiteZeroR -> Bool
-prop_SimplifyThenEval (SuiteZeroR exp valMap) =
+prop_SimplifyThenEval :: SuiteZeroC -> Bool
+prop_SimplifyThenEval (SuiteZeroC exp valMap) =
     eval (emptyVms |> withVm0 valMap) exp ~=
     eval (emptyVms |> withVm0 valMap) (simplify exp)
 
 -- |
 --
-prop_Add :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplify2, simplifySum) =
+prop_Add :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
+prop_Add (SuiteZeroC exp1 valMap1) (SuiteZeroC exp2 valMap2) (simplify1, simplify2, simplifySum) =
     eval (emptyVms |> withVm0 valMap) exp1' +
     eval (emptyVms |> withVm0 valMap) exp2' ~=
     eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expSum'
@@ -93,8 +94,8 @@ prop_Add (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplif
             then simplify (exp1 + exp2)
             else exp1 + exp2
 
-prop_Multiply :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplify2, simplifyMul) =
+prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
+prop_Multiply (SuiteZeroC exp1 valMap1) (SuiteZeroC exp2 valMap2) (simplify1, simplify2, simplifyMul) =
     eval (emptyVms |> withVm0 valMap) exp1' *
     eval (emptyVms |> withVm0 valMap) exp2' ~=
     eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expMul'
@@ -113,14 +114,14 @@ prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, si
             then simplify (exp1 * exp2)
             else exp1 * exp2
 
-prop_AddMultiply :: SuiteZeroR -> Bool
-prop_AddMultiply (SuiteZeroR exp valMap) =
+prop_AddMultiply :: SuiteZeroC -> Bool
+prop_AddMultiply (SuiteZeroC exp valMap) =
     eval (emptyVms |> withVm0 valMap) (simplify (exp + exp)) ~=
-    eval (emptyVms |> withVm0 valMap) (simplify (exp * const 2))
+    eval (emptyVms |> withVm0 valMap) (simplify (const 2 *. exp))
 
 spec :: Spec
 spec =
-    describe "simplify & eval property for Zero R" $ do
+    describe "simplify & eval property for Zero C" $ do
         specify "evaluate must equals simplify then evaluate " $
             property prop_SimplifyThenEval
         specify "prop_Add" $ property prop_Add
