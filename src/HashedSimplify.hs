@@ -81,6 +81,7 @@ simplify e =
             complexNumRules >>>
             distributiveRules >>>
             piecewiseRules >>>
+            otherRules >>>
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules)
@@ -152,8 +153,7 @@ distributiveRules =
 piecewiseRules :: Simplification
 piecewiseRules =
     makeRecursive . chain . map fromPattern $
-    [piecewise condition branches |. allTheSame branches ~~> headOf branches
-    ]
+    [piecewise condition branches |. allTheSame branches ~~> headOf branches]
 
 -- | Rules of exponent and log
 --
@@ -161,6 +161,11 @@ exponentRules :: Simplification
 exponentRules =
     makeRecursive . chain . map fromPattern $
     [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
+
+-- |
+--
+otherRules :: Simplification
+otherRules = makeRecursive . chain . map fromPattern $ [sqrt (x * x) |.~~> x]
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --

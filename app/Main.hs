@@ -41,13 +41,17 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
---    let f = rotate (2, 3) (x2 + y2)
---    showExp f
---    showExp $ exteriorDerivative (Set.fromList ["X2", "Y2"]) f
---    let f = piecewise [-3, 3] x [x + const 3, x + const 3, x + const 3]
---    showExp f
---    showExp . simplify $ f
-    let f = huber 3 (x * x + y * y)
---    showExp f
-    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"])$ f
+    let hbb = huber2 3 (x * x + y * y)
+    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
 
+--    showExp . simplify $ sqrt (x * x)
+--    let g = x * x
+--        f = piecewise [1] g [sqrt g, (one + g) / const 2]
+--    let hb = huber 1 x
+--    putStrLn "f:"
+--    showExp . simplify $ f
+--    putStrLn "df:"
+--    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ f
+--    putStrLn "f(x):"
+--    print . eval (emptyVms |> withVm0 (fromList [("x", 2)])) $ f
+--    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"] $ hb

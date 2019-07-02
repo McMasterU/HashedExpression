@@ -28,6 +28,7 @@ import Prelude hiding
     , atanh
     , const
     , cos
+    , sqrt
     , cosh
     , exp
     , negate
@@ -196,6 +197,14 @@ huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
     inRange = const 0.5 *. (e * e)
     lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
     largerThan = e * deltaVector - const 0.5 *. deltaVector
+
+huber2 :: (DimensionType d) => Double -> Expression d R -> Expression d R
+huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
+  where
+    deltaVector =
+        constWithShape (expressionShape e) (delta * delta) :: Expression d R
+    lessThan = sqrt (e * e)
+    largerThan = const 0.5 *. (e * e + deltaVector)
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
