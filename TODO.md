@@ -4,8 +4,5 @@
 - [] Add rotate
     - Discuss cases that could happen
     - Simplification rules
-    
-- Shift 1 [a b c] --> [0 a b]
-- Rotate 1 [a b c] --> [c a b]
-
+- [] Add a function: given an expression, determine if it is just a constant "x" and not depends on any variable
 

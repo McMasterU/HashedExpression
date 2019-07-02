@@ -74,8 +74,8 @@ data Pattern
     | PSum [Pattern]
     | PMul [Pattern]
     | PNeg Pattern
-    | PScale (Pattern) Pattern
-    | PDiv (Pattern) Pattern
+    | PScale Pattern Pattern
+    | PDiv Pattern Pattern
     | PSqrt Pattern
     | PSin Pattern
     | PCos Pattern
@@ -95,6 +95,7 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
+
     deriving (Show)
 
 instance AddableOp (Pattern) where

@@ -41,6 +41,10 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let f = rotate (2, 3) (x2 + y2)
+--    let f = rotate (2, 3) (x2 + y2)
+--    showExp f
+--    showExp $ exteriorDerivative (Set.fromList ["X2", "Y2"]) f
+    let f = rotate 2 (x1 * y1)
     showExp f
+    showExp $ exteriorDerivative (Set.fromList ["X1", "Y1"]) f
 --    showExp $ simplify f
