@@ -80,6 +80,7 @@ simplify e =
             exponentRules >>>
             complexNumRules >>>
             distributiveRules >>>
+            piecewiseRules >>>
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules)
@@ -144,6 +145,14 @@ distributiveRules =
     , x <.> sum (each) |.~~> sum (x <.> each)
     , sum (each) <.> x |.~~> sum (x <.> each)
     , x *. sum (each) |.~~> sum (x *. each)
+    ]
+
+-- | Rules of piecewise
+--
+piecewiseRules :: Simplification
+piecewiseRules =
+    makeRecursive . chain . map fromPattern $
+    [piecewise condition branches |. allTheSame branches ~~> headOf branches
     ]
 
 -- | Rules of exponent and log

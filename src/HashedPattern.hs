@@ -57,18 +57,24 @@ type ListCapture = Int
 --
 data PatternList =
     PListHole [Pattern -> Pattern] ListCapture
+    deriving (Show)
 
-instance Show PatternList where
+instance Show (Pattern -> Pattern) where
     show p = "Pattern List here"
 
+-- GOAL:
+--    piecewise condition branches |. allTheSame branches ~~> headOf branches
 -- |
 --
 data Pattern
     = PHole Capture
+    -- Ref to a node in the expression
+    | PRef Int
+    -- Ref to head of the list captures e.g: ListCapture(2) -> [2132, 34512, 4542],
+    -- then PHead (tranformations) 2 ---> transformation 2132
+    | PHead [Pattern -> Pattern] ListCapture
     -- MARK: For list capture
     | PSumList PatternList
-     -- Ref to a node in the expression
-    | PRef Int
     -- MARK: Reflex Node in HashedExpression
     | PConst Double
     | PSum [Pattern]
@@ -95,7 +101,7 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
-
+    | PPiecewise Pattern PatternList
     deriving (Show)
 
 instance AddableOp (Pattern) where
@@ -203,7 +209,15 @@ sameElementType ps exp match = allEqual . map getET $ ps
 
 -- |
 --
-[p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
+allTheSame :: PatternList -> Condition
+allTheSame pl@(PListHole _ listCapture) exp match
+    | Just nIds <- Map.lookup listCapture . listCapturesMap $ match =
+        allEqual nIds
+    | otherwise = False
+
+-- |
+--
+[p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
 one :: Pattern
 one = PConst 1
@@ -216,6 +230,17 @@ each = PListHole [] 1
 
 sum :: PatternList -> Pattern
 sum = PSumList
+
+-- |
+--
+piecewise :: Pattern -> PatternList -> Pattern
+piecewise = PPiecewise
+
+branches :: PatternList
+branches = PListHole [] 2
+
+headOf :: PatternList -> Pattern
+headOf (PListHole trans listCapture) = PHead trans listCapture
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes
@@ -239,11 +264,17 @@ matchList mp ns (PListHole fs listCapture)
     nIds subMatches =
         catMaybes . map (Map.lookup uniqueCapture . capturesMap) $ subMatches
 
-data Match = Match {capturesMap:: Map Capture Int, listCapturesMap:: Map ListCapture [Int]}
+data Match =
+    Match
+        { capturesMap :: Map Capture Int
+        , listCapturesMap :: Map ListCapture [Int]
+        }
 
 unionMatch :: Match -> Match -> Match
 unionMatch match1 match2 =
-    Match (capturesMap match1 `union` capturesMap match2) (listCapturesMap match1 `union` listCapturesMap match2)
+    Match
+        (capturesMap match1 `union` capturesMap match2)
+        (listCapturesMap match1 `union` listCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
@@ -259,12 +290,14 @@ match (mp, n) outerWH =
             , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, outerWH) of
-            (_, PHole capture) -> Just $ Match (Map.fromList [(capture, n)]) Map.empty
+            (_, PHole capture) ->
+                Just $ Match (Map.fromList [(capture, n)]) Map.empty
             (Const c, PConst whc)
                 | c == whc -> Just $ Match Map.empty Map.empty
-            (Sum _ args, PSumList pl@(PListHole fs listCapture))
+            (Sum _ args, PSumList pl@(PListHole _ listCapture))
                 | Just innerArgs <- matchList mp args pl ->
-                    Just $ Match Map.empty (Map.fromList [(listCapture, innerArgs)])
+                    Just $
+                    Match Map.empty (Map.fromList [(listCapture, innerArgs)])
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
@@ -294,6 +327,15 @@ match (mp, n) outerWH =
             (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
             (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (Piecewise _ conditionArg branchArgs, PPiecewise wh pl@(PListHole _ listCapture))
+                | Just innerArgs <- matchList mp branchArgs pl
+                , Just (Match cMap lcMap) <-
+                     recursiveAndCombine [conditionArg] [wh] ->
+                    Just $
+                    Match
+                        cMap
+                        (lcMap `union` (Map.fromList [(listCapture, innerArgs)]))
+                | otherwise -> Nothing
             _ -> Nothing
 
 turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
@@ -310,8 +352,7 @@ buildFromPatternList exp match (PListHole fs listCapture)
 
 buildFromPattern ::
        (ExpressionMap, Int) -> Match -> Pattern -> (ExpressionMap, Int)
-buildFromPattern exp@(originalMp, originalN) match =
-    buildFromPattern'
+buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
     buildFromPattern' :: Pattern -> (ExpressionMap, Int)
     buildFromPattern' pattern =
@@ -323,6 +364,10 @@ buildFromPattern exp@(originalMp, originalN) match =
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
+            PHead fs listCapture
+                | Just ns <- Map.lookup listCapture (listCapturesMap match)
+                , let pt = turnToPattern fs . head $ ns -> buildFromPattern' pt
+                | otherwise -> error "ListCapture not in the Map ListCapture [Int] which should never happens"
             PConst pc ->
                 case retrieveShape originalN originalMp of
                     [] -> unwrap $ const pc
@@ -362,3 +407,6 @@ buildFromPattern exp@(originalMp, originalN) match =
             PInnerProd sp1 sp2 ->
                 apply (binaryET InnerProd ElementDefault `hasShape` []) $
                 map buildFromPattern' [sp1, sp2]
+            PPiecewise _ _ ->
+                error
+                    "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"

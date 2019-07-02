@@ -31,12 +31,14 @@ fromR x = x :+ 0
 ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
 ensureSameShape e1 e2 after
     | expressionShape e1 == expressionShape e2 = after
-    | otherwise = error "Ensure same shape failed"
+    | otherwise =
+        error $ "Ensure same shape failed " ++
+        show (expressionShape e1) ++ " " ++ show (expressionShape e2)
 
 ensureSameShapeList :: [Expression d et] -> a -> a
 ensureSameShapeList es after
-    | allEqual es = after
-    | otherwise = error "Ensure same shape failed"
+    | allEqual (map expressionShape es) = after
+    | otherwise = error $ "Ensure same shape failed " ++ show (map expressionShape es)
 
 constWithShape :: Shape -> Double -> Expression d R
 constWithShape shape val = Expression h (IM.fromList [(h, node)])
