@@ -235,11 +235,15 @@ matchList mp ns (PListHole fs listCapture)
     pt = foldr ($) eachHole fs
     matchOne nId = match (mp, nId) pt
     maybeSubMatches = map matchOne ns
-    otherCaptures = Map.delete uniqueCapture . fst
+    otherCaptures = Map.delete uniqueCapture . capturesMap
     nIds subMatches =
-        catMaybes . map (Map.lookup uniqueCapture . fst) $ subMatches
+        catMaybes . map (Map.lookup uniqueCapture . capturesMap) $ subMatches
 
-type Match = (Map Capture Int, Map ListCapture [Int])
+data Match = Match {capturesMap:: Map Capture Int, listCapturesMap:: Map ListCapture [Int]}
+
+unionMatch :: Match -> Match -> Match
+unionMatch match1 match2 =
+    Match (capturesMap match1 `union` capturesMap match2) (listCapturesMap match1 `union` listCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
@@ -247,7 +251,7 @@ type Match = (Map Capture Int, Map ListCapture [Int])
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
-        catMatch = foldl unionBoth (Map.empty, Map.empty)
+        catMatch = foldl unionMatch (Match Map.empty Map.empty)
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
@@ -255,12 +259,12 @@ match (mp, n) outerWH =
             , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, outerWH) of
-            (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
+            (_, PHole capture) -> Just $ Match (Map.fromList [(capture, n)]) Map.empty
             (Const c, PConst whc)
-                | c == whc -> Just (Map.empty, Map.empty)
+                | c == whc -> Just $ Match Map.empty Map.empty
             (Sum _ args, PSumList pl@(PListHole fs listCapture))
                 | Just innerArgs <- matchList mp args pl ->
-                    Just (Map.empty, Map.fromList [(listCapture, innerArgs)])
+                    Just $ Match Map.empty (Map.fromList [(listCapture, innerArgs)])
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
@@ -298,7 +302,7 @@ turnToPattern fs nId = foldr ($) (PRef nId) fs
 buildFromPatternList ::
        (ExpressionMap, Int) -> Match -> PatternList -> [(ExpressionMap, Int)]
 buildFromPatternList exp match (PListHole fs listCapture)
-    | Just ns <- Map.lookup listCapture (snd match) =
+    | Just ns <- Map.lookup listCapture (listCapturesMap match) =
         map (buildFromPattern exp match . turnToPattern fs) ns
     | otherwise =
         error
@@ -306,7 +310,7 @@ buildFromPatternList exp match (PListHole fs listCapture)
 
 buildFromPattern ::
        (ExpressionMap, Int) -> Match -> Pattern -> (ExpressionMap, Int)
-buildFromPattern exp@(originalMp, originalN) match@(capturesMap, _) =
+buildFromPattern exp@(originalMp, originalN) match =
     buildFromPattern'
   where
     buildFromPattern' :: Pattern -> (ExpressionMap, Int)
@@ -314,7 +318,7 @@ buildFromPattern exp@(originalMp, originalN) match@(capturesMap, _) =
         case pattern of
             PRef nId -> (originalMp, nId)
             PHole capture
-                | Just nId <- Map.lookup capture capturesMap ->
+                | Just nId <- Map.lookup capture (capturesMap match) ->
                     (originalMp, nId)
                 | otherwise ->
                     error
