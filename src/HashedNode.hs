@@ -36,6 +36,7 @@ nodeElementType node mp =
         ImagPart _ -> R -- extract imaginary part
         InnerProd et _ _ -> et
         Piecewise _ _ branches -> retrieveElementType (head branches) mp
+        Rotate _ arg -> retrieveElementType arg mp
 
 -- | Get list of arguments of this node
 --
@@ -70,6 +71,7 @@ nodeArgs node =
         ImagPart arg -> [arg]
         InnerProd _ arg1 arg2 -> [arg1, arg2]
         Piecewise _ conditionArg branches -> conditionArg : branches
+        Rotate _ arg -> [arg]
 
 -- | Auxiliary functions for operations
 --

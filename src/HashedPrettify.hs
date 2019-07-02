@@ -121,3 +121,9 @@ hiddenPrettify e@(Expression n mp) =
                         , " in "
                         , T.intercalate "" $ map printCase cases
                         ]
+            Rotate amount arg ->
+                T.concat
+                    [ "rotate"
+                    , T.pack . show $ amount
+                    , wrapParentheses $ innerPrettify arg
+                    ]

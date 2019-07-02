@@ -71,6 +71,8 @@ instance HasHash Node where
             Piecewise marks arg branches ->
                 (1 + argHash (foldr moveBase 0 (show marks) : arg : branches)) *
                 269
+            -- MARK: Rotate
+            Rotate amount arg -> (1 + argHash (arg : amount)) * 593
 
 -- |
 --

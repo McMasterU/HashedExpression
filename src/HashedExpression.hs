@@ -145,6 +145,9 @@ class ComplexRealOp r c | r -> c, c -> r where
 class InnerProductSpaceOp a b c | a b -> c where
     (<.>) :: a -> b -> c
 
+class RotateOp k a | a -> k where
+    rotate :: k -> a -> a
+
 infixl 6 +, -
 
 infixl 7 *
@@ -167,6 +170,8 @@ type Arg = Int
 type ConditionArg = Int
 
 type BranchArg = Int
+
+type RotateAmount = [Int]
 
 -- | Data representation of element type
 --
@@ -233,4 +238,5 @@ data Node
     | InnerProd ET Arg Arg
     -- MARK: Piecewise
     | Piecewise [Double] ConditionArg [BranchArg]
+    | Rotate RotateAmount Arg
     deriving (Show, Eq, Ord)
