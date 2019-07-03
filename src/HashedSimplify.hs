@@ -291,3 +291,52 @@ makeRecursive smp = recursiveSmp
         let children = nodeArgs $ retrieveNode n mp
             simplifiedChildren = map recursiveSmp . map (mp, ) $ children
          in smp $ reconstruct exp simplifiedChildren
+
+-- | Reconstruct
+--
+reconstruct ::
+       (ExpressionMap, Int) -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+reconstruct oldExp@(oldMp, oldN) newChildren =
+    let (oldShape, oldNode) = retrieveInternal oldN oldMp
+        apply' option = apply (option `hasShape` oldShape) -- keep the old shape
+     in case oldNode of
+            Var _ -> oldExp
+            DVar _ -> oldExp
+            Const _ -> oldExp
+            Sum et _ ->
+                apply' (naryET Sum (ElementSpecific et)) $ sortArgs newChildren
+            Mul et _ ->
+                apply' (naryET Mul (ElementSpecific et)) $ sortArgs newChildren
+            Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) newChildren
+            Scale et _ _ ->
+                apply' (binaryET Scale (ElementSpecific et)) newChildren
+            Div _ _ -> apply' (binary Div) newChildren
+            Sqrt _ -> apply' (unary Sqrt) newChildren
+            Sin _ -> apply' (unary Sin) newChildren
+            Cos _ -> apply' (unary Cos) newChildren
+            Tan _ -> apply' (unary Tan) newChildren
+            Exp _ -> apply' (unary Exp) newChildren
+            Log _ -> apply' (unary Log) newChildren
+            Sinh _ -> apply' (unary Sinh) newChildren
+            Cosh _ -> apply' (unary Cosh) newChildren
+            Tanh _ -> apply' (unary Tanh) newChildren
+            Asin _ -> apply' (unary Asin) newChildren
+            Acos _ -> apply' (unary Acos) newChildren
+            Atan _ -> apply' (unary Atan) newChildren
+            Asinh _ -> apply' (unary Asinh) newChildren
+            Acosh _ -> apply' (unary Acosh) newChildren
+            Atanh _ -> apply' (unary Atanh) newChildren
+            RealImag _ _ -> apply' (binary RealImag) newChildren
+            RealPart _ -> apply' (unary RealPart) newChildren
+            ImagPart _ -> apply' (unary ImagPart) newChildren
+            InnerProd et _ _ ->
+                apply' (binaryET InnerProd (ElementSpecific et)) newChildren
+            Piecewise marks _ _ ->
+                apply (conditionAry (Piecewise marks)) newChildren
+            Rotate amount _ -> apply (unary (Rotate amount)) newChildren
+
+sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
+sortArgs = concat . map sortByHash . groupBy nodeType
+  where
+    nodeType (mp1, n1) (mp2, n2) = True
+    sortByHash = id
