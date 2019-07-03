@@ -73,6 +73,7 @@ hiddenPrettify e@(Expression n mp) =
             Mul _ args ->
                 wrapParentheses . T.intercalate "*" . map innerPrettify $ args
             Neg _ arg -> T.concat ["-", wrapParentheses $ innerPrettify arg]
+
             Scale _ arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "*.", innerPrettify arg2]
@@ -127,3 +128,6 @@ hiddenPrettify e@(Expression n mp) =
                     , T.pack . show $ amount
                     , wrapParentheses $ innerPrettify arg
                     ]
+            Power x arg ->
+                            wrapParentheses . T.concat $
+                            [innerPrettify arg, "^", T.pack $ show x]

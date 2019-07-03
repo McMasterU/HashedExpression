@@ -25,6 +25,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -113,6 +114,9 @@ class AddableOp a where
 
 class MultiplyOp a b c | a b -> c where
     (*) :: a -> b -> c
+
+class PowerOp a where
+    (^) :: a -> Double -> a
 
 class VectorSpaceOp a b where
     scale :: a -> b -> b
@@ -211,6 +215,7 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | Power Double Arg
     | Neg ET Arg
     | Scale ET Arg Arg
     -- MARK: only apply to R

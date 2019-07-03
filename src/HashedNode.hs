@@ -13,6 +13,7 @@ nodeElementType node mp =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
+        Power _ _ -> R
         Neg et _ -> et
         Scale et _ _ -> et
         Div _ _ -> R
@@ -45,6 +46,7 @@ sameOp node1 node2 =
     case (node1, node2) of
         (Sum {}, Sum {}) -> True
         (Mul {}, Mul {}) -> True
+        (Power {}, Power {}) -> True
         (Neg {}, Neg {}) -> True
         (Scale {}, Scale {}) -> True
         (Div {}, Div {}) -> True
@@ -81,6 +83,7 @@ nodeArgs node =
         Const _ -> []
         Sum _ args -> args
         Mul _ args -> args
+        Power _ arg -> [arg]
         Neg _ arg -> [arg]
         Scale _ arg1 arg2 -> [arg1, arg2]
         Div arg1 arg2 -> [arg1, arg2]

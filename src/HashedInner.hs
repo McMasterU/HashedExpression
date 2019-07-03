@@ -96,6 +96,7 @@ mulMany = apply $ naryET Mul ElementDefault
 sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 sumMany = apply $ naryET Sum ElementDefault
 
+
 -- |
 --
 hasShape :: OperationOption -> Shape -> OperationOption

@@ -16,6 +16,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -41,8 +42,8 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let hbb = huber2 3 (x * x + y * y)
-    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
+--    let hbb = huber2 3 (x * x + y * y)
+--    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
 --    showExp . simplify $ sqrt (x * x)
 --    let g = x * x
 --        f = piecewise [1] g [sqrt g, (one + g) / const 2]
@@ -54,3 +55,6 @@ main = do
 --    putStrLn "f(x):"
 --    print . eval (emptyVms |> withVm0 (fromList [("x", 2)])) $ f
 --    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"] $ hb
+      let a = (const 2 * x) ^ 3
+      showExp a
+      showExp . exteriorDerivative (Set.fromList ["x","y"]) $ simplify a

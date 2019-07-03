@@ -307,6 +307,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
                 apply' (naryET Sum (ElementSpecific et)) $ sortArgs newChildren
             Mul et _ ->
                 apply' (naryET Mul (ElementSpecific et)) $ sortArgs newChildren
+            Power x _ -> apply' (unary (Power x)) newChildren
             Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) newChildren
             Scale et _ _ ->
                 apply' (binaryET Scale (ElementSpecific et)) newChildren
