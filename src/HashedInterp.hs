@@ -115,9 +115,7 @@ instance Evaluable Zero R Double where
                 Scale R arg1 arg2 ->
                     eval valMap (expZeroR mp arg1) *
                     eval valMap (expZeroR mp arg2)
-                Power x arg ->
-
-                                eval valMap (expZeroR mp arg) ** x
+                Power x arg -> eval valMap (expZeroR mp arg) ** x
                 Div arg1 arg2 ->
                     eval valMap (expZeroR mp arg1) /
                     eval valMap (expZeroR mp arg2)

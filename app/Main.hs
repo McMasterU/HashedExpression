@@ -41,7 +41,7 @@ import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
-main = do
+main
 --    let hbb = huber2 3 (x * x + y * y)
 --    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
 --    showExp . simplify $ sqrt (x * x)
@@ -55,6 +55,10 @@ main = do
 --    putStrLn "f(x):"
 --    print . eval (emptyVms |> withVm0 (fromList [("x", 2)])) $ f
 --    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"] $ hb
-      let a = (const 2 * x) ^ 3
-      showExp a
-      showExp . exteriorDerivative (Set.fromList ["x","y"]) $ simplify a
+ = do
+    let a = (const (-2) *. x) ^ (-3)
+    showExp a
+    showExp . exteriorDerivative (Set.fromList ["x", "y"]) $
+        simplify $ simplify a
+    let b = const 0 *. x
+    showExp $ simplify b

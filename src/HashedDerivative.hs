@@ -140,10 +140,10 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
                  in wrap . sumMany . map dEach . removeEach $ args
                 -- d(f ^ x) = df * x * f ^ (x - 1)
-            Power x arg -> -- wrap . powerMany . map dOne $ arg
-                 let f = Expression arg mp :: Expression D_ NT_
-                     df = hiddenDerivative' f :: Expression D_ Covector
-                     constX = const x
+            Power x arg ->
+                let f = Expression arg mp :: Expression D_ NT_
+                    df = hiddenDerivative' f :: Expression D_ Covector
+                    constX = const x
                  in constX *. (f ^ (x - 1)) |*| df
                  -- d(-f) = -d(f)
             Neg et arg -> d1Input (Neg et) arg

@@ -96,7 +96,6 @@ mulMany = apply $ naryET Mul ElementDefault
 sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
 sumMany = apply $ naryET Sum ElementDefault
 
-
 -- |
 --
 hasShape :: OperationOption -> Shape -> OperationOption
@@ -153,4 +152,3 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 --
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
-

@@ -13,7 +13,7 @@ nodeElementType node mp =
         Const _ -> R
         Sum et _ -> et
         Mul et _ -> et
-        Power _ _ -> R
+        Power _ arg -> retrieveElementType arg mp
         Neg et _ -> et
         Scale et _ _ -> et
         Div _ _ -> R

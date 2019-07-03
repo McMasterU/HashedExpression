@@ -128,13 +128,9 @@ product es = Just . applyNary (naryET Mul ElementDefault) $ es
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) =>
-         PowerOp (Expression d et) where
+instance (DimensionType d, NumType et) => PowerOp (Expression d et) where
     (^) :: Expression d et -> Double -> Expression d et
     (^) e1 x = applyUnary ((unary $ Power x) `hasShape` expressionShape e1) e1
-
-
-
 
 -- | Scale in vector space
 --
@@ -266,7 +262,6 @@ instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
 
 --instance {-# OVERLAPPABLE #-} Num a => PowerOp a a a where
 --    (^) x y = x Prelude.^ y
-
 instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     sqrt = Prelude.sqrt
     exp = Prelude.exp
