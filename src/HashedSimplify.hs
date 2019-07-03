@@ -74,98 +74,103 @@ simplify ::
 simplify e =
     let applyRules =
             multipleTimes 100 $
-            zeroOneRules >>>
-            scaleRules >>>
-            dotProductRules >>>
-            exponentRules >>>
-            complexNumRules >>>
-            distributiveRules >>>
-            piecewiseRules >>>
-            otherRules >>>
+            rulesFromPattern >>>
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules)
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
+rulesFromPattern :: Simplification
+rulesFromPattern =
+    makeRecursive . chain . map fromPattern $
+    zeroOneRules ++
+    scaleRules ++
+    complexNumRules ++
+    dotProductRules ++
+    distributiveRules ++ piecewiseRules ++ exponentRules ++ otherRules
+
 -- | Rules with zero and one
 --
-zeroOneRules :: Simplification
+zeroOneRules :: [(GuardedPattern, Pattern)]
 zeroOneRules =
-    makeRecursive . chain . map fromPattern $
-    [ one *. x |.~~> x
-    , one * x |.~~> x
-    , x * one |.~~> x
-    , zero * x |.~~> zero
-    , x * zero |.~~> zero
-    , zero *. x |. isReal x ~~> zero
-    , zero *. x |. isComplex x ~~> zero +: zero
-    , x *. zero |.~~> zero
-    , one *. x |.~~> x
-    , x + zero |.~~> x
-    , zero + x |.~~> x
-    , (x <.> zero) |.~~> zero
-    , zero <.> x |.~~> zero
-    , negate zero |.~~> zero
-    , negate (negate x) |.~~> x
+    [ one *. x |.~~~~~~> x
+    , one * x |.~~~~~~> x
+    , x * one |.~~~~~~> x
+    , zero * x |.~~~~~~> zero
+    , x * zero |.~~~~~~> zero
+    , zero *. x |. isReal x ~~~~~~> zero
+    , zero *. x |. isComplex x ~~~~~~> zero +: zero
+    , x *. zero |.~~~~~~> zero
+    , one *. x |.~~~~~~> x
+    , x + zero |.~~~~~~> x
+    , zero + x |.~~~~~~> x
+    , (x <.> zero) |.~~~~~~> zero
+    , zero <.> x |.~~~~~~> zero
+    , negate zero |.~~~~~~> zero
+    , negate (negate x) |.~~~~~~> x
     ]
 
+scaleRules :: [(GuardedPattern, Pattern)]
 scaleRules =
-    makeRecursive . chain . map fromPattern $
-    [ x *. (y *. z) |. sameElementType [x, y] ~~> (x * y) *. z
-    , negate (s *. x) |.~~> s *. negate (x)
-    , xRe (s *. x) |. isReal s ~~> s *. xRe (x)
-    , xIm (s *. x) |. isReal s ~~> s *. xIm (x)
+    [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
+    , negate (s *. x) |.~~~~~~> s *. negate (x)
+    , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
+    , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
     ]
 
 -- | Rules with complex operation
 --
-complexNumRules :: Simplification
+complexNumRules :: [(GuardedPattern, Pattern)]
 complexNumRules =
-    makeRecursive . chain . map fromPattern $
-    [ xRe (x +: y) |.~~> x
-    , xIm (x +: y) |.~~> y
-    , (x +: y) + (u +: v) |.~~> (x + u) +: (y + v)
-    , s *. (x +: y) |. isReal s ~~> (s *. x) +: (s *. y)
-    , (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z)
+    [ xRe (x +: y) |.~~~~~~> x
+    , xIm (x +: y) |.~~~~~~> y
+    , (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v)
+    , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
+    , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
     ]
 
 -- | Rules with dot product and scale
 --
-dotProductRules :: Simplification
+dotProductRules :: [(GuardedPattern, Pattern)]
 dotProductRules =
-    makeRecursive . chain . map fromPattern $
-    [(s *. x) <.> y |.~~> s * (x <.> y), x <.> (s *. y) |.~~> s * (x <.> y)]
+    [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
+    , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+    ]
 
 -- | Rules of distributive over sum
 --
-distributiveRules :: Simplification
+distributiveRules :: [(GuardedPattern, Pattern)]
 distributiveRules =
-    makeRecursive . chain . map fromPattern $
-    [ x * sum (each) |.~~> sum (x * each)
-    , sum (each) * x |.~~> sum (x * each)
-    , x <.> sum (each) |.~~> sum (x <.> each)
-    , sum (each) <.> x |.~~> sum (x <.> each)
-    , x *. sum (each) |.~~> sum (x *. each)
+    [ x * sum (each) |.~~~~~~> sum (x * each)
+    , sum (each) * x |.~~~~~~> sum (x * each)
+    , x <.> sum (each) |.~~~~~~> sum (x <.> each)
+    , sum (each) <.> x |.~~~~~~> sum (x <.> each)
+    , x *. sum (each) |.~~~~~~> sum (x *. each)
     ]
 
 -- | Rules of piecewise
 --
-piecewiseRules :: Simplification
+piecewiseRules :: [(GuardedPattern, Pattern)]
 piecewiseRules =
-    makeRecursive . chain . map fromPattern $
-    [piecewise condition branches |. allTheSame branches ~~> headOf branches]
+    [ piecewise condition branches |. allTheSame branches ~~~~~~>
+      headOf branches
+    ]
 
 -- | Rules of exponent and log
 --
-exponentRules :: Simplification
+exponentRules :: [(GuardedPattern, Pattern)]
 exponentRules =
-    makeRecursive . chain . map fromPattern $
-    [exp (log (x)) |.~~> x, log (exp (x)) |.~~> x, exp (zero) |.~~> one]
+    [ exp (log (x)) |.~~~~~~> x --
+    , log (exp (x)) |.~~~~~~> x --
+    , exp (zero) |.~~~~~~> one
+    ]
 
 -- |
 --
-otherRules :: Simplification
-otherRules = makeRecursive . chain . map fromPattern $ [sqrt (x * x) |.~~> x]
+otherRules :: [(GuardedPattern, Pattern)]
+otherRules =
+    [ sqrt (x * x) |.~~~~~~> x --
+    ]
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --

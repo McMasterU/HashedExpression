@@ -163,14 +163,14 @@ data GuardedPattern =
 
 -- | Helper to make pattern and replacement without condition
 --
-(|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
-(|.~~>) pattern replacement =
+(|.~~~~~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
+(|.~~~~~~>) pattern replacement =
     (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
-infix 0 |.~~>, ~~>
+infix 0 |.~~~~~~>, ~~~~~~>
 
-(~~>) :: GuardedPattern -> Pattern -> (GuardedPattern, Pattern)
-(~~>) gPattern replacement = (gPattern, replacement)
+(~~~~~~>) :: GuardedPattern -> Pattern -> (GuardedPattern, Pattern)
+(~~~~~~>) gPattern replacement = (gPattern, replacement)
 
 (|.) :: Pattern -> Condition -> GuardedPattern
 (|.) pattern condition = GP pattern condition
