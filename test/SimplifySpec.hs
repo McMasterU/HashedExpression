@@ -3,11 +3,11 @@ module SimplifySpec where
 import Commons
 import Data.Maybe (fromJust)
 import HashedExpression
-import HashedVar
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
+import HashedVar
 import Prelude hiding
     ( (*)
     , (+)

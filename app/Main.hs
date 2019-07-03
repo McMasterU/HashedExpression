@@ -43,7 +43,6 @@ import Test.QuickCheck hiding (scale)
 main = do
     let hbb = huber2 3 (x * x + y * y)
     showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
-
 --    showExp . simplify $ sqrt (x * x)
 --    let g = x * x
 --        f = piecewise [1] g [sqrt g, (one + g) / const 2]

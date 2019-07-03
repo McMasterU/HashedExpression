@@ -192,5 +192,4 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
                 apply' (binaryET InnerProd (ElementSpecific et)) newChildren
             Piecewise marks _ _ ->
                 apply (conditionAry (Piecewise marks)) newChildren
-            Rotate amount _ ->
-                apply (unary (Rotate amount)) newChildren
+            Rotate amount _ -> apply (unary (Rotate amount)) newChildren

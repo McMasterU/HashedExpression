@@ -21,6 +21,7 @@ import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import HashedUtils ((|>))
+import HashedVar
 import Prelude hiding
     ( (*)
     , (+)
@@ -48,11 +49,9 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-import HashedVar
 
 -- |
 --
-
 -- | Remove duplicate but also sort
 --
 removeDuplicate :: (Ord a) => [a] -> [a]

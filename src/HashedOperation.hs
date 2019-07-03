@@ -28,12 +28,12 @@ import Prelude hiding
     , atanh
     , const
     , cos
-    , sqrt
     , cosh
     , exp
     , negate
     , sin
     , sinh
+    , sqrt
     , tan
     , tanh
     )
@@ -223,19 +223,16 @@ piecewise marks conditionExp branchExps =
         ensureSameShapeList branchExps .
         ensureSameShape conditionExp (head branchExps)
 
-
-
 instance (ElementType et) => RotateOp Int (Expression One et) where
     rotate :: Int -> Expression One et -> Expression One et
     rotate x = applyUnary . unary $ Rotate [x]
-
 
 instance (ElementType et) => RotateOp (Int, Int) (Expression Two et) where
     rotate :: (Int, Int) -> Expression Two et -> Expression Two et
     rotate (x, y) = applyUnary . unary $ Rotate [x, y]
 
-
-instance (ElementType et) => RotateOp (Int, Int, Int) (Expression Three et) where
+instance (ElementType et) =>
+         RotateOp (Int, Int, Int) (Expression Three et) where
     rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
     rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
 

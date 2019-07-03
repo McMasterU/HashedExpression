@@ -74,6 +74,7 @@ simplify ::
 simplify e =
     let applyRules =
             multipleTimes 100 $
+            (makeRecursive standardize) >>>
             rulesFromPattern >>>
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
@@ -273,6 +274,12 @@ fromPattern pt@(GP pattern condition, replacementPattern) exp
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
     | otherwise = exp
+
+-- | Turn expression to a standard version where arguments in Sum and Mul are sorted
+--
+standardize :: Simplification
+standardize exp@(mp, n) =
+    reconstruct exp . map (mp, ) . nodeArgs $ retrieveNode n mp
 
 -- | Turn a simplification to a recursive one, apply rules bottom up
 --

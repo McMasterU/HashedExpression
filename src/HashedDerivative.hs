@@ -279,7 +279,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
                          in coerce $ rotate (x, y) df
                     ([x, y, z], [size1, size2, size3]) ->
                         let f = Expression arg mp :: Expression Three R
-                            df = hiddenDerivative' f :: Expression Three Covector
+                            df =
+                                hiddenDerivative' f :: Expression Three Covector
                          in coerce $ rotate (x, y, z) df
 
 -- | Wise-multiply a number with a covector

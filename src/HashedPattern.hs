@@ -367,7 +367,9 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PHead fs listCapture
                 | Just ns <- Map.lookup listCapture (listCapturesMap match)
                 , let pt = turnToPattern fs . head $ ns -> buildFromPattern' pt
-                | otherwise -> error "ListCapture not in the Map ListCapture [Int] which should never happens"
+                | otherwise ->
+                    error
+                        "ListCapture not in the Map ListCapture [Int] which should never happens"
             PConst pc ->
                 case retrieveShape originalN originalMp of
                     [] -> unwrap $ const pc
