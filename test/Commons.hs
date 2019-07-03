@@ -96,7 +96,7 @@ instance Approximable Double where
     (~=) :: Double -> Double -> Bool
     a ~= b
         | a == b = True
-        | otherwise = relativeError a b < 0.001
+        | otherwise = relativeError a b < 0.01
 
 instance Approximable (Complex Double) where
     (~=) :: Complex Double -> Complex Double -> Bool

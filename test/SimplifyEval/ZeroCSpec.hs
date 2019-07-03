@@ -4,6 +4,7 @@ import Commons
 import Data.Map.Strict
 import Data.Maybe (fromJust)
 import Data.Typeable (Typeable)
+import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
@@ -98,7 +99,7 @@ prop_Add (SuiteZeroC exp1 valMap1) (SuiteZeroC exp2 valMap2) (simplify1, simplif
 prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroC exp1 valMap1) (SuiteZeroC exp2 valMap2) (simplify1, simplify2, simplifyMul) =
     eval (emptyVms |> withVm0 valMap) exp1' *
-    eval (emptyVms |> withVm0 valMap) exp2' ~=
+     eval (emptyVms |> withVm0 valMap) exp2' ~=
     eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expMul'
   where
     valMap = valMap1 `union` valMap2

@@ -62,7 +62,7 @@ spec = do
                 prettify ((x * z - y * w) +: (x * w + y * z))
             simplify (xRe (x +: y)) `shouldBe` x
             simplify (xIm (x +: y)) `shouldBe` y
-            simplify ((x +: y) + (u +: v)) `shouldBe` (x + u) +: (y + v)
+            simplify ((x +: y) + (u +: v)) `shouldBe` simplify ((x + u) +: (y + v))
             simplify (s *. (x +: y)) `shouldBe` (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
             simplify ((x +: y) * (z +: w)) `shouldBe` (x * z - y * w) +:
                 (x * w + y * z)
@@ -78,20 +78,20 @@ spec = do
             simplify (x <.> (y + z)) `shouldBe` ((x <.> y) + (x <.> z))
             simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
-                sum (map (x *) [y, z, t, u, v])
+                simplify (sum (map (x *) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] * x) `shouldBe`
-                sum (map (x *) [y, z, t, u, v])
+                simplify (sum (map (x *) [y, z, t, u, v]))
             simplify (x *. sum [y, z, t, u, v]) `shouldBe`
-                sum (map (x *.) [y, z, t, u, v])
+                simplify (sum (map (x *.) [y, z, t, u, v]))
             simplify (x <.> sum [y, z, t, u, v]) `shouldBe`
-                sum (map (x <.>) [y, z, t, u, v])
+                simplify (sum (map (x <.>) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
-                sum (map (x <.>) [y, z, t, u, v])
+                simplify (sum (map (x <.>) [y, z, t, u, v]))
         specify "flatten sum and product" $ do
             simplify (product [x * y, product [z, t, w], one]) `shouldBe`
                 product [x, y, z, t, w]
             simplify (sum [x + y, sum [z, t, w + s], zero]) `shouldBe`
-                sum [x, y, z, t, w, s]
+                simplify (sum [x, y, z, t, w, s])
         specify "group constants together" $ do
             simplify (product [one, one, x, y, one, z]) `shouldBe`
                 product [x, y, z]
@@ -100,10 +100,10 @@ spec = do
             simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
                 product [const 6, x, y, z]
         specify "combine same terms" $ do
-            simplify (sum [one *. x, x, x, const 3 *. y, y]) `shouldBe`
-                sum [const 3 *. x, const 4 *. y]
+            prettify (simplify (sum [one *. x, x, x, const 3 *. y, y])) `shouldBe`
+                prettify (simplify (sum [const 3 *. x, const 4 *. y]))
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
-                sum [const 4 *. y, z]
+                simplify (sum [const 4 *. y, z])
             simplify (x - x) `shouldBe` zero
         specify "scale rules" $ do
             simplify (x *. (y *. v)) `shouldBe` (x * y) *. v

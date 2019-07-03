@@ -14,6 +14,7 @@ import qualified Data.IntSet as IS
 import Data.List (group, groupBy)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
+import GHC.Exts (sortWith)
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -47,6 +48,7 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude
+import Debug.Trace (traceShowId)
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -79,6 +81,9 @@ simplify e =
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules)
+--    let applyRules = makeRecursive combineTermsRules
+--    let applyRules = makeRecursive standardize >> makeRecursive combineTermsRules
+
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 rulesFromPattern :: Simplification
@@ -107,6 +112,8 @@ zeroOneRules =
     , zero + x |.~~~~~~> x
     , (x <.> zero) |.~~~~~~> zero
     , zero <.> x |.~~~~~~> zero
+    , x <.> one |.~~~~~~> x
+    , one <.> x |.~~~~~~> x
     , negate zero |.~~~~~~> zero
     , negate (negate x) |.~~~~~~> x
     ]
@@ -128,6 +135,7 @@ complexNumRules =
     , (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v)
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
+    , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
 -- | Rules with dot product and scale
@@ -147,6 +155,7 @@ distributiveRules =
     , x <.> sum (each) |.~~~~~~> sum (x <.> each)
     , sum (each) <.> x |.~~~~~~> sum (x <.> each)
     , x *. sum (each) |.~~~~~~> sum (x *. each)
+    , negate (sum (each)) |.~~~~~~> sum (negate each) -- TODO: Should or shouldn't?
     ]
 
 -- | Rules of piecewise
@@ -239,7 +248,7 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Simplification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
-        reconstruct exp $ map (toExp . combine) . groupBy fn . map cntAppr $ ns
+        reconstruct exp $ map (toExp . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
     | otherwise = (mp, n)
   where
     cntAppr nId
@@ -335,8 +344,41 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
                 apply (conditionAry (Piecewise marks)) newChildren
             Rotate amount _ -> apply (unary (Rotate amount)) newChildren
 
+-- | Sort the arguments (now only for Sum and Mul)
+--
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs = concat . map sortByHash . groupBy nodeType
+sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeWeight
   where
     nodeType (mp1, n1) (mp2, n2) = True
     sortByHash = id
+    nodeWeight (mp, n) =
+        case retrieveNode n mp of
+            Var {} -> 800
+            DVar {} -> 2
+            Const {} -> -9999
+            Sum {} -> 9999
+            Mul {} -> 3
+            Neg {} -> 4
+            Scale {} -> 5
+            Div {} -> 6
+            Sqrt {} -> 7
+            Sin {} -> 8
+            Cos {} -> 9
+            Tan {} -> 10
+            Exp {} -> 11
+            Log {} -> 12
+            Sinh {} -> 13
+            Cosh {} -> 14
+            Tanh {} -> 15
+            Asin {} -> 16
+            Acos {} -> 17
+            Atan {} -> 18
+            Asinh {} -> 19
+            Acosh {} -> 20
+            Atanh {} -> 21
+            RealImag {} -> 22
+            RealPart {} -> 23
+            ImagPart {} -> 24
+            InnerProd {} -> 25
+            Piecewise {} -> 26
+            Rotate {} -> 27
