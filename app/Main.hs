@@ -8,7 +8,8 @@ import qualified Data.Set as Set
 import HashedDerivative
 import HashedExpression
 import HashedInterp
-import HashedOperation
+import HashedOperation hiding (product, sum)
+import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import Prelude hiding
@@ -29,33 +30,22 @@ import Prelude hiding
     , exp
     , log
     , negate
+    , product
     , sin
     , sinh
     , sqrt
+    , sum
     , tan
     , tanh
     )
 
+import Data.Maybe (fromJust)
 import HashedUtils ((|>))
 import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
-main
---    let hbb = huber2 3 (x * x + y * y)
---    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ hbb
---    showExp . simplify $ sqrt (x * x)
---    let g = x * x
---        f = piecewise [1] g [sqrt g, (one + g) / const 2]
---    let hb = huber 1 x
---    putStrLn "f:"
---    showExp . simplify $ f
---    putStrLn "df:"
---    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ f
---    putStrLn "f(x):"
---    print . eval (emptyVms |> withVm0 (fromList [("x", 2)])) $ f
---    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"] $ hb
- = do
+main = do
     let a = (const (-2) * x) ^ (-3)
     showExp a
     showExp . exteriorDerivative (Set.fromList ["x", "y"]) $

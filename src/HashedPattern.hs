@@ -108,6 +108,10 @@ instance AddableOp (Pattern) where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
+instance AddableOp PatternList where
+    (+) = error "Not implemented yet add two pattern list yet"
+    negate (PListHole f listCapture) = PListHole (negate : f) listCapture
+
 instance MultiplyOp (Pattern) (Pattern) (Pattern) where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
