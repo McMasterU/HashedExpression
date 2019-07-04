@@ -130,7 +130,7 @@ product es = Just . applyNary (naryET Mul ElementDefault) $ es
 --
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) where
     (^) :: Expression d et -> Int -> Expression d et
-    (^) e1 x = applyUnary ((unary $ Power x) `hasShape` expressionShape e1) e1
+    (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
 -- | Scale in vector space
 --

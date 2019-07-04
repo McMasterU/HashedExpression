@@ -70,7 +70,7 @@ data NT_
 -- | Placeholder for any element type
 --
 data ET
-    deriving (Typeable, ElementType)
+    deriving (Typeable, ElementType, Addable)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -140,8 +140,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
                  in wrap . sumMany . map dEach . removeEach $ args
                 -- d(f ^ x) = df * x * f ^ (x - 1)
-            Power x arg 
-             ->
+            Power x arg ->
                 let f = Expression arg mp :: Expression D_ NT_
                     df = hiddenDerivative' f :: Expression D_ Covector
                     constX = const . fromIntegral $ x
