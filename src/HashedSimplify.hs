@@ -69,6 +69,15 @@ multipleTimes k smp exp = go (k - 1) exp (smp exp)
         | snd lastExp == snd curExp = curExp
         | otherwise = go (k - 1) curExp (smp curExp)
 
+-- | For debugging a single simplification rule
+--
+makeSmp ::
+       (DimensionType d, ElementType et)
+    => Simplification
+    -> Expression d et
+    -> Expression d et
+makeSmp smp = wrap . smp . unwrap
+
 -- | Simplify an expression
 --
 simplify ::
@@ -349,14 +358,15 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeTypeWeight
+sortArgs =
+    concat . map (sortWith snd) . groupBy nodeType . sortWith nodeTypeWeight
   where
-    nodeType (mp1, n1) (mp2, n2) = True
-    sortByHash = sortWith snd
+    nodeType (mp1, n1) (mp2, n2) =
+        sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)
     nodeTypeWeight (mp, n) =
         case retrieveNode n mp of
-            Var {} -> 800
-            DVar {} -> 2
+            Var {} -> 1
+            DVar {} -> 800
             Const {} -> -9999
             Sum {} -> 9999
             Mul {} -> 3

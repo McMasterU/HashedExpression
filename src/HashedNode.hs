@@ -41,9 +41,12 @@ nodeElementType node mp =
 
 -- |
 --
-sameOp :: Node -> Node -> Bool
-sameOp node1 node2 =
+sameNodeType :: Node -> Node -> Bool
+sameNodeType node1 node2 =
     case (node1, node2) of
+        (Var {}, Var {}) -> True
+        (DVar {}, DVar {}) -> True
+        (Const {}, Const {}) -> True
         (Sum {}, Sum {}) -> True
         (Mul {}, Mul {}) -> True
         (Power {}, Power {}) -> True

@@ -58,15 +58,15 @@ spec = do
             simplify (log (exp x)) `shouldBe` x
             simplify (exp (log x)) `shouldBe` x
         specify "complex related" $ do
-            simplify ((x +: y) * (z +: w)) `shouldBe`
-                simplify ((x * z - y * w) +: (x * w + y * z))
+            prettify (simplify ((x +: y) * (z +: w))) `shouldBe`
+                prettify (simplify ((x * z - y * w) +: (x * w + y * z)))
             simplify (xRe (x +: y)) `shouldBe` x
             simplify (xIm (x +: y)) `shouldBe` y
             simplify ((x +: y) + (u +: v)) `shouldBe`
                 simplify ((x + u) +: (y + v))
             simplify (s *. (x +: y)) `shouldBe` (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
-            simplify ((x +: y) * (z +: w)) `shouldBe` simplify ((x * z - y * w) +:
-                (x * w + y * z))
+            simplify ((x +: y) * (z +: w)) `shouldBe`
+                simplify ((x * z - y * w) +: (x * w + y * z))
         specify "dot product" $ do
             simplify (x <.> zero) `shouldBe` zero
             simplify (zero <.> x) `shouldBe` zero
@@ -89,8 +89,11 @@ spec = do
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
                 simplify (sum (map (x <.>) [y, z, t, u, v]))
             prettify (simplify (product [a, b, c, sum [x, y, z]])) `shouldBe`
-                prettify
-                    (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
+                prettify (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
+            simplify ((x + y) * (z + t) * a * b) `shouldBe`
+                simplify
+                    (a * b * x * z + a * b * x * t + a * b * y * z +
+                     a * b * y * t)
         specify "flatten sum and product" $ do
             simplify (product [x * y, product [z, t, w], one]) `shouldBe`
                 simplify (product [x, y, z, t, w])
