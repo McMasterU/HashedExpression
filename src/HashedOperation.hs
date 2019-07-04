@@ -178,9 +178,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
     asinh = applyUnary (unary Asinh)
     acosh = applyUnary (unary Acosh)
     atanh = applyUnary (unary Atanh)
-    (/) e1 e2 =
-        let op = binary Div
-         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    (/) e1 e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
 
 -- | inner product
 --
