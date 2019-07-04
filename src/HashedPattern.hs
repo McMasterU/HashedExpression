@@ -56,7 +56,7 @@ type ListCapture = Int
 -- | List holes to captures many elements
 --
 data PatternList =
-    PListHole [Pattern -> Pattern] ListCapture
+    PListHole (Pattern -> Pattern) ListCapture
     deriving (Show)
 
 instance Show (Pattern -> Pattern) where
@@ -70,9 +70,10 @@ data Pattern
     = PHole Capture
     -- Ref to a node in the expression
     | PRef Int
-    -- Ref to head of the list captures e.g: ListCapture(2) -> [2132, 34512, 4542],
-    -- then PHead (tranformations) 2 ---> transformation 2132
-    | PHead [Pattern -> Pattern] ListCapture
+    -- Ref to head of the list captures e.g:
+    -- ListCapture(2) -> [2132, 34512, 4542],
+    -- PHead (transformation) 2 ---> transformation 2132
+    | PHead (Pattern -> Pattern) ListCapture
     -- MARK: For list capture
     | PSumList PatternList
     -- MARK: Reflex Node in HashedExpression
@@ -104,29 +105,17 @@ data Pattern
     | PPiecewise Pattern PatternList
     deriving (Show)
 
+-- | Pattern
+--
 instance AddableOp (Pattern) where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
-instance AddableOp PatternList where
-    (+) = error "Not implemented yet add two pattern list yet"
-    negate (PListHole f listCapture) = PListHole (negate : f) listCapture
-
 instance MultiplyOp (Pattern) (Pattern) (Pattern) where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-instance MultiplyOp (Pattern) (PatternList) (PatternList) where
-    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) : f) listCapture
-
-instance MultiplyOp (PatternList) (Pattern) (PatternList) where
-    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) : f) listCapture
-
 instance VectorSpaceOp (Pattern) (Pattern) where
     scale = PScale
-
-instance VectorSpaceOp (Pattern) (PatternList) where
-    scale wh1 (PListHole f listCapture) =
-        PListHole ((wh1 `scale`) : f) listCapture
 
 instance NumOp (Pattern) where
     sqrt = PSqrt
@@ -154,11 +143,27 @@ instance ComplexRealOp (Pattern) (Pattern) where
 instance InnerProductSpaceOp (Pattern) (Pattern) (Pattern) where
     (<.>) = PInnerProd
 
+-- | Pattern List
+--
+instance AddableOp PatternList where
+    (+) = error "Not implementation for adding two pattern list yet"
+    negate (PListHole f listCapture) = PListHole (negate . f) listCapture
+
+instance MultiplyOp (Pattern) (PatternList) (PatternList) where
+    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
+
+instance MultiplyOp (PatternList) (Pattern) (PatternList) where
+    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
+
 instance InnerProductSpaceOp (Pattern) (PatternList) (PatternList) where
-    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) : f) listCapture
+    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
 
 instance InnerProductSpaceOp (PatternList) (Pattern) (PatternList) where
-    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) : f) listCapture
+    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
+
+instance VectorSpaceOp (Pattern) (PatternList) where
+    scale wh1 (PListHole f listCapture) =
+        PListHole ((wh1 `scale`) . f) listCapture
 
 -- | Guarded patterns for simplification
 --
@@ -230,7 +235,7 @@ zero :: Pattern
 zero = PConst 0
 
 each :: PatternList
-each = PListHole [] 1
+each = PListHole id 1
 
 sum :: PatternList -> Pattern
 sum = PSumList
@@ -241,7 +246,7 @@ piecewise :: Pattern -> PatternList -> Pattern
 piecewise = PPiecewise
 
 branches :: PatternList
-branches = PListHole [] 2
+branches = PListHole id 2
 
 headOf :: PatternList -> Pattern
 headOf (PListHole trans listCapture) = PHead trans listCapture
@@ -261,7 +266,7 @@ matchList mp ns (PListHole fs listCapture)
   where
     uniqueCapture = minBound :: Int
     eachHole = PHole uniqueCapture
-    pt = foldr ($) eachHole fs
+    pt = fs eachHole
     matchOne nId = match (mp, nId) pt
     maybeSubMatches = map matchOne ns
     otherCaptures = Map.delete uniqueCapture . capturesMap
@@ -342,8 +347,8 @@ match (mp, n) outerWH =
                 | otherwise -> Nothing
             _ -> Nothing
 
-turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
-turnToPattern fs nId = foldr ($) (PRef nId) fs
+turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
+turnToPattern fs nId = fs $ PRef nId
 
 buildFromPatternList ::
        (ExpressionMap, Int) -> Match -> PatternList -> [(ExpressionMap, Int)]
