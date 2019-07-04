@@ -46,6 +46,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Data.List.HT (splitLast)
 
 -- | Pattern for simplification
 --
@@ -331,6 +332,12 @@ match (mp, n) outerWH =
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Mul _ args, PMulRest (PMulManyHole listCapture) wh)
+                | let (rest, theLast) = splitLast args
+                , Just matchTheLast <- recursiveAndCombine [theLast] [wh]
+                , let matchRest =
+                          Match Map.empty (Map.fromList [(listCapture, rest)]) ->
+                    Just $ unionMatch matchRest matchTheLast
             (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
@@ -442,3 +449,10 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PPiecewise _ _ ->
                 error
                     "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"
+            PMulRest (PMulManyHole restCapture) sp
+                | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
+                    mulMany $
+                    (map (originalMp, ) $ ns) ++ [buildFromPattern' sp]
+                | otherwise ->
+                    error
+                        "ListCapture not in the Map ListCapture [Int] which should never happens"

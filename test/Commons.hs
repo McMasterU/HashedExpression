@@ -146,8 +146,8 @@ primitiveZeroR = do
 
 operandR :: Gen (Expression Zero R, [String])
 operandR
-    -- 70% getting a primitive, 30% get a nested
- = oneof $ replicate 7 primitiveZeroR ++ replicate 3 genZeroR
+    -- 80% getting a primitive, 20% get a nested
+ = oneof $ replicate 8 primitiveZeroR ++ replicate 2 genZeroR
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
@@ -197,8 +197,8 @@ primitiveZeroC = do
 
 operandC :: Gen (Expression Zero C, [String])
 operandC
-    -- 70% getting a primitive, 30% get a nested
- = oneof $ replicate 7 primitiveZeroC ++ replicate 3 genZeroC
+    -- 80% getting a primitive, 20% get a nested
+ = oneof $ replicate 8 primitiveZeroC ++ replicate 2 genZeroC
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
