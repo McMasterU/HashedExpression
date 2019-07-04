@@ -352,7 +352,7 @@ sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
 sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeTypeWeight
   where
     nodeType (mp1, n1) (mp2, n2) = True
-    sortByHash = id
+    sortByHash = sortWith snd
     nodeTypeWeight (mp, n) =
         case retrieveNode n mp of
             Var {} -> 800
