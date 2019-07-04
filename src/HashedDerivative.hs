@@ -67,10 +67,6 @@ data D_
 data NT_
     deriving (Typeable, ElementType, NumType, Addable)
 
--- | Placeholder for any element type
---
-data ET
-    deriving (Typeable, ElementType, Addable)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
