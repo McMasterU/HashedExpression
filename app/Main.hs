@@ -46,6 +46,5 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let a = xRe $ (x +: y) * (v +: u) * (z +: t) ^ 2
-    showExp a
-    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ a
+    let f = huber2 3 (x * x + y * y)
+    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ f

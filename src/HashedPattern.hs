@@ -46,7 +46,7 @@ import Prelude hiding
     , tan
     , tanh
     )
-import Data.List.HT (splitLast)
+import Data.List.HT (splitLast, viewR)
 
 -- | Pattern for simplification
 --
@@ -333,7 +333,7 @@ match (mp, n) outerWH =
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Mul _ args, PMulRest (PMulManyHole listCapture) wh)
-                | let (rest, theLast) = splitLast args
+                | let (rest, theLast) = fromJust . viewR $ args
                 , Just matchTheLast <- recursiveAndCombine [theLast] [wh]
                 , let matchRest =
                           Match Map.empty (Map.fromList [(listCapture, rest)]) ->
