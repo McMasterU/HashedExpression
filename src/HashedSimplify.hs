@@ -14,6 +14,7 @@ import qualified Data.IntSet as IS
 import Data.List (group, groupBy)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
+import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
 import HashedHash
@@ -48,7 +49,6 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude
-import Debug.Trace (traceShowId)
 
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -81,11 +81,10 @@ simplify e =
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules)
---    let applyRules = makeRecursive combineTermsRules
---    let applyRules = makeRecursive standardize >> makeRecursive combineTermsRules
-
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
+--    let applyRules = makeRecursive combineTermsRules
+--    let applyRules = makeRecursive standardize >> makeRecursive combineTermsRules
 rulesFromPattern :: Simplification
 rulesFromPattern =
     makeRecursive . chain . map fromSubstitution $
@@ -150,12 +149,13 @@ dotProductRules =
 --
 distributiveRules :: [Substitution]
 distributiveRules =
-    [ x * sum (each) |.~~~~~~> sum (x * each)
-    , sum (each) * x |.~~~~~~> sum (x * each)
-    , x <.> sum (each) |.~~~~~~> sum (x <.> each)
-    , sum (each) <.> x |.~~~~~~> sum (x <.> each)
-    , x *. sum (each) |.~~~~~~> sum (x *. each)
-    , negate (sum (each)) |.~~~~~~> sum (negate each) -- TODO: Should or shouldn't?
+    [ x * sumOf (each) |.~~~~~~> sumOf (x * each)
+    , sumOf (each) * x |.~~~~~~> sumOf (x * each)
+    , x <.> sumOf (each) |.~~~~~~> sumOf (x <.> each)
+    , sumOf (each) <.> x |.~~~~~~> sumOf (x <.> each)
+    , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
+    , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
+    , prodOfRest * sumOf (each) |.~~~~~~> sumOf (prodOfRest * each)
     ]
 
 -- | Rules of piecewise
@@ -248,7 +248,8 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Simplification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
-        reconstruct exp $ map (toExp . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
+        reconstruct exp $
+        map (toExp . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
     | otherwise = (mp, n)
   where
     cntAppr nId

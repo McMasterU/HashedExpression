@@ -62,8 +62,12 @@ data PatternList =
 instance Show (Pattern -> Pattern) where
     show p = "Pattern List here"
 
--- GOAL:
---    piecewise condition branches |. allTheSame branches ~~> headOf branches
+-- | This captures multiplication of many
+--
+data PatternMulMany =
+    PMulManyHole ListCapture
+    deriving (Show)
+
 -- |
 --
 data Pattern
@@ -103,21 +107,22 @@ data Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
     | PPiecewise Pattern PatternList
+    | PMulRest PatternMulMany Pattern
     deriving (Show)
 
 -- | Pattern
 --
-instance AddableOp (Pattern) where
+instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
-instance MultiplyOp (Pattern) (Pattern) (Pattern) where
+instance MultiplyOp Pattern Pattern Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-instance VectorSpaceOp (Pattern) (Pattern) where
+instance VectorSpaceOp Pattern Pattern where
     scale = PScale
 
-instance NumOp (Pattern) where
+instance NumOp Pattern where
     sqrt = PSqrt
     exp = PExp
     log = PLog
@@ -135,12 +140,12 @@ instance NumOp (Pattern) where
     atanh = PAtanh
     (/) = PDiv
 
-instance ComplexRealOp (Pattern) (Pattern) where
+instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
     xRe = PRealPart
     xIm = PImagPart
 
-instance InnerProductSpaceOp (Pattern) (Pattern) (Pattern) where
+instance InnerProductSpaceOp Pattern Pattern Pattern where
     (<.>) = PInnerProd
 
 -- | Pattern List
@@ -149,21 +154,30 @@ instance AddableOp PatternList where
     (+) = error "Not implementation for adding two pattern list yet"
     negate (PListHole f listCapture) = PListHole (negate . f) listCapture
 
-instance MultiplyOp (Pattern) (PatternList) (PatternList) where
+instance MultiplyOp Pattern PatternList PatternList where
     (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
 
-instance MultiplyOp (PatternList) (Pattern) (PatternList) where
+instance MultiplyOp PatternList Pattern PatternList where
     (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
 
-instance InnerProductSpaceOp (Pattern) (PatternList) (PatternList) where
+instance InnerProductSpaceOp Pattern PatternList PatternList where
     (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
 
-instance InnerProductSpaceOp (PatternList) (Pattern) (PatternList) where
+instance InnerProductSpaceOp PatternList Pattern PatternList where
     (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
 
-instance VectorSpaceOp (Pattern) (PatternList) where
+instance VectorSpaceOp Pattern PatternList where
     scale wh1 (PListHole f listCapture) =
         PListHole ((wh1 `scale`) . f) listCapture
+
+-- | Pattern Mul Many
+--
+instance MultiplyOp PatternMulMany Pattern Pattern where
+    (*) = PMulRest
+
+instance MultiplyOp PatternMulMany PatternList PatternList where
+    (*) pMulMany (PListHole f listCapture) =
+        PListHole (PMulRest pMulMany . f) listCapture
 
 -- | Guarded patterns for simplification
 --
@@ -239,8 +253,8 @@ zero = PConst 0
 each :: PatternList
 each = PListHole id 1
 
-sum :: PatternList -> Pattern
-sum = PSumList
+sumOf :: PatternList -> Pattern
+sumOf = PSumList
 
 -- |
 --
@@ -252,6 +266,11 @@ branches = PListHole id 2
 
 headOf :: PatternList -> Pattern
 headOf (PListHole trans listCapture) = PHead trans listCapture
+
+-- |
+--
+prodOfRest :: PatternMulMany
+prodOfRest = PMulManyHole 32421
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes
