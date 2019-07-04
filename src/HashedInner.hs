@@ -152,4 +152,3 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 --
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
-

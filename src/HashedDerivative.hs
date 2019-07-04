@@ -27,6 +27,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -64,12 +65,8 @@ data D_
 -- | Placeholder for any num type
 --
 data NT_
-    deriving (Typeable, ElementType, NumType)
+    deriving (Typeable, ElementType, NumType, Addable)
 
--- | Placeholder for any element type
---
-data ET
-    deriving (Typeable, ElementType)
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -138,7 +135,13 @@ hiddenDerivative vars (Expression n mp) = coerce res
                 let mkSub nId = (mp, nId)
                     dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
                  in wrap . sumMany . map dEach . removeEach $ args
-                -- d(-f) = -d(f)
+                -- d(f ^ x) = df * x * f ^ (x - 1)
+            Power x arg ->
+                let f = Expression arg mp :: Expression D_ NT_
+                    df = hiddenDerivative' f :: Expression D_ Covector
+                    constX = const . fromIntegral $ x
+                 in constX *. (f ^ (x - 1)) |*| df
+                 -- d(-f) = -d(f)
             Neg et arg -> d1Input (Neg et) arg
             Scale et arg1 arg2 ->
                 let s = Expression arg1 mp :: Expression Zero NT_

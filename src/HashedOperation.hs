@@ -20,6 +20,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -124,6 +125,12 @@ product ::
     -> Maybe (Expression d et)
 product [] = Nothing
 product es = Just . applyNary (naryET Mul ElementDefault) $ es
+
+-- | Element-wise multiplication
+--
+instance (DimensionType d, NumType et) => PowerOp (Expression d et) where
+    (^) :: Expression d et -> Int -> Expression d et
+    (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
 -- | Scale in vector space
 --
@@ -253,6 +260,8 @@ instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
 instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
     (*) = times
 
+--instance {-# OVERLAPPABLE #-} Num a => PowerOp a a a where
+--    (^) x y = x Prelude.^ y
 instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     sqrt = Prelude.sqrt
     exp = Prelude.exp

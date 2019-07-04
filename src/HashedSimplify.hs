@@ -316,6 +316,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
                 apply' (naryET Sum (ElementSpecific et)) $ sortArgs newChildren
             Mul et _ ->
                 apply' (naryET Mul (ElementSpecific et)) $ sortArgs newChildren
+            Power x _ -> apply' (unary (Power x)) newChildren
             Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) newChildren
             Scale et _ _ ->
                 apply' (binaryET Scale (ElementSpecific et)) newChildren
@@ -358,6 +359,7 @@ sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeWeight
             Const {} -> -9999
             Sum {} -> 9999
             Mul {} -> 3
+            Power {} -> 28
             Neg {} -> 4
             Scale {} -> 5
             Div {} -> 6

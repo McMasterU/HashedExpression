@@ -17,6 +17,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -44,14 +45,7 @@ import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
-sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum = fromJust . HashedOperation.sum
-
-product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-product = fromJust . HashedOperation.product
-
 main = do
-    let f = huber2 3 $ x * x + y * y
-    showExp f
-    showExp . simplify $ f
---    print "hello world"
+    let a = xRe $ (x +: y) * (v +: u) * (z +: t) ^ 2
+    showExp a
+    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ a
