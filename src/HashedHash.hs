@@ -43,8 +43,7 @@ instance HasHash Node where
             -- MARK: Basics
             Sum et args -> (1 + argHash (hash et : args)) * 2131
             Mul et args -> (1 + argHash (hash et : args)) * 3343
-            --Power x arg -> (1 + argHash [arg, x]) * 2527
-            Power x arg -> 2131 + foldr moveBase 0 (show x)
+            Power x arg -> (1 + argHash [arg, x]) * 2527
             Neg et arg -> (1 + argHash [hash et, arg]) * 2293
             Scale et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3343
             -- MARK: only apply to R

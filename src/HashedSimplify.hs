@@ -359,6 +359,7 @@ sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeWeight
             Const {} -> -9999
             Sum {} -> 9999
             Mul {} -> 3
+            Power {} -> 28
             Neg {} -> 4
             Scale {} -> 5
             Div {} -> 6

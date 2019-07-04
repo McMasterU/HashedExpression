@@ -46,9 +46,6 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let a = (const (-2) * x) ^ (-3)
+    let a = xRe $ (x +: y) * (v +: u) * (z +: t) ^ 2
     showExp a
-    showExp . exteriorDerivative (Set.fromList ["x", "y"]) $
-        simplify $ simplify a
-    let b = const 0 * x
-    showExp $ simplify b
+    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ a

@@ -158,6 +158,8 @@ infixl 7 *
 
 infixl 8 *., `scale`, <.>
 
+infix 8 ^
+
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
