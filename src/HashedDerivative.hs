@@ -27,6 +27,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -64,7 +65,8 @@ data D_
 -- | Placeholder for any num type
 --
 data NT_
-    deriving (Typeable, ElementType, NumType)
+    deriving (Typeable, ElementType, NumType, Addable)
+
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
@@ -133,7 +135,13 @@ hiddenDerivative vars (Expression n mp) = coerce res
                 let mkSub nId = (mp, nId)
                     dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
                  in wrap . sumMany . map dEach . removeEach $ args
-                -- d(-f) = -d(f)
+                -- d(f ^ x) = df * x * f ^ (x - 1)
+            Power x arg ->
+                let f = Expression arg mp :: Expression D_ NT_
+                    df = hiddenDerivative' f :: Expression D_ Covector
+                    constX = const . fromIntegral $ x
+                 in constX *. (f ^ (x - 1)) |*| df
+                 -- d(-f) = -d(f)
             Neg et arg -> d1Input (Neg et) arg
             Scale et arg1 arg2 ->
                 let s = Expression arg1 mp :: Expression Zero NT_
@@ -262,6 +270,21 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     branchExps = map (flip Expression mp) branches
                  in piecewise marks conditionExp $
                     map hiddenDerivative' branchExps
+            Rotate amount arg ->
+                case (amount, retrieveShape arg mp) of
+                    ([x], [size]) ->
+                        let f = Expression arg mp :: Expression One R
+                            df = hiddenDerivative' f :: Expression One Covector
+                         in coerce $ rotate x df
+                    ([x, y], [size1, size2]) ->
+                        let f = Expression arg mp :: Expression Two R
+                            df = hiddenDerivative' f :: Expression Two Covector
+                         in coerce $ rotate (x, y) df
+                    ([x, y, z], [size1, size2, size3]) ->
+                        let f = Expression arg mp :: Expression Three R
+                            df =
+                                hiddenDerivative' f :: Expression Three Covector
+                         in coerce $ rotate (x, y, z) df
 
 -- | Wise-multiply a number with a covector
 --

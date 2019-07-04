@@ -1,3 +1,6 @@
 .stack-work
 dist-newstyle
 *.cabal
+.idea
+.DS_Store
+*.iml

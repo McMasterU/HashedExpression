@@ -46,6 +46,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Data.List.HT (splitLast)
 
 -- | Pattern for simplification
 --
@@ -56,26 +57,37 @@ type ListCapture = Int
 -- | List holes to captures many elements
 --
 data PatternList =
-    PListHole [Pattern -> Pattern] ListCapture
+    PListHole (Pattern -> Pattern) ListCapture
+    deriving (Show)
 
-instance Show PatternList where
+instance Show (Pattern -> Pattern) where
     show p = "Pattern List here"
+
+-- | This captures multiplication of many
+--
+data PatternMulMany =
+    PMulManyHole ListCapture
+    deriving (Show)
 
 -- |
 --
 data Pattern
     = PHole Capture
+    -- Ref to a node in the expression
+    | PRef Int
+    -- Ref to head of the list captures e.g:
+    -- ListCapture(2) -> [2132, 34512, 4542],
+    -- PHead (transformation) 2 ---> transformation 2132
+    | PHead (Pattern -> Pattern) ListCapture
     -- MARK: For list capture
     | PSumList PatternList
-     -- Ref to a node in the expression
-    | PRef Int
     -- MARK: Reflex Node in HashedExpression
     | PConst Double
     | PSum [Pattern]
     | PMul [Pattern]
     | PNeg Pattern
-    | PScale (Pattern) Pattern
-    | PDiv (Pattern) Pattern
+    | PScale Pattern Pattern
+    | PDiv Pattern Pattern
     | PSqrt Pattern
     | PSin Pattern
     | PCos Pattern
@@ -95,29 +107,23 @@ data Pattern
     | PRealPart Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
+    | PPiecewise Pattern PatternList
+    | PMulRest PatternMulMany Pattern
     deriving (Show)
 
-instance AddableOp (Pattern) where
+-- | Pattern
+--
+instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
     negate = PNeg
 
-instance MultiplyOp (Pattern) (Pattern) (Pattern) where
+instance MultiplyOp Pattern Pattern Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-instance MultiplyOp (Pattern) (PatternList) (PatternList) where
-    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) : f) listCapture
-
-instance MultiplyOp (PatternList) (Pattern) (PatternList) where
-    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) : f) listCapture
-
-instance VectorSpaceOp (Pattern) (Pattern) where
+instance VectorSpaceOp Pattern Pattern where
     scale = PScale
 
-instance VectorSpaceOp (Pattern) (PatternList) where
-    scale wh1 (PListHole f listCapture) =
-        PListHole ((wh1 `scale`) : f) listCapture
-
-instance NumOp (Pattern) where
+instance NumOp Pattern where
     sqrt = PSqrt
     exp = PExp
     log = PLog
@@ -135,35 +141,62 @@ instance NumOp (Pattern) where
     atanh = PAtanh
     (/) = PDiv
 
-instance ComplexRealOp (Pattern) (Pattern) where
+instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
     xRe = PRealPart
     xIm = PImagPart
 
-instance InnerProductSpaceOp (Pattern) (Pattern) (Pattern) where
+instance InnerProductSpaceOp Pattern Pattern Pattern where
     (<.>) = PInnerProd
 
-instance InnerProductSpaceOp (Pattern) (PatternList) (PatternList) where
-    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) : f) listCapture
+-- | Pattern List
+--
+instance AddableOp PatternList where
+    (+) = error "Not implementation for adding two pattern list yet"
+    negate (PListHole f listCapture) = PListHole (negate . f) listCapture
 
-instance InnerProductSpaceOp (PatternList) (Pattern) (PatternList) where
-    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) : f) listCapture
+instance MultiplyOp Pattern PatternList PatternList where
+    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
+
+instance MultiplyOp PatternList Pattern PatternList where
+    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
+
+instance InnerProductSpaceOp Pattern PatternList PatternList where
+    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
+
+instance InnerProductSpaceOp PatternList Pattern PatternList where
+    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
+
+instance VectorSpaceOp Pattern PatternList where
+    scale wh1 (PListHole f listCapture) =
+        PListHole ((wh1 `scale`) . f) listCapture
+
+-- | Pattern Mul Many
+--
+instance MultiplyOp PatternMulMany Pattern Pattern where
+    (*) = PMulRest
+
+instance MultiplyOp PatternMulMany PatternList PatternList where
+    (*) pMulMany (PListHole f listCapture) =
+        PListHole (PMulRest pMulMany . f) listCapture
 
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
     GP Pattern Condition
 
+type Substitution = (GuardedPattern, Pattern)
+
 -- | Helper to make pattern and replacement without condition
 --
-(|.~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
-(|.~~>) pattern replacement =
+(|.~~~~~~>) :: Pattern -> Pattern -> Substitution
+(|.~~~~~~>) pattern replacement =
     (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
-infix 0 |.~~>, ~~>
+infix 0 |.~~~~~~>, ~~~~~~>
 
-(~~>) :: GuardedPattern -> Pattern -> (GuardedPattern, Pattern)
-(~~>) gPattern replacement = (gPattern, replacement)
+(~~~~~~>) :: GuardedPattern -> Pattern -> Substitution
+(~~~~~~>) gPattern replacement = (gPattern, replacement)
 
 (|.) :: Pattern -> Condition -> GuardedPattern
 (|.) pattern condition = GP pattern condition
@@ -202,7 +235,15 @@ sameElementType ps exp match = allEqual . map getET $ ps
 
 -- |
 --
-[p, q, r, s, t, u, v, w, x, y, z] = map PHole [1 .. 11]
+allTheSame :: PatternList -> Condition
+allTheSame pl@(PListHole _ listCapture) exp match
+    | Just nIds <- Map.lookup listCapture . listCapturesMap $ match =
+        allEqual nIds
+    | otherwise = False
+
+-- |
+--
+[p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
 one :: Pattern
 one = PConst 1
@@ -211,10 +252,26 @@ zero :: Pattern
 zero = PConst 0
 
 each :: PatternList
-each = PListHole [] 1
+each = PListHole id 1
 
-sum :: PatternList -> Pattern
-sum = PSumList
+sumOf :: PatternList -> Pattern
+sumOf = PSumList
+
+-- |
+--
+piecewise :: Pattern -> PatternList -> Pattern
+piecewise = PPiecewise
+
+branches :: PatternList
+branches = PListHole id 2
+
+headOf :: PatternList -> Pattern
+headOf (PListHole trans listCapture) = PHead trans listCapture
+
+-- |
+--
+prodOfRest :: PatternMulMany
+prodOfRest = PMulManyHole 32421
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes
@@ -231,14 +288,24 @@ matchList mp ns (PListHole fs listCapture)
   where
     uniqueCapture = minBound :: Int
     eachHole = PHole uniqueCapture
-    pt = foldr ($) eachHole fs
+    pt = fs eachHole
     matchOne nId = match (mp, nId) pt
     maybeSubMatches = map matchOne ns
-    otherCaptures = Map.delete uniqueCapture . fst
+    otherCaptures = Map.delete uniqueCapture . capturesMap
     nIds subMatches =
-        catMaybes . map (Map.lookup uniqueCapture . fst) $ subMatches
+        catMaybes . map (Map.lookup uniqueCapture . capturesMap) $ subMatches
 
-type Match = (Map Capture Int, Map ListCapture [Int])
+data Match =
+    Match
+        { capturesMap :: Map Capture Int
+        , listCapturesMap :: Map ListCapture [Int]
+        }
+
+unionMatch :: Match -> Match -> Match
+unionMatch match1 match2 =
+    Match
+        (capturesMap match1 `union` capturesMap match2)
+        (listCapturesMap match1 `union` listCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
@@ -246,7 +313,7 @@ type Match = (Map Capture Int, Map ListCapture [Int])
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
-        catMatch = foldl unionBoth (Map.empty, Map.empty)
+        catMatch = foldl unionMatch (Match Map.empty Map.empty)
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
@@ -254,15 +321,23 @@ match (mp, n) outerWH =
             , all isJust subMatches = Just . catMatch . catMaybes $ subMatches
             | otherwise = Nothing
      in case (retrieveNode n mp, outerWH) of
-            (_, PHole capture) -> Just (Map.fromList [(capture, n)], Map.empty)
+            (_, PHole capture) ->
+                Just $ Match (Map.fromList [(capture, n)]) Map.empty
             (Const c, PConst whc)
-                | c == whc -> Just (Map.empty, Map.empty)
-            (Sum _ args, PSumList pl@(PListHole fs listCapture))
+                | c == whc -> Just $ Match Map.empty Map.empty
+            (Sum _ args, PSumList pl@(PListHole _ listCapture))
                 | Just innerArgs <- matchList mp args pl ->
-                    Just (Map.empty, Map.fromList [(listCapture, innerArgs)])
+                    Just $
+                    Match Map.empty (Map.fromList [(listCapture, innerArgs)])
                 | otherwise -> Nothing
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Mul _ args, PMulRest (PMulManyHole listCapture) wh)
+                | let (rest, theLast) = splitLast args
+                , Just matchTheLast <- recursiveAndCombine [theLast] [wh]
+                , let matchRest =
+                          Match Map.empty (Map.fromList [(listCapture, rest)]) ->
+                    Just $ unionMatch matchRest matchTheLast
             (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
@@ -289,15 +364,24 @@ match (mp, n) outerWH =
             (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
             (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
+            (Piecewise _ conditionArg branchArgs, PPiecewise wh pl@(PListHole _ listCapture))
+                | Just innerArgs <- matchList mp branchArgs pl
+                , Just (Match cMap lcMap) <-
+                     recursiveAndCombine [conditionArg] [wh] ->
+                    Just $
+                    Match
+                        cMap
+                        (lcMap `union` (Map.fromList [(listCapture, innerArgs)]))
+                | otherwise -> Nothing
             _ -> Nothing
 
-turnToPattern :: [Pattern -> Pattern] -> Int -> Pattern
-turnToPattern fs nId = foldr ($) (PRef nId) fs
+turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
+turnToPattern fs nId = fs $ PRef nId
 
 buildFromPatternList ::
        (ExpressionMap, Int) -> Match -> PatternList -> [(ExpressionMap, Int)]
 buildFromPatternList exp match (PListHole fs listCapture)
-    | Just ns <- Map.lookup listCapture (snd match) =
+    | Just ns <- Map.lookup listCapture (listCapturesMap match) =
         map (buildFromPattern exp match . turnToPattern fs) ns
     | otherwise =
         error
@@ -305,19 +389,24 @@ buildFromPatternList exp match (PListHole fs listCapture)
 
 buildFromPattern ::
        (ExpressionMap, Int) -> Match -> Pattern -> (ExpressionMap, Int)
-buildFromPattern exp@(originalMp, originalN) match@(capturesMap, _) =
-    buildFromPattern'
+buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
     buildFromPattern' :: Pattern -> (ExpressionMap, Int)
     buildFromPattern' pattern =
         case pattern of
             PRef nId -> (originalMp, nId)
             PHole capture
-                | Just nId <- Map.lookup capture capturesMap ->
+                | Just nId <- Map.lookup capture (capturesMap match) ->
                     (originalMp, nId)
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
+            PHead fs listCapture
+                | Just ns <- Map.lookup listCapture (listCapturesMap match)
+                , let pt = turnToPattern fs . head $ ns -> buildFromPattern' pt
+                | otherwise ->
+                    error
+                        "ListCapture not in the Map ListCapture [Int] which should never happens"
             PConst pc ->
                 case retrieveShape originalN originalMp of
                     [] -> unwrap $ const pc
@@ -357,3 +446,13 @@ buildFromPattern exp@(originalMp, originalN) match@(capturesMap, _) =
             PInnerProd sp1 sp2 ->
                 apply (binaryET InnerProd ElementDefault `hasShape` []) $
                 map buildFromPattern' [sp1, sp2]
+            PPiecewise _ _ ->
+                error
+                    "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"
+            PMulRest (PMulManyHole restCapture) sp
+                | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
+                    mulMany $
+                    (map (originalMp, ) $ ns) ++ [buildFromPattern' sp]
+                | otherwise ->
+                    error
+                        "ListCapture not in the Map ListCapture [Int] which should never happens"

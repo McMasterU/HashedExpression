@@ -20,6 +20,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -33,6 +34,7 @@ import Prelude hiding
     , negate
     , sin
     , sinh
+    , sqrt
     , tan
     , tanh
     )
@@ -124,6 +126,12 @@ product ::
 product [] = Nothing
 product es = Just . applyNary (naryET Mul ElementDefault) $ es
 
+-- | Element-wise multiplication
+--
+instance (DimensionType d, NumType et) => PowerOp (Expression d et) where
+    (^) :: Expression d et -> Int -> Expression d et
+    (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
+
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
@@ -197,6 +205,14 @@ huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
     lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
     largerThan = e * deltaVector - const 0.5 *. deltaVector
 
+huber2 :: (DimensionType d) => Double -> Expression d R -> Expression d R
+huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
+  where
+    deltaVector =
+        constWithShape (expressionShape e) (delta * delta) :: Expression d R
+    lessThan = sqrt (e * e)
+    largerThan = const 0.5 *. (e * e + deltaVector)
+
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
@@ -213,6 +229,19 @@ piecewise marks conditionExp branchExps =
     guard =
         ensureSameShapeList branchExps .
         ensureSameShape conditionExp (head branchExps)
+
+instance (ElementType et) => RotateOp Int (Expression One et) where
+    rotate :: Int -> Expression One et -> Expression One et
+    rotate x = applyUnary . unary $ Rotate [x]
+
+instance (ElementType et) => RotateOp (Int, Int) (Expression Two et) where
+    rotate :: (Int, Int) -> Expression Two et -> Expression Two et
+    rotate (x, y) = applyUnary . unary $ Rotate [x, y]
+
+instance (ElementType et) =>
+         RotateOp (Int, Int, Int) (Expression Three et) where
+    rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
+    rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
 
 -- | Prelude version of * and +
 --
@@ -231,6 +260,8 @@ instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
 instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
     (*) = times
 
+--instance {-# OVERLAPPABLE #-} Num a => PowerOp a a a where
+--    (^) x y = x Prelude.^ y
 instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     sqrt = Prelude.sqrt
     exp = Prelude.exp

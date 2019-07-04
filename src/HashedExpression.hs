@@ -25,6 +25,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -114,7 +115,10 @@ class AddableOp a where
 class MultiplyOp a b c | a b -> c where
     (*) :: a -> b -> c
 
-class VectorSpaceOp a b where
+class PowerOp a where
+    (^) :: a -> Int -> a
+
+class AddableOp b => VectorSpaceOp a b where
     scale :: a -> b -> b
     (*.) :: a -> b -> b
     (*.) = scale
@@ -145,11 +149,16 @@ class ComplexRealOp r c | r -> c, c -> r where
 class InnerProductSpaceOp a b c | a b -> c where
     (<.>) :: a -> b -> c
 
+class RotateOp k a | a -> k where
+    rotate :: k -> a -> a
+
 infixl 6 +, -
 
 infixl 7 *
 
 infixl 8 *., `scale`, <.>
+
+infix 8 ^
 
 -- | Shape type:
 -- []        --> scalar
@@ -167,6 +176,8 @@ type Arg = Int
 type ConditionArg = Int
 
 type BranchArg = Int
+
+type RotateAmount = [Int]
 
 -- | Data representation of element type
 --
@@ -206,6 +217,7 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | Power Int Arg -- TODO: Power for Complex or not ?
     | Neg ET Arg
     | Scale ET Arg Arg
     -- MARK: only apply to R
@@ -233,4 +245,5 @@ data Node
     | InnerProd ET Arg Arg
     -- MARK: Piecewise
     | Piecewise [Double] ConditionArg [BranchArg]
+    | Rotate RotateAmount Arg
     deriving (Show, Eq, Ord)
