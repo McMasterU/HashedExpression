@@ -88,7 +88,7 @@ simplify e =
 
 rulesFromPattern :: Simplification
 rulesFromPattern =
-    makeRecursive . chain . map fromPattern $
+    makeRecursive . chain . map fromSubstitution $
     zeroOneRules ++
     scaleRules ++
     complexNumRules ++
@@ -97,7 +97,7 @@ rulesFromPattern =
 
 -- | Rules with zero and one
 --
-zeroOneRules :: [(GuardedPattern, Pattern)]
+zeroOneRules :: [Substitution]
 zeroOneRules =
     [ one *. x |.~~~~~~> x
     , one * x |.~~~~~~> x
@@ -118,7 +118,7 @@ zeroOneRules =
     , negate (negate x) |.~~~~~~> x
     ]
 
-scaleRules :: [(GuardedPattern, Pattern)]
+scaleRules :: [Substitution]
 scaleRules =
     [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
     , negate (s *. x) |.~~~~~~> s *. negate (x)
@@ -128,7 +128,7 @@ scaleRules =
 
 -- | Rules with complex operation
 --
-complexNumRules :: [(GuardedPattern, Pattern)]
+complexNumRules :: [Substitution]
 complexNumRules =
     [ xRe (x +: y) |.~~~~~~> x
     , xIm (x +: y) |.~~~~~~> y
@@ -140,7 +140,7 @@ complexNumRules =
 
 -- | Rules with dot product and scale
 --
-dotProductRules :: [(GuardedPattern, Pattern)]
+dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
@@ -148,7 +148,7 @@ dotProductRules =
 
 -- | Rules of distributive over sum
 --
-distributiveRules :: [(GuardedPattern, Pattern)]
+distributiveRules :: [Substitution]
 distributiveRules =
     [ x * sum (each) |.~~~~~~> sum (x * each)
     , sum (each) * x |.~~~~~~> sum (x * each)
@@ -160,7 +160,7 @@ distributiveRules =
 
 -- | Rules of piecewise
 --
-piecewiseRules :: [(GuardedPattern, Pattern)]
+piecewiseRules :: [Substitution]
 piecewiseRules =
     [ piecewise condition branches |. allTheSame branches ~~~~~~>
       headOf branches
@@ -168,7 +168,7 @@ piecewiseRules =
 
 -- | Rules of exponent and log
 --
-exponentRules :: [(GuardedPattern, Pattern)]
+exponentRules :: [Substitution]
 exponentRules =
     [ exp (log (x)) |.~~~~~~> x --
     , log (exp (x)) |.~~~~~~> x --
@@ -177,7 +177,7 @@ exponentRules =
 
 -- |
 --
-otherRules :: [(GuardedPattern, Pattern)]
+otherRules :: [Substitution]
 otherRules =
     [ sqrt (x * x) |.~~~~~~> x --
     ]
@@ -278,8 +278,8 @@ removeUnreachable (mp, n) =
 
 -- | Turn HashedPattern to a simplification
 --
-fromPattern :: (GuardedPattern, Pattern) -> Simplification
-fromPattern pt@(GP pattern condition, replacementPattern) exp
+fromSubstitution :: Substitution -> Simplification
+fromSubstitution pt@(GP pattern condition, replacementPattern) exp
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
     | otherwise = exp
@@ -348,11 +348,11 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeWeight
+sortArgs = concat . map sortByHash . groupBy nodeType . sortWith nodeTypeWeight
   where
     nodeType (mp1, n1) (mp2, n2) = True
     sortByHash = id
-    nodeWeight (mp, n) =
+    nodeTypeWeight (mp, n) =
         case retrieveNode n mp of
             Var {} -> 800
             DVar {} -> 2

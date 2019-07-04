@@ -170,15 +170,17 @@ instance VectorSpaceOp (Pattern) (PatternList) where
 data GuardedPattern =
     GP Pattern Condition
 
+type Substitution = (GuardedPattern, Pattern)
+
 -- | Helper to make pattern and replacement without condition
 --
-(|.~~~~~~>) :: Pattern -> Pattern -> (GuardedPattern, Pattern)
+(|.~~~~~~>) :: Pattern -> Pattern -> Substitution
 (|.~~~~~~>) pattern replacement =
     (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
 infix 0 |.~~~~~~>, ~~~~~~>
 
-(~~~~~~>) :: GuardedPattern -> Pattern -> (GuardedPattern, Pattern)
+(~~~~~~>) :: GuardedPattern -> Pattern -> Substitution
 (~~~~~~>) gPattern replacement = (gPattern, replacement)
 
 (|.) :: Pattern -> Condition -> GuardedPattern
