@@ -115,7 +115,7 @@ instance Evaluable Zero R Double where
                 Scale R arg1 arg2 ->
                     eval valMap (expZeroR mp arg1) *
                     eval valMap (expZeroR mp arg2)
-                Power x arg -> eval valMap (expZeroR mp arg) ** x
+                Power x arg -> eval valMap (expZeroR mp arg) ^ x
                 Div arg1 arg2 ->
                     eval valMap (expZeroR mp arg1) /
                     eval valMap (expZeroR mp arg2)
@@ -276,7 +276,7 @@ instance Evaluable One R (Array Int Double) where
                         foldl1' (+) . map (eval valMap . expOneR mp) $ args
                     Mul R args ->
                         foldl1' (+) . map (eval valMap . expOneR mp) $ args
-                    Power x arg -> fmap (** x) (eval valMap $ expOneR mp arg)
+                    Power x arg -> fmap (^ x) (eval valMap $ expOneR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expOneR mp arg
                     Scale R arg1 arg2 ->
                         let scalar = eval valMap $ expZeroR mp arg1
@@ -424,7 +424,7 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                         foldl1' (+) . map (eval valMap . expTwoR mp) $ args
                     Mul R args ->
                         foldl1' (+) . map (eval valMap . expTwoR mp) $ args
-                    Power x arg -> fmap (** x) (eval valMap $ expTwoR mp arg)
+                    Power x arg -> fmap (^ x) (eval valMap $ expTwoR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expTwoR mp arg
                     Scale R arg1 arg2 ->
                         let scalar = eval valMap $ expZeroR mp arg1
@@ -590,7 +590,7 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                         foldl1' (+) . map (eval valMap . expThreeR mp) $ args
                     Mul R args ->
                         foldl1' (+) . map (eval valMap . expThreeR mp) $ args
-                    Power x arg -> fmap (** x) (eval valMap $ expThreeR mp arg)
+                    Power x arg -> fmap (^ x) (eval valMap $ expThreeR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expThreeR mp arg
                     Scale R arg1 arg2 ->
                         let scalar = eval valMap $ expZeroR mp arg1

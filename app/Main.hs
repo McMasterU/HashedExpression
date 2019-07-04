@@ -56,9 +56,9 @@ main
 --    print . eval (emptyVms |> withVm0 (fromList [("x", 2)])) $ f
 --    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"] $ hb
  = do
-    let a = (const (-2) *. x) ^ (-3)
+    let a = (const (-2) * x) ^ (-3)
     showExp a
     showExp . exteriorDerivative (Set.fromList ["x", "y"]) $
         simplify $ simplify a
-    let b = const 0 *. x
+    let b = const 0 * x
     showExp $ simplify b
