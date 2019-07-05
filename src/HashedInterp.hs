@@ -185,6 +185,7 @@ instance Evaluable Zero C (Complex Double) where
             case retrieveNode n mp of
                 Sum C args -> sum . map (eval valMap . expZeroC mp) $ args
                 Mul C args -> product . map (eval valMap . expZeroC mp) $ args
+                Power x arg -> eval valMap (expZeroC mp arg) ^ x
                 Neg C arg -> -(eval valMap $ expZeroC mp arg)
                 Scale C arg1 arg2 ->
                     case retrieveElementType arg1 mp of
@@ -349,6 +350,7 @@ instance Evaluable One C (Array Int (Complex Double)) where
                         foldl1' (+) . map (eval valMap . expOneC mp) $ args
                     Mul C args ->
                         foldl1' (+) . map (eval valMap . expOneC mp) $ args
+                    Power x arg -> fmap (^ x) (eval valMap $ expOneC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expOneC mp arg
                     Scale C arg1 arg2 ->
                         case retrieveElementType arg1 mp of
@@ -506,6 +508,7 @@ instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
                         foldl1' (+) . map (eval valMap . expTwoC mp) $ args
                     Mul C args ->
                         foldl1' (+) . map (eval valMap . expTwoC mp) $ args
+                    Power x arg -> fmap (^ x) (eval valMap $ expTwoC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expTwoC mp arg
                     Scale C arg1 arg2 ->
                         case retrieveElementType arg1 mp of
@@ -684,6 +687,7 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                         foldl1' (+) . map (eval valMap . expThreeC mp) $ args
                     Mul C args ->
                         foldl1' (+) . map (eval valMap . expThreeC mp) $ args
+                    Power x arg -> fmap (^ x) (eval valMap $ expThreeC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expThreeC mp arg
                     Scale C arg1 arg2 ->
                         case retrieveElementType arg1 mp of

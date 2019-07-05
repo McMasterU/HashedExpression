@@ -31,11 +31,11 @@ import Prelude hiding
     , (^)
     , acos
     , acosh
-    , const
     , asin
     , asinh
     , atan
     , atanh
+    , const
     , const
     , cos
     , cosh
@@ -150,6 +150,7 @@ complexNumRules =
     , (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v)
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
+    --, (x +: y) * (x +: y) |.~~~~~~> (x +:y)^2
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
@@ -173,6 +174,16 @@ distributiveRules =
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
     , prodOfRest * sumOf (each) |.~~~~~~> sumOf (prodOfRest * each)
     ]
+
+-- | Rules for power product
+-- (a+b)^2 should be (a+b)*(a+b) => prodOfRest * sumOf(each)
+
+--powerProdRules :: [Substitution]
+--powerProdRules =
+--    [ --x ^ num |.~~~~~~> prodOfRest * sumOf (each)
+--      (x) ^ num |.~~~~~~> num *. (prodOfRest * x )
+--    ]
+
 
 -- | Rules of piecewise
 --
@@ -277,10 +288,10 @@ combineTermsRules exp@(mp, n)
     fn x y = fst x == fst y
     toExp (nId, val)
         | val == 1 = (mp, nId)
---        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
 
+--        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
@@ -296,7 +307,10 @@ combineTermsRulesProd exp@(mp, n)
         | Power value powerel <- retrieveNode nId mp = (powerel, value)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
-    fn x y = fst x == fst y
+    fn (x, px) (y, py)
+        | Sum _ _ <- retrieveNode x mp = False
+        | Sum _ _ <- retrieveNode y mp = False
+        | otherwise = x == y
     toExp (nId, val)
         | val == 1 = (mp, nId)
         | otherwise = apply (unary (Power val)) $ [(mp, nId)]
