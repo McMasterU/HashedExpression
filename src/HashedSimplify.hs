@@ -308,8 +308,8 @@ combineTermsRulesProd exp@(mp, n)
 
 -- | Rules for power product
 -- (a+b)^2 should be (a+b)*(a+b)
-powerProdRules :: Simplification
-powerProdRules exp@(mp, n)
+powerSumRules :: Simplification
+powerSumRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Sum _ _ <- retrieveNode nId mp =
         if val > 1
@@ -320,6 +320,13 @@ powerProdRules exp@(mp, n)
     | otherwise = exp
   where
     inverse e = apply (unary $ Power (-1)) $ [e]
+
+powerProdRules :: Simplification
+powerProdRules exp@(mp, n)
+    | Power val nId <- retrieveNode n mp
+    , Mul _ _ <- retrieveNode nId mp = mulMany $ replicate val (mp, nId)
+    | otherwise = exp
+
 
 -- | Remove unreachable nodes
 --
