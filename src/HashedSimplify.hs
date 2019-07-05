@@ -92,7 +92,8 @@ simplify e =
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules) >>>
-            (makeRecursive combineTermsRulesProd)
+            (makeRecursive combineTermsRulesProd) >>>
+            (makeRecursive powerProdRules)
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 --    let applyRules = makeRecursive combineTermsRules
@@ -174,16 +175,6 @@ distributiveRules =
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
     , prodOfRest * sumOf (each) |.~~~~~~> sumOf (prodOfRest * each)
     ]
-
--- | Rules for power product
--- (a+b)^2 should be (a+b)*(a+b) => prodOfRest * sumOf(each)
-
---powerProdRules :: [Substitution]
---powerProdRules =
---    [ --x ^ num |.~~~~~~> prodOfRest * sumOf (each)
---      (x) ^ num |.~~~~~~> num *. (prodOfRest * x )
---    ]
-
 
 -- | Rules of piecewise
 --
@@ -314,6 +305,21 @@ combineTermsRulesProd exp@(mp, n)
     toExp (nId, val)
         | val == 1 = (mp, nId)
         | otherwise = apply (unary (Power val)) $ [(mp, nId)]
+
+-- | Rules for power product
+-- (a+b)^2 should be (a+b)*(a+b)
+powerProdRules :: Simplification
+powerProdRules exp@(mp, n)
+    | Power val nId <- retrieveNode n mp
+    , Sum _ _ <- retrieveNode nId mp =
+        if val > 1
+            then mulMany $ replicate val (mp, nId)
+            else if val < -1
+                     then inverse . mulMany $ replicate (-val) (mp, nId)
+                     else exp
+    | otherwise = exp
+  where
+    inverse e = apply (unary $ Power (-1)) $ [e]
 
 -- | Remove unreachable nodes
 --

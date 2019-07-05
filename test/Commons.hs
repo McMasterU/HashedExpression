@@ -27,6 +27,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -180,7 +181,7 @@ genZeroR :: Gen (Expression Zero R, [String])
 genZeroR = do
     let nary = map fromNaryZeroR [sum, product]
         binary = map fromBinaryZeroR [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroR [negate]
+        unary = map fromUnaryZeroR [negate, (^ 2), (^ 3)]
     oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
 
 -- | MARK: Gen functions C
@@ -239,5 +240,5 @@ genZeroC :: Gen (Expression Zero C, [String])
 genZeroC = do
     let nary = map fromNaryZeroC [sum, product]
         binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroC [negate]
+        unary = map fromUnaryZeroC [negate , (^ 2), (^ 3)]
     oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
