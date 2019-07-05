@@ -89,7 +89,8 @@ spec = do
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
                 simplify (sum (map (x <.>) [y, z, t, u, v]))
             prettify (simplify (product [a, b, c, sum [x, y, z]])) `shouldBe`
-                prettify (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
+                prettify
+                    (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
             simplify ((x + y) * (z + t) * a * b) `shouldBe`
                 simplify
                     (a * b * x * z + a * b * x * t + a * b * y * z +

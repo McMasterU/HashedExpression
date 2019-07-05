@@ -87,8 +87,6 @@ inspect x =
 
 -- |
 --
-
-
 -- | Approximable class
 --
 class Approximable a where
@@ -243,4 +241,3 @@ genZeroC = do
         binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
         unary = map fromUnaryZeroC [negate]
     oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
-

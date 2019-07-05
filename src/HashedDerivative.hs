@@ -67,7 +67,6 @@ data D_
 data NT_
     deriving (Typeable, ElementType, NumType, Addable)
 
-
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
 coerce :: Expression d1 et1 -> Expression d2 et2

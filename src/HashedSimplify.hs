@@ -277,6 +277,7 @@ combineTermsRules exp@(mp, n)
         | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
+
 -- |
 --
 -- Mul(x^(-1) * x,y) -> Mul(1,y)

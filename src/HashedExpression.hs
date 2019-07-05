@@ -118,7 +118,9 @@ class MultiplyOp a b c | a b -> c where
 class PowerOp a b | a -> b where
     (^) :: a -> b -> a
 
-class AddableOp b => VectorSpaceOp a b where
+class AddableOp b =>
+      VectorSpaceOp a b
+    where
     scale :: a -> b -> b
     (*.) :: a -> b -> b
     (*.) = scale

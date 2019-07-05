@@ -46,5 +46,5 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let f = x^(-1)*x / y
+    let f = x ^ (-1) * x / y
     showExp . simplify $ f

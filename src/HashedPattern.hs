@@ -15,6 +15,7 @@
 -------------------------------------------------------------------------------
 module HashedPattern where
 
+import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
@@ -47,7 +48,6 @@ import Prelude hiding
     , tan
     , tanh
     )
-import Data.List.HT (splitLast, viewR)
 
 -- | Pattern for simplification
 --
