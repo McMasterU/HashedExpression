@@ -28,6 +28,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -89,7 +90,8 @@ simplify e =
             rulesFromPattern >>>
             (makeRecursive reduceSumProdRules) >>>
             (makeRecursive groupConstantsRules) >>>
-            (makeRecursive combineTermsRules)
+            (makeRecursive combineTermsRules) >>>
+            (makeRecursive combineTermsRulesProd)
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 --    let applyRules = makeRecursive combineTermsRules
@@ -110,6 +112,8 @@ zeroOneRules =
     [ one *. x |.~~~~~~> x
     , one * x |.~~~~~~> x
     , x * one |.~~~~~~> x
+    , x ^ zero |.~~~~~~> one
+    , x ^ one |.~~~~~~> x
     , zero * x |.~~~~~~> zero
     , x * zero |.~~~~~~> zero
     , zero *. x |. isReal x ~~~~~~> zero
@@ -273,6 +277,25 @@ combineTermsRules exp@(mp, n)
         | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
+-- |
+--
+-- Mul(x^(-1) * x,y) -> Mul(1,y)
+-- Mul(x,x,y) -> Mul(x^2,y)
+combineTermsRulesProd :: Simplification
+combineTermsRulesProd exp@(mp, n)
+    | Mul _ ns <- retrieveNode n mp =
+        reconstruct exp $
+        map (toExp . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
+    | otherwise = (mp, n)
+  where
+    cntAppr nId
+        | Power value powerel <- retrieveNode nId mp = (powerel, value)
+        | otherwise = (nId, 1)
+    combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
+    fn x y = fst x == fst y
+    toExp (nId, val)
+        | val == 1 = (mp, nId)
+        | otherwise = apply (unary (Power val)) $ [(mp, nId)]
 
 -- | Remove unreachable nodes
 --

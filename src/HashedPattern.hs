@@ -30,6 +30,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -109,6 +110,7 @@ data Pattern
     | PInnerProd Pattern Pattern
     | PPiecewise Pattern PatternList
     | PMulRest PatternMulMany Pattern
+    | PPower Pattern Pattern
     deriving (Show)
 
 -- | Pattern
@@ -148,6 +150,9 @@ instance ComplexRealOp Pattern Pattern where
 
 instance InnerProductSpaceOp Pattern Pattern Pattern where
     (<.>) = PInnerProd
+
+instance PowerOp Pattern Pattern where
+    (^) = PPower
 
 -- | Pattern List
 --
@@ -373,6 +378,8 @@ match (mp, n) outerWH =
                         cMap
                         (lcMap `union` (Map.fromList [(listCapture, innerArgs)]))
                 | otherwise -> Nothing
+            (Power x arg, PPower sp (PConst val))
+                | fromIntegral x == val -> recursiveAndCombine [arg] [sp]
             _ -> Nothing
 
 turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern

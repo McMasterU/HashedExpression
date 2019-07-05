@@ -46,5 +46,5 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let f = huber2 3 (x * x + y * y)
-    showExp . simplify . exteriorDerivative (Set.fromList ["x", "y"]) $ f
+    let f = x^(-1)*x / y
+    showExp . simplify $ f

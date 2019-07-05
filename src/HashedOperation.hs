@@ -128,7 +128,7 @@ product es = Just . applyNary (naryET Mul ElementDefault) $ es
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) => PowerOp (Expression d et) where
+instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
     (^) :: Expression d et -> Int -> Expression d et
     (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
@@ -178,9 +178,7 @@ instance (DimensionType d) => NumOp (Expression d R) where
     asinh = applyUnary (unary Asinh)
     acosh = applyUnary (unary Acosh)
     atanh = applyUnary (unary Atanh)
-    (/) e1 e2 =
-        let op = binary Div
-         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    (/) e1 e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
 
 -- | inner product
 --
