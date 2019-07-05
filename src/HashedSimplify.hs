@@ -31,6 +31,7 @@ import Prelude hiding
     , (^)
     , acos
     , acosh
+    , const
     , asin
     , asinh
     , atan
@@ -128,6 +129,8 @@ zeroOneRules =
     , one <.> x |.~~~~~~> x
     , negate zero |.~~~~~~> zero
     , negate (negate x) |.~~~~~~> x
+    , num (-1) *. negate (x) |.~~~~~~> x
+    , num (-1) * negate (x) |.~~~~~~> x
     ]
 
 scaleRules :: [Substitution]
@@ -274,13 +277,13 @@ combineTermsRules exp@(mp, n)
     fn x y = fst x == fst y
     toExp (nId, val)
         | val == 1 = (mp, nId)
-        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
+--        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
 
 -- |
 --
--- Mul(x^(-1) * x,y) -> Mul(1,y)
+-- Mul(x^(-1) * x,y) -> y
 -- Mul(x,x,y) -> Mul(x^2,y)
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)

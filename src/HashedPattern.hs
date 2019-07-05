@@ -256,6 +256,9 @@ one = PConst 1
 zero :: Pattern
 zero = PConst 0
 
+num :: Double -> Pattern
+num = PConst
+
 each :: PatternList
 each = PListHole id 1
 
