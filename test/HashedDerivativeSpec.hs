@@ -1,4 +1,4 @@
-module DerivativeSpec where
+module HashedDerivativeSpec where
 
 import Commons
 import Data.List

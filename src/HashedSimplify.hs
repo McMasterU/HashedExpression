@@ -151,7 +151,6 @@ complexNumRules =
     , (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v)
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
-    --, (x +: y) * (x +: y) |.~~~~~~> (x +:y)^2
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 

@@ -17,6 +17,17 @@ import GHC.IO.Unsafe (unsafePerformIO)
 
 infixl 1 |>
 
+-- |
+--
+mapBoth :: (a -> b) -> (a, a) -> (b, b)
+mapBoth f (x, y) = (f x, f y)
+
+-- |
+--
+bringMaybeOut :: (Maybe a, Maybe b) -> Maybe (a, b)
+bringMaybeOut (Just x, Just y) = Just (x, y)
+bringMaybeOut _ = Nothing
+
 -- | Check if all elements of the list is equal
 --
 allEqual :: (Eq a) => [a] -> Bool
