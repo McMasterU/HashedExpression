@@ -39,42 +39,44 @@ nodeElementType node mp =
         Piecewise _ _ branches -> retrieveElementType (head branches) mp
         Rotate _ arg -> retrieveElementType arg mp
 
+nodeTypeWeight :: Node -> Int
+nodeTypeWeight node =
+    case node of
+        Var {} -> 1
+        DVar {} -> 800
+        Const {} -> -9999
+        Sum {} -> 9999
+        Mul {} -> 3
+        Power {} -> 28
+        Neg {} -> 4
+        Scale {} -> 5
+        Div {} -> 6
+        Sqrt {} -> 7
+        Sin {} -> 8
+        Cos {} -> 9
+        Tan {} -> 10
+        Exp {} -> 11
+        Log {} -> 12
+        Sinh {} -> 13
+        Cosh {} -> 14
+        Tanh {} -> 15
+        Asin {} -> 16
+        Acos {} -> 17
+        Atan {} -> 18
+        Asinh {} -> 19
+        Acosh {} -> 20
+        Atanh {} -> 21
+        RealImag {} -> 22
+        RealPart {} -> 23
+        ImagPart {} -> 24
+        InnerProd {} -> 25
+        Piecewise {} -> 26
+        Rotate {} -> 27
+
 -- |
 --
 sameNodeType :: Node -> Node -> Bool
-sameNodeType node1 node2 =
-    case (node1, node2) of
-        (Var {}, Var {}) -> True
-        (DVar {}, DVar {}) -> True
-        (Const {}, Const {}) -> True
-        (Sum {}, Sum {}) -> True
-        (Mul {}, Mul {}) -> True
-        (Power {}, Power {}) -> True
-        (Neg {}, Neg {}) -> True
-        (Scale {}, Scale {}) -> True
-        (Div {}, Div {}) -> True
-        (Sqrt {}, Sqrt {}) -> True
-        (Sin {}, Sin {}) -> True
-        (Cos {}, Cos {}) -> True
-        (Tan {}, Tan {}) -> True
-        (Exp {}, Exp {}) -> True
-        (Log {}, Log {}) -> True
-        (Sinh {}, Sinh {}) -> True
-        (Cosh {}, Cosh {}) -> True
-        (Tanh {}, Tanh {}) -> True
-        (Asin {}, Asin {}) -> True
-        (Acos {}, Acos {}) -> True
-        (Atan {}, Atan {}) -> True
-        (Asinh {}, Asinh {}) -> True
-        (Acosh {}, Acosh {}) -> True
-        (Atanh {}, Atanh {}) -> True
-        (RealImag {}, RealImag {}) -> True
-        (RealPart {}, RealPart {}) -> True
-        (ImagPart {}, ImagPart {}) -> True
-        (InnerProd {}, InnerProd {}) -> True
-        (Piecewise {}, Piecewise {}) -> True
-        (Rotate {}, Rotate {}) -> True
-        _ -> False
+sameNodeType node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
 
 -- | Get list of arguments of this node
 --

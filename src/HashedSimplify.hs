@@ -279,10 +279,10 @@ combineTermsRules exp@(mp, n)
     fn x y = fst x == fst y
     toExp (nId, val)
         | val == 1 = (mp, nId)
+        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
         | otherwise =
             apply (binaryET Scale ElementDefault) $ [aConst [] val, (mp, nId)]
 
---        | val == -1 = apply (unaryET Neg ElementDefault) $ [(mp, nId)]
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
@@ -413,39 +413,8 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
 sortArgs =
-    concat . map (sortWith snd) . groupBy nodeType . sortWith nodeTypeWeight
+    concat . map (sortWith snd) . groupBy nodeType . sortWith weight
   where
     nodeType (mp1, n1) (mp2, n2) =
         sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)
-    nodeTypeWeight (mp, n) =
-        case retrieveNode n mp of
-            Var {} -> 1
-            DVar {} -> 800
-            Const {} -> -9999
-            Sum {} -> 9999
-            Mul {} -> 3
-            Power {} -> 28
-            Neg {} -> 4
-            Scale {} -> 5
-            Div {} -> 6
-            Sqrt {} -> 7
-            Sin {} -> 8
-            Cos {} -> 9
-            Tan {} -> 10
-            Exp {} -> 11
-            Log {} -> 12
-            Sinh {} -> 13
-            Cosh {} -> 14
-            Tanh {} -> 15
-            Asin {} -> 16
-            Acos {} -> 17
-            Atan {} -> 18
-            Asinh {} -> 19
-            Acosh {} -> 20
-            Atanh {} -> 21
-            RealImag {} -> 22
-            RealPart {} -> 23
-            ImagPart {} -> 24
-            InnerProd {} -> 25
-            Piecewise {} -> 26
-            Rotate {} -> 27
+    weight (mp, n) = nodeTypeWeight $ retrieveNode n mp
