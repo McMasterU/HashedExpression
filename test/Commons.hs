@@ -184,6 +184,9 @@ genZeroR = do
         unary = map fromUnaryZeroR [negate, (^ 2), (^ 3)]
     oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
 
+instance Arbitrary (Expression Zero R) where
+    arbitrary = fmap fst genZeroR
+
 -- | MARK: Gen functions C
 --
 primitiveZeroC :: Gen (Expression Zero C, [String])
@@ -240,5 +243,8 @@ genZeroC :: Gen (Expression Zero C, [String])
 genZeroC = do
     let nary = map fromNaryZeroC [sum, product]
         binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroC [negate , (^ 2), (^ 3)]
+        unary = map fromUnaryZeroC [negate, (^ 2), (^ 3)]
     oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
+
+instance Arbitrary (Expression Zero C) where
+    arbitrary = fmap fst genZeroC

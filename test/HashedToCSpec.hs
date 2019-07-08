@@ -1,3 +1,5 @@
+{-# LANGUAGE ExistentialQuantification #-}
+
 module HashedToCSpec where
 
 import Commons
@@ -11,17 +13,24 @@ import HashedToC
 import Test.Hspec
 import Test.QuickCheck
 
+data ArbitraryExpresion =
+    forall d et. ArbitraryExpresion (Expression d et)
+
+instance Show ArbitraryExpresion where
+    show (ArbitraryExpresion exp) = show exp
+
+instance Arbitrary ArbitraryExpresion where
+    arbitrary =
+        let option1 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero R))
+            option2 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero C))
+         in oneof [option1, option2]
+
 -- |
 --
-newtype TopologicalSuite =
-    TopologicalSuite (Expression Zero C)
-    deriving (Show)
-
-instance Arbitrary TopologicalSuite where
-    arbitrary = fmap (TopologicalSuite . fst) genZeroC
-
-prop_TopologicalSort :: TopologicalSuite -> Bool
-prop_TopologicalSort (TopologicalSuite (Expression n mp)) =
+prop_TopologicalSort :: ArbitraryExpresion -> Bool
+prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
     noDuplicate && all prop withChildren
   where
     sortedNodeId = topologicalSort (mp, n)
