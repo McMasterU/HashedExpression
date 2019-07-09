@@ -139,10 +139,13 @@ generateCodeC memMap expr = concatMap genCode . topologicalSort . unwrap $ expr
     mp = fst . unwrap $ expr
     [i, j, k, noOffset] = ["i", "j", "k", "0"]
     for :: String -> Int -> [String] -> [String]
-    for iter nId scopeCodes =
+    for = forWith []
+    forWith :: [String] -> String -> Int -> [String] -> [String]
+    forWith initCodes iter nId scopeCodes =
         let shape = retrieveShape nId mp
-         in [ "{"
-            , "  int " ++ iter ++ ";"
+         in ["{"] ++
+            initCodes ++
+            [ "  int " ++ iter ++ ";"
             , "  for (" ++
               iter ++
               " = 0; " ++
@@ -254,3 +257,16 @@ generateCodeC memMap expr = concatMap genCode . topologicalSort . unwrap $ expr
                 Asinh arg -> for i n [(n `at` i) <<- "asinh" ++ (arg `at` i)]
                 Acosh arg -> for i n [(n `at` i) <<- "acosh" ++ (arg `at` i)]
                 Atanh arg -> for i n [(n `at` i) <<- "atanh" ++ (arg `at` i)]
+                RealImag arg1 arg2 ->
+                    for i n [(n `reAt` i) <<- (arg1 `at` i)] ++
+                    for i n [(n `reAt` i) <<- (arg2 `at` i)]
+                RealPart arg -> for i n [(n `at` i) <<- (arg `reAt` i)]
+                ImagPart arg -> for i n [(n `at` i) <<- (arg `imAt` i)]
+                InnerProd _ arg1 arg2
+                    | map elementType [arg1, arg2] == [R, R] ->
+                        let codes =
+                                [ "acc" +=
+                                  (arg1 `at` i) ++ " * " ++ (arg2 `at` i)
+                                ]
+                         in forWith ["double acc" <<- "0"] i n codes
+                    | otherwise -> error "Not support yet"
