@@ -48,6 +48,8 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Prelude (Bool)
+import Prelude (Bool)
 
 -- | Pattern for simplification
 --
@@ -212,6 +214,19 @@ type Condition = (ExpressionMap, Int) -> Match -> Bool
 
 -- |
 --
+(&&.) :: Condition -> Condition -> Condition
+(&&.) condition1 condition2 expr match = condition1 expr match && condition2 expr match
+
+infixl 8 &&.
+-- |
+--
+isScalar :: Pattern -> Condition
+isScalar p exp match = retrieveShape n mp == []
+  where
+  (mp,n) = buildFromPattern exp match  p
+
+-- |
+--
 isReal :: Pattern -> Condition
 isReal p exp match = retrieveElementType n mp == R
   where
@@ -237,7 +252,6 @@ sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
     getET = uncurry (flip retrieveElementType) . buildFromPattern exp match
-
 -- |
 --
 allTheSame :: PatternList -> Condition

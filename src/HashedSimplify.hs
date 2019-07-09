@@ -140,6 +140,8 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x*y
+
     ]
 
 -- | Rules with complex operation
@@ -155,7 +157,7 @@ complexNumRules =
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
--- | Rules with dot product and scale
+-- | Rules with dot product and scalepush
 --
 dotProductRules :: [Substitution]
 dotProductRules =
@@ -308,6 +310,8 @@ combineTermsRulesProd exp@(mp, n)
 
 -- | Rules for power product
 -- (a+b)^2 should be (a+b)*(a+b)
+
+
 powerSumRules :: Simplification
 powerSumRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
