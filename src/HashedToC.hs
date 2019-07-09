@@ -78,9 +78,9 @@ data PartC
     | Im
     deriving (Show, Eq, Ord)
 
-data LocalOffset
-    = OffsetR [Int]
-    | OffsetC PartC [Int]
+data LookupIndex
+    = LookupR [Int]
+    | LookupC PartC [Int]
     deriving (Show, Eq, Ord)
 
 -- | Make a memory map from an expression
@@ -88,34 +88,39 @@ data LocalOffset
 makeMemMap :: NumType et => Expression d et -> MemMap
 makeMemMap expr@(Expression n mp) = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
   where
-    nIds = topologicalSort . unwrap $ expr
+    nIds = IM.keys mp
     f :: (IntMap MemMapEntry, Int) -> Int -> (IntMap MemMapEntry, Int)
     f (memMapSoFar, sizeSoFar) nId =
         let (shape, node) = retrieveInternal nId mp
             (nodeSz, mmShape)
-                | nodeElementType node mp == R = (product shape, EntryR)
-                | nodeElementType node mp == C = (2 * product shape, EntryC)
+                | nodeElementType node mp == R =
+                    (product shape * sizeDouble, EntryR)
+                | nodeElementType node mp == C =
+                    (2 * product shape * sizeDouble, EntryC)
             newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
          in (newMemMap, sizeSoFar + nodeSz)
 
-memOffset :: MemMap -> Int -> LocalOffset -> Int
+memOffset :: MemMap -> Int -> LookupIndex -> Int
 memOffset (MemMap entryMap _) nId lookupOffset
     | Just (globalOffset, entryType, entryShape) <- IM.lookup nId entryMap =
         case (entryType, lookupOffset) of
-            (EntryR, OffsetR indices) ->
-                globalOffset + computeInnerOffset entryShape indices
-            (EntryC, OffsetC Re indices) ->
-                globalOffset + computeInnerOffset (2 : entryShape) (0 : indices)
-            (EntryC, OffsetC Im indices) ->
-                globalOffset + computeInnerOffset (2 : entryShape) (1 : indices)
+            (EntryR, LookupR indices) ->
+                globalOffset + localOffset entryShape indices
+            (EntryC, LookupC Re indices) ->
+                globalOffset + localOffset (2 : entryShape) (0 : indices)
+            (EntryC, LookupC Im indices) ->
+                globalOffset + localOffset (2 : entryShape) (1 : indices)
     | otherwise = error "node id is not in the mem map"
 
 -- | Compute the inner offset:
--- e.g computeInnerOffset [3, 4, 5] [2, 0, 1] = 2 * (4 * 5) + 0 * (5) + 1
+-- e.g localOffset [3, 4, 5] [2, 0, 1] = 2 * (4 * 5) + 0 * (5) + 1
 --
-computeInnerOffset :: [Int] -> [Int] -> Int
-computeInnerOffset shape indices
+localOffset :: [Int] -> [Int] -> Int
+localOffset shape indices
     | length shape == length indices =
-        sum . zipWith (*) indices $ map product . tail . tails $ shape
+        (* sizeDouble) . sum . zipWith (*) indices . map product . tail . tails $
+        shape
     | otherwise =
         error "shape and indices are not compatible (not the same size)"
+-- |
+--
