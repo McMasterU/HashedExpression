@@ -36,9 +36,9 @@ prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
     sortedNodeId = topologicalSort (mp, n)
     noDuplicate = sort (removeDuplicate sortedNodeId) == sort sortedNodeId
     isAfter n other =
-        filter (\nId -> nId == n || nId == other) sortedNodeId == [other, n]
-    withChildren =
-        zip sortedNodeId (map (\n -> nodeArgs $ retrieveNode n mp) sortedNodeId)
+        filter (liftA2 (||) (== n) (== other)) sortedNodeId == [other, n]
+    dependencies n = nodeArgs $ retrieveNode n mp
+    withChildren = zip sortedNodeId (map dependencies sortedNodeId)
     prop (nId, childrenIds) = all (nId `isAfter`) childrenIds
 
 -- | Spec
