@@ -2,6 +2,7 @@
 
 module HashedToC where
 
+import Data.Array
 import Data.Graph (buildG, topSort)
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
@@ -57,7 +58,7 @@ type MemMapEntry = (Int, EntryType, Shape)
 data MemMap =
     MemMap
         { entryMap :: IntMap MemMapEntry -- node id -> (offset, size)
-        , totalSize :: Int
+        , totalDoubles :: Int
         }
     deriving (Show, Eq, Ord)
 
@@ -76,10 +77,6 @@ data GridIndex
     | GridC PartC [Int]
     deriving (Show, Eq, Ord)
 
--- |
---
-sizeDouble = 8
-
 -- | Make a memory map from an expression
 --
 makeMemMap :: (DimensionType d, NumType et) => Expression d et -> MemMap
@@ -90,10 +87,8 @@ makeMemMap expr@(Expression n mp) = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
     f (memMapSoFar, sizeSoFar) nId =
         let (shape, node) = retrieveInternal nId mp
             (nodeSz, mmShape)
-                | nodeElementType node mp == R =
-                    (product shape * sizeDouble, EntryR)
-                | nodeElementType node mp == C =
-                    (2 * product shape * sizeDouble, EntryC)
+                | nodeElementType node mp == R = (product shape, EntryR)
+                | nodeElementType node mp == C = (2 * product shape, EntryC)
             newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
          in (newMemMap, sizeSoFar + nodeSz)
 
@@ -117,8 +112,7 @@ memOffset (MemMap entryMap _) nId gridIndex
 localOffset :: [Int] -> [Int] -> Int
 localOffset shape indices
     | length shape == length indices =
-        (* sizeDouble) . sum . zipWith (*) indices . map product . tail . tails $
-        shape
+        sum . zipWith (*) indices . map product . tail . tails $ shape
     | otherwise =
         error $
         "shape and indices are not compatible" ++ show shape ++ show indices
@@ -142,65 +136,64 @@ space n = map (replicate n ' ' ++)
 --
 generateCodeC ::
        (DimensionType d, NumType et) => MemMap -> Expression d et -> [String]
-generateCodeC memMap expr = concatMap genCode . topologicalSort . unwrap $ expr
+generateCodeC memMap expr@(Expression _ mp) =
+    concatMap genCode . topologicalSort . unwrap $ expr
   where
-    mp = fst . unwrap $ expr
+    getShape :: Int -> Shape
+    getShape nId = retrieveShape nId mp
+    -- for with only body
     for :: String -> Int -> [String] -> [String]
-    for iter nId scopeCodes = forWith [] iter nId scopeCodes []
-    forWith :: [String] -> String -> Int -> [String] -> [String] -> [String]
-    forWith initCodes iter nId scopeCodes afterCode =
-        let shape = retrieveShape nId mp
-         in ["{"] ++
+    for iter nId scopeCodes = forWith iter nId ([], scopeCodes, [])
+    -- for with init code, body code and after code
+    forWith :: String -> Int -> ([String], [String], [String]) -> [String]
+    forWith iter nId (initCodes, codes, afterCodes)
+        | let shape = getShape nId
+        , not $ null shape =
+            ["{"] ++
             space 2 initCodes ++
             [ "  int " ++ iter ++ ";"
             , "  for (" ++
               iter ++
               " = 0; " ++
-              iter ++
-              " < 8 * " ++ show (product shape) ++ "; " ++ iter ++ " += 8) {"
+              iter ++ " < " ++ show (product shape) ++ "; " ++ iter ++ "++) {"
             ] ++
-            space 4 scopeCodes ++
+            space 4 codes ++
             ["  }"] ++ --
-            space 2 afterCode ++ --
+            space 2 afterCodes ++ --
             ["}"]
+        | otherwise = initCodes ++ codes ++ afterCodes
+    commonAt :: GridIndex -> Int -> String -> String
+    commonAt gridIndex nId os =
+        let nShape = retrieveShape nId mp
+            offsetValue
+                | null nShape = ""
+                | os == "0" = ""
+                | otherwise = " + " ++ os
+         in "(*(ptr + " ++
+            show (memOffset memMap nId gridIndex) ++ offsetValue ++ "))"
     -- Real node
     at :: Int -> String -> String
-    at nId offsetVar =
-        let nShape = retrieveShape nId mp
-            gridIndex = GridR $ replicate (length nShape) 0
-            offsetValue
-                | offsetVar == "0" = ""
-                | otherwise = " + " ++ offsetVar
-         in "(*((double*)(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ ")))"
+    at nId os =
+        let gridIndex = GridR $ replicate (length $ retrieveShape nId mp) 0
+         in commonAt gridIndex nId os
     -- Real part of complex node
     reAt :: Int -> String -> String
-    reAt nId offsetVar =
-        let nShape = retrieveShape nId mp
-            gridIndex = GridC Re $ replicate (length nShape) 0
-            offsetValue
-                | offsetVar == "0" = ""
-                | otherwise = "+ " ++ offsetVar
-         in "(*((double*)(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ ")))"
+    reAt nId os =
+        let gridIndex = GridC Re $ replicate (length $ retrieveShape nId mp) 0
+         in commonAt gridIndex nId os
     -- Real part of complex node
     imAt :: Int -> String -> String
-    imAt nId offsetVar =
-        let nShape = retrieveShape nId mp
-            gridIndex = GridC Im $ replicate (length nShape) 0
-            offsetValue
-                | offsetVar == "0" = ""
-                | otherwise = "+ " ++ offsetVar
-         in "(*((double*)(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ ")))"
+    imAt nId os =
+        let gridIndex = GridC Im $ replicate (length $ retrieveShape nId mp) 0
+         in commonAt gridIndex nId os
     infix 9 `at`, `imAt`, `reAt`
     computedValAt :: Int -> String -> String
     computedValAt nId offsetVar
         | Const val <- retrieveNode nId mp = "(" ++ show val ++ ")"
         | otherwise =
             let gridIndex = GridR []
-             in "(*((double*)(ptr + " ++
-                show (memOffset memMap nId gridIndex) ++ offsetVar ++ ")))"
+             in "(*(ptr + " ++
+                show (memOffset memMap nId gridIndex) ++ offsetVar ++ "))"
     genCode :: Int -> [String] -- From node id to codes
     genCode n =
         let (shape, node) = retrieveInternal n mp
@@ -225,7 +218,8 @@ generateCodeC memMap expr = concatMap genCode . topologicalSort . unwrap $ expr
                     | otherwise -> error "Not support yet"
                 Power x arg
                     | elementType n == R ->
-                        let powerAt i = arg `at` i ++ "^ (" ++ show x ++ ")"
+                        let powerAt i =
+                                "pow(" ++ arg `at` i ++ "," ++ show x ++ ")"
                          in for i n [n `at` i <<- powerAt i]
                     | otherwise -> error "Not support yet"
                 Neg _ arg
@@ -281,10 +275,10 @@ generateCodeC memMap expr = concatMap genCode . topologicalSort . unwrap $ expr
                             codes =
                                 ["acc" += arg1 `at` i ++ " * " ++ arg2 `at` i]
                             afterCodes = [n `at` noOffset <<- "acc"]
-                         in forWith initCodes i arg1 codes afterCodes
+                         in forWith i arg1 (initCodes, codes, afterCodes)
                     | otherwise -> error "Not support yet"
 
--- |
+-- | Generate a fully functional C program that compute the expression and print out the result
 --
 generateProgram ::
        (DimensionType d, NumType et) => ValMaps -> Expression d et -> [String]
@@ -306,13 +300,14 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
             offsetValue
                 | offsetVar == "0" = ""
                 | otherwise = " + " ++ offsetVar
-         in "(*((double*)(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ ")))"
+         in "(*(ptr + " ++
+            show (memOffset memMap nId gridIndex) ++ offsetValue ++ "))"
     (mp, n) = unwrap expr
     memMap = makeMemMap expr
     -- allocate memory
-    sz = totalSize memMap
-    initMemory = ["void *ptr" <<- "malloc(" ++ show sz ++ ")"]
+    sz = totalDoubles memMap
+    initMemory =
+        ["double *ptr" <<- "malloc(sizeof(double) * " ++ show sz ++ ")"]
     -- assign value to variables
     vars :: [(Int, String)]
     vars =
@@ -322,12 +317,26 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
          in mapMaybe toVar . IM.keys $ mp
     codesForVar :: (Int, String) -> [String]
     codesForVar (n, varName)
-        | Just val <- Map.lookup varName vm0 =
-            [n `at` noOffset <<- show val]
-        | Just val <- Map.lookup varName vm1 = []
-        | Just val <- Map.lookup varName vm2 = []
-        | Just val <- Map.lookup varName vm3 = []
-    assignVals = []
+        | Just val <- Map.lookup varName vm0 = [n `at` noOffset <<- show val]
+        | Just array1d <- Map.lookup varName vm1 =
+            let assignIndex id = [n `at` show id <<- show (array1d ! id)]
+             in concatMap assignIndex $ indices array1d
+        | Just array2d <- Map.lookup varName vm2 =
+            let shape = retrieveShape n mp
+                assignIndex (id1, id2) =
+                    [ n `at` show (localOffset shape [id1, id2]) <<-
+                      show (array2d ! (id1, id2))
+                    ]
+             in concatMap assignIndex $ indices array2d
+        | Just array3d <- Map.lookup varName vm3 =
+            let shape = retrieveShape n mp
+                assignIndex (id1, id2, id3) =
+                    [ n `at` show (localOffset shape [id1, id2, id3]) <<-
+                      show (array3d ! (id1, id2, id2))
+                    ]
+             in concatMap assignIndex $ indices array3d
+        | otherwise = []
+    assignVals = concatMap codesForVar vars
     -- codes to compute
     codes = generateCodeC memMap expr
     -- print the value of expression

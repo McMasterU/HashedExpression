@@ -50,8 +50,8 @@ spec =
     describe "Hashed To C spec" $ do
         specify "Topological sort" $ property prop_TopologicalSort
         specify "Compute local offset" $ do
-            localOffset [2, 3, 4] [1, 2, 0] `shouldBe` 8 * (1 * 3 * 4 + 2 * 4 + 0)
-            localOffset [5] [3] `shouldBe` 8 * 3
+            localOffset [2, 3, 4] [1, 2, 0] `shouldBe` (1 * 3 * 4 + 2 * 4 + 0)
+            localOffset [5] [3] `shouldBe` 3
             localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
         specify "Size memmap" $ pendingWith "not implemented"
         specify "Mem map offset" $ pendingWith "not implemented"
