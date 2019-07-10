@@ -86,11 +86,8 @@ spec =
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
             replicateM_ 10 $ do
-                (exp, names) <- generate genZeroR
-                doubles <-
-                    generate $ vectorOf (length names) (arbitrary :: Gen Double)
-                let vm0 = Map.fromList $ zip names doubles
-                    valMaps = emptyVms |> withVm0 vm0
+                print "hello world"
+                SuiteZeroR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code should equal to HashedInterp
                 output <- evaluateCodeC exp valMaps
@@ -98,12 +95,12 @@ spec =
                 let resultInterp = eval valMaps exp
                 putStrLn $ "Result C Code: " ++ show result
                 putStrLn $ "Result Interp: " ++ show resultInterp
-                result ~= resultInterp `shouldBe` True
+                result `shouldApprox` resultInterp
                 putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 outputSimple <- evaluateCodeC (simplify exp) valMaps
                 let resultSimple = read . head . splitOn " " $ outputSimple
                 putStrLn $ "Result C Code (Simplified): " ++ show result
                 putStrLn $ "Result Interp (Simplified): " ++ show resultInterp
-                resultSimple ~= eval valMaps (simplify exp) `shouldBe` True
+                resultSimple `shouldApprox` eval valMaps (simplify exp)
                 putStrLn "OK!"

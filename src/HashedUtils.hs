@@ -132,3 +132,11 @@ withVm2 vm2 (ValMaps vm0 vm1 _ vm3) = ValMaps vm0 vm1 vm2 vm3
 
 withVm3 :: Map String (Array (Int, Int, Int) Double) -> ValMaps -> ValMaps
 withVm3 vm3 (ValMaps vm0 vm1 vm2 _) = ValMaps vm0 vm1 vm2 vm3
+
+mergeValMaps :: ValMaps -> ValMaps -> ValMaps
+mergeValMaps (ValMaps vm10 vm11 vm12 vm13) (ValMaps vm20 vm21 vm22 vm23) =
+    ValMaps
+        (Map.union vm10 vm20)
+        (Map.union vm11 vm21)
+        (Map.union vm12 vm22)
+        (Map.union vm13 vm23)
