@@ -17,12 +17,12 @@ import HashedInner
 import HashedInterp
 import HashedNode
 import HashedPrettify (showExp)
+import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
-import HashedSimplify (simplify)
 
 -- |
 --
@@ -91,11 +91,19 @@ spec =
                     generate $ vectorOf (length names) (arbitrary :: Gen Double)
                 let vm0 = Map.fromList $ zip names doubles
                     valMaps = emptyVms |> withVm0 vm0
+                putStrLn "------------------------"
                 -- Evaluate by C code should equal to HashedInterp
                 output <- evaluateCodeC exp valMaps
                 let result = read . head . splitOn " " $ output
-                result ~= eval valMaps exp `shouldBe` True
+                let resultInterp = eval valMaps exp
+                putStrLn $ "Result C Code: " ++ show result
+                putStrLn $ "Result Interp: " ++ show resultInterp
+                result ~= resultInterp `shouldBe` True
+                putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 outputSimple <- evaluateCodeC (simplify exp) valMaps
                 let resultSimple = read . head . splitOn " " $ outputSimple
+                putStrLn $ "Result C Code (Simplified): " ++ show result
+                putStrLn $ "Result Interp (Simplified): " ++ show resultInterp
                 resultSimple ~= eval valMaps (simplify exp) `shouldBe` True
+                putStrLn "OK!"
