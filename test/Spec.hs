@@ -59,7 +59,7 @@ spec = do
 --    describe "SimplifySpec" HashedSimplifySpec.spec
 --    describe "Test1" Test1.spec
 --    describe "Test1" Test2.spec
---    describe "HashedToCSpec" HashedToCSpec.spec
+    describe "HashedToCSpec" HashedToCSpec.spec
 
 --haha = do
 --    let f = negate (y +: m) + (y +: g)
