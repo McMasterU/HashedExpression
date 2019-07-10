@@ -1,4 +1,4 @@
-module SimplifySpec where
+module HashedSimplifySpec where
 
 import Commons
 import Data.Maybe (fromJust)
