@@ -140,8 +140,7 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
-    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x*y
-
+    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules with complex operation
@@ -154,7 +153,7 @@ complexNumRules =
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
     --, (x +: y) * (x +: y) |.~~~~~~> (x +:y)^2
-    , negate (x +: y) |.~~~~~~> negate x +: negate y
+--    , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
 -- | Rules with dot product and scalepush
@@ -163,6 +162,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+--    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules of distributive over sum
@@ -310,8 +310,6 @@ combineTermsRulesProd exp@(mp, n)
 
 -- | Rules for power product
 -- (a+b)^2 should be (a+b)*(a+b)
-
-
 powerSumRules :: Simplification
 powerSumRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
@@ -330,7 +328,6 @@ powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ _ <- retrieveNode nId mp = mulMany $ replicate val (mp, nId)
     | otherwise = exp
-
 
 -- | Remove unreachable nodes
 --
@@ -416,8 +413,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs =
-    concat . map (sortWith snd) . groupBy nodeType . sortWith weight
+sortArgs = concat . map (sortWith snd) . groupBy nodeType . sortWith weight
   where
     nodeType (mp1, n1) (mp2, n2) =
         sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)

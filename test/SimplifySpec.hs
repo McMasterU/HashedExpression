@@ -65,19 +65,23 @@ spec = do
             simplify (xIm (x +: y)) `shouldBe` y
             simplify ((x +: y) + (u +: v)) `shouldBe`
                 simplify ((x + u) +: (y + v))
-            simplify (s *. (x +: y)) `shouldBe` (s *. x) +: (s *. y) -- does not work for ScalarC, only vectorC; it's also in HashedComplexInstances
+            simplify (s *. (x +: y)) `shouldBe` simplify ((s *. x) +: (s *. y))
             simplify ((x +: y) * (z +: w)) `shouldBe`
                 simplify ((x * z - y * w) +: (x * w + y * z))
         specify "dot product" $ do
             simplify (x <.> zero) `shouldBe` zero
             simplify (zero <.> x) `shouldBe` zero
-            simplify ((s *. x) <.> y) `shouldBe` simplify (s * (x <.> y))
+            prettify (simplify ((s *. x) <.> y)) `shouldBe` prettify (simplify (s * (x <.> y)))
             simplify (x <.> (s *. y)) `shouldBe` simplify (s * (x <.> y))
         specify "distributivity" $ do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
-            simplify (x *. (y + z)) `shouldBe` (x *. y + x *. z)
-            simplify (x <.> (y + z)) `shouldBe` ((x <.> y) + (x <.> z))
+            showExp $ simplify (x *. (y + z))
+            showExp $ simplify (x *. y + x *. z)
+            print . simplify $ x *. (y + z)
+            print . simplify $ x *. y + x *. z
+            (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
+            prettify (simplify (x <.> (y + z))) `shouldBe` prettify ((x <.> y) + (x <.> z))
             simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
