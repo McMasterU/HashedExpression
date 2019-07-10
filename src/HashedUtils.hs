@@ -1,6 +1,9 @@
 module HashedUtils where
 
+import Data.Array
 import qualified Data.IntMap.Strict as IM
+import Data.Map (Map, fromList)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import HashedExpression
 import HashedHash
@@ -99,3 +102,33 @@ aConst shape val = (IM.fromList [(h, node)], h)
   where
     node = (shape, Const val)
     h = hash node
+
+-- |
+--
+data ValMaps =
+    ValMaps
+        { vm0 :: Map String Double
+        , vm1 :: Map String (Array Int Double)
+        , vm2 :: Map String (Array (Int, Int) Double)
+        , vm3 :: Map String (Array (Int, Int, Int) Double)
+        }
+    deriving (Eq, Show, Ord)
+
+emptyVms :: ValMaps
+emptyVms =
+    ValMaps {vm0 = Map.empty, vm1 = Map.empty, vm2 = Map.empty, vm3 = Map.empty}
+
+-- | Helpers so we can write things like
+-- emptyVms |> withVm0 (..) |> withVm1 (..) |> withVM2 (..)
+--
+withVm0 :: Map String Double -> ValMaps -> ValMaps
+withVm0 vm0 (ValMaps _ vm1 vm2 vm3) = ValMaps vm0 vm1 vm2 vm3
+
+withVm1 :: Map String (Array Int Double) -> ValMaps -> ValMaps
+withVm1 vm1 (ValMaps vm0 _ vm2 vm3) = ValMaps vm0 vm1 vm2 vm3
+
+withVm2 :: Map String (Array (Int, Int) Double) -> ValMaps -> ValMaps
+withVm2 vm2 (ValMaps vm0 vm1 _ vm3) = ValMaps vm0 vm1 vm2 vm3
+
+withVm3 :: Map String (Array (Int, Int, Int) Double) -> ValMaps -> ValMaps
+withVm3 vm3 (ValMaps vm0 vm1 vm2 _) = ValMaps vm0 vm1 vm2 vm3

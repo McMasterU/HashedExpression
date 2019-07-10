@@ -41,11 +41,15 @@ import Prelude hiding
 
 import Data.Maybe (fromJust)
 import HashedToC
-import HashedUtils ((|>))
+import HashedUtils
 import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
+import Data.List (intercalate)
 
 main = do
-    print "hello world"
-    print "hello world"
+    let f = (x * y * z + one + x1 <.> y1) * z
+    showExp f
+    let program = generateProgram emptyVms f
+    writeFile "C/f.c" (intercalate "\n" program)
+
