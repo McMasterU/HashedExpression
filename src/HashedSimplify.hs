@@ -93,7 +93,11 @@ simplify e =
             (makeRecursive groupConstantsRules) >>>
             (makeRecursive combineTermsRules) >>>
             (makeRecursive combineTermsRulesProd) >>>
-            (makeRecursive powerProdRules)
+            (makeRecursive powerProdRules) >>>
+            (makeRecursive powerSumRules) >>>
+            (makeRecursive combinePowerRules) >>>
+            (makeRecursive negateRules) >>>
+            (makeRecursive combineScaleRules) >>> id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 --    let applyRules = makeRecursive combineTermsRules
@@ -116,6 +120,7 @@ zeroOneRules =
     , x * one |.~~~~~~> x
     , x ^ zero |.~~~~~~> one
     , x ^ one |.~~~~~~> x
+    , (negate (x)) * (negate (x)) |.~~~~~~> x * x
     , zero * x |.~~~~~~> zero
     , x * zero |.~~~~~~> zero
     , zero *. x |. isReal x ~~~~~~> zero
@@ -306,7 +311,17 @@ combineTermsRulesProd exp@(mp, n)
         | val == 1 = (mp, nId)
         | otherwise = apply (unary (Power val)) $ [(mp, nId)]
 
--- | Rules for power product
+-- | Rules for combining powers of power
+-- (x^2)^3 -> x^6
+-- (x^2)^-1 -> x^-2
+combinePowerRules :: Simplification
+combinePowerRules exp@(mp, n)
+    | Power powerVal wholeExpr <- retrieveNode n mp
+    , Power powerVal1 innerExpr <- retrieveNode wholeExpr mp =
+        apply (unary (Power (powerVal * powerVal1))) $ [(mp, innerExpr)] --(innerExpr,(powerVal*powerVal1)
+    | otherwise = exp
+
+-- | Rules for power sum
 -- (a+b)^2 should be (a+b)*(a+b)
 powerSumRules :: Simplification
 powerSumRules exp@(mp, n)
@@ -321,13 +336,57 @@ powerSumRules exp@(mp, n)
   where
     inverse e = apply (unary $ Power (-1)) $ [e]
 
+-- |Rules for power product
+-- (a*b)^2 should be a^2 * b^2
 powerProdRules :: Simplification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , Mul _ _ <- retrieveNode nId mp = mulMany $ replicate val (mp, nId)
+    , Mul _ _ <- retrieveNode nId mp
+    , val > 0 = mulMany $ replicate val (mp, nId)
     | otherwise = exp
 
+--    , Const val1 <- retrieveNode nId mp --ADDED NOW
+--    | Power powerVal wholeExpr <- retrieveNode n mp
+--    , Neg _ negateNum <- retrieveNode wholeExpr mp
+--    , powerVal > 0 = mulMany $ replicate powerVal (mp,wholeExpr)
+-- | Rules for negate
+-- (-x) ---> (-1) *. x
+negateRules :: Simplification
+negateRules exp@(mp, n)
+    | Neg _ nID <- retrieveNode n mp --apply (binary (Scale (-1))) $ [(mp, nID)]
+     = apply (binaryET Scale ElementDefault) $ [aConst [] (-1), (mp, nID)]
+    | otherwise = exp
 
+-- powerScaleRules :: Simplification
+-- powerScaleRules exp@(mp,n)
+--    | Power nId powerVal  <- retrieveNode n mp
+--    , Scale _ scalerN scaleeN <- retrieveNode nId mp
+--    , Const constVal <- retrieveNode scalerN mp
+--    , powerVal > 0 = mulMany . (map constPower powerVal constVal) $ [(mp,nId)]
+--    | otherwise = exp
+--    where
+--      constPower x y  = replicate x y
+-- | Rules for combining scale
+-- ((-1) *. x) * (2 *. y) * (3 *. z) ---> (-6) *. (x * y * z)
+--combineScaleRules :: Simplification
+combineScaleRules exp@(mp, n)
+    | Mul _ ns <- retrieveNode n mp =
+        let extract nId
+                | Scale _ scalar scalee <- retrieveNode nId mp
+                , Const constVal <- retrieveNode scalar mp = (scalee, constVal)
+                | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
+                | otherwise = (nId, 1)
+            extracted :: [(Int, Double)]
+            extracted = map extract ns
+            combinedConstants :: Double
+            combinedConstants = Prelude.product $ map snd extracted --(fst $ head extracted, Prelude.product $ map snd extracted)
+            combinedScalees :: (ExpressionMap, Int)
+            combinedScalees = mulMany . map (mp, ) . map fst $ extracted
+         in apply (binaryET Scale ElementDefault) $
+            [aConst [] (combinedConstants), combinedScalees] -- then scale the combined constants to the combined scalees
+    | otherwise = exp
+
+--            | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)
 -- | Remove unreachable nodes
 --
 removeUnreachable :: Simplification
@@ -412,8 +471,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs =
-    concat . map (sortWith snd) . groupBy nodeType . sortWith weight
+sortArgs = concat . map (sortWith snd) . groupBy nodeType . sortWith weight
   where
     nodeType (mp1, n1) (mp2, n2) =
         sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)

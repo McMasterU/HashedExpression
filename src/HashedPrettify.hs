@@ -129,4 +129,4 @@ hiddenPrettify e@(Expression n mp) =
                     ]
             Power x arg ->
                 wrapParentheses . T.concat $
-                [innerPrettify arg, "^", T.pack $ show x]
+                [{--wrapParentheses .-} innerPrettify $ arg, "^", T.pack $ show x]
