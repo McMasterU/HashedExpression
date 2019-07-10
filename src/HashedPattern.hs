@@ -19,7 +19,7 @@ import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
-import Debug.Trace (trace)
+import Debug.Trace (trace, traceShowId)
 import HashedExpression
 import HashedInner
 import HashedNode

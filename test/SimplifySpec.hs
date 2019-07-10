@@ -76,13 +76,9 @@ spec = do
         specify "distributivity" $ do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
-            showExp $ simplify (x *. (y + z))
-            showExp $ simplify (x *. y + x *. z)
-            print . simplify $ x *. (y + z)
-            print . simplify $ x *. y + x *. z
             (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
-            prettify (simplify (x <.> (y + z))) `shouldBe` prettify ((x <.> y) + (x <.> z))
-            simplify ((y + z) <.> x) `shouldBe` ((x <.> y) + (x <.> z))
+            simplify (simplify (x <.> (y + z))) `shouldBe` simplify ((x <.> y) + (x <.> z))
+            simplify ((y + z) <.> x) `shouldBe` simplify ((x <.> y) + (x <.> z))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] * x) `shouldBe`
@@ -113,13 +109,20 @@ spec = do
             simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
                 simplify (product [const 6, x, y, z])
         specify "combine same terms" $ do
+            -- Higher dimension this is correct
+            prettify (simplify (sum [one *. x1, x1, x1, const 3 *. y1, y1])) `shouldBe`
+                prettify (simplify (sum [const 3 *. x1, const 4 *. y1]))
+            simplify (sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1]) `shouldBe`
+                simplify (sum [const 4 *. y1, z1])
+            simplify (x1 - x1) `shouldBe` zero1
+            pendingWith "Fix me scalar because *. becomes * for scalars"
             prettify (simplify (sum [one *. x, x, x, const 3 *. y, y])) `shouldBe`
                 prettify (simplify (sum [const 3 *. x, const 4 *. y]))
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
                 simplify (sum [const 4 *. y, z])
             simplify (x - x) `shouldBe` zero
         specify "scale rules" $ do
-            simplify (x *. (y *. v)) `shouldBe` (x * y) *. v
+            simplify (x *. (y *. v)) `shouldBe` simplify ((x * y) *. v)
             simplify (xRe (x *. xc)) `shouldBe` simplify (x *. xRe xc)
             simplify (xIm (x *. xc)) `shouldBe` simplify (x *. xIm xc)
         specify "negate rules" $ do

@@ -45,11 +45,8 @@ import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
-main
-        --f = ((x +: y) * (x +: y) * (x +: y))
- = do
-    let g = (x*.y+x*.z)-- ((x +: y) ^ 2 ) * (x +: y) * (x +: y)
---    showExp $ f
-    showExp $ g
---    showExp . simplify $ f
-    showExp . simplify $ g
+main = do
+--    let f = x *. y
+    print $ x * y
+    print . simplify $ x *. y
+
