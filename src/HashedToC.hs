@@ -110,7 +110,7 @@ localOffset shape indices
         error $
         "shape and indices are not compatible" ++ show shape ++ show indices
 
--- | Assigning
+-- | Helpers to write more readable code generation
 --
 infixl 1 <<-, +=
 
@@ -122,6 +122,9 @@ infixl 1 <<-, +=
 
 space :: Int -> [String] -> [String]
 space n = map (replicate n ' ' ++)
+
+scoped :: [String] -> [String]
+scoped codes = ["{"] ++ space 2 codes ++ ["}"]
 
 [i, j, k, noOffset] = ["i", "j", "k", "0"]
 
