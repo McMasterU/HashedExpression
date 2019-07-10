@@ -86,7 +86,6 @@ spec =
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
             replicateM_ 10 $ do
-                print "hello world"
                 SuiteZeroR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code should equal to HashedInterp
@@ -100,7 +99,22 @@ spec =
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 outputSimple <- evaluateCodeC (simplify exp) valMaps
                 let resultSimple = read . head . splitOn " " $ outputSimple
-                putStrLn $ "Result C Code (Simplified): " ++ show result
-                putStrLn $ "Result Interp (Simplified): " ++ show resultInterp
-                resultSimple `shouldApprox` eval valMaps (simplify exp)
+                let resultInterpSimple = eval valMaps (simplify exp)
+                putStrLn $ "Result C Code (Simplified): " ++ show resultSimple
+                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimple
+                resultSimple `shouldApprox` resultInterpSimple
                 putStrLn "OK!"
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
+            replicateM_ 10 $ do
+                SuiteZeroC exp valMaps <- generate arbitrary
+                putStrLn "------------------------"
+                -- Evaluate by C code simplified version should equal to HashedInterp
+                outputSimple <- evaluateCodeC (simplify exp) valMaps
+                putStrLn outputSimple
+--                let resultSimple = read . head . splitOn " " $ outputSimple
+--                let resultInterpSimple = eval valMaps (simplify exp)
+--                putStrLn $ "Result C Code (Simplified): " ++ show resultSimple
+--                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimple
+--                resultSimple `shouldApprox` resultInterpSimple
+--                putStrLn "OK!"
