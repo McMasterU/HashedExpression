@@ -1,8 +1,7 @@
 ### TODO 
-- Interp 
-    - Power
-    - Rotate
-- Simplify
-    - Power
-    - Rotate
+- Expand all the complex rule
 
+```
+Expression {exIndex = 857615537104437, exMap = fromList [(120,([],Var "x")),(121,([],Var "y")),(122,([],Var "z")),(402580775,([],Mul R [120,121])),(405793398,([],Mul R [120,122])),(857615537104437,([],Sum R [402580775,405793398]))]}
+Expression {exIndex = 216119115632991012, exMap = fromList [(120,([],Var "x")),(121,([],Var "y")),(122,([],Var "z")),(101450355541,([],Mul R [120,121])),(102259936537,([],Mul R [120,122])),(216119115632991012,([],Sum R [101450355541,102259936537]))]}
+```

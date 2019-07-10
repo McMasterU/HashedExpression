@@ -19,7 +19,7 @@ import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
-import Debug.Trace (trace)
+import Debug.Trace (trace, traceShowId)
 import HashedExpression
 import HashedInner
 import HashedNode
@@ -48,6 +48,8 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Prelude (Bool)
+import Prelude (Bool)
 
 -- | Pattern for simplification
 --
@@ -209,6 +211,21 @@ infix 0 |.~~~~~~>, ~~~~~~>
 infixl 1 |.
 
 type Condition = (ExpressionMap, Int) -> Match -> Bool
+
+-- |
+--
+(&&.) :: Condition -> Condition -> Condition
+(&&.) condition1 condition2 expr match =
+    condition1 expr match && condition2 expr match
+
+infixl 8 &&.
+
+-- |
+--
+isScalar :: Pattern -> Condition
+isScalar p exp match = retrieveShape n mp == []
+  where
+    (mp, n) = buildFromPattern exp match p
 
 -- |
 --

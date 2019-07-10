@@ -96,8 +96,6 @@ simplify e =
             (makeRecursive powerProdRules)
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
---    let applyRules = makeRecursive combineTermsRules
---    let applyRules = makeRecursive standardize >> makeRecursive combineTermsRules
 rulesFromPattern :: Simplification
 rulesFromPattern =
     makeRecursive . chain . map fromSubstitution $
@@ -140,6 +138,7 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules with complex operation
@@ -154,12 +153,13 @@ complexNumRules =
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
--- | Rules with dot product and scale
+-- | Rules with dot product and scalepush
 --
 dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules of distributive over sum
@@ -285,7 +285,7 @@ combineTermsRules exp@(mp, n)
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y)
+-- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or RealImag
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
@@ -300,6 +300,8 @@ combineTermsRulesProd exp@(mp, n)
     fn (x, px) (y, py)
         | Sum _ _ <- retrieveNode x mp = False
         | Sum _ _ <- retrieveNode y mp = False
+        | RealImag _ _ <- retrieveNode x mp = False
+        | RealImag _ _ <- retrieveNode y mp = False
         | otherwise = x == y
     toExp (nId, val)
         | val == 1 = (mp, nId)
@@ -325,7 +327,6 @@ powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ _ <- retrieveNode nId mp = mulMany $ replicate val (mp, nId)
     | otherwise = exp
-
 
 -- | Remove unreachable nodes
 --
@@ -411,8 +412,7 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs =
-    concat . map (sortWith snd) . groupBy nodeType . sortWith weight
+sortArgs = concat . map (sortWith snd) . groupBy nodeType . sortWith weight
   where
     nodeType (mp1, n1) (mp2, n2) =
         sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)
