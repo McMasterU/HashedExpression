@@ -146,7 +146,6 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
         -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
-
 -- | Vars list
 --
 type Vars = [[String]] -- Vars 0D, 1D, 2D, 3D, ..
@@ -165,7 +164,9 @@ primitiveZeroR1 :: Gen (Expression Zero R, Vars)
 primitiveZeroR1 = do
     name <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
-    elements $ replicate 6 (var name, [[name], [], [], []]) ++ replicate 4 (const dbl, [])
+    elements $
+        replicate 6 (var name, [[name], [], [], []]) ++
+        replicate 4 (const dbl, [[], [], [], []])
 
 operandR1 :: Gen (Expression Zero R, Vars)
 operandR1
@@ -183,8 +184,7 @@ fromNaryZeroR1 f = do
     return (exp, vars)
 
 fromUnaryZeroR1 ::
-       (Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, Vars)
+       (Expression Zero R -> Expression Zero R) -> Gen (Expression Zero R, Vars)
 fromUnaryZeroR1 f = do
     on <- operandR1
     let exp = f . fst $ on
@@ -275,23 +275,49 @@ instance Show SuiteZeroR where
         simplifiedExp = prettify . simplify $ e
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
-        
 
+-- |
+--
+genValMaps :: Vars -> Gen ValMaps
+genValMaps vars = do
+    let [names0d, names1d, names2d, names3d] = vars
+        -- vm0
+    list0d <- vectorOf (length names0d) arbitrary
+    let vm0 = Map.fromList $ zip names0d list0d
+        -- vm1
+    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
+    let vm1 =
+            Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $
+            list1d
+    list2d <-
+        vectorOf (length names1d) . vectorOf (vectorSize * vectorSize) $
+        arbitrary
+    let vm2 =
+            Map.fromList .
+            zip names2d .
+            map (listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
+            list2d
+    list3d <-
+        vectorOf (length names1d) .
+        vectorOf (vectorSize * vectorSize * vectorSize) $
+        arbitrary
+    let vm3 =
+            Map.fromList .
+            zip names3d .
+            map
+                (listArray
+                     ( (0, 0, 0)
+                     , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
+            list3d
+    return (ValMaps vm0 vm1 vm2 vm3)
+
+-- |
+--
 instance Arbitrary SuiteZeroR where
     arbitrary = do
         (exp, vars) <- genZeroR1
-        let [names0d, names1d, names2d, names3d] = vars
-        -- vm0
-        doubles <- vectorOf (length names0d) arbitrary
-        let vm0 = Map.fromList $ zip names0d doubles
-        -- vm1
-        list1d <- vectorOf (length names1d) . vectorOf vectorSize $ (arbitrary :: Gen Double)
-        let vm1 = Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $ list1d
-        list1d <- vectorOf (length names1d) . vectorOf vectorSize $ (arbitrary :: Gen Double)
-        let vm1 = Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $ list1d
-        let vm2 = undefined
-        let vm3 = undefined
-        return $ SuiteZeroR exp (ValMaps vm0 vm1 vm2 vm3)
+        valMaps <- genValMaps vars
+        return $ SuiteZeroR exp valMaps
 
 -------------------------------------------------------------------------------
 -- | MARK: Gen functions C
