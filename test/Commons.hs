@@ -11,6 +11,8 @@ import Data.Function.HT (nest)
 import Data.List (intercalate)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
 import Data.Typeable (Typeable)
@@ -21,6 +23,7 @@ import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
+import HashedUtils
 import HashedVar
 import Prelude hiding
     ( (*)
@@ -50,9 +53,6 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
-import HashedUtils
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 
 -- |
 --
@@ -91,6 +91,9 @@ inspect x =
 
 -- |
 --
+vectorSize :: Int
+vectorSize = 10
+
 -- | Approximable class
 --
 class Approximable a where
@@ -143,11 +146,68 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
         -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
+
+-- | Vars list
+--
+type Vars = [[String]] -- Vars 0D, 1D, 2D, 3D, ..
+
+mergeVars :: [Vars] -> Vars
+mergeVars = foldl f [[], [], [], []]
+  where
+    f x y = map removeDuplicate $ zipWith (++) x y
+
 -------------------------------------------------------------------------------
 -- | MARK: Gen functions R
 --
 --
 -------------------------------------------------------------------------------
+primitiveZeroR1 :: Gen (Expression Zero R, Vars)
+primitiveZeroR1 = do
+    name <- elements . map pure $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements $ replicate 6 (var name, [[name], [], [], []]) ++ replicate 4 (const dbl, [])
+
+operandR1 :: Gen (Expression Zero R, Vars)
+operandR1
+    -- 80% getting a primitive, 20% get a nested
+ = oneof $ replicate 8 primitiveZeroR1 ++ replicate 2 genZeroR1
+
+fromNaryZeroR1 ::
+       ([Expression Zero R] -> Expression Zero R)
+    -> Gen (Expression Zero R, Vars)
+fromNaryZeroR1 f = do
+    numOperands <- elements [3 .. 6]
+    ons <- vectorOf numOperands operandR1
+    let exp = f . map fst $ ons
+        vars = mergeVars . map snd $ ons
+    return (exp, vars)
+
+fromUnaryZeroR1 ::
+       (Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, Vars)
+fromUnaryZeroR1 f = do
+    on <- operandR1
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryZeroR1 ::
+       (Expression Zero R -> Expression Zero R -> Expression Zero R)
+    -> Gen (Expression Zero R, Vars)
+fromBinaryZeroR1 f = do
+    on1 <- operandR1
+    on2 <- operandR1
+    let exp = f (fst on1) (fst on2)
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
+
+genZeroR1 :: Gen (Expression Zero R, Vars)
+genZeroR1 = do
+    let nary = map fromNaryZeroR1 [sum, product]
+        binary = map fromBinaryZeroR1 [(*.), (+), (-), (<.>)]
+        unary = map fromUnaryZeroR1 [negate, (^ 2), (^ 3)]
+    oneof ([primitiveZeroR1] ++ nary ++ binary ++ unary)
+
 primitiveZeroR :: Gen (Expression Zero R, [String])
 primitiveZeroR = do
     name <- elements . map pure $ ['a' .. 'z']
@@ -201,34 +261,43 @@ instance Arbitrary (Expression Zero R) where
 -- |
 --
 data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) (Map String Double)
+    SuiteZeroR (Expression Zero R) ValMaps
 
 instance Show SuiteZeroR where
-    show (SuiteZeroR e valMap) =
+    show (SuiteZeroR e valMaps) =
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
-            , ("ValMap", show valMap)
+            , ("ValMap", show valMaps)
             ]
       where
         exp = prettify e
         simplifiedExp = prettify . simplify $ e
-        evalExp = eval (emptyVms |> withVm0 valMap) e
-        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
+        
 
 instance Arbitrary SuiteZeroR where
     arbitrary = do
-        (exp, names) <- genZeroR
-        doubles <- vectorOf (length names) arbitrary
-        let valMap = Map.fromList $ zip names doubles
-        return $ SuiteZeroR exp valMap
+        (exp, vars) <- genZeroR1
+        let [names0d, names1d, names2d, names3d] = vars
+        -- vm0
+        doubles <- vectorOf (length names0d) arbitrary
+        let vm0 = Map.fromList $ zip names0d doubles
+        -- vm1
+        list1d <- vectorOf (length names1d) . vectorOf vectorSize $ (arbitrary :: Gen Double)
+        let vm1 = Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $ list1d
+        list1d <- vectorOf (length names1d) . vectorOf vectorSize $ (arbitrary :: Gen Double)
+        let vm1 = Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $ list1d
+        let vm2 = undefined
+        let vm3 = undefined
+        return $ SuiteZeroR exp (ValMaps vm0 vm1 vm2 vm3)
 
 -------------------------------------------------------------------------------
 -- | MARK: Gen functions C
 --
 --
 -------------------------------------------------------------------------------
-
 primitiveZeroC :: Gen (Expression Zero C, [String])
 primitiveZeroC = do
     name1 <- elements . map pure $ ['a' .. 'z']
@@ -288,7 +357,6 @@ genZeroC = do
 
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
-
 
 data SuiteZeroC =
     SuiteZeroC (Expression Zero C) (Map String Double)
