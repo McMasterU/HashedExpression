@@ -67,14 +67,10 @@ data EntryType
     | EntryC
     deriving (Show, Eq, Ord)
 
-data PartC
-    = Re
-    | Im
-    deriving (Show, Eq, Ord)
-
-data GridIndex
-    = GridR [Int]
-    | GridC PartC [Int]
+data LookupPart
+    = LookupR
+    | LookupReC
+    | LookupImC
     deriving (Show, Eq, Ord)
 
 -- | Make a memory map from an expression
@@ -94,16 +90,13 @@ makeMemMap expr@(Expression n mp) = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
 
 -- |
 --
-memOffset :: MemMap -> Int -> GridIndex -> Int
-memOffset (MemMap entryMap _) nId gridIndex
+memOffset :: MemMap -> Int -> LookupPart -> Int
+memOffset (MemMap entryMap _) nId lookupPart
     | Just (globalOffset, entryType, entryShape) <- IM.lookup nId entryMap =
-        case (entryType, gridIndex) of
-            (EntryR, GridR indices) ->
-                globalOffset + localOffset entryShape indices
-            (EntryC, GridC Re indices) ->
-                globalOffset + localOffset (2 : entryShape) (0 : indices)
-            (EntryC, GridC Im indices) ->
-                globalOffset + localOffset (2 : entryShape) (1 : indices)
+        case (entryType, lookupPart) of
+            (EntryR, LookupR) -> globalOffset
+            (EntryC, LookupReC) -> globalOffset
+            (EntryC, LookupImC) -> globalOffset + product entryShape
     | otherwise = error "node id is not in the mem map"
 
 -- | Compute the inner offset:
@@ -132,6 +125,36 @@ space n = map (replicate n ' ' ++)
 
 [i, j, k, noOffset] = ["i", "j", "k", "0"]
 
+-- | Helper functions to generate codes
+--
+forWith :: String -> Shape -> ([String], [String], [String]) -> [String]
+forWith iter shape (initCodes, codes, afterCodes)
+    | not $ null shape =
+        ["{"] ++
+        space 2 initCodes ++
+        [ "  int " ++ iter ++ ";"
+        , "  for (" ++
+          iter ++
+          " = 0; " ++
+          iter ++ " < " ++ show (product shape) ++ "; " ++ iter ++ "++) {"
+        ] ++
+        space 4 codes ++
+        ["  }"] ++ --
+        space 2 afterCodes ++ --
+        ["}"]
+    | otherwise = initCodes ++ codes ++ afterCodes
+
+-- | Access pointer
+--
+accessPtr :: MemMap -> LookupPart -> Shape -> Int -> String -> String
+accessPtr memMap lookupPart shape nId os =
+    let offsetValue
+            | null shape = ""
+            | os == "0" = ""
+            | otherwise = " + " ++ os
+     in "(*(ptr + " ++
+        show (memOffset memMap nId lookupPart) ++ offsetValue ++ "))"
+
 -- |
 --
 generateCodeC ::
@@ -143,57 +166,17 @@ generateCodeC memMap expr@(Expression _ mp) =
     getShape nId = retrieveShape nId mp
     -- for with only body
     for :: String -> Int -> [String] -> [String]
-    for iter nId scopeCodes = forWith iter nId ([], scopeCodes, [])
-    -- for with init code, body code and after code
-    forWith :: String -> Int -> ([String], [String], [String]) -> [String]
-    forWith iter nId (initCodes, codes, afterCodes)
-        | let shape = getShape nId
-        , not $ null shape =
-            ["{"] ++
-            space 2 initCodes ++
-            [ "  int " ++ iter ++ ";"
-            , "  for (" ++
-              iter ++
-              " = 0; " ++
-              iter ++ " < " ++ show (product shape) ++ "; " ++ iter ++ "++) {"
-            ] ++
-            space 4 codes ++
-            ["  }"] ++ --
-            space 2 afterCodes ++ --
-            ["}"]
-        | otherwise = initCodes ++ codes ++ afterCodes
-    commonAt :: GridIndex -> Int -> String -> String
-    commonAt gridIndex nId os =
-        let nShape = retrieveShape nId mp
-            offsetValue
-                | null nShape = ""
-                | os == "0" = ""
-                | otherwise = " + " ++ os
-         in "(*(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ "))"
+    for iter nId scopeCodes = forWith iter (getShape nId) ([], scopeCodes, [])
     -- Real node
     at :: Int -> String -> String
-    at nId os =
-        let gridIndex = GridR $ replicate (length $ retrieveShape nId mp) 0
-         in commonAt gridIndex nId os
+    at nId = accessPtr memMap LookupR (getShape nId) nId
     -- Real part of complex node
     reAt :: Int -> String -> String
-    reAt nId os =
-        let gridIndex = GridC Re $ replicate (length $ retrieveShape nId mp) 0
-         in commonAt gridIndex nId os
+    reAt nId = accessPtr memMap LookupReC (getShape nId) nId
     -- Real part of complex node
     imAt :: Int -> String -> String
-    imAt nId os =
-        let gridIndex = GridC Im $ replicate (length $ retrieveShape nId mp) 0
-         in commonAt gridIndex nId os
+    imAt nId = accessPtr memMap LookupImC (getShape nId) nId
     infix 9 `at`, `imAt`, `reAt`
-    computedValAt :: Int -> String -> String
-    computedValAt nId offsetVar
-        | Const val <- retrieveNode nId mp = "(" ++ show val ++ ")"
-        | otherwise =
-            let gridIndex = GridR []
-             in "(*(ptr + " ++
-                show (memOffset memMap nId gridIndex) ++ offsetVar ++ "))"
     genCode :: Int -> [String] -- From node id to codes
     genCode n =
         let (shape, node) = retrieveInternal n mp
@@ -275,7 +258,10 @@ generateCodeC memMap expr@(Expression _ mp) =
                             codes =
                                 ["acc" += arg1 `at` i ++ " * " ++ arg2 `at` i]
                             afterCodes = [n `at` noOffset <<- "acc"]
-                         in forWith i arg1 (initCodes, codes, afterCodes)
+                         in forWith
+                                i
+                                (getShape arg1)
+                                (initCodes, codes, afterCodes)
                     | otherwise -> error "Not support yet"
 
 -- | Generate a fully functional C program that compute the expression and print out the result
@@ -293,16 +279,20 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
     ]
   where
     infix 9 `at`
+    -- for with only body
+    for :: String -> Int -> [String] -> [String]
+    for iter nId scopeCodes = forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
+    -- Real node
     at :: Int -> String -> String
-    at nId offsetVar =
-        let nShape = retrieveShape nId mp
-            gridIndex = GridR $ replicate (length nShape) 0
-            offsetValue
-                | offsetVar == "0" = ""
-                | otherwise = " + " ++ offsetVar
-         in "(*(ptr + " ++
-            show (memOffset memMap nId gridIndex) ++ offsetValue ++ "))"
+    at nId = accessPtr memMap LookupR (retrieveShape nId mp) nId
+    -- Real part of complex node
+    reAt :: Int -> String -> String
+    reAt nId = accessPtr memMap LookupReC (retrieveShape nId mp) nId
+    -- Real part of complex node
+    imAt :: Int -> String -> String
+    imAt nId = accessPtr memMap LookupImC (retrieveShape nId mp) nId
     (mp, n) = unwrap expr
+    (shape, et) = (expressionShape expr, expressionElementType expr)
     memMap = makeMemMap expr
     -- allocate memory
     sz = totalDoubles memMap
@@ -340,5 +330,10 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
     -- codes to compute
     codes = generateCodeC memMap expr
     -- print the value of expression
-    printValue = []
+    printValue
+        | et == R = for i n ["printf(\"%f \"," ++ n `at` i ++ ");"]
+        | et == C =
+            for i n ["printf(\"%f \"," ++ n `reAt` i ++ ");"] ++
+            ["printf(\"\\n\");"] ++
+            for i n ["printf(\"%f \"," ++ n `imAt` i ++ ");"]
     releaseMemory = ["free(ptr);"]

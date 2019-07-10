@@ -9,6 +9,7 @@ import Data.Array
 import Data.Complex
 import Data.Function.HT (nest)
 import Data.List (intercalate)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
@@ -20,7 +21,6 @@ import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
-import HashedUtils ((|>))
 import HashedVar
 import Prelude hiding
     ( (*)
@@ -50,6 +50,9 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
+import HashedUtils
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 -- |
 --
@@ -135,8 +138,11 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
         -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
+-------------------------------------------------------------------------------
 -- | MARK: Gen functions R
 --
+--
+-------------------------------------------------------------------------------
 primitiveZeroR :: Gen (Expression Zero R, [String])
 primitiveZeroR = do
     name <- elements . map pure $ ['a' .. 'z']
@@ -187,8 +193,37 @@ genZeroR = do
 instance Arbitrary (Expression Zero R) where
     arbitrary = fmap fst genZeroR
 
+-- |
+--
+data SuiteZeroR =
+    SuiteZeroR (Expression Zero R) (Map String Double)
+
+instance Show SuiteZeroR where
+    show (SuiteZeroR e valMap) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMap)
+            ]
+      where
+        exp = prettify e
+        simplifiedExp = prettify . simplify $ e
+        evalExp = eval (emptyVms |> withVm0 valMap) e
+        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
+
+instance Arbitrary SuiteZeroR where
+    arbitrary = do
+        (exp, names) <- genZeroR
+        doubles <- vectorOf (length names) arbitrary
+        let valMap = Map.fromList $ zip names doubles
+        return $ SuiteZeroR exp valMap
+
+-------------------------------------------------------------------------------
 -- | MARK: Gen functions C
 --
+--
+-------------------------------------------------------------------------------
+
 primitiveZeroC :: Gen (Expression Zero C, [String])
 primitiveZeroC = do
     name1 <- elements . map pure $ ['a' .. 'z']
@@ -248,3 +283,27 @@ genZeroC = do
 
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
+
+
+data SuiteZeroC =
+    SuiteZeroC (Expression Zero C) (Map String Double)
+
+instance Show SuiteZeroC where
+    show (SuiteZeroC e valMap) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMap)
+            ]
+      where
+        exp = prettify e
+        simplifiedExp = prettify . simplify $ e
+        evalExp = eval (emptyVms |> withVm0 valMap) e
+        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
+
+instance Arbitrary SuiteZeroC where
+    arbitrary = do
+        (exp, names) <- genZeroC
+        doubles <- vectorOf (length names) arbitrary
+        let valMap = Map.fromList $ zip names doubles
+        return $ SuiteZeroC exp valMap

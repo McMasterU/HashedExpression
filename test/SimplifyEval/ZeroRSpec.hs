@@ -39,30 +39,6 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
--- |
---
-data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) (Map String Double)
-
-instance Show SuiteZeroR where
-    show (SuiteZeroR e valMap) =
-        format
-            [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
-            , ("ValMap", show valMap)
-            ]
-      where
-        exp = prettify e
-        simplifiedExp = prettify . simplify $ e
-        evalExp = eval (emptyVms |> withVm0 valMap) e
-        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
-
-instance Arbitrary SuiteZeroR where
-    arbitrary = do
-        (exp, names) <- genZeroR
-        doubles <- vectorOf (length names) arbitrary
-        let valMap = fromList $ zip names doubles
-        return $ SuiteZeroR exp valMap
 
 -- |
 --

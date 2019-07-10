@@ -7,6 +7,7 @@ import Control.Applicative (liftA2)
 import Data.List (sort)
 import Debug.Trace (traceShowId)
 import HashedExpression (C, Expression(..), R, Zero)
+import HashedInterp
 import HashedInner
 import HashedNode
 import HashedToC
