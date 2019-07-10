@@ -195,78 +195,31 @@ genValMaps vars = do
 --
 --
 -------------------------------------------------------------------------------
-primitiveZeroR1 :: Gen (Expression Zero R, Vars)
-primitiveZeroR1 = do
+primitiveZeroR :: Gen (Expression Zero R, Vars)
+primitiveZeroR = do
     name <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
     elements $
         replicate 6 (var name, [[name], [], [], []]) ++
         replicate 4 (const dbl, [[], [], [], []])
 
-operandR1 :: Gen (Expression Zero R, Vars)
-operandR1
-    -- 80% getting a primitive, 20% get a nested
- = oneof $ replicate 8 primitiveZeroR1 ++ replicate 2 genZeroR1
-
-fromNaryZeroR1 ::
-       ([Expression Zero R] -> Expression Zero R)
-    -> Gen (Expression Zero R, Vars)
-fromNaryZeroR1 f = do
-    numOperands <- elements [3 .. 6]
-    ons <- vectorOf numOperands operandR1
-    let exp = f . map fst $ ons
-        vars = mergeVars . map snd $ ons
-    return (exp, vars)
-
-fromUnaryZeroR1 ::
-       (Expression Zero R -> Expression Zero R) -> Gen (Expression Zero R, Vars)
-fromUnaryZeroR1 f = do
-    on <- operandR1
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryZeroR1 ::
-       (Expression Zero R -> Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, Vars)
-fromBinaryZeroR1 f = do
-    on1 <- operandR1
-    on2 <- operandR1
-    let exp = f (fst on1) (fst on2)
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
-genZeroR1 :: Gen (Expression Zero R, Vars)
-genZeroR1 = do
-    let nary = map fromNaryZeroR1 [sum, product]
-        binary = map fromBinaryZeroR1 [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroR1 [negate, (^ 2), (^ 3)]
-    oneof ([primitiveZeroR1] ++ nary ++ binary ++ unary)
-
-primitiveZeroR :: Gen (Expression Zero R, [String])
-primitiveZeroR = do
-    name <- elements . map pure $ ['a' .. 'z']
-    dbl <- arbitrary
-    elements $ replicate 6 (var name, [name]) ++ replicate 4 (const dbl, [])
-
-operandR :: Gen (Expression Zero R, [String])
+operandR :: Gen (Expression Zero R, Vars)
 operandR
     -- 80% getting a primitive, 20% get a nested
  = oneof $ replicate 8 primitiveZeroR ++ replicate 2 genZeroR
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
+    -> Gen (Expression Zero R, Vars)
 fromNaryZeroR f = do
     numOperands <- elements [3 .. 6]
     ons <- vectorOf numOperands operandR
     let exp = f . map fst $ ons
-        names = removeDuplicate . concatMap snd $ ons
-    return (exp, names)
+        vars = mergeVars . map snd $ ons
+    return (exp, vars)
 
 fromUnaryZeroR ::
-       (Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
+       (Expression Zero R -> Expression Zero R) -> Gen (Expression Zero R, Vars)
 fromUnaryZeroR f = do
     on <- operandR
     let exp = f . fst $ on
@@ -275,15 +228,15 @@ fromUnaryZeroR f = do
 
 fromBinaryZeroR ::
        (Expression Zero R -> Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, [String])
+    -> Gen (Expression Zero R, Vars)
 fromBinaryZeroR f = do
     on1 <- operandR
     on2 <- operandR
     let exp = f (fst on1) (fst on2)
-        names = removeDuplicate $ snd on1 ++ snd on2
-    return (exp, names)
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
 
-genZeroR :: Gen (Expression Zero R, [String])
+genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR = do
     let nary = map fromNaryZeroR [sum, product]
         binary = map fromBinaryZeroR [(*.), (+), (-), (<.>)]
@@ -315,7 +268,7 @@ instance Show SuiteZeroR where
 --
 instance Arbitrary SuiteZeroR where
     arbitrary = do
-        (exp, vars) <- genZeroR1
+        (exp, vars) <- genZeroR
         valMaps <- genValMaps vars
         return $ SuiteZeroR exp valMaps
 
@@ -324,65 +277,8 @@ instance Arbitrary SuiteZeroR where
 --
 --
 -------------------------------------------------------------------------------
-primitiveZeroC :: Gen (Expression Zero C, [String])
+primitiveZeroC :: Gen (Expression Zero C, Vars)
 primitiveZeroC = do
-    name1 <- elements . map pure $ ['a' .. 'z']
-    name2 <- elements . map pure $ ['a' .. 'z']
-    dbl <- arbitrary
-    elements
-        [(var name1 +: var name2, [name1, name2]), (const dbl +: const 0, [])]
-
-operandC :: Gen (Expression Zero C, [String])
-operandC
-    -- 80% getting a primitive, 20% get a nested
- = oneof $ replicate 8 primitiveZeroC ++ replicate 2 genZeroC
-
-fromNaryZeroC ::
-       ([Expression Zero C] -> Expression Zero C)
-    -> Gen (Expression Zero C, [String])
-fromNaryZeroC f = do
-    numOperands <- elements [3 .. 6]
-    ons <- vectorOf numOperands operandC
-    let exp = f . map fst $ ons
-        names = removeDuplicate . concatMap snd $ ons
-    return (exp, names)
-
-fromUnaryZeroC ::
-       (Expression Zero C -> Expression Zero C)
-    -> Gen (Expression Zero C, [String])
-fromUnaryZeroC f = do
-    on <- operandC
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryZeroC ::
-       (Expression Zero C -> Expression Zero C -> Expression Zero C)
-    -> Gen (Expression Zero C, [String])
-fromBinaryZeroC f = do
-    on1 <- operandC
-    on2 <- operandC
-    let exp = f (fst on1) (fst on2)
-        names = removeDuplicate $ snd on1 ++ snd on2
-    return (exp, names)
-
-fromRealImagZeroC :: Gen (Expression Zero C, [String])
-fromRealImagZeroC = do
-    on1 <- genZeroR
-    on2 <- genZeroR
-    let exp = fst on1 +: fst on2
-        names = removeDuplicate $ snd on1 ++ snd on2
-    return (exp, names)
-
-genZeroC :: Gen (Expression Zero C, [String])
-genZeroC = do
-    let nary = map fromNaryZeroC [sum, product]
-        binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroC [negate, (^ 2), (^ 3)]
-    oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
-
-primitiveZeroC1 :: Gen (Expression Zero C, Vars)
-primitiveZeroC1 = do
     name1 <- elements . map pure $ ['a' .. 'z']
     name2 <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
@@ -391,53 +287,53 @@ primitiveZeroC1 = do
         , (const dbl +: const 0, [[], [], [], []])
         ]
 
-operandC1 :: Gen (Expression Zero C, Vars)
-operandC1
+operandC :: Gen (Expression Zero C, Vars)
+operandC
     -- 80% getting a primitive, 20% get a nested
- = oneof $ replicate 8 primitiveZeroC1 ++ replicate 2 genZeroC1
+ = oneof $ replicate 8 primitiveZeroC ++ replicate 2 genZeroC
 
-fromNaryZeroC1 ::
+fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
-fromNaryZeroC1 f = do
+fromNaryZeroC f = do
     numOperands <- elements [3 .. 6]
-    ons <- vectorOf numOperands operandC1
+    ons <- vectorOf numOperands operandC
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons
     return (exp, vars)
 
-fromUnaryZeroC1 ::
+fromUnaryZeroC ::
        (Expression Zero C -> Expression Zero C) -> Gen (Expression Zero C, Vars)
-fromUnaryZeroC1 f = do
-    on <- operandC1
+fromUnaryZeroC f = do
+    on <- operandC
     let exp = f . fst $ on
         vars = snd on
     return (exp, vars)
 
-fromBinaryZeroC1 ::
+fromBinaryZeroC ::
        (Expression Zero C -> Expression Zero C -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
-fromBinaryZeroC1 f = do
-    on1 <- operandC1
-    on2 <- operandC1
+fromBinaryZeroC f = do
+    on1 <- operandC
+    on2 <- operandC
     let exp = f (fst on1) (fst on2)
         vars = mergeVars [snd on1, snd on2]
     return (exp, vars)
 
-fromRealImagZeroC1 :: Gen (Expression Zero C, Vars)
-fromRealImagZeroC1 = do
-    on1 <- genZeroR1
-    on2 <- genZeroR1
+fromRealImagZeroC :: Gen (Expression Zero C, Vars)
+fromRealImagZeroC = do
+    on1 <- genZeroR
+    on2 <- genZeroR
     let exp = fst on1 +: fst on2
         vars = mergeVars [snd on1, snd on2]
     return (exp, vars)
 
-genZeroC1 :: Gen (Expression Zero C, Vars)
-genZeroC1 = do
-    let nary = map fromNaryZeroC1 [sum, product]
-        binary = map fromBinaryZeroC1 [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroC1 [negate, (^ 2), (^ 3)]
-    oneof ([fromRealImagZeroC1, primitiveZeroC1] ++ nary ++ binary ++ unary)
+genZeroC :: Gen (Expression Zero C, Vars)
+genZeroC = do
+    let nary = map fromNaryZeroC [sum, product]
+        binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
+        unary = map fromUnaryZeroC [negate, (^ 2), (^ 3)]
+    oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
 
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
@@ -460,6 +356,6 @@ instance Show SuiteZeroC where
 
 instance Arbitrary SuiteZeroC where
     arbitrary = do
-        (exp, names) <- genZeroC1
+        (exp, names) <- genZeroC
         valMaps <- genValMaps names
         return $ SuiteZeroC exp valMaps
