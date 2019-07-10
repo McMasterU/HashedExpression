@@ -147,7 +147,7 @@ primitiveZeroR :: Gen (Expression Zero R, [String])
 primitiveZeroR = do
     name <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
-    elements [(var name, [name]), (const dbl, [])]
+    elements $ replicate 6 (var name, [name]) ++ replicate 4 (const dbl, [])
 
 operandR :: Gen (Expression Zero R, [String])
 operandR

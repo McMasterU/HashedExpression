@@ -146,14 +146,17 @@ forWith iter shape (initCodes, codes, afterCodes)
 
 -- | Access pointer
 --
-accessPtr :: MemMap -> LookupPart -> Shape -> Int -> String -> String
-accessPtr memMap lookupPart shape nId os =
-    let offsetValue
-            | null shape = ""
-            | os == "0" = ""
-            | otherwise = " + " ++ os
-     in "(*(ptr + " ++
-        show (memOffset memMap nId lookupPart) ++ offsetValue ++ "))"
+accessPtr :: MemMap -> LookupPart -> ExpressionMap -> Int -> String -> String
+accessPtr memMap lookupPart mp nId offsetVal
+    | Const val <- retrieveNode nId mp = "(" ++ show val ++ ")"
+    | otherwise =
+        let shape = retrieveShape nId mp
+            updatedOffsetVal
+                | null shape = ""
+                | offsetVal == "0" = ""
+                | otherwise = " + " ++ offsetVal
+         in "(*(ptr + " ++
+            show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "))"
 
 -- |
 --
@@ -169,13 +172,13 @@ generateCodeC memMap expr@(Expression _ mp) =
     for iter nId scopeCodes = forWith iter (getShape nId) ([], scopeCodes, [])
     -- Real node
     at :: Int -> String -> String
-    at nId = accessPtr memMap LookupR (getShape nId) nId
+    at = accessPtr memMap LookupR mp
     -- Real part of complex node
     reAt :: Int -> String -> String
-    reAt nId = accessPtr memMap LookupReC (getShape nId) nId
+    reAt = accessPtr memMap LookupReC mp
     -- Real part of complex node
     imAt :: Int -> String -> String
-    imAt nId = accessPtr memMap LookupImC (getShape nId) nId
+    imAt = accessPtr memMap LookupImC mp
     infix 9 `at`, `imAt`, `reAt`
     genCode :: Int -> [String] -- From node id to codes
     genCode n =
@@ -253,7 +256,13 @@ generateCodeC memMap expr@(Expression _ mp) =
                 RealPart arg -> for i n [n `at` i <<- arg `reAt` i]
                 ImagPart arg -> for i n [n `at` i <<- arg `imAt` i]
                 InnerProd _ arg1 arg2
-                    | map elementType [arg1, arg2] == [R, R] ->
+                    | map elementType [arg1, arg2] == [R, R] &&
+                          null (getShape arg1) ->
+                        [ n `at` noOffset <<-
+                          arg1 `at` noOffset ++ "*" ++ arg2 `at` noOffset
+                        ]
+                    | map elementType [arg1, arg2] == [R, R] &&
+                          not (null (getShape arg1)) ->
                         let initCodes = ["double acc" <<- "0"]
                             codes =
                                 ["acc" += arg1 `at` i ++ " * " ++ arg2 `at` i]
@@ -281,16 +290,17 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
     infix 9 `at`
     -- for with only body
     for :: String -> Int -> [String] -> [String]
-    for iter nId scopeCodes = forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
+    for iter nId scopeCodes =
+        forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
     -- Real node
     at :: Int -> String -> String
-    at nId = accessPtr memMap LookupR (retrieveShape nId mp) nId
+    at = accessPtr memMap LookupR mp
     -- Real part of complex node
     reAt :: Int -> String -> String
-    reAt nId = accessPtr memMap LookupReC (retrieveShape nId mp) nId
+    reAt = accessPtr memMap LookupReC mp
     -- Real part of complex node
     imAt :: Int -> String -> String
-    imAt nId = accessPtr memMap LookupImC (retrieveShape nId mp) nId
+    imAt = accessPtr memMap LookupImC mp
     (mp, n) = unwrap expr
     (shape, et) = (expressionShape expr, expressionElementType expr)
     memMap = makeMemMap expr
