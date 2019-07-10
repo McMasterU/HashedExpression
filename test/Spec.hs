@@ -55,12 +55,12 @@ main = do
 spec :: Spec
 spec = do
     describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
+    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
 --    describe "SimplifySpec" HashedSimplifySpec.spec
 --    describe "Test1" Test1.spec
 --    describe "Test1" Test2.spec
 --    describe "HashedToCSpec" HashedToCSpec.spec
 
---    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
 --haha = do
 --    let f = negate (y +: m) + (y +: g)
 --    let g = one +: (const 12000 * d * n * q * m * k * m * q)

@@ -155,6 +155,41 @@ mergeVars = foldl f [[], [], [], []]
   where
     f x y = map removeDuplicate $ zipWith (++) x y
 
+-- |
+--
+genValMaps :: Vars -> Gen ValMaps
+genValMaps vars = do
+    let [names0d, names1d, names2d, names3d] = vars
+        -- vm0
+    list0d <- vectorOf (length names0d) arbitrary
+    let vm0 = Map.fromList $ zip names0d list0d
+        -- vm1
+    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
+    let vm1 =
+            Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $
+            list1d
+    list2d <-
+        vectorOf (length names1d) . vectorOf (vectorSize * vectorSize) $
+        arbitrary
+    let vm2 =
+            Map.fromList .
+            zip names2d .
+            map (listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
+            list2d
+    list3d <-
+        vectorOf (length names1d) .
+        vectorOf (vectorSize * vectorSize * vectorSize) $
+        arbitrary
+    let vm3 =
+            Map.fromList .
+            zip names3d .
+            map
+                (listArray
+                     ( (0, 0, 0)
+                     , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
+            list3d
+    return (ValMaps vm0 vm1 vm2 vm3)
+
 -------------------------------------------------------------------------------
 -- | MARK: Gen functions R
 --
@@ -278,41 +313,6 @@ instance Show SuiteZeroR where
 
 -- |
 --
-genValMaps :: Vars -> Gen ValMaps
-genValMaps vars = do
-    let [names0d, names1d, names2d, names3d] = vars
-        -- vm0
-    list0d <- vectorOf (length names0d) arbitrary
-    let vm0 = Map.fromList $ zip names0d list0d
-        -- vm1
-    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
-    let vm1 =
-            Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $
-            list1d
-    list2d <-
-        vectorOf (length names1d) . vectorOf (vectorSize * vectorSize) $
-        arbitrary
-    let vm2 =
-            Map.fromList .
-            zip names2d .
-            map (listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
-            list2d
-    list3d <-
-        vectorOf (length names1d) .
-        vectorOf (vectorSize * vectorSize * vectorSize) $
-        arbitrary
-    let vm3 =
-            Map.fromList .
-            zip names3d .
-            map
-                (listArray
-                     ( (0, 0, 0)
-                     , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
-            list3d
-    return (ValMaps vm0 vm1 vm2 vm3)
-
--- |
---
 instance Arbitrary SuiteZeroR where
     arbitrary = do
         (exp, vars) <- genZeroR1
@@ -381,28 +381,85 @@ genZeroC = do
         unary = map fromUnaryZeroC [negate, (^ 2), (^ 3)]
     oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
 
+primitiveZeroC1 :: Gen (Expression Zero C, Vars)
+primitiveZeroC1 = do
+    name1 <- elements . map pure $ ['a' .. 'z']
+    name2 <- elements . map pure $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements
+        [ (var name1 +: var name2, [[name1, name2], [], [], []])
+        , (const dbl +: const 0, [[], [], [], []])
+        ]
+
+operandC1 :: Gen (Expression Zero C, Vars)
+operandC1
+    -- 80% getting a primitive, 20% get a nested
+ = oneof $ replicate 8 primitiveZeroC1 ++ replicate 2 genZeroC1
+
+fromNaryZeroC1 ::
+       ([Expression Zero C] -> Expression Zero C)
+    -> Gen (Expression Zero C, Vars)
+fromNaryZeroC1 f = do
+    numOperands <- elements [3 .. 6]
+    ons <- vectorOf numOperands operandC1
+    let exp = f . map fst $ ons
+        vars = mergeVars . map snd $ ons
+    return (exp, vars)
+
+fromUnaryZeroC1 ::
+       (Expression Zero C -> Expression Zero C) -> Gen (Expression Zero C, Vars)
+fromUnaryZeroC1 f = do
+    on <- operandC1
+    let exp = f . fst $ on
+        vars = snd on
+    return (exp, vars)
+
+fromBinaryZeroC1 ::
+       (Expression Zero C -> Expression Zero C -> Expression Zero C)
+    -> Gen (Expression Zero C, Vars)
+fromBinaryZeroC1 f = do
+    on1 <- operandC1
+    on2 <- operandC1
+    let exp = f (fst on1) (fst on2)
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
+
+fromRealImagZeroC1 :: Gen (Expression Zero C, Vars)
+fromRealImagZeroC1 = do
+    on1 <- genZeroR1
+    on2 <- genZeroR1
+    let exp = fst on1 +: fst on2
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
+
+genZeroC1 :: Gen (Expression Zero C, Vars)
+genZeroC1 = do
+    let nary = map fromNaryZeroC1 [sum, product]
+        binary = map fromBinaryZeroC1 [(*.), (+), (-), (<.>)]
+        unary = map fromUnaryZeroC1 [negate, (^ 2), (^ 3)]
+    oneof ([fromRealImagZeroC1, primitiveZeroC1] ++ nary ++ binary ++ unary)
+
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
 
 data SuiteZeroC =
-    SuiteZeroC (Expression Zero C) (Map String Double)
+    SuiteZeroC (Expression Zero C) ValMaps
 
 instance Show SuiteZeroC where
-    show (SuiteZeroC e valMap) =
+    show (SuiteZeroC e valMaps) =
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
-            , ("ValMap", show valMap)
+            , ("ValMap", show valMaps)
             ]
       where
         exp = prettify e
         simplifiedExp = prettify . simplify $ e
-        evalExp = eval (emptyVms |> withVm0 valMap) e
-        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
 
 instance Arbitrary SuiteZeroC where
     arbitrary = do
-        (exp, names) <- genZeroC
-        doubles <- vectorOf (length names) arbitrary
-        let valMap = Map.fromList $ zip names doubles
-        return $ SuiteZeroC exp valMap
+        (exp, names) <- genZeroC1
+        valMaps <- genValMaps names
+        return $ SuiteZeroC exp valMaps
