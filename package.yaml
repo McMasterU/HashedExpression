@@ -30,6 +30,8 @@ dependencies:
 - deepseq
 - process
 - binary
+- split
+
 
 
 library:
@@ -58,3 +60,5 @@ tests:
     dependencies:
     - HashedExpression
     - hspec
+    - process
+    - uuid

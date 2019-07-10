@@ -100,8 +100,6 @@ simplify e =
             (makeRecursive combineScaleRules) >>> id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
---    let applyRules = makeRecursive combineTermsRules
---    let applyRules = makeRecursive standardize >> makeRecursive combineTermsRules
 rulesFromPattern :: Simplification
 rulesFromPattern =
     makeRecursive . chain . map fromSubstitution $
@@ -145,6 +143,7 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules with complex operation
@@ -156,7 +155,6 @@ complexNumRules =
     , (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v)
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
-    --, (x +: y) * (x +: y) |.~~~~~~> (x +:y)^2
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     ]
 
@@ -166,6 +164,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules of distributive over sum
@@ -291,7 +290,7 @@ combineTermsRules exp@(mp, n)
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y)
+-- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or RealImag
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
@@ -306,6 +305,8 @@ combineTermsRulesProd exp@(mp, n)
     fn (x, px) (y, py)
         | Sum _ _ <- retrieveNode x mp = False
         | Sum _ _ <- retrieveNode y mp = False
+        | RealImag _ _ <- retrieveNode x mp = False
+        | RealImag _ _ <- retrieveNode y mp = False
         | otherwise = x == y
     toExp (nId, val)
         | val == 1 = (mp, nId)

@@ -37,7 +37,8 @@ import Prelude hiding
     )
 import qualified SimplifyEval.ZeroCSpec as ZeroCSpec
 import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
-import qualified SimplifySpec
+import qualified HashedSimplifySpec
+import qualified HashedToCSpec
 
 import Commons ((~=))
 import Data.Maybe (fromJust)
@@ -53,12 +54,13 @@ main = do
 --    haha
 spec :: Spec
 spec = do
-    describe "SimplifySpec" SimplifySpec.spec
-    describe "Test1" Test1.spec
-    describe "Test1" Test2.spec
+    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
+    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
+    describe "SimplifySpec" HashedSimplifySpec.spec
+--    describe "Test1" Test1.spec
+--    describe "Test1" Test2.spec
+    describe "HashedToCSpec" HashedToCSpec.spec
 
---    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
---    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
 --haha = do
 --    let f = negate (y +: m) + (y +: g)
 --    let g = one +: (const 12000 * d * n * q * m * k * m * q)

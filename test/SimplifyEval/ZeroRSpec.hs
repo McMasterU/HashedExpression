@@ -39,47 +39,23 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
--- |
---
-data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) (Map String Double)
-
-instance Show SuiteZeroR where
-    show (SuiteZeroR e valMap) =
-        format
-            [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
-            , ("ValMap", show valMap)
-            ]
-      where
-        exp = prettify e
-        simplifiedExp = prettify . simplify $ e
-        evalExp = eval (emptyVms |> withVm0 valMap) e
-        evalSimplified = eval (emptyVms |> withVm0 valMap) $ simplify e
-
-instance Arbitrary SuiteZeroR where
-    arbitrary = do
-        (exp, names) <- genZeroR
-        doubles <- vectorOf (length names) arbitrary
-        let valMap = fromList $ zip names doubles
-        return $ SuiteZeroR exp valMap
 
 -- |
 --
 prop_SimplifyThenEval :: SuiteZeroR -> Bool
-prop_SimplifyThenEval (SuiteZeroR exp valMap) =
-    eval (emptyVms |> withVm0 valMap) exp ~=
-    eval (emptyVms |> withVm0 valMap) (simplify exp)
+prop_SimplifyThenEval (SuiteZeroR exp valMaps) =
+    eval valMaps exp ~=
+    eval valMaps (simplify exp)
 
 -- |
 --
 prop_Add :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplify2, simplifySum) =
-    eval (emptyVms |> withVm0 valMap) exp1' +
-    eval (emptyVms |> withVm0 valMap) exp2' ~=
-    eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expSum'
+prop_Add (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifySum) =
+    eval valMaps exp1' +
+    eval valMaps exp2' ~=
+    eval valMaps expSum'
   where
-    valMap = valMap1 `union` valMap2
+    valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
         if simplify1
             then simplify exp1
@@ -94,12 +70,12 @@ prop_Add (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplif
             else exp1 + exp2
 
 prop_Multiply :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, simplify2, simplifyMul) =
+prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
     if lhs ~= rhs
         then True
         else error (show lhs ++ " not equal " ++ show rhs)
   where
-    valMap = valMap1 `union` valMap2
+    valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
         if simplify1
             then simplify exp1
@@ -113,14 +89,14 @@ prop_Multiply (SuiteZeroR exp1 valMap1) (SuiteZeroR exp2 valMap2) (simplify1, si
             then simplify (exp1 * exp2)
             else exp1 * exp2
     lhs =
-        eval (emptyVms |> withVm0 valMap) exp1' *
-        eval (emptyVms |> withVm0 valMap) exp2'
-    rhs = eval (emptyVms |> withVm0 (valMap1 `union` valMap)) expMul'
+        eval valMaps exp1' *
+        eval valMaps exp2'
+    rhs = eval valMaps expMul'
 
 prop_AddMultiply :: SuiteZeroR -> Bool
-prop_AddMultiply (SuiteZeroR exp valMap) =
-    eval (emptyVms |> withVm0 valMap) (simplify (exp + exp)) ~=
-    eval (emptyVms |> withVm0 valMap) (simplify (exp * const 2))
+prop_AddMultiply (SuiteZeroR exp valMaps) =
+    eval valMaps (simplify (exp + exp)) ~=
+    eval valMaps (simplify (exp * const 2))
 
 spec :: Spec
 spec =
