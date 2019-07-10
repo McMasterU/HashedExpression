@@ -39,7 +39,7 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "Simplify spec" $ do
+    describe "Simplify spec" $
         specify "simplify scalar one zero" $ do
             x `shouldBe` x
             simplify (x * x) `shouldBe` (x ^ 2)
@@ -60,16 +60,16 @@ spec =
             simplify ((x ^ 2) ^ 2) `shouldBe` (x ^ 4)
             simplify ((x + y) * (x + y)) `shouldBe`
                 simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
-            simplify (((x + y) * (x + y)) * (x + y)) `shouldBe`
-                simplify
+            prettify (simplify (((x + y) * (x + y)) * (x + y))) `shouldBe`
+                prettify (simplify
                     ((const 3.0 *. (y * (x ^ 2))) +
                      ((const 3.0) *. (x * (y ^ 2))) +
                      (x ^ 3) +
-                     (y ^ 3))
-            simplify ((x - y) ^ 2) `shouldBe`
-                simplify
+                     (y ^ 3)))
+            prettify (simplify ((x - y) ^ 2)) `shouldBe`
+                prettify (simplify
                     ((const 2.0 *. (x * (negate (y)))) + (x ^ 2) +
-                     ((negate (y)) ^ 2))
+                     ((negate (y)) ^ 2)))
             simplify (((x * y) ^ 3) * (x + y) ^ 2) `shouldBe`
                 simplify
                     (((y ^ 3) * (x ^ 5)) + ((x ^ 3) * (y ^ 5)) +

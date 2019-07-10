@@ -94,7 +94,7 @@ simplify e =
             (makeRecursive combineTermsRules) >>>
             (makeRecursive combineTermsRulesProd) >>>
             (makeRecursive powerProdRules) >>>
-            (makeRecursive powerSumRules) >>>
+            (makeRecursive powerSumRealImagRules) >>>
             (makeRecursive combinePowerRules) >>>
             (makeRecursive negateRules) >>>
             (makeRecursive combineScaleRules) >>> id
@@ -137,13 +137,13 @@ zeroOneRules =
     , num (-1) * negate (x) |.~~~~~~> x
     ]
 
+--    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x * y -- TODO: Should we do this???
 scaleRules :: [Substitution]
 scaleRules =
     [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
-    , x *. y |. sameElementType [x, y] &&. isScalar y ~~~~~~> x * y
     ]
 
 -- | Rules with complex operation
@@ -324,10 +324,17 @@ combinePowerRules exp@(mp, n)
 
 -- | Rules for power sum
 -- (a+b)^2 should be (a+b)*(a+b)
-powerSumRules :: Simplification
-powerSumRules exp@(mp, n)
+powerSumRealImagRules :: Simplification
+powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Sum _ _ <- retrieveNode nId mp =
+        if val > 1
+            then mulMany $ replicate val (mp, nId)
+            else if val < -1
+                     then inverse . mulMany $ replicate (-val) (mp, nId)
+                     else exp
+    | Power val nId <- retrieveNode n mp
+    , RealImag _ _ <- retrieveNode nId mp =
         if val > 1
             then mulMany $ replicate val (mp, nId)
             else if val < -1
@@ -346,30 +353,18 @@ powerProdRules exp@(mp, n)
     , val > 0 = mulMany $ replicate val (mp, nId)
     | otherwise = exp
 
---    , Const val1 <- retrieveNode nId mp --ADDED NOW
---    | Power powerVal wholeExpr <- retrieveNode n mp
---    , Neg _ negateNum <- retrieveNode wholeExpr mp
---    , powerVal > 0 = mulMany $ replicate powerVal (mp,wholeExpr)
 -- | Rules for negate
+-- Turn negate to scale with (-1)
 -- (-x) ---> (-1) *. x
 negateRules :: Simplification
 negateRules exp@(mp, n)
-    | Neg _ nID <- retrieveNode n mp --apply (binary (Scale (-1))) $ [(mp, nID)]
-     = apply (binaryET Scale ElementDefault) $ [aConst [] (-1), (mp, nID)]
+    | Neg _ nId <- retrieveNode n mp =
+        apply (binaryET Scale ElementDefault) $ [aConst [] (-1), (mp, nId)]
     | otherwise = exp
 
--- powerScaleRules :: Simplification
--- powerScaleRules exp@(mp,n)
---    | Power nId powerVal  <- retrieveNode n mp
---    , Scale _ scalerN scaleeN <- retrieveNode nId mp
---    , Const constVal <- retrieveNode scalerN mp
---    , powerVal > 0 = mulMany . (map constPower powerVal constVal) $ [(mp,nId)]
---    | otherwise = exp
---    where
---      constPower x y  = replicate x y
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) ---> (-6) *. (x * y * z)
---combineScaleRules :: Simplification
+combineScaleRules :: Simplification
 combineScaleRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
         let extract nId
@@ -380,11 +375,13 @@ combineScaleRules exp@(mp, n)
             extracted :: [(Int, Double)]
             extracted = map extract ns
             combinedConstants :: Double
-            combinedConstants = Prelude.product $ map snd extracted --(fst $ head extracted, Prelude.product $ map snd extracted)
+            combinedConstants = Prelude.product $ map snd extracted
             combinedScalees :: (ExpressionMap, Int)
             combinedScalees = mulMany . map (mp, ) . map fst $ extracted
-         in apply (binaryET Scale ElementDefault) $
-            [aConst [] (combinedConstants), combinedScalees] -- then scale the combined constants to the combined scalees
+         in if combinedConstants /= 1
+                then apply (binaryET Scale ElementDefault) $
+                     [aConst [] (combinedConstants), combinedScalees] -- then scale the combined constants to the combined scalees
+                else combinedScalees
     | otherwise = exp
 
 --            | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)

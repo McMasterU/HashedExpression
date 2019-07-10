@@ -52,7 +52,7 @@ spec = do
             simplify (zero * (x * y)) `shouldBe` zero
             simplify ((x * y) * zero) `shouldBe` zero
             simplify ((x * zero) * one) `shouldBe` zero
-            simplify ((x * y) * one) `shouldBe` (x * y)
+            prettify (simplify ((x * y) * one)) `shouldBe` prettify (x * y)
             simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
             simplify (product [x, y, z, t, w, zero]) `shouldBe` zero
         specify "simplify log and exponential" $ do
