@@ -98,6 +98,11 @@ class Approximable a where
 
 infix 4 ~=
 
+shouldApprox :: Approximable a => a -> a -> Expectation
+shouldApprox x y = x ~= y `shouldBe` True
+
+infix 1 `shouldApprox`
+
 instance Approximable Double where
     (~=) :: Double -> Double -> Bool
     a ~= b
