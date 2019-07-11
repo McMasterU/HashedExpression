@@ -72,6 +72,6 @@ main = do
 ----    let valMaps = emptyVms |> withVm0 (fromList [("r", 88.3314)])
 --    print $ eval valMaps (exp1 * exp2)
 --    print $ eval valMaps $ simplify (exp1 * exp2)
-      let g = ((x+y)/(x-y))
+      let g = (x+y)^2 + (x-y)^2
       showExp g
       showExp . simplify $ g
