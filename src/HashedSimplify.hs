@@ -138,8 +138,7 @@ zeroOneRules =
 
 scaleRules :: [Substitution]
 scaleRules =
-    [
-    x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
+    [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
@@ -155,7 +154,10 @@ complexNumRules =
     , s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y)
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
     , negate (x +: y) |.~~~~~~> negate x +: negate y
+    , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
     ]
+
+-- (((z+:a)*(z+:a))+((d+:w)*(d+:w))+(2.0*.((z+:a)*(d+:w)))+(0.0+:0.0))
 
 -- | Rules with dot product and scale
 --

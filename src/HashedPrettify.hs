@@ -3,6 +3,7 @@
 
 module HashedPrettify
     ( prettify
+    , showExpDebug
     , showExp
     ) where
 
@@ -30,46 +31,80 @@ prettify e@(Expression n mp) =
             " :: " ++
             (show . typeRep $ (Proxy :: Proxy d)) ++
             " " ++ (show . typeRep $ (Proxy :: Proxy rc))
-     in T.unpack (hiddenPrettify e) ++ typeName
+     in T.unpack (hiddenPrettify False e) ++ typeName
 
-hiddenPrettify :: Expression d rc -> T.Text
-hiddenPrettify e@(Expression n mp) =
+-- | Pretty exp to a string that can be paste to editor
+--
+showExpDebug ::
+       forall d rc. (Typeable d, Typeable rc)
+    => Expression d rc
+    -> IO ()
+showExpDebug = putStrLn . prettifyDebug
+
+prettifyDebug ::
+       forall d rc. (Typeable d, Typeable rc)
+    => Expression d rc
+    -> String
+prettifyDebug e@(Expression n mp) =
+    let shape = expressionShape e
+        node = expressionNode e
+     in T.unpack (hiddenPrettify True e)
+
+hiddenPrettify :: Bool -> Expression d rc -> T.Text
+hiddenPrettify pastable e@(Expression n mp) =
     let shape = expressionShape e
         wrapParentheses x = T.concat ["(", x, ")"]
         node = expressionNode e
-        innerPrettify = hiddenPrettify . flip Expression mp
-        shapeSignature =
-            case shape of
-                [] -> ""
-                [x] -> T.concat ["[", T.pack . show $ x, "]"]
-                [x, y] ->
-                    T.concat
-                        [ "["
-                        , T.pack . show $ x
-                        , "]"
-                        , "["
-                        , T.pack . show $ y
-                        , "]"
-                        ]
-                [x, y, z] ->
-                    T.concat
-                        [ "["
-                        , T.pack . show $ x
-                        , "]"
-                        , "["
-                        , T.pack . show $ y
-                        , "]"
-                        , "["
-                        , T.pack . show $ z
-                        , "]"
-                        ]
-                _ -> error "Haven't deal with more than 3-dimension"
+        innerPrettify = hiddenPrettify pastable . flip Expression mp
+        shapeSignature
+            | pastable = ""
+            | otherwise =
+                case shape of
+                    [] -> ""
+                    [x] -> T.concat ["[", T.pack . show $ x, "]"]
+                    [x, y] ->
+                        T.concat
+                            [ "["
+                            , T.pack . show $ x
+                            , "]"
+                            , "["
+                            , T.pack . show $ y
+                            , "]"
+                            ]
+                    [x, y, z] ->
+                        T.concat
+                            [ "["
+                            , T.pack . show $ x
+                            , "]"
+                            , "["
+                            , T.pack . show $ y
+                            , "]"
+                            , "["
+                            , T.pack . show $ z
+                            , "]"
+                            ]
+                    _ -> error "Haven't deal with more than 3-dimension"
      in case node of
             Var name -> T.concat [T.pack name, shapeSignature]
             DVar name -> T.concat ["d", T.pack name, shapeSignature]
-            Const val -> T.concat [T.pack . show $ val, shapeSignature]
-            Sum _ args ->
-                wrapParentheses . T.intercalate "+" . map innerPrettify $ args
+            Const val
+                | pastable ->
+                    wrapParentheses $
+                    T.concat
+                        [ "const "
+                        , wrapParentheses . T.pack . show $ val
+                        ]
+                | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
+            Sum _ args
+                | pastable && length args > 2 ->
+                    T.concat
+                        [ "sum ["
+                        , T.intercalate ", " . map innerPrettify $ args
+                        , "]"
+                        ]
+                | otherwise ->
+                    wrapParentheses . T.intercalate "+" . map innerPrettify $
+                    args
             Mul _ args ->
                 wrapParentheses . T.intercalate "*" . map innerPrettify $ args
             Neg _ arg -> T.concat ["-", wrapParentheses $ innerPrettify arg]
@@ -129,4 +164,4 @@ hiddenPrettify e@(Expression n mp) =
                     ]
             Power x arg ->
                 wrapParentheses . T.concat $
-                [{--wrapParentheses .-} innerPrettify $ arg, "^", T.pack $ show x]
+                [wrapParentheses . innerPrettify $ arg, "^", T.pack $ show x]
