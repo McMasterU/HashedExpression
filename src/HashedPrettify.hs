@@ -1,19 +1,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module HashedPrettify
     ( prettify
     , showExpDebug
     , showExp
+    , showAllEntries
+    , allEntriesDebug
+    , allEntries
+    , debugPrint
     ) where
 
+import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression
+import HashedInner (unwrap)
 import HashedNode
 import HashedUtils
 
+-- |
+--
 showExp ::
        forall d rc. (Typeable d, Typeable rc)
     => Expression d rc
@@ -31,7 +40,7 @@ prettify e@(Expression n mp) =
             " :: " ++
             (show . typeRep $ (Proxy :: Proxy d)) ++
             " " ++ (show . typeRep $ (Proxy :: Proxy rc))
-     in T.unpack (hiddenPrettify False e) ++ typeName
+     in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
 -- | Pretty exp to a string that can be paste to editor
 --
@@ -48,14 +57,41 @@ prettifyDebug ::
 prettifyDebug e@(Expression n mp) =
     let shape = expressionShape e
         node = expressionNode e
-     in T.unpack (hiddenPrettify True e)
+     in T.unpack (hiddenPrettify True $ unwrap e)
 
-hiddenPrettify :: Bool -> Expression d rc -> T.Text
-hiddenPrettify pastable e@(Expression n mp) =
-    let shape = expressionShape e
+-- |
+--
+allEntries :: forall d rc. Expression d rc -> [(Int, String)]
+allEntries (Expression n mp) =
+    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $ IM.keys mp
+
+allEntriesDebug :: (ExpressionMap, Int) -> [(Int, String)]
+allEntriesDebug (mp, n) =
+    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $ IM.keys mp
+-- |
+--
+showAllEntries :: forall d rc. Expression d rc -> IO ()
+showAllEntries e = do
+    putStrLn "--------------------------"
+    putStrLn $ intercalate "\n" . map mkString $ allEntries e
+    putStrLn "--------------------------"
+  where
+    mkString (n, str) = show n ++ " --> " ++ str
+
+
+-- |
+--
+debugPrint :: (ExpressionMap, Int) -> String
+debugPrint = T.unpack . hiddenPrettify False
+
+-- | 
+--
+hiddenPrettify :: Bool -> (ExpressionMap, Int) -> T.Text
+hiddenPrettify pastable (mp, n) =
+    let shape = retrieveShape n mp
         wrapParentheses x = T.concat ["(", x, ")"]
-        node = expressionNode e
-        innerPrettify = hiddenPrettify pastable . flip Expression mp
+        node = retrieveNode n mp
+        innerPrettify = hiddenPrettify pastable . (mp, )
         shapeSignature
             | pastable = ""
             | otherwise =
@@ -90,10 +126,7 @@ hiddenPrettify pastable e@(Expression n mp) =
             Const val
                 | pastable ->
                     wrapParentheses $
-                    T.concat
-                        [ "const "
-                        , wrapParentheses . T.pack . show $ val
-                        ]
+                    T.concat ["const ", wrapParentheses . T.pack . show $ val]
                 | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
             Sum _ args
                 | pastable && length args > 2 ->
@@ -107,7 +140,11 @@ hiddenPrettify pastable e@(Expression n mp) =
                     args
             Mul _ args ->
                 wrapParentheses . T.intercalate "*" . map innerPrettify $ args
-            Neg _ arg -> T.concat ["-", wrapParentheses $ innerPrettify arg]
+            Neg _ arg
+                | pastable ->
+                    T.concat ["negate", wrapParentheses $ innerPrettify arg]
+                | otherwise ->
+                    T.concat ["-", wrapParentheses $ innerPrettify arg]
             Scale _ arg1 arg2 ->
                 wrapParentheses . T.concat $
                 [innerPrettify arg1, "*.", innerPrettify arg2]

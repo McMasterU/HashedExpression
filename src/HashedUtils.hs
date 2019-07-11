@@ -75,11 +75,17 @@ pullConstants mp ns
 isZero :: ExpressionMap -> Int -> Bool
 isZero mp nId
     | Const 0 <- retrieveNode nId mp = True
+    | RealImag arg1 arg2 <- retrieveNode nId mp
+    , Const 0 <- retrieveNode arg1 mp
+    , Const 0 <- retrieveNode arg2 mp = True
     | otherwise = False
 
 isOne :: ExpressionMap -> Int -> Bool
 isOne mp nId
     | Const 1 <- retrieveNode nId mp = True
+    | RealImag arg1 arg2 <- retrieveNode nId mp
+    , Const 1 <- retrieveNode arg1 mp
+    , Const 0 <- retrieveNode arg2 mp = True
     | otherwise = False
 
 isConstant :: ExpressionMap -> Int -> Bool

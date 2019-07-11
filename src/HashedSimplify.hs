@@ -11,10 +11,10 @@ import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (group, groupBy)
+import Data.List (group, groupBy, intercalate)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
-import Debug.Trace (traceShowId)
+import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
 import HashedHash
@@ -22,6 +22,7 @@ import HashedInner
 import HashedNode
 import HashedOperation (const, const1d, const2d, const3d, plus, times)
 import HashedPattern
+import HashedPrettify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -157,8 +158,6 @@ complexNumRules =
     , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
     ]
 
--- (((z+:a)*(z+:a))+((d+:w)*(d+:w))+(2.0*.((z+:a)*(d+:w)))+(0.0+:0.0))
-
 -- | Rules with dot product and scale
 --
 dotProductRules :: [Substitution]
@@ -211,13 +210,19 @@ reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
     let reconstruct' :: [Int] -> (ExpressionMap, Int)
         reconstruct' = reconstruct exp . map (mp, )
+        properZero = aConst (retrieveShape n mp) 0
+        properOne = aConst (retrieveShape n mp) 1
+        elementType = retrieveElementType n mp
      in case retrieveNode n mp of
             Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
                 | length ns == 1 -> (mp, head ns)
                 -- to make sure filter (not . isZero mp) ns is not empty
-                | all (isZero mp) ns -> aConst (retrieveShape n mp) 0
+                | all (isZero mp) ns ->
+                    if elementType == C
+                        then apply (binary RealImag) [properZero, properZero]
+                        else properZero
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
@@ -231,7 +236,10 @@ reduceSumProdRules exp@(mp, n) =
                 -- product(x) -> x
                 | length ns == 1 -> (mp, head ns)
                 -- to make sure filter (not . isOne mp) ns is not empty
-                | all (isOne mp) ns -> aConst (retrieveShape n mp) 1
+                | all (isOne mp) ns ->
+                    if elementType == C
+                        then apply (binary RealImag) [properOne, properZero]
+                        else properOne
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->
@@ -405,9 +413,9 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
 standardize :: Simplification
-standardize exp@(mp, n) =
-    reconstruct exp . map (mp, ) . nodeArgs $ retrieveNode n mp
+standardize = makeRecursive id
 
+--    reconstruct exp . map (mp, ) . nodeArgs $ retrieveNode n mp
 -- | Turn a simplification to a recursive one, apply rules bottom up
 --
 makeRecursive :: Simplification -> Simplification
