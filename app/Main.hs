@@ -41,26 +41,34 @@ import Prelude hiding
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
-import HashedToC
+import HashedToC (generateProgram)
 import HashedUtils
 import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let f = (x * y ^ 2 * z + one + x1 <.> y1 + x2 <.> y2) * z
-    showExp f
+    let exp1 = ((negate (const 16.68869279125222)) +: (t + d + const 4.874246963013614 + f))
+    let exp2 = ((const (-12.137127243968372) +: const 0.0) + (k +: w) + (s +: o))
     let valMaps =
-            emptyVms |> withVm0 (fromList [("x", 1), ("y", 1.213), ("z", 3)])
---            |> withVm1
---                (fromList
---                     [ ("X1", listArray (0, 9) [1 .. 10])
---                     , ("Y1", listArray (0, 9) [2 .. 11])
---                     ]) |>
---            withVm2
---                (fromList
---                     [ ("X2", listArray ((0, 0), (9, 9)) [1 .. 100])
---                     , ("Y2", listArray ((0, 0), (9, 9)) [2 .. 101])
---                     ])
-    let program = generateProgram valMaps f
-    writeFile "C/main.c" (intercalate "\n" program)
+            ValMaps
+                { vm0 =
+                      fromList
+                          [ ("d", 14.84231720618179)
+                          , ("f", 27.188882137553513)
+                          , ("t", 36.13931293443671)
+                          , ("k", 27.188882137553513)
+                          , ("w", 36.13931293443671)
+                          , ("s", 27.188882137553513)
+                          , ("o", 36.13931293443671)
+                          ]
+                , vm1 = fromList []
+                , vm2 = fromList []
+                , vm3 = fromList []
+                }
+    showExp exp1
+    showExp exp2
+    showExp . simplify $ f * g
+--    let valMaps = emptyVms |> withVm0 (fromList [("r", 88.3314)])
+    print $ eval valMaps (exp1 * exp2)
+    print $ eval valMaps $ simplify (exp1 * exp2)

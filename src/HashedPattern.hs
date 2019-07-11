@@ -218,7 +218,13 @@ type Condition = (ExpressionMap, Int) -> Match -> Bool
 (&&.) condition1 condition2 expr match =
     condition1 expr match && condition2 expr match
 
+-- |
+--
+isNot :: Condition -> Condition
+isNot condition expr match = not $ condition expr match
+
 infixl 8 &&.
+
 
 -- |
 --
@@ -231,6 +237,15 @@ isScalar p exp match = retrieveShape n mp == []
 --
 isReal :: Pattern -> Condition
 isReal p exp match = retrieveElementType n mp == R
+  where
+    (mp, n) = buildFromPattern exp match p
+
+-- |
+--
+isConst :: Pattern -> Condition
+isConst p exp match
+    | Const _ <- retrieveNode n mp = True
+    | otherwise = False
   where
     (mp, n) = buildFromPattern exp match p
 

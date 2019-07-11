@@ -204,15 +204,13 @@ primitiveZeroR = do
         replicate 4 (const dbl, [[], [], [], []])
 
 operandR :: Gen (Expression Zero R, Vars)
-operandR
-    -- 80% getting a primitive, 20% get a nested
- = oneof $ replicate 8 primitiveZeroR ++ replicate 2 genZeroR
+operandR = oneof $ replicate 9 primitiveZeroR ++ replicate 2 genZeroR -- ratio 9 / 2
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
     -> Gen (Expression Zero R, Vars)
 fromNaryZeroR f = do
-    numOperands <- elements [3 .. 6]
+    numOperands <- elements [3 .. 4]
     ons <- vectorOf numOperands operandR
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons
@@ -288,15 +286,13 @@ primitiveZeroC = do
         ]
 
 operandC :: Gen (Expression Zero C, Vars)
-operandC
-    -- 80% getting a primitive, 20% get a nested
- = oneof $ replicate 8 primitiveZeroC ++ replicate 2 genZeroC
+operandC = oneof $ replicate 9 primitiveZeroC ++ replicate 2 genZeroC -- ratio 9 / 2
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
 fromNaryZeroC f = do
-    numOperands <- elements [3 .. 6]
+    numOperands <- elements [3]
     ons <- vectorOf numOperands operandC
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons

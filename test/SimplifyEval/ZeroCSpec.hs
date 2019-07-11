@@ -42,21 +42,17 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
-
 -- |
 --
 prop_SimplifyThenEval :: SuiteZeroC -> Bool
 prop_SimplifyThenEval (SuiteZeroC exp valMaps) =
-    eval valMaps exp ~=
-    eval valMaps (simplify exp)
+    eval valMaps exp ~= eval valMaps (simplify exp)
 
 -- |
 --
 prop_Add :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
 prop_Add (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simplify2, simplifySum) =
-    eval valMaps exp1' +
-    eval valMaps exp2' ~=
-    eval valMaps expSum'
+    eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
@@ -74,9 +70,15 @@ prop_Add (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simpl
 
 prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
-    eval valMaps exp1' *
-     eval valMaps exp2' ~=
-    eval valMaps expMul'
+    if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
+        then True
+        else error $
+             prettify exp1' ++
+             "\n" ++
+             prettify exp2' ++
+             "\n" ++
+             prettify expMul' ++
+             "\n" ++ show valMaps ++ "\n" ++ show lhs ++ "\n" ++ show rhs
   where
     valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
@@ -91,6 +93,8 @@ prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, 
         if simplifyMul
             then simplify (exp1 * exp2)
             else exp1 * exp2
+    lhs = eval valMaps exp1' * eval valMaps exp2'
+    rhs = eval valMaps expMul'
 
 prop_AddMultiply :: SuiteZeroC -> Bool
 prop_AddMultiply (SuiteZeroC exp valMaps) =
