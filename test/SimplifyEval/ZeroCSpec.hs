@@ -2,9 +2,10 @@ module SimplifyEval.ZeroCSpec where
 
 import Commons
 import Data.Map.Strict
+import qualified Data.IntMap.Strict as IM
 import Data.Maybe (fromJust)
 import Data.Typeable (Typeable)
-import Debug.Trace (traceShowId)
+import Debug.Trace (traceShowId, traceShow)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
@@ -69,16 +70,28 @@ prop_Add (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simpl
             else exp1 + exp2
 
 prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
+prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) x@(simplify1, simplify2, simplifyMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
         else error $
+             show exp1 ++
+             show exp2 ++
+             "\n----------------- BARE ----------\n" ++
+             prettify exp1 ++
+             "\n" ++
+             prettify exp2 ++
+             "\n" ++
+             "\n----------------- SIMPLIFIED ----------\n" ++
+             prettify (simplify $ exp1) ++
+             "\n" ++
+             prettify (simplify $ exp2) ++
+             "\n----------------- HAHA ----------\n" ++
              prettify exp1' ++
              "\n" ++
              prettify exp2' ++
              "\n" ++
              prettify expMul' ++
-             "\n" ++ show valMaps ++ "\n" ++ show lhs ++ "\n" ++ show rhs
+             "\n" ++ show valMaps ++ "\n" ++ show lhs ++ "\n" ++ show rhs ++ "\n" ++ show x ++ "\n ------------------------------"
   where
     valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
@@ -94,7 +107,7 @@ prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, 
             then simplify (exp1 * exp2)
             else exp1 * exp2
     lhs = eval valMaps exp1' * eval valMaps exp2'
-    rhs = eval valMaps expMul'
+    rhs = traceShow (IM.size . exMap $ expMul') eval valMaps expMul'
 
 prop_AddMultiply :: SuiteZeroC -> Bool
 prop_AddMultiply (SuiteZeroC exp valMaps) =

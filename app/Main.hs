@@ -3,6 +3,7 @@
 module Main where
 
 import Data.Array
+import qualified Data.IntMap.Strict as IM
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
 import HashedDerivative
@@ -39,6 +40,7 @@ import Prelude hiding
     , tanh
     )
 
+import Data.Complex (Complex(..))
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import HashedToC (generateProgram)
@@ -48,27 +50,80 @@ import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
 main = do
-    let exp1 = ((negate (const 16.68869279125222)) +: (t + d + const 4.874246963013614 + f))
-    let exp2 = ((const (-12.137127243968372) +: const 0.0) + (k +: w) + (s +: o))
-    let valMaps =
-            ValMaps
-                { vm0 =
-                      fromList
-                          [ ("d", 14.84231720618179)
-                          , ("f", 27.188882137553513)
-                          , ("t", 36.13931293443671)
-                          , ("k", 27.188882137553513)
-                          , ("w", 36.13931293443671)
-                          , ("s", 27.188882137553513)
-                          , ("o", 36.13931293443671)
+    let exp1 =
+            ((r +: u) + (i +: l) +
+             negate ((const (17.98534460707952) +: const (0.0))))
+    let exp2 = ((t +: k) + (d +: w) + (h +: s))
+    let kaka =
+            Expression
+                { exIndex = -2548377210763299520
+                , exMap =
+                      IM.fromList
+                          [ ( -3234846063262403967
+                            , ([], Sum C [867910, 716770, 3130068329764892197]))
+                          , ( -2548377210763299520
+                            , ([], Power 2 (-3234846063262403967)))
+                          , (97, ([], Var "a"))
+                          , (100, ([], Var "d"))
+                          , (119, ([], Var "w"))
+                          , (122, ([], Var "z"))
+                          , (716770, ([], RealImag 122 97))
+                          , (867910, ([], RealImag 100 119))
+                          , (79088992115, ([], Const 0.0))
+                          , ( 3130068329764892197
+                            , ([], RealImag 4444106685288363347 79088992115))
+                          , ( 4444106685288363347
+                            , ([], Const (-13.125787705372137)))
                           ]
-                , vm1 = fromList []
-                , vm2 = fromList []
-                , vm3 = fromList []
-                }
-    showExp exp1
-    showExp exp2
-    showExp . simplify $ f * g
---    let valMaps = emptyVms |> withVm0 (fromList [("r", 88.3314)])
-    print $ eval valMaps (exp1 * exp2)
-    print $ eval valMaps $ simplify (exp1 * exp2)
+                } :: Expression Zero C
+--    print kaka
+--    putStrLn "--------KAKA"
+--    showExp kaka
+--    showExp . simplify $ kaka
+--    let kiki = (((d+:w)+(z+:a)+(const (-13.125787705372137)+:const (0.0)))^2)
+--    putStrLn "--------KIKI"
+----    print kiki
+--    showExp kiki
+--    showExp . simplify $ kiki
+    let sum = fromJust . HashedOperation.sum
+    let kaka = (sum [(d+:w), (z+:a), (const (0)+:const (0.0))])^2
+    let valMaps = ValMaps {vm0 = fromList [("a",1),("d",1),("e",1),("p",1),("w",1),("z",2)], vm1 = fromList [], vm2 = fromList [], vm3 = fromList []}
+    let simplified = simplify kaka
+    showExp simplified
+    print $ eval valMaps kaka
+    print $ eval valMaps $ simplify kaka
+
+--    showExp $ simplify kaka
+--    showExp $ simplify $ (exp1) * (simplify exp2)
+--    let allSimplify = map (\_ -> simplify $ exp1 * exp2) [1..1000]
+--    print $ allEqual allSimplify
+--    let expMul =
+--            ((((r * x) + (const (-1.8329084829569435) * x) + (const (-1.0) *. (c * f))) +:
+--              ((f * p) + (k * r) + (const (-1.8329084829569435) * k))) +
+--             (((g * r) + (const (-1.8329084829569435) * g) + (const (-1.0) *. (f * w))) +:
+--              ((f * g) + (r * w) + (const (-1.8329084829569435) * w))) +
+--             (((p * r) + (const (-1.8329084829569435) * p) + (const (-1.0) *. (f * k))) +:
+--              ((f * p) + (k * r) + (const (-1.8329084829569435) * k))))
+--    let valMaps =
+--            ValMaps
+--                { vm0 =
+--                      fromList
+--                          [ ("c", -42.996699908420105)
+--                          , ("f", 32.962335255376956)
+--                          , ("g", 2.278616799902468)
+--                          , ("k", 15.932658947705567)
+--                          , ("p", -45.32604905943502)
+--                          , ("r", 66.23122144783572)
+--                          , ("w", -1.1627731148202438)
+--                          , ("x", -28.02201697062796)
+--                          ]
+--                , vm1 = fromList []
+--                , vm2 = fromList []
+--                , vm3 = fromList []
+--                }
+--    showExp exp1
+--    showExp exp2
+--    showExp . simplify $ exp1 * exp2
+--    let rhs = eval valMaps $ simplify $ expMul
+--    print rhs
+--    print $ eval valMaps exp1 * eval valMaps exp2
