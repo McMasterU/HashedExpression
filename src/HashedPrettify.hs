@@ -52,8 +52,7 @@ showExpDebug ::
 showExpDebug = putStrLn . prettifyDebug
 
 prettifyDebug ::
-       forall d rc. (Typeable d, Typeable rc)
-    => Expression d rc
+    Expression d rc
     -> String
 prettifyDebug e@(Expression n mp) =
     let shape = expressionShape e

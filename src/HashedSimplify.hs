@@ -156,6 +156,9 @@ complexNumRules =
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
+    , restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
+      ((x * z - y * w) +: (x * w + y * z))
+    , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
     ]
 
 -- | Rules with dot product and scale
@@ -177,7 +180,7 @@ distributiveRules =
     , sumOf (each) <.> x |.~~~~~~> sumOf (x <.> each)
     , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
-    , prodOfRest * sumOf (each) |.~~~~~~> sumOf (prodOfRest * each)
+    , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (restOfProduct ~* each)
     ]
 
 -- | Rules of piecewise
@@ -298,7 +301,7 @@ combineTermsRules exp@(mp, n)
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or RealImag
+-- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or complex
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
@@ -313,8 +316,8 @@ combineTermsRulesProd exp@(mp, n)
     fn (x, px) (y, py)
         | Sum _ _ <- retrieveNode x mp = False
         | Sum _ _ <- retrieveNode y mp = False
-        | RealImag _ _ <- retrieveNode x mp = False
-        | RealImag _ _ <- retrieveNode y mp = False
+        | C <- retrieveElementType x mp = False
+        | C <- retrieveElementType y mp = False
         | otherwise = x == y
     toExp (nId, val)
         | val == 1 = (mp, nId)

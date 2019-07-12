@@ -24,6 +24,7 @@ import HashedHash
 import HashedInner
 import HashedNode
 import HashedUtils
+import HashedPrettify (prettifyDebug)
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node
 --
@@ -204,13 +205,11 @@ generateCodeC memMap expr@(Expression _ mp) =
                     | elementType n == R ->
                         let prodAt i = intercalate " * " $ map (`at` i) args
                          in for i n [n `at` i <<- prodAt i]
-                    | otherwise -> error "Not support yet"
                 Power x arg
                     | elementType n == R ->
                         let powerAt i =
                                 "pow(" ++ arg `at` i ++ "," ++ show x ++ ")"
                          in for i n [n `at` i <<- powerAt i]
-                    | otherwise -> error "Not support yet"
                 Neg _ arg
                     | elementType n == R ->
                         let negAt i = "-" ++ arg `at` i
@@ -232,7 +231,6 @@ generateCodeC memMap expr@(Expression _ mp) =
                                 (scalar `at` noOffset) ++ "*" ++ (arg `imAt` i)
                          in for i n [n `reAt` i <<- scaleRe i] ++
                             for i n [n `reAt` i <<- scaleIm i]
-                    | otherwise -> error "Not support yet"
                 -- MARK: only apply to R
                 Div arg1 arg2 ->
                     let divAt i = arg1 `at` i ++ " / " ++ arg2 `at` i
@@ -255,7 +253,7 @@ generateCodeC memMap expr@(Expression _ mp) =
                 -- MARK: Complex related
                 RealImag arg1 arg2 ->
                     for i n [n `reAt` i <<- arg1 `at` i] ++
-                    for i n [n `reAt` i <<- arg2 `at` i]
+                    for i n [n `imAt` i <<- arg2 `at` i]
                 RealPart arg -> for i n [n `at` i <<- arg `reAt` i]
                 ImagPart arg -> for i n [n `at` i <<- arg `imAt` i]
                 InnerProd _ arg1 arg2
@@ -274,7 +272,7 @@ generateCodeC memMap expr@(Expression _ mp) =
                                 i
                                 (getShape arg1)
                                 (initCodes, codes, afterCodes)
-                    | otherwise -> error "Not support yet"
+                _ -> error $ "Not support yet " ++ prettifyDebug expr
 
 -- | Generate a fully functional C program that compute the expression and print out the result
 --
