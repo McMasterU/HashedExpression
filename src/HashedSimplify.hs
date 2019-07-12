@@ -65,7 +65,7 @@ chain = flip $ foldl (|>)
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
 multipleTimes :: Int -> Simplification -> Simplification
-multipleTimes k smp exp = go (k - 1) exp (smp exp)
+multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
   where
     go 0 _ curExp = curExp
     go k lastExp curExp

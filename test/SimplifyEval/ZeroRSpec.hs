@@ -52,18 +52,15 @@ prop_Add (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simpl
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = mergeValMaps valMaps1 valMaps2
-    exp1' =
-        if simplify1
-            then simplify exp1
-            else exp1
-    exp2' =
-        if simplify2
-            then simplify exp2
-            else exp2
-    expSum' =
-        if simplifySum
-            then simplify (exp1 + exp2)
-            else exp1 + exp2
+    exp1'
+        | simplify1 = simplify exp1
+        | otherwise = exp1
+    exp2'
+        | simplify2 = simplify exp2
+        | otherwise = exp2
+    expSum'
+        | simplifySum = simplify (exp1 + exp2)
+        | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
@@ -75,18 +72,15 @@ prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, 
                   prettify exp2' ++ " not ~= " ++ prettify expMul' ++ " ----- " ++ show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
   where
     valMaps = mergeValMaps valMaps1 valMaps2
-    exp1' =
-        if simplify1
-            then simplify exp1
-            else exp1
-    exp2' =
-        if simplify2
-            then simplify exp2
-            else exp2
-    expMul' =
-        if simplifyMul
-            then simplify (exp1 * exp2)
-            else exp1 * exp2
+    exp1'
+        | simplify1 = simplify exp1
+        | otherwise = exp1
+    exp2'
+        | simplify2 = simplify exp2
+        | otherwise = exp2
+    expMul'
+        | simplifyMul = simplify (exp1 * exp2)
+        | otherwise = exp1 * exp2
     lhs = eval valMaps exp1' * eval valMaps exp2'
     rhs = eval valMaps expMul'
 

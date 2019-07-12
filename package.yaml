@@ -30,6 +30,7 @@ dependencies:
 - deepseq
 - process
 - binary
+- time
 - split
 
 

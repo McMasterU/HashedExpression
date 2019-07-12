@@ -13,18 +13,18 @@ import HashedExpression hiding ((*), (+), (-))
 -- | m and p for base-hashing
 -- See https://cp-algorithms.com/string/string-hashing.html
 --
-m :: Int
-m = 1000000007
+modulo :: Int
+modulo = 1000000007
 
 -- | Hash string consists of alphabet and numeric
 --
-p :: Int
-p = 83
+radix :: Int
+radix = 83
 
 -- | Hash string
 -- s[0] + s[1]⋅p + s[2]⋅p^2 + ... + s[n−1]⋅p^n−1 mod m
 hashString :: String -> Int
-hashString (x:xs) = ((ord x - ord '0') + p * hashString xs) `mod` m
+hashString (x:xs) = ((ord x - ord '0') + radix * hashString xs) `mod` modulo
 hashString [] = 0
 
 -- | Offset the hash by number of m
@@ -33,8 +33,8 @@ hashString [] = 0
 --
 offsetHash :: Int -> Int -> Int
 offsetHash offset hash =
-    if hash < m
-        then offset * m + hash
+    if hash < modulo
+        then offset * modulo + hash
         else error "????"
 
 rehash :: Int -> [Int]

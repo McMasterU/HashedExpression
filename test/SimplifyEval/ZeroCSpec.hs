@@ -1,11 +1,12 @@
 module SimplifyEval.ZeroCSpec where
 
 import Commons
-import Data.Map.Strict
+import Control.Monad (replicateM_)
 import qualified Data.IntMap.Strict as IM
+import Data.Map.Strict
 import Data.Maybe (fromJust)
 import Data.Typeable (Typeable)
-import Debug.Trace (traceShowId, traceShow)
+import Debug.Trace (traceShow, traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
@@ -56,40 +57,32 @@ prop_Add (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) (simplify1, simpl
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = mergeValMaps valMaps1 valMaps2
-    exp1' =
-        if simplify1
-            then simplify exp1
-            else exp1
-    exp2' =
-        if simplify2
-            then simplify exp2
-            else exp2
-    expSum' =
-        if simplifySum
-            then simplify (exp1 + exp2)
-            else exp1 + exp2
+    exp1'
+        |simplify1 = simplify exp1
+        | otherwise = exp1
+    exp2'
+        | simplify2 = simplify exp2
+        | otherwise = exp2
+    expSum'
+        | simplifySum = simplify (exp1 + exp2)
+        | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) x@(simplify1, simplify2, simplifyMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
-        else error $
-             prettifyDebug exp1' ++
-             prettifyDebug exp2'
+        else error $ prettifyDebug exp1' ++ prettifyDebug exp2'
   where
     valMaps = mergeValMaps valMaps1 valMaps2
-    exp1' =
-        if simplify1
-            then simplify exp1
-            else exp1
-    exp2' =
-        if simplify2
-            then simplify exp2
-            else exp2
-    expMul' =
-        if simplifyMul
-            then simplify (exp1 * exp2)
-            else exp1 * exp2
+    exp1'
+        | simplify1 = simplify exp1
+        | otherwise = exp1
+    exp2'
+        | simplify2 = simplify exp2
+        | otherwise = exp2
+    expMul'
+        | simplifyMul = simplify (exp1 * exp2)
+        | otherwise = exp1 * exp2
 
 prop_AddMultiply :: SuiteZeroC -> Bool
 prop_AddMultiply (SuiteZeroC exp valMaps) =
@@ -104,3 +97,13 @@ spec =
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply
+        specify "Check size" $
+            replicateM_ 10 $ do
+                let sz = IM.size . exMap
+                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
+                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
+                measureTime $ do
+                    putStrLn "----------------------------"
+                    putStrLn $ "Generate exp1 -> " ++ show (sz exp1) ++ " subexpressions"
+                    putStrLn $ "Generate exp2 -> " ++ show (sz exp2) ++ " subexpressions"
+                    putStrLn $ "Simplifing (exp1 * exp2) -> " ++ show (sz $ simplify $ (exp1 * exp2)) ++ " subexpressions"

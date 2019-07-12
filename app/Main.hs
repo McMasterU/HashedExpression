@@ -52,9 +52,10 @@ import HashedHash
 
 main = do
 --    let sum = fromJust . HashedOperation.sum
-    let product = fromJust . HashedOperation.product
-    let exp = product [x +: y, z +: t, a +: b]
-    showExp $ simplify exp
+--    let product = fromJust . HashedOperation.product
+    let exp1 = (((((n+:l))^3))^3)
+    let exp2 = ((k+:u)+(p+:j))
+    showExp $ simplify $ exp1 * exp2
 
 
 

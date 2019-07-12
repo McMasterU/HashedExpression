@@ -21,6 +21,7 @@ import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
+import Data.Time (getCurrentTime, diffUTCTime)
 import HashedPrettify
 import HashedSimplify
 import HashedUtils
@@ -84,6 +85,15 @@ inspect x =
     unsafePerformIO $ do
         showExp x
         return x
+
+-- |
+--
+measureTime :: IO a -> IO ()
+measureTime action = do
+    beforeTime <- getCurrentTime
+    action
+    afterTime <- getCurrentTime
+    putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
 -- |
 --
@@ -276,7 +286,7 @@ genZeroC :: Gen (Expression Zero C, Vars)
 genZeroC = do
     let nary = map fromNaryZeroC [sum, product]
         binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
-        unary = map fromUnaryZeroC [negate, (^ 2), (^ 3)]
+        unary = map fromUnaryZeroC [negate, (^ 2)]
     oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
 
 instance Arbitrary (Expression Zero C) where
