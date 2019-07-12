@@ -28,6 +28,9 @@ import HashedNode
 import HashedPrettify (prettify, showExp)
 import HashedUtils
 
+-- | This operation emulates the mathematical operation
+
+
 -- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R
@@ -327,6 +330,7 @@ instance Evaluable One R (Array Int Double) where
                     Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
                     RealPart arg -> fmap realPart . eval valMap $ expOneC mp arg
                     ImagPart arg -> fmap imagPart . eval valMap $ expOneC mp arg
+                    -- Rotate rA arg ->
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expOneR mp conditionArg
                             branches = map (eval valMap . expOneR mp) branchArgs
@@ -337,12 +341,15 @@ instance Evaluable One R (Array Int Double) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
+--                    Rotate [x] arg -> fmap
                     _ -> error "expression structure One R is wrong"
         | otherwise = error "one r but shape is not [size] ??"
 
 --                         in chooseBranch marks cdt branches
 -- |
 --
+
+
 instance Evaluable One C (Array Int (Complex Double)) where
     eval :: ValMaps -> Expression One C -> Array Int (Complex Double)
     eval valMap e@(Expression n mp)
@@ -746,3 +753,5 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                                 ]
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
+
+

@@ -9,6 +9,7 @@
 
 module HashedOperation where
 
+import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
 import HashedExpression
 import HashedHash
@@ -240,6 +241,14 @@ instance (ElementType et) =>
          RotateOp (Int, Int, Int) (Expression Three et) where
     rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
     rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
+
+
+-- | Rotate Operation
+rt ::
+  Int -- ^ Input : Rotate Amount as Integer
+  -> [a] -- ^ Output : input List
+  -> [a] -- ^ output : Rotated Result
+rt rotateAmount xs = (length xs-rotateAmount) `drop` xs ++ take (length xs - rotateAmount) xs
 
 -- | Prelude version of * and +
 --
