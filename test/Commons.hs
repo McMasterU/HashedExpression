@@ -15,13 +15,13 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
+import Data.Time (diffUTCTime, getCurrentTime)
 import Data.Typeable (Typeable)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
-import Data.Time (getCurrentTime, diffUTCTime)
 import HashedPrettify
 import HashedSimplify
 import HashedUtils
@@ -68,7 +68,6 @@ format :: [(String, String)] -> String
 format = intercalate "\n" . map oneLine
   where
     oneLine (f, s) = f ++ ": " ++ s
-
 
 -- |
 --
@@ -220,6 +219,7 @@ shouldApprox :: Approximable a => a -> a -> Expectation
 shouldApprox x y = x ~= y `shouldBe` True
 
 infix 1 `shouldApprox`
+
 -- |
 --
 instance Arbitrary SuiteZeroR where

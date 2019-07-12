@@ -94,7 +94,8 @@ spec =
             localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
         specify "Size memmap" $ pendingWith "not implemented"
         specify "Mem map offset" $ pendingWith "not implemented"
-        specify "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
             replicateM_ 10 $ do
                 SuiteZeroR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
@@ -111,21 +112,25 @@ spec =
                 let resultSimplify = read . head . splitOn " " $ outputSimple
                 let resultInterpSimplify = eval valMaps (simplify exp)
                 putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimplify
+                putStrLn $
+                    "Result Interp (Simplified): " ++ show resultInterpSimplify
                 resultSimplify `shouldApprox` resultInterpSimplify
                 putStrLn "OK!"
-        specify "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
             replicateM_ 10 $ do
                 SuiteZeroC exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 let simplifiedExp = simplify exp
-                writeFile "C/main.c" $ intercalate "\n" . generateProgram valMaps $ simplifiedExp
+                writeFile "C/main.c" $
+                    intercalate "\n" . generateProgram valMaps $ simplifiedExp
                 outputCodeC <- evaluateCodeC (simplify exp) valMaps
                 let ([im], [re]) = readC outputCodeC
                 let resultSimplify = im :+ re
                 let resultInterpSimplify = eval valMaps simplifiedExp
                 putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimplify
+                putStrLn $
+                    "Result Interp (Simplified): " ++ show resultInterpSimplify
                 resultSimplify `shouldApprox` resultInterpSimplify
                 putStrLn "OK!"

@@ -1,14 +1,15 @@
 module HashedSimplifySpec where
 
 import Commons
+import Data.Complex (Complex(..))
 import Data.Maybe (fromJust)
 import HashedExpression
+import HashedInterp ((~=))
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import HashedVar
-import Data.Complex (Complex(..))
 import Prelude hiding
     ( (*)
     , (+)
@@ -37,7 +38,6 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
-import HashedInterp ((~=))
 
 spec :: Spec
 spec = do
@@ -73,13 +73,15 @@ spec = do
         specify "dot product" $ do
             simplify (x <.> zero) `shouldBe` zero
             simplify (zero <.> x) `shouldBe` zero
-            prettify (simplify ((s *. x) <.> y)) `shouldBe` prettify (simplify (s * (x <.> y)))
+            prettify (simplify ((s *. x) <.> y)) `shouldBe`
+                prettify (simplify (s * (x <.> y)))
             simplify (x <.> (s *. y)) `shouldBe` simplify (s * (x <.> y))
         specify "distributivity" $ do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
             (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
-            simplify (simplify (x <.> (y + z))) `shouldBe` simplify ((x <.> y) + (x <.> z))
+            simplify (simplify (x <.> (y + z))) `shouldBe`
+                simplify ((x <.> y) + (x <.> z))
             simplify ((y + z) <.> x) `shouldBe` simplify ((x <.> y) + (x <.> z))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
@@ -110,8 +112,9 @@ spec = do
                 simplify (sum [const 3, x, y, z])
             simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
                 simplify (product [const 6, x, y, z])
-        specify "combine same terms" $ do
+        specify "combine same terms" $
             -- Higher dimension this is correct
+         do
             prettify (simplify (sum [one *. x1, x1, x1, const 3 *. y1, y1])) `shouldBe`
                 prettify (simplify (sum [const 3 *. x1, const 4 *. y1]))
             simplify (sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1]) `shouldBe`
@@ -129,7 +132,8 @@ spec = do
             simplify (xIm (x *. xc)) `shouldBe` simplify (x *. xIm xc)
         specify "negate rules" $ do
             simplify (negate (negate x)) `shouldBe` simplify x
-            prettify (simplify (negate (negate (x + y)))) `shouldBe` prettify (simplify (x + y))
+            prettify (simplify (negate (negate (x + y)))) `shouldBe`
+                prettify (simplify (x + y))
             simplify (negate zero) `shouldBe` zero
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do

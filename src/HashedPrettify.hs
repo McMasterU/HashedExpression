@@ -51,9 +51,7 @@ showExpDebug ::
     -> IO ()
 showExpDebug = putStrLn . prettifyDebug
 
-prettifyDebug ::
-    Expression d rc
-    -> String
+prettifyDebug :: Expression d rc -> String
 prettifyDebug e@(Expression n mp) =
     let shape = expressionShape e
         node = expressionNode e
@@ -63,11 +61,13 @@ prettifyDebug e@(Expression n mp) =
 --
 allEntries :: forall d rc. Expression d rc -> [(Int, String)]
 allEntries (Expression n mp) =
-    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $ IM.keys mp
+    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $
+    IM.keys mp
 
 allEntriesDebug :: (ExpressionMap, Int) -> [(Int, String)]
 allEntriesDebug (mp, n) =
-    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $ IM.keys mp
+    zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $
+    IM.keys mp
 
 -- |
 --
@@ -78,7 +78,6 @@ showAllEntries e = do
     putStrLn "--------------------------"
   where
     mkString (n, str) = show n ++ " --> " ++ str
-
 
 -- |
 --

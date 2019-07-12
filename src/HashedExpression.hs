@@ -156,7 +156,7 @@ class RotateOp k a | a -> k where
 
 infixl 6 +, -
 
-infixl 7 *
+infixl 7 *, /
 
 infixl 8 *., `scale`, <.>
 

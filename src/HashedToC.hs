@@ -23,8 +23,8 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
-import HashedUtils
 import HashedPrettify (prettifyDebug)
+import HashedUtils
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node
 --

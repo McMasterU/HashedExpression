@@ -98,8 +98,7 @@ simplify e =
             (makeRecursive combineScaleRules) >>>
             (makeRecursive powerProdRules) >>>
             (makeRecursive powerSumRealImagRules) >>>
-            (makeRecursive combinePowerRules) >>>
-            id
+            (makeRecursive combinePowerRules) >>> id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 rulesFromPattern :: Simplification
@@ -159,7 +158,8 @@ complexNumRules =
     , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
     , restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
       ((x * z - y * w) +: (x * w + y * z))
-    , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
+    , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+
+      ((x + u) +: (y + v))
     , (x +: y) *. (z +: w) |.~~~~~~> (x *. z - y *. w) +: (x *. w + y *. z)
     , (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z - y <.> w) +: (x <.> w + y <.> z)
     ]
@@ -378,7 +378,7 @@ negateRules exp@(mp, n)
     | otherwise = exp
 
 -- | Rules for combining scale
--- ((-1) *. x) * (2 *. y) * (3 *. z) ---> (-6) *. (x * y * z)
+-- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
 combineScaleRules :: Simplification
 combineScaleRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp

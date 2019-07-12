@@ -101,6 +101,7 @@ apply (Condition op) exps@(conditionArg:branchArgs) =
         shape = retrieveShape headBranchN headBranchMp
         node = op (snd conditionArg) $ map snd branchArgs
      in addEntry mergedMap (shape, node)
+
 -- | General multiplication and sum
 --
 mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
