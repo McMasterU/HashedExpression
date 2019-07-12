@@ -9,6 +9,7 @@
 
 module HashedOperation where
 
+import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
 import HashedExpression
 import HashedHash
@@ -255,11 +256,32 @@ instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
     (+) = plus
     negate = Prelude.negate
 
+instance AddableOp (Array Int Double) where
+    (+) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+    negate arr =
+        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
+      where
+        size = length . elems $ arr
+
 instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
     (*) = times
 
---instance {-# OVERLAPPABLE #-} Num a => PowerOp a a a where
---    (^) x y = x Prelude.^ y
+instance MultiplyOp (Array Int Double) (Array Int Double) (Array Int Double)  where
+    (*) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+
+instance PowerOp Double Int where
+    (^) x y = x Prelude.^ y
+
 instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     sqrt = Prelude.sqrt
     exp = Prelude.exp

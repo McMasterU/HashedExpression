@@ -322,7 +322,7 @@ instance Arbitrary SuiteZeroC where
 -------------------------------------------------------------------------------
 primitiveOneR :: Gen (Expression One R, Vars)
 primitiveOneR = do
-    name <- elements . map ((++ "1") . pure) $ ['A' .. 'Z']
+    name <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
     dbl <- arbitrary
     elements $
         replicate 6 (var1d vectorSize name, [[], [name], [], []]) ++
@@ -388,6 +388,8 @@ instance Show SuiteOneR where
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
             , ("ValMap", show valMaps)
+            , ("EvalExp", show evalExp)
+            , ("EvalExpSimplify", show evalSimplified)
             ]
       where
         exp = prettify e
