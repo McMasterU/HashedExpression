@@ -92,8 +92,7 @@ prop_AddMultiply (SuiteZeroC exp valMaps) =
 spec :: Spec
 spec =
     describe "simplify & eval property for Zero C" $ do
-        specify "evaluate must equals simplify then evaluate " $
-            property prop_SimplifyThenEval
+        specify "evaluate must equals simplify then evaluate " $ property prop_SimplifyThenEval
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply
@@ -106,4 +105,4 @@ spec =
                     putStrLn "----------------------------"
                     putStrLn $ "Generate exp1 -> " ++ show (sz exp1) ++ " subexpressions"
                     putStrLn $ "Generate exp2 -> " ++ show (sz exp2) ++ " subexpressions"
-                    putStrLn $ "Simplifing (exp1 * exp2) -> " ++ show (sz $ simplify $ (exp1 * exp2)) ++ " subexpressions"
+                    putStrLn $ "Simplifing (exp1 * exp2) -> " ++ show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
