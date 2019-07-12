@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -43,8 +44,10 @@ import Prelude hiding
     , cosh
     , exp
     , negate
+    , product
     , sin
     , sinh
+    , sum
     , tan
     , tanh
     )
@@ -64,13 +67,7 @@ data PatternList =
     deriving (Show)
 
 instance Show (Pattern -> Pattern) where
-    show p = "Pattern List here"
-
--- | This captures multiplication of many
---
-data PatternMulMany =
-    PMulManyHole ListCapture
-    deriving (Show)
+    show p = "(Pattern -> Pattern)"
 
 -- |
 --
@@ -111,9 +108,34 @@ data Pattern
     | PImagPart Pattern
     | PInnerProd Pattern Pattern
     | PPiecewise Pattern PatternList
-    | PMulRest PatternMulMany Pattern
+    | PMulRest ListCapture [Pattern]
+    | PSumRest ListCapture [Pattern]
     | PPower Pattern Pattern
     deriving (Show)
+
+-- |
+--
+infixl 7 ~*
+
+infixl 6 ~+
+
+class MulRestOp a b c | a b -> c where
+    (~*) :: a -> b -> c
+
+instance MulRestOp Pattern Pattern Pattern where
+    (~*) (PMulRest listCapture ps) p = PMulRest listCapture (ps ++ [p])
+
+instance MulRestOp Pattern PatternList PatternList where
+    (~*) rest (PListHole fs listHole) = PListHole ((rest ~*) . fs) listHole
+
+class SumRestOp a b c | a b -> c where
+    (~+) :: a -> b -> c
+
+instance SumRestOp Pattern Pattern Pattern where
+    (~+) (PSumRest listCapture ps) p = PSumRest listCapture (ps ++ [p])
+
+instance SumRestOp Pattern PatternList PatternList where
+    (~+) rest (PListHole fs listHole) = PListHole ((rest ~+) . fs) listHole
 
 -- | Pattern
 --
@@ -178,15 +200,6 @@ instance VectorSpaceOp Pattern PatternList where
     scale wh1 (PListHole f listCapture) =
         PListHole ((wh1 `scale`) . f) listCapture
 
--- | Pattern Mul Many
---
-instance MultiplyOp PatternMulMany Pattern Pattern where
-    (*) = PMulRest
-
-instance MultiplyOp PatternMulMany PatternList PatternList where
-    (*) pMulMany (PListHole f listCapture) =
-        PListHole (PMulRest pMulMany . f) listCapture
-
 -- | Guarded patterns for simplification
 --
 data GuardedPattern =
@@ -224,7 +237,6 @@ isNot :: Condition -> Condition
 isNot condition expr match = not $ condition expr match
 
 infixl 8 &&.
-
 
 -- |
 --
@@ -310,8 +322,11 @@ headOf (PListHole trans listCapture) = PHead trans listCapture
 
 -- |
 --
-prodOfRest :: PatternMulMany
-prodOfRest = PMulManyHole 32421
+prodRest :: Pattern
+prodRest = PMulRest 239 []
+
+sumRest :: Pattern
+sumRest = PSumRest 2391 []
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes
@@ -340,6 +355,7 @@ data Match =
         { capturesMap :: Map Capture Int
         , listCapturesMap :: Map ListCapture [Int]
         }
+    deriving (Show)
 
 unionMatch :: Match -> Match -> Match
 unionMatch match1 match2 =
@@ -365,19 +381,30 @@ match (mp, n) outerWH =
                 Just $ Match (Map.fromList [(capture, n)]) Map.empty
             (Const c, PConst whc)
                 | c == whc -> Just $ Match Map.empty Map.empty
+            (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Sum _ args, PSumList pl@(PListHole _ listCapture))
                 | Just innerArgs <- matchList mp args pl ->
                     Just $
                     Match Map.empty (Map.fromList [(listCapture, innerArgs)])
-                | otherwise -> Nothing
-            (Sum _ args, PSum whs) -> recursiveAndCombine args whs
-            (Mul _ args, PMul whs) -> recursiveAndCombine args whs
-            (Mul _ args, PMulRest (PMulManyHole listCapture) wh)
-                | let (rest, theLast) = fromJust . viewR $ args
-                , Just matchTheLast <- recursiveAndCombine [theLast] [wh]
-                , let matchRest =
+            (Sum _ args, PSumRest listCapture ps)
+                | length args > length ps
+                , let (rest, normalParts) =
+                          splitAt (length args - length ps) args
+                , length normalParts == length ps
+                , Just matchNormalParts <- recursiveAndCombine normalParts ps
+                , let matchListPart =
                           Match Map.empty (Map.fromList [(listCapture, rest)]) ->
-                    Just $ unionMatch matchRest matchTheLast
+                    Just $ unionMatch matchNormalParts matchListPart
+            (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Mul _ args, PMulRest listCapture ps)
+                | length args > (length ps)
+                , let (rest, normalParts) =
+                          splitAt (length args - length ps) args
+                , length normalParts == length ps
+                , Just matchNormalParts <- recursiveAndCombine normalParts ps
+                , let matchListPart =
+                          Match Map.empty (Map.fromList [(listCapture, rest)]) ->
+                    Just $ unionMatch matchNormalParts matchListPart
             (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
@@ -491,10 +518,14 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PPiecewise _ _ ->
                 error
                     "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"
-            PMulRest (PMulManyHole restCapture) sp
+            PMulRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     mulMany $
-                    (map (originalMp, ) $ ns) ++ [buildFromPattern' sp]
-                | otherwise ->
-                    error
-                        "ListCapture not in the Map ListCapture [Int] which should never happens"
+                    (map (originalMp, ) $ ns) ++ map (buildFromPattern') sps
+            PSumRest restCapture sps
+                | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
+                    sumMany $
+                    (map (originalMp, ) $ ns) ++ map (buildFromPattern') sps
+            _ ->
+                error
+                    "The right hand-side of substitution has something that we don't support yet"

@@ -66,7 +66,7 @@ nodeTypeWeight node =
         Asinh {} -> 19
         Acosh {} -> 20
         Atanh {} -> 21
-        RealImag {} -> 22
+        RealImag {} -> 8888
         RealPart {} -> 23
         ImagPart {} -> 24
         InnerProd {} -> 25

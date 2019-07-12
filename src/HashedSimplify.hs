@@ -156,6 +156,7 @@ complexNumRules =
     , (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z)
     , negate (x +: y) |.~~~~~~> negate x +: negate y
     , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
+    , prodRest ~* (x +: y) ~* (z +: w) |.~~~~~~> prodRest ~* ((x * z - y * w) +: (x * w + y * z))
     ]
 
 -- | Rules with dot product and scale
@@ -177,7 +178,7 @@ distributiveRules =
     , sumOf (each) <.> x |.~~~~~~> sumOf (x <.> each)
     , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
-    , prodOfRest * sumOf (each) |.~~~~~~> sumOf (prodOfRest * each)
+    , prodRest ~* sumOf (each) |.~~~~~~> sumOf (prodRest ~* each)
     ]
 
 -- | Rules of piecewise
