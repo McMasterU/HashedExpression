@@ -362,7 +362,7 @@ negateRules exp@(mp, n)
     | otherwise = exp
 
 -- | Rules for combining scale
--- ((-1) *. x) * (2 *. y) * (3 *. z) ---> (-6) *. (x * y * z)
+-- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
 combineScaleRules :: Simplification
 combineScaleRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp
