@@ -45,7 +45,7 @@ nodeTypeWeight node =
         Var {} -> 1
         DVar {} -> 800
         Const {} -> -9999
-        Sum {} -> 9999
+        Sum {} -> 9999 -- Sum at the end
         Mul {} -> 3
         Power {} -> 28
         Neg {} -> 4
@@ -66,7 +66,7 @@ nodeTypeWeight node =
         Asinh {} -> 19
         Acosh {} -> 20
         Atanh {} -> 21
-        RealImag {} -> 8888
+        RealImag {} -> 8888 -- At the end right after sum
         RealPart {} -> 23
         ImagPart {} -> 24
         InnerProd {} -> 25

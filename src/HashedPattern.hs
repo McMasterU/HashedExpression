@@ -322,8 +322,8 @@ headOf (PListHole trans listCapture) = PHead trans listCapture
 
 -- |
 --
-prodRest :: Pattern
-prodRest = PMulRest 239 []
+restOfProduct :: Pattern
+restOfProduct = PMulRest 239 []
 
 sumRest :: Pattern
 sumRest = PSumRest 2391 []
