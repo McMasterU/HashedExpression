@@ -98,7 +98,8 @@ simplify e =
             (makeRecursive combineScaleRules) >>>
             (makeRecursive powerProdRules) >>>
             (makeRecursive powerSumRealImagRules) >>>
-            (makeRecursive combinePowerRules) >>> id
+            (makeRecursive combinePowerRules) >>>
+            id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 rulesFromPattern :: Simplification

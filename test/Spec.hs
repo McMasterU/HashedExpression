@@ -52,9 +52,9 @@ main = do
 
 spec :: Spec
 spec = do
---    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
---    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
---    describe "SimplifySpec" HashedSimplifySpec.spec
+    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
+    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
+    describe "SimplifySpec" HashedSimplifySpec.spec
 --    describe "Test1" Test1.spec
 --    describe "Test1" Test2.spec
     describe "HashedToCSpec" HashedToCSpec.spec

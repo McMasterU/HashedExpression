@@ -22,7 +22,7 @@ import HashedInner (unwrap)
 import HashedNode
 import HashedUtils
 
--- |
+-- | Pretty exp
 --
 showExp ::
        forall d rc. (Typeable d, Typeable rc)
@@ -59,7 +59,7 @@ prettifyDebug e@(Expression n mp) =
         node = expressionNode e
      in T.unpack (hiddenPrettify True $ unwrap e)
 
--- |
+-- | All the entries of the expression
 --
 allEntries :: forall d rc. Expression d rc -> [(Int, String)]
 allEntries (Expression n mp) =
@@ -68,6 +68,7 @@ allEntries (Expression n mp) =
 allEntriesDebug :: (ExpressionMap, Int) -> [(Int, String)]
 allEntriesDebug (mp, n) =
     zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp, )) $ IM.keys mp
+
 -- |
 --
 showAllEntries :: forall d rc. Expression d rc -> IO ()

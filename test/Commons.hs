@@ -234,7 +234,7 @@ primitiveZeroC = do
         ]
 
 operandC :: Gen (Expression Zero C, Vars)
-operandC = oneof $ replicate 9 primitiveZeroC ++ replicate 2 genZeroC -- ratio 9 / 2
+operandC = oneof $ replicate 9 primitiveZeroC ++ replicate 1 genZeroC -- ratio 9 / 1
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
