@@ -86,4 +86,5 @@ spec =
             simplify (y * (y ^ 2) ^ 2) `shouldBe` (y ^ 5)
             simplify (x / ((y ^ 2) ^ 3)) `shouldBe` (x * y ^ (-6))
             simplify (((x * y) ^ 2) / x) `shouldBe` (x * y ^ 2)
+            simplify ((const 0.1)* x)^2 `shouldBe` (const 0.01)*.x^2
 --              simplify (((x+y)^2)*((x-y)^2)) `shouldBe`

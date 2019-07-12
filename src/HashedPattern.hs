@@ -222,10 +222,26 @@ infixl 8 &&.
 
 -- |
 --
+(||.) :: Condition -> Condition -> Condition
+(||.) condition1 condition2 expr match =
+    condition1 expr match || condition2 expr match
+-- |
+--
 isScalar :: Pattern -> Condition
 isScalar p exp match = retrieveShape n mp == []
   where
     (mp, n) = buildFromPattern exp match p
+
+-- |
+--
+isNotConst :: Pattern -> Condition
+isNotConst p exp match =
+  let (mp, n) = buildFromPattern exp match p
+  in case retrieveNode n mp of
+      Const _ -> False
+      _ -> True
+
+
 
 -- |
 --

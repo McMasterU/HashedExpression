@@ -97,7 +97,9 @@ simplify e =
             (makeRecursive powerSumRealImagRules) >>>
             (makeRecursive combinePowerRules) >>>
             (makeRecursive negateRules) >>>
-            (makeRecursive combineScaleRules) >>> id
+            (makeRecursive combineScaleRules) >>>
+            (makeRecursive constPowerRules) >>>
+            id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 rulesFromPattern :: Simplification
@@ -144,6 +146,7 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , x*.y |. isNotConst x &&. isScalar y ~~~~~~> x*y
     ]
 
 -- | Rules with complex operation
@@ -353,6 +356,18 @@ powerProdRules exp@(mp, n)
     , val > 0 = mulMany $ replicate val (mp, nId)
     | otherwise = exp
 
+
+-- | Rules for constant multiplication
+-- (Const val)^t ---> Const (val)^t
+constPowerRules :: Simplification
+constPowerRules exp@(mp , n)
+    | Power val nId <- retrieveNode n mp
+    , Const constVal <- retrieveNode nId mp
+    , val > 0 = aConst (retrieveShape n mp) (constVal Prelude.^ val)
+    | otherwise = exp
+
+
+
 -- | Rules for negate
 -- Turn negate to scale with (-1)
 -- (-x) ---> (-1) *. x
@@ -384,7 +399,7 @@ combineScaleRules exp@(mp, n)
                 else combinedScalees
     | otherwise = exp
 
---            | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)
+-- | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)
 -- | Remove unreachable nodes
 --
 removeUnreachable :: Simplification
