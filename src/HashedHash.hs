@@ -4,78 +4,100 @@
 
 module HashedHash where
 
+import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
-import HashedExpression hiding ((*), (+))
+import Data.List (intercalate)
 import Debug.Trace (traceShowId)
+import HashedExpression hiding ((*), (+), (-))
 
-
--- |
+-- | m and p for base-hashing
+-- See https://cp-algorithms.com/string/string-hashing.html
 --
-class HasHash a where
-    hash :: a -> Int
+m :: Int
+m = 1000000007
 
--- | Helper hash functions, copy from HashedExpression
+-- | Hash string consists of alphabet and numeric
 --
-moveBase :: Char -> Int -> Int
-moveBase c hash = hash * 40591 + fromEnum c
+p :: Int
+p = 83
 
-argHash :: [Int] -> Int
-argHash (arg:args) = arg + 31 * argHash args
-argHash [] = 0
+-- | Hash string
+-- s[0] + s[1]⋅p + s[2]⋅p^2 + ... + s[n−1]⋅p^n−1 mod m
+hashString :: String -> Int
+hashString (x:xs) = ((ord x - ord '0') + p * hashString xs) `mod` m
+hashString [] = 0
+
+-- | Offset the hash by number of m
+-- Because each kind of node will be offset by a different offset
+-- This means that 2 nodes of the same types (Var, Sum , ..) can't have the same hash
+--
+offsetHash :: Int -> Int -> Int
+offsetHash offset hash =
+    if hash < m
+        then offset * m + hash
+        else error "????"
 
 rehash :: Int -> [Int]
 rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 
 -- | HasHash instances
 --
-instance HasHash Internal where
-    hash (shape, node) = hash node * (1 + argHash shape)
-
-instance HasHash ET where
-    hash R = 423
-    hash C = 451
-    hash Covector = 269
-
-instance HasHash Node where
-    hash node =
-        case node of
-            Var name -> foldr moveBase 0 name
-            DVar name -> foldr moveBase 1123 name
-            Const num -> 919393 + foldr moveBase 0 (show num)
-            -- MARK: Basics
-            Sum et args -> (1 + argHash (hash et : args)) * 2131
-            Mul et args -> (1 + argHash (hash et : args)) * 2437
-            Power x arg -> (1 + argHash [arg, x]) * 2527
-            Neg et arg -> (1 + argHash [hash et, arg]) * 2293
-            Scale et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3343
-            -- MARK: only apply to R
-            Div arg1 arg2 -> (1 + argHash [arg1, arg2]) * 2621
-            Sqrt arg -> (1 + argHash [arg]) * 3083
-            Sin arg -> (1 + argHash [arg]) * 1009
-            Cos arg -> (1 + argHash [arg]) * 1013
-            Tan arg -> (1 + argHash [arg]) * 1019
-            Exp arg -> (1 + argHash [arg]) * 1031
-            Log arg -> (1 + argHash [arg]) * 1033
-            Sinh arg -> (1 + argHash [arg]) * 1039
-            Cosh arg -> (1 + argHash [arg]) * 1049
-            Tanh arg -> (1 + argHash [arg]) * 1051
-            Asin arg -> (1 + argHash [arg]) * 1061
-            Acos arg -> (1 + argHash [arg]) * 1063
-            Atan arg -> (1 + argHash [arg]) * 1069
-            Asinh arg -> (1 + argHash [arg]) * 1087
-            Acosh arg -> (1 + argHash [arg]) * 1091
-            Atanh arg -> (1 + argHash [arg]) * 1093
-            -- MARK: Complex related
-            RealPart arg -> (1 + argHash [arg]) * 223
-            ImagPart arg -> (1 + argHash [arg]) * 227
-            RealImag arg1 arg2 -> (1 + argHash [arg1, arg2]) * 229
-            InnerProd et arg1 arg2 -> (1 + argHash [hash et, arg1, arg2]) * 3187
-            -- MARK: Piecewise
+hash :: Internal -> Int
+hash (shape, node) =
+    let hashString' s =
+            hashString $ (intercalate "a" . map show $ shape) ++ "a" ++ s
+     in case node of
+            Var name -> offsetHash 0 . hashString' $ name
+            DVar name -> offsetHash 1 . hashString' $ show name
+            Const num -> offsetHash 2 . hashString' $ show num
+            Sum et args ->
+                offsetHash 3 . hashString' $
+                show et ++ (intercalate "a" . map show $ args)
+            Mul et args ->
+                offsetHash 4 . hashString' $
+                show et ++ (intercalate "a" . map show $ args)
+            Power x arg ->
+                offsetHash 5 . hashString' $ show x ++ "of" ++ show arg
+            Neg et arg -> offsetHash 6 . hashString' $ show et ++ show arg
+            Scale et arg1 arg2 ->
+                offsetHash 7 . hashString' $
+                show et ++ show arg1 ++ "a" ++ show arg2
+        -- MARK: only apply to R
+            Div arg1 arg2 ->
+                offsetHash 8 . hashString' $ show arg1 ++ "a" ++ show arg2
+            Sqrt arg -> offsetHash 9 . hashString' $ show arg
+            Sin arg -> offsetHash 10 . hashString' $ show arg
+            Cos arg -> offsetHash 11 . hashString' $ show arg
+            Tan arg -> offsetHash 12 . hashString' $ show arg
+            Exp arg -> offsetHash 13 . hashString' $ show arg
+            Log arg -> offsetHash 14 . hashString' $ show arg
+            Sinh arg -> offsetHash 15 . hashString' $ show arg
+            Cosh arg -> offsetHash 16 . hashString' $ show arg
+            Tanh arg -> offsetHash 17 . hashString' $ show arg
+            Asin arg -> offsetHash 18 . hashString' $ show arg
+            Acos arg -> offsetHash 19 . hashString' $ show arg
+            Atan arg -> offsetHash 20 . hashString' $ show arg
+            Asinh arg -> offsetHash 21 . hashString' $ show arg
+            Acosh arg -> offsetHash 22 . hashString' $ show arg
+            Atanh arg -> offsetHash 23 . hashString' $ show arg
+        -- MARK: Complex related
+            RealPart arg -> offsetHash 24 . hashString' $ show arg
+            ImagPart arg -> offsetHash 25 . hashString' $ show arg
+            RealImag arg1 arg2 ->
+                offsetHash 26 . hashString' $ show arg1 ++ "a" ++ show arg2
+            InnerProd et arg1 arg2 ->
+                offsetHash 27 . hashString' $
+                show et ++ show arg1 ++ "a" ++ show arg2
+        -- MARK: Piecewise
             Piecewise marks arg branches ->
-                (1 + argHash (foldr moveBase 0 (show marks) : arg : branches)) *
-                269
-            -- MARK: Rotate
-            Rotate amount arg -> (1 + argHash (arg : amount)) * 593
+                offsetHash 28 . hashString' $
+                (intercalate "a" . map show $ marks) ++
+                "a" ++
+                show arg ++ "a" ++ (intercalate "a" . map show $ branches)
+        -- MARK: Rotate
+            Rotate amount arg ->
+                offsetHash 29 . hashString' $
+                (intercalate "a" . map show $ amount) ++ "a" ++ show arg
 
 -- |
 --

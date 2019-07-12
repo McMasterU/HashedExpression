@@ -68,10 +68,6 @@ format = intercalate "\n" . map oneLine
   where
     oneLine (f, s) = f ++ ": " ++ s
 
--- |
---
-relativeError :: Double -> Double -> Double
-relativeError a b = abs (a - b) / max (abs a) (abs b)
 
 -- |
 --
@@ -93,58 +89,6 @@ inspect x =
 --
 vectorSize :: Int
 vectorSize = 10
-
--- | Approximable class
---
-class Approximable a where
-    (~=) :: a -> a -> Bool
-
-infix 4 ~=
-
-shouldApprox :: Approximable a => a -> a -> Expectation
-shouldApprox x y = x ~= y `shouldBe` True
-
-infix 1 `shouldApprox`
-
-instance Approximable Double where
-    (~=) :: Double -> Double -> Bool
-    a ~= b
-        | a == b = True
-        | otherwise = relativeError a b < 0.01
-
-instance Approximable (Complex Double) where
-    (~=) :: Complex Double -> Complex Double -> Bool
-    a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
-
-instance Approximable (Array Int Double) where
-    (~=) :: Array Int Double -> Array Int Double -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
-
-instance Approximable (Array Int (Complex Double)) where
-    (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
-
-instance Approximable (Array (Int, Int) Double) where
-    (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
-
-instance Approximable (Array (Int, Int) (Complex Double)) where
-    (~=) ::
-           Array (Int, Int) (Complex Double)
-        -> Array (Int, Int) (Complex Double)
-        -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
-
-instance Approximable (Array (Int, Int, Int) Double) where
-    (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
-
-instance Approximable (Array (Int, Int, Int) (Complex Double)) where
-    (~=) ::
-           Array (Int, Int, Int) (Complex Double)
-        -> Array (Int, Int, Int) (Complex Double)
-        -> Bool
-    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 -- | Vars list
 --
@@ -262,6 +206,10 @@ instance Show SuiteZeroR where
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
 
+shouldApprox :: Approximable a => a -> a -> Expectation
+shouldApprox x y = x ~= y `shouldBe` True
+
+infix 1 `shouldApprox`
 -- |
 --
 instance Arbitrary SuiteZeroR where

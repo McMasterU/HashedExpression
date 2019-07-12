@@ -28,7 +28,6 @@ import HashedNode
 import HashedPrettify (prettify, showExp)
 import HashedUtils
 
-
 -- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R
@@ -62,6 +61,59 @@ chooseBranch marks val branches
     | val < head marks = head branches
     | otherwise =
         snd . last . filter ((val >=) . fst) $ zip marks (tail branches)
+
+-- | Approximable class
+--
+class Approximable a where
+    (~=) :: a -> a -> Bool
+
+infix 4 ~=
+
+-- |
+--
+relativeError :: Double -> Double -> Double
+relativeError a b = abs (a - b) / max (abs a) (abs b)
+
+instance Approximable Double where
+    (~=) :: Double -> Double -> Bool
+    a ~= b
+        | abs (a - b) < 1.0e-5 = True
+        | a == b = True
+        | otherwise = relativeError a b < 0.01
+
+instance Approximable (Complex Double) where
+    (~=) :: Complex Double -> Complex Double -> Bool
+    a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
+
+instance Approximable (Array Int Double) where
+    (~=) :: Array Int Double -> Array Int Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array Int (Complex Double)) where
+    (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int) Double) where
+    (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int) (Complex Double)) where
+    (~=) ::
+           Array (Int, Int) (Complex Double)
+        -> Array (Int, Int) (Complex Double)
+        -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int, Int) Double) where
+    (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
+
+instance Approximable (Array (Int, Int, Int) (Complex Double)) where
+    (~=) ::
+           Array (Int, Int, Int) (Complex Double)
+        -> Array (Int, Int, Int) (Complex Double)
+        -> Bool
+    a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
 -- |
 --

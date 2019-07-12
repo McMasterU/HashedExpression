@@ -13,6 +13,17 @@ import HashedHash
 import HashedNode
 import HashedUtils
 
+-- | Enable this when we want to check for conflict when merging two expressions
+-- Different node of two maps could have the same hash (which we hope never happens)
+--
+checkMergeConflict :: Bool
+checkMergeConflict = False
+
+-- | TODO: Check if 2 different nodes from 2 maps have the same hash
+--
+safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
+safeUnion = IM.union
+
 -- |
 --
 data ElementOutcome
@@ -82,12 +93,14 @@ apply (Normal nodeOutcome shapeOutcome) exps =
                 _ -> error "HashedInner.apply"
      in addEntry mergedMap (shape, node)
 apply (Condition op) exps@(conditionArg:branchArgs) =
-    let mergedMap = foldl1 IM.union . map fst $ exps
+    let unionMap
+            | checkMergeConflict = safeUnion
+            | otherwise = IM.union
+        mergedMap = foldl1 unionMap . map fst $ exps
         (headBranchMp, headBranchN) = head branchArgs
         shape = retrieveShape headBranchN headBranchMp
         node = op (snd conditionArg) $ map snd branchArgs
      in addEntry mergedMap (shape, node)
-
 -- | General multiplication and sum
 --
 mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)

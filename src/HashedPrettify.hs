@@ -4,6 +4,7 @@
 
 module HashedPrettify
     ( prettify
+    , prettifyDebug
     , showExpDebug
     , showExp
     , showAllEntries

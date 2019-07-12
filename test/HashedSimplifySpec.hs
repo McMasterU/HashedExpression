@@ -8,6 +8,7 @@ import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import HashedVar
+import Data.Complex (Complex(..))
 import Prelude hiding
     ( (*)
     , (+)
@@ -36,6 +37,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
+import HashedInterp ((~=))
 
 spec :: Spec
 spec = do

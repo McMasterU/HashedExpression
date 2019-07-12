@@ -74,24 +74,8 @@ prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) x@(simplify1
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
         else error $
-             show exp1 ++
-             show exp2 ++
-             "\n----------------- BARE ----------\n" ++
-             prettify exp1 ++
-             "\n" ++
-             prettify exp2 ++
-             "\n" ++
-             "\n----------------- SIMPLIFIED ----------\n" ++
-             prettify (simplify $ exp1) ++
-             "\n" ++
-             prettify (simplify $ exp2) ++
-             "\n----------------- HAHA ----------\n" ++
-             prettify exp1' ++
-             "\n" ++
-             prettify exp2' ++
-             "\n" ++
-             prettify expMul' ++
-             "\n" ++ show valMaps ++ "\n" ++ show lhs ++ "\n" ++ show rhs ++ "\n" ++ show x ++ "\n ------------------------------"
+             prettifyDebug exp1' ++
+             prettifyDebug exp2'
   where
     valMaps = mergeValMaps valMaps1 valMaps2
     exp1' =
@@ -106,8 +90,6 @@ prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) x@(simplify1
         if simplifyMul
             then simplify (exp1 * exp2)
             else exp1 * exp2
-    lhs = eval valMaps exp1' * eval valMaps exp2'
-    rhs = traceShow (IM.size . exMap $ expMul') eval valMaps expMul'
 
 prop_AddMultiply :: SuiteZeroC -> Bool
 prop_AddMultiply (SuiteZeroC exp valMaps) =
