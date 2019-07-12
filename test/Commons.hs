@@ -143,8 +143,13 @@ genValMaps vars = do
             list3d
     return (ValMaps vm0 vm1 vm2 vm3)
 
+shouldApprox :: Approximable a => a -> a -> Expectation
+shouldApprox x y = x ~= y `shouldBe` True
+
+infix 1 `shouldApprox`
+
 -------------------------------------------------------------------------------
--- | MARK: Gen functions R
+-- | MARK: Gen functions Zero R
 --
 --
 -------------------------------------------------------------------------------
@@ -156,15 +161,15 @@ primitiveZeroR = do
         replicate 6 (var name, [[name], [], [], []]) ++
         replicate 4 (const dbl, [[], [], [], []])
 
-operandR :: Gen (Expression Zero R, Vars)
-operandR = oneof $ replicate 9 primitiveZeroR ++ replicate 2 genZeroR -- ratio 9 / 2
+operandZeroR :: Gen (Expression Zero R, Vars)
+operandZeroR = oneof $ replicate 9 primitiveZeroR ++ replicate 2 genZeroR -- ratio 9 / 2
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
     -> Gen (Expression Zero R, Vars)
 fromNaryZeroR f = do
     numOperands <- elements [3 .. 4]
-    ons <- vectorOf numOperands operandR
+    ons <- vectorOf numOperands operandZeroR
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons
     return (exp, vars)
@@ -172,7 +177,7 @@ fromNaryZeroR f = do
 fromUnaryZeroR ::
        (Expression Zero R -> Expression Zero R) -> Gen (Expression Zero R, Vars)
 fromUnaryZeroR f = do
-    on <- operandR
+    on <- operandZeroR
     let exp = f . fst $ on
         names = snd on
     return (exp, names)
@@ -181,8 +186,8 @@ fromBinaryZeroR ::
        (Expression Zero R -> Expression Zero R -> Expression Zero R)
     -> Gen (Expression Zero R, Vars)
 fromBinaryZeroR f = do
-    on1 <- operandR
-    on2 <- operandR
+    on1 <- operandZeroR
+    on2 <- operandZeroR
     let exp = f (fst on1) (fst on2)
         vars = mergeVars [snd on1, snd on2]
     return (exp, vars)
@@ -215,10 +220,6 @@ instance Show SuiteZeroR where
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
 
-shouldApprox :: Approximable a => a -> a -> Expectation
-shouldApprox x y = x ~= y `shouldBe` True
-
-infix 1 `shouldApprox`
 
 -- |
 --
@@ -229,7 +230,7 @@ instance Arbitrary SuiteZeroR where
         return $ SuiteZeroR exp valMaps
 
 -------------------------------------------------------------------------------
--- | MARK: Gen functions C
+-- | MARK: Gen functions Zero C
 --
 --
 -------------------------------------------------------------------------------
@@ -243,15 +244,15 @@ primitiveZeroC = do
         , (const dbl +: const 0, [[], [], [], []])
         ]
 
-operandC :: Gen (Expression Zero C, Vars)
-operandC = oneof $ replicate 9 primitiveZeroC ++ replicate 1 genZeroC -- ratio 9 / 1
+operandZeroC :: Gen (Expression Zero C, Vars)
+operandZeroC = oneof $ replicate 9 primitiveZeroC ++ replicate 1 genZeroC -- ratio 9 / 1
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
 fromNaryZeroC f = do
     numOperands <- elements [3]
-    ons <- vectorOf numOperands operandC
+    ons <- vectorOf numOperands operandZeroC
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons
     return (exp, vars)
@@ -259,7 +260,7 @@ fromNaryZeroC f = do
 fromUnaryZeroC ::
        (Expression Zero C -> Expression Zero C) -> Gen (Expression Zero C, Vars)
 fromUnaryZeroC f = do
-    on <- operandC
+    on <- operandZeroC
     let exp = f . fst $ on
         vars = snd on
     return (exp, vars)
@@ -268,8 +269,8 @@ fromBinaryZeroC ::
        (Expression Zero C -> Expression Zero C -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
 fromBinaryZeroC f = do
-    on1 <- operandC
-    on2 <- operandC
+    on1 <- operandZeroC
+    on2 <- operandZeroC
     let exp = f (fst on1) (fst on2)
         vars = mergeVars [snd on1, snd on2]
     return (exp, vars)
@@ -313,3 +314,91 @@ instance Arbitrary SuiteZeroC where
         (exp, names) <- genZeroC
         valMaps <- genValMaps names
         return $ SuiteZeroC exp valMaps
+
+-------------------------------------------------------------------------------
+-- | MARK: Gen functions One R
+--
+--
+-------------------------------------------------------------------------------
+primitiveOneR :: Gen (Expression One R, Vars)
+primitiveOneR = do
+    name <- elements . map ((++ "1") . pure) $ ['A' .. 'Z']
+    dbl <- arbitrary
+    elements $
+        replicate 6 (var1d vectorSize name, [[], [name], [], []]) ++
+        replicate 4 (const1d vectorSize dbl, [[], [], [], []])
+
+operandOneR :: Gen (Expression One R, Vars)
+operandOneR = oneof $ replicate 9 primitiveOneR ++ replicate 2 genOneR -- ratio 9 / 2
+
+fromNaryOneR ::
+       ([Expression One R] -> Expression One R)
+    -> Gen (Expression One R, Vars)
+fromNaryOneR f = do
+    numOperands <- elements [3 .. 4]
+    ons <- vectorOf numOperands operandOneR
+    let exp = f . map fst $ ons
+        vars = mergeVars . map snd $ ons
+    return (exp, vars)
+
+fromUnaryOneR ::
+       (Expression One R -> Expression One R) -> Gen (Expression One R, Vars)
+fromUnaryOneR f = do
+    on <- operandOneR
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryOneR ::
+       (Expression One R -> Expression One R -> Expression One R)
+    -> Gen (Expression One R, Vars)
+fromBinaryOneR f = do
+    on1 <- operandOneR
+    on2 <- operandOneR
+    let exp = f (fst on1) (fst on2)
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
+
+fromScaleOneR :: Gen (Expression One R, Vars)
+fromScaleOneR = do
+    scalar <- operandZeroR
+    scalee <- operandOneR
+    let exp = fst scalar *. fst scalee
+        vars = mergeVars [snd scalar, snd scalee]
+    return (exp, vars)
+
+genOneR :: Gen (Expression One R, Vars)
+genOneR = do
+    let nary = map fromNaryOneR [sum, product]
+        binary = map fromBinaryOneR [(+), (-)]
+        unary = map fromUnaryOneR [negate, (^ 2)]
+    oneof ([primitiveOneR] ++ nary ++ binary ++ unary ++ [fromScaleOneR])
+
+instance Arbitrary (Expression One R) where
+    arbitrary = fmap fst genOneR
+
+-- |
+--
+data SuiteOneR =
+    SuiteOneR (Expression One R) ValMaps
+
+instance Show SuiteOneR where
+    show (SuiteOneR e valMaps) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMaps)
+            ]
+      where
+        exp = prettify e
+        simplifiedExp = prettify . simplify $ e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
+
+-- |
+--
+instance Arbitrary SuiteOneR where
+    arbitrary = do
+        (exp, vars) <- genOneR
+        valMaps <- genValMaps vars
+        return $ SuiteOneR exp valMaps

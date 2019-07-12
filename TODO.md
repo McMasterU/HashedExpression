@@ -6,3 +6,5 @@ main = do
     let exp2 = ((k+:u)+(p+:j))
     showExp $ simplify $ exp1 * exp2
 ```
+
+- Have a collections of lots of expressions for testing 
