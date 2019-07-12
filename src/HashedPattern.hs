@@ -325,8 +325,8 @@ headOf (PListHole trans listCapture) = PHead trans listCapture
 restOfProduct :: Pattern
 restOfProduct = PMulRest 239 []
 
-sumRest :: Pattern
-sumRest = PSumRest 2391 []
+restOfSum :: Pattern
+restOfSum = PSumRest 2391 []
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes

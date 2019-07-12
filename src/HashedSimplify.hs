@@ -158,7 +158,7 @@ complexNumRules =
     , (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
     , restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
       ((x * z - y * w) +: (x * w + y * z))
-    , sumRest ~+ (x +: y) ~+ (u +: v) |.~~~~~~> sumRest ~+ ((x + u) +: (y + v))
+    , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
     ]
 
 -- | Rules with dot product and scale
