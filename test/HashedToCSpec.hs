@@ -107,16 +107,13 @@ spec =
                 putStrLn "OK!"
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $ do
-            pendingWith "Fix simplication for C first"
-            replicateM_ 10 $ do
+            replicateM_ 1 $ do
                 SuiteZeroC exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code simplified version should equal to HashedInterp
-                outputSimple <- evaluateCodeC (simplify exp) valMaps
-                putStrLn outputSimple
---                let resultSimple = read . head . splitOn " " $ outputSimple
+                writeFile "C/main.c" $ intercalate "\n" . generateProgram valMaps $ simplify exp
+                print valMaps
+                showExp exp
+--                outputSimple <- evaluateCodeC (simplify exp) valMaps
+--                putStrLn outputSimple
 --                let resultInterpSimple = eval valMaps (simplify exp)
---                putStrLn $ "Result C Code (Simplified): " ++ show resultSimple
---                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimple
---                resultSimple `shouldApprox` resultInterpSimple
---                putStrLn "OK!"
