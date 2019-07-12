@@ -5,6 +5,7 @@ module HashedToCSpec where
 import Commons
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM_)
+import Data.Complex (Complex(..))
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
@@ -71,6 +72,16 @@ evaluateCodeC exp valMaps = do
     readProcess "rm" ["C/" ++ fileName] ""
     return output
 
+-- | Parse output of the C program
+--
+readR :: String -> [Double]
+readR = map read . filter (not . null) . splitOn " "
+
+readC :: String -> ([Double], [Double])
+readC str = (readR rePart, readR imPart)
+  where
+    [rePart, imPart] = splitOn "\n" str
+
 -- | Spec
 --
 spec :: Spec
@@ -83,8 +94,7 @@ spec =
             localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
         specify "Size memmap" $ pendingWith "not implemented"
         specify "Mem map offset" $ pendingWith "not implemented"
-        specify
-            "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
+        specify "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
             replicateM_ 10 $ do
                 SuiteZeroR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
@@ -98,22 +108,24 @@ spec =
                 putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 outputSimple <- evaluateCodeC (simplify exp) valMaps
-                let resultSimple = read . head . splitOn " " $ outputSimple
-                let resultInterpSimple = eval valMaps (simplify exp)
-                putStrLn $ "Result C Code (Simplified): " ++ show resultSimple
-                putStrLn $
-                    "Result Interp (Simplified): " ++ show resultInterpSimple
-                resultSimple `shouldApprox` resultInterpSimple
+                let resultSimplify = read . head . splitOn " " $ outputSimple
+                let resultInterpSimplify = eval valMaps (simplify exp)
+                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
+                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimplify
+                resultSimplify `shouldApprox` resultInterpSimplify
                 putStrLn "OK!"
-        specify
-            "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $ do
-            replicateM_ 1 $ do
+        specify "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
+            replicateM_ 10 $ do
                 SuiteZeroC exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code simplified version should equal to HashedInterp
-                writeFile "C/main.c" $ intercalate "\n" . generateProgram valMaps $ simplify exp
-                print valMaps
-                showExp exp
---                outputSimple <- evaluateCodeC (simplify exp) valMaps
---                putStrLn outputSimple
---                let resultInterpSimple = eval valMaps (simplify exp)
+                let simplifiedExp = simplify exp
+                writeFile "C/main.c" $ intercalate "\n" . generateProgram valMaps $ simplifiedExp
+                outputCodeC <- evaluateCodeC (simplify exp) valMaps
+                let ([im], [re]) = readC outputCodeC
+                let resultSimplify = im :+ re
+                let resultInterpSimplify = eval valMaps simplifiedExp
+                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
+                putStrLn $ "Result Interp (Simplified): " ++ show resultInterpSimplify
+                resultSimplify `shouldApprox` resultInterpSimplify
+                putStrLn "OK!"
