@@ -392,8 +392,8 @@ instance Show SuiteOneR where
             , ("EvalExpSimplify", show evalSimplified)
             ]
       where
-        exp = prettify e
-        simplifiedExp = prettify . simplify $ e
+        exp = prettifyDebug e
+        simplifiedExp = prettifyDebug . simplify $ e
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
 
