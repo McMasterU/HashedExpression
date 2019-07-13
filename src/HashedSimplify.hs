@@ -20,7 +20,7 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
-import HashedOperation (const, const1d, const2d, const3d, plus, times)
+import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
 import HashedUtils

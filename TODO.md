@@ -8,3 +8,4 @@ main = do
 ```
 
 - Have a collections of lots of expressions for testing 
+- Avoid merging expressions when simplifying to speed things up

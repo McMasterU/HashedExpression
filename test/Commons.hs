@@ -162,7 +162,7 @@ primitiveZeroR = do
         replicate 4 (const dbl, [[], [], [], []])
 
 operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof $ replicate 9 primitiveZeroR ++ replicate 2 genZeroR -- ratio 9 / 2
+operandZeroR = oneof $ replicate 9 primitiveZeroR ++ replicate 1 genZeroR -- ratio 9 / 1
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
@@ -172,6 +172,14 @@ fromNaryZeroR f = do
     ons <- vectorOf numOperands operandZeroR
     let exp = f . map fst $ ons
         vars = mergeVars . map snd $ ons
+    return (exp, vars)
+
+fromInnerProdHigherZeroR :: Gen (Expression Zero R, Vars)
+fromInnerProdHigherZeroR = do
+    operand1 <- genOneR
+    operand2 <- genOneR
+    let exp = fst operand1 <.> fst operand2
+        vars = mergeVars [snd operand1, snd operand2]
     return (exp, vars)
 
 fromUnaryZeroR ::
@@ -192,12 +200,26 @@ fromBinaryZeroR f = do
         vars = mergeVars [snd on1, snd on2]
     return (exp, vars)
 
+fromZeroCZeroR :: Gen (Expression Zero R, Vars)
+fromZeroCZeroR = do
+    rand <- elements [True, False]
+    (zeroC, vars) <- genZeroC
+    let exp =
+            if rand
+                then xRe zeroC
+                else xIm zeroC
+    return (exp, vars)
+
 genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR = do
     let nary = map fromNaryZeroR [sum, product]
         binary = map fromBinaryZeroR [(*.), (+), (-), (<.>)]
         unary = map fromUnaryZeroR [negate, (^ 2), (^ 3)]
-    oneof ([primitiveZeroR] ++ nary ++ binary ++ unary)
+    oneof . concat $
+        -- some of the time will be from inner product of higher dimension
+        -- some of the time will be from a complex
+        replicate 20 ([primitiveZeroR] ++ nary ++ binary ++ unary) ++
+        replicate 1 [fromInnerProdHigherZeroR] ++ replicate 1 [fromZeroCZeroR]
 
 instance Arbitrary (Expression Zero R) where
     arbitrary = fmap fst genZeroR
@@ -219,7 +241,6 @@ instance Show SuiteZeroR where
         simplifiedExp = prettify . simplify $ e
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
-
 
 -- |
 --
@@ -265,6 +286,14 @@ fromUnaryZeroC f = do
         vars = snd on
     return (exp, vars)
 
+fromInnerProdHigherZeroC :: Gen (Expression Zero C, Vars)
+fromInnerProdHigherZeroC = do
+    operand1 <- genOneC
+    operand2 <- genOneC
+    let exp = fst operand1 <.> fst operand2
+        vars = mergeVars [snd operand1, snd operand2]
+    return (exp, vars)
+
 fromBinaryZeroC ::
        (Expression Zero C -> Expression Zero C -> Expression Zero C)
     -> Gen (Expression Zero C, Vars)
@@ -288,7 +317,11 @@ genZeroC = do
     let nary = map fromNaryZeroC [sum, product]
         binary = map fromBinaryZeroC [(*.), (+), (-), (<.>)]
         unary = map fromUnaryZeroC [negate, (^ 2)]
-    oneof ([fromRealImagZeroC, primitiveZeroC] ++ nary ++ binary ++ unary)
+    oneof . concat $
+        -- some of the time will be from inner product of higher dimension
+        replicate 15 ([primitiveZeroC] ++ nary ++ binary ++ unary) ++
+        replicate 1 [fromInnerProdHigherZeroC] ++
+        replicate 1 [fromRealImagZeroC]
 
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
@@ -329,11 +362,10 @@ primitiveOneR = do
         replicate 4 (const1d vectorSize dbl, [[], [], [], []])
 
 operandOneR :: Gen (Expression One R, Vars)
-operandOneR = oneof $ replicate 9 primitiveOneR ++ replicate 2 genOneR -- ratio 9 / 2
+operandOneR = oneof $ replicate 9 primitiveOneR ++ replicate 1 genOneR -- ratio 9 / 2
 
 fromNaryOneR ::
-       ([Expression One R] -> Expression One R)
-    -> Gen (Expression One R, Vars)
+       ([Expression One R] -> Expression One R) -> Gen (Expression One R, Vars)
 fromNaryOneR f = do
     numOperands <- elements [3 .. 4]
     ons <- vectorOf numOperands operandOneR
@@ -372,7 +404,9 @@ genOneR = do
     let nary = map fromNaryOneR [sum, product]
         binary = map fromBinaryOneR [(+), (-)]
         unary = map fromUnaryOneR [negate, (^ 2)]
-    oneof ([primitiveOneR] ++ nary ++ binary ++ unary ++ [fromScaleOneR])
+    oneof . concat $
+        replicate 9 ([primitiveOneR] ++ nary ++ binary ++ unary) ++
+        replicate 2 [fromScaleOneR]
 
 instance Arbitrary (Expression One R) where
     arbitrary = fmap fst genOneR
@@ -404,3 +438,108 @@ instance Arbitrary SuiteOneR where
         (exp, vars) <- genOneR
         valMaps <- genValMaps vars
         return $ SuiteOneR exp valMaps
+
+-------------------------------------------------------------------------------
+-- | MARK: Gen functions One C
+--
+--
+-------------------------------------------------------------------------------
+primitiveOneC :: Gen (Expression One C, Vars)
+primitiveOneC = do
+    name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
+    name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
+    dbl1 <- arbitrary
+    dbl2 <- arbitrary
+    elements $
+        replicate
+            6
+            ( var1d vectorSize name1 +: var1d vectorSize name2
+            , [[], [name1, name2], [], []]) ++
+        replicate
+            4
+            ( const1d vectorSize dbl1 +: const1d vectorSize dbl2
+            , [[], [], [], []])
+
+operandOneC :: Gen (Expression One C, Vars)
+operandOneC = oneof $ replicate 9 primitiveOneC ++ replicate 1 genOneC -- ratio 9 / 1
+
+fromNaryOneC ::
+       ([Expression One C] -> Expression One C) -> Gen (Expression One C, Vars)
+fromNaryOneC f = do
+    numOperands <- elements [3]
+    ons <- vectorOf numOperands operandOneC
+    let exp = f . map fst $ ons
+        vars = mergeVars . map snd $ ons
+    return (exp, vars)
+
+fromUnaryOneC ::
+       (Expression One C -> Expression One C) -> Gen (Expression One C, Vars)
+fromUnaryOneC f = do
+    on <- operandOneC
+    let exp = f . fst $ on
+        names = snd on
+    return (exp, names)
+
+fromBinaryOneC ::
+       (Expression One C -> Expression One C -> Expression One C)
+    -> Gen (Expression One C, Vars)
+fromBinaryOneC f = do
+    on1 <- operandOneC
+    on2 <- operandOneC
+    let exp = f (fst on1) (fst on2)
+        vars = mergeVars [snd on1, snd on2]
+    return (exp, vars)
+
+fromScaleOneC :: Gen (Expression One C, Vars)
+fromScaleOneC = do
+    scalarR <- operandZeroR
+    scalarC <- operandZeroC
+    scalee <- operandOneC
+    rand <- elements [True, False]
+    let (exp, vars) =
+            if rand
+                then ( fst scalarR *. fst scalee
+                     , mergeVars [snd scalarR, snd scalee])
+                else ( fst scalarC *. fst scalee
+                     , mergeVars [snd scalarC, snd scalee])
+    return (exp, vars)
+
+genOneC :: Gen (Expression One C, Vars)
+genOneC = do
+    let nary = map fromNaryOneC [sum, product]
+        binary = map fromBinaryOneC [(+), (-)]
+        unary = map fromUnaryOneC [negate, (^ 2)]
+    oneof . concat $
+        replicate 5 ([primitiveOneC] ++ nary ++ binary ++ unary) ++
+        replicate 1 [fromScaleOneC]
+
+instance Arbitrary (Expression One C) where
+    arbitrary = fmap fst genOneC
+
+-- |
+--
+data SuiteOneC =
+    SuiteOneC (Expression One C) ValMaps
+
+instance Show SuiteOneC where
+    show (SuiteOneC e valMaps) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMaps)
+            , ("EvalExp", show evalExp)
+            , ("EvalExpSimplify", show evalSimplified)
+            ]
+      where
+        exp = prettifyDebug e
+        simplifiedExp = prettifyDebug . simplify $ e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
+
+-- |
+--
+instance Arbitrary SuiteOneC where
+    arbitrary = do
+        (exp, vars) <- genOneC
+        valMaps <- genValMaps vars
+        return $ SuiteOneC exp valMaps

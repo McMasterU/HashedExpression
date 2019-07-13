@@ -1,7 +1,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module HashedToCSpec where
 
+import Data.Array
 import Commons
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM_)
@@ -22,6 +24,8 @@ import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
+import qualified Data.Text.IO as TIO
+import qualified Data.Text as T
 import Test.Hspec
 import Test.QuickCheck
 
@@ -64,7 +68,7 @@ evaluateCodeC exp valMaps = do
     fileName <- fmap (toString . fromJust) nextUUID
     let fullFileName = "C/" ++ fileName ++ ".c"
     let program = generateProgram valMaps exp
-    writeFile fullFileName (intercalate "\n" program)
+    TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
     readProcess "cc" [fullFileName, "-o", "C/" ++ fileName] ""
     let runCommand = "C/" ++ fileName
     output <- readProcess runCommand [] ""
@@ -134,3 +138,44 @@ spec =
                     "Result Interp (Simplified): " ++ show resultInterpSimplify
                 resultSimplify `shouldApprox` resultInterpSimplify
                 putStrLn "OK!"
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression One R)" $
+            replicateM_ 10 $ do
+                SuiteOneR exp valMaps <- generate arbitrary
+                putStrLn "------------------------"
+                -- Evaluate by C code should equal to HashedInterp
+                output <- evaluateCodeC exp valMaps
+                let result = listArray (0, vectorSize - 1) $ readR output
+                let resultInterp = eval valMaps exp
+                putStrLn $ "Result C Code: " ++ show result
+                putStrLn $ "Result Interp: " ++ show resultInterp
+                result `shouldApprox` resultInterp
+                putStrLn "OK!"
+                -- Evaluate by C code simplified version should equal to HashedInterp
+                outputSimple <- evaluateCodeC (simplify exp) valMaps
+                let resultSimplify = listArray (0, vectorSize - 1) $ readR output
+                let resultInterpSimplify = eval valMaps (simplify exp)
+                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
+                putStrLn $
+                    "Result Interp (Simplified): " ++ show resultInterpSimplify
+                resultSimplify `shouldApprox` resultInterpSimplify
+                putStrLn "OK!"
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression One C)" $
+            replicateM_ 1 $ do
+                SuiteOneC exp valMaps <- generate arbitrary
+                putStrLn "------------------------"
+                -- Evaluate by C code simplified version should equal to HashedInterp
+                let simplifiedExp = simplify exp
+                writeFile "C/main.c" $
+                    intercalate "\n" . generateProgram valMaps $ simplifiedExp
+                outputCodeC <- evaluateCodeC (simplify exp) valMaps
+                putStrLn outputCodeC
+--                let (re, im) = readC outputCodeC
+--                let resultSimplify = listArray (0, vectorSize) $ zipWith (:+) re im
+--                let resultInterpSimplify = eval valMaps simplifiedExp
+--                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
+--                putStrLn $
+--                    "Result Interp (Simplified): " ++ show resultInterpSimplify
+--                resultSimplify `shouldApprox` resultInterpSimplify
+--                putStrLn "OK!"
