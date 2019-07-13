@@ -97,8 +97,7 @@ spec =
         simplify (y * (y ^ 2) ^ 2) `shouldBe` simplify (y ^ 5)
         simplify (x / ((y ^ 2) ^ 3)) `shouldBe` simplify (x * y ^ (-6))
         simplify (((x * y) ^ 2) / x) `shouldBe` simplify (x * y ^ 2)
-        simplify (((x + y) ^ 2) * ((x - y) ^ 2)) `shouldBe`
-            simplify ((const (-2.0) *. ((x ^ 2) * (y ^ 2))) + (x ^ 4) + (y ^ 4))
+        prettify (simplify (((x + y) ^ 2) * ((x - y) ^ 2))) `shouldBe` prettify (simplify ((const (-2.0) *. ((x ^ 2) * (y ^ 2))) + (x ^ 4) + (y ^ 4)))
         simplify (((x + y) ^ 2) + ((x - y) ^ 2)) `shouldBe`
             simplify ((const 2.0 *. (x ^ 2)) + (const 2.0 *. (y ^ 2)))
         simplify (((x + y) ^ 2) - ((x - y) ^ 2)) `shouldBe`
