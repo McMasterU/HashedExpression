@@ -118,8 +118,8 @@ hashOutcome mp new newHash =
 
 -- |
 --
-addEntry :: ExpressionMap -> Internal -> (ExpressionMap, Int)
-addEntry mp e =
+addInternal :: ExpressionMap -> Internal -> (ExpressionMap, Int)
+addInternal mp e =
     case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
         (IsDuplicate h:_) -> (mp, h)
         (IsNew h:_) -> (IM.insert h e mp, h)

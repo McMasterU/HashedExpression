@@ -73,14 +73,14 @@ highestElementType1 mp = maximum . map (`retrieveElementType` mp)
 -- | The apply function that is used everywhere
 --
 apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-apply option exprs = applySameContext mergedMap option (map snd exprs)
+apply option exprs = addEntry mergedMap option (map snd exprs)
   where
     mergedMap = IM.unions . map fst $ exprs
 
 -- | Apply operation to nodes in the same Expresison Map
 --
-applySameContext :: ExpressionMap -> OperationOption -> [Int] -> (ExpressionMap, Int)
-applySameContext mp (Normal nodeOutcome shapeOutcome) ns =
+addEntry :: ExpressionMap -> OperationOption -> [Int] -> (ExpressionMap, Int)
+addEntry mp (Normal nodeOutcome shapeOutcome) ns =
     let
         getShape n = retrieveShape n mp
         shape =
@@ -101,13 +101,13 @@ applySameContext mp (Normal nodeOutcome shapeOutcome) ns =
                 (OpMany op, args) -> op args
                 (OpManyElement op elm, args) -> op (elementType elm) args
                 _ -> error "HashedInner.applySameScope"
-     in addEntry mp (shape, node)
-applySameContext mp (Condition op) ns@(conditionN:branchesNs) =
+     in addInternal mp (shape, node)
+addEntry mp (Condition op) ns@(conditionN:branchesNs) =
     let
         headBranchN = head branchesNs
         shape = retrieveShape headBranchN mp
         node = op conditionN branchesNs
-     in addEntry mp (shape, node)
+     in addInternal mp (shape, node)
 
 -- | General multiplication and sum
 --
