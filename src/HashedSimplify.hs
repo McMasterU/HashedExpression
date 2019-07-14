@@ -11,7 +11,7 @@ import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (group, groupBy, intercalate)
+import Data.List (group, groupBy, intercalate, sort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
 import Debug.Trace (traceShow, traceShowId)
@@ -53,9 +53,26 @@ import Prelude hiding
     )
 import qualified Prelude
 
+-- | Extra entries with respect to an existing ExpressionMap, this is for speeding things up
+--
+type ExtraExpressionMap = ExpressionMap
+
+data Update =
+    Update
+        { extraEntries :: ExtraExpressionMap
+        , rootId :: Int
+        }
+
+-- |
+--
+fromExp :: (ExpressionMap, Int) -> Update
+fromExp (mp, n) = Update mp n
+
 -- | Simplification type, we can combine them, chain them, apply them n times using nest, ...
 --
 type Simplification = (ExpressionMap, Int) -> (ExpressionMap, Int)
+
+type Simplification1 = (ExpressionMap, Int) -> Update
 
 -- | Chain n simplifications together to a simplification
 --
@@ -99,8 +116,7 @@ simplify e =
             (makeRecursive powerSumRealImagRules) >>>
             (makeRecursive negateRules) >>>
             (makeRecursive combineScaleRules) >>>
-            (makeRecursive constPowerRules) >>>
-            id
+            (makeRecursive constPowerRules) >>> id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 rulesFromPattern :: Simplification
@@ -145,9 +161,9 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
---    , x *. y |. sameElementType [x, y] &&. isScalar y &&. isNotConst x ~~~~~~> x * y -- TODO
     ]
 
+--    , x *. y |. sameElementType [x, y] &&. isScalar y &&. isNotConst x ~~~~~~> x * y -- TODO
 -- | Rules with complex operation
 --
 complexNumRules :: [Substitution]
@@ -218,7 +234,7 @@ otherRules =
 reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
     let reconstruct' :: [Int] -> (ExpressionMap, Int)
-        reconstruct' = reconstruct exp . map (mp, )
+        reconstruct' = reconstruct1 mp n . map (Update IM.empty) -- no extra entries
         properZero = aConst (retrieveShape n mp) 0
         properOne = aConst (retrieveShape n mp) 1
         elementType = retrieveElementType n mp
@@ -266,18 +282,22 @@ reduceSumProdRules exp@(mp, n) =
 --
 groupConstantsRules :: Simplification
 groupConstantsRules exp@(mp, n) =
-    let nonConstants ns = map (mp, ) . filter (not . isConstant mp) $ ns
+    let shape = retrieveShape n mp
+        nonConstants :: [Int] -> [Update]
+        nonConstants ns =
+            map (Update IM.empty) . filter (not . isConstant mp) $ ns
+        constUpdate val = fromExp . aConst shape $ val
      in case retrieveNode n mp of
             Sum _ ns
-                | Just (shape, cs) <- pullConstants mp ns
+                | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $
-                    [aConst shape $ Prelude.sum cs] ++ nonConstants ns
+                    reconstruct1 mp n $
+                    [constUpdate $ Prelude.sum cs] ++ nonConstants ns
             Mul _ ns
                 | Just (shape, cs) <- pullConstants mp ns
                 , length cs > 1 ->
-                    reconstruct exp $
-                    [aConst shape $ Prelude.product cs] ++ nonConstants ns
+                    reconstruct1 mp n $
+                    [constUpdate $ Prelude.product cs] ++ nonConstants ns
             _ -> (mp, n)
 
 -- |
@@ -368,17 +388,14 @@ powerProdRules exp@(mp, n)
     , val > 0 = mulMany $ replicate val (mp, nId)
     | otherwise = exp
 
-
 -- | Rules for constant multiplication
 -- (Const val)^t ---> Const (val)^t
 constPowerRules :: Simplification
-constPowerRules exp@(mp , n)
+constPowerRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Const constVal <- retrieveNode nId mp
     , val > 0 = aConst (retrieveShape n mp) (constVal Prelude.^ val)
     | otherwise = exp
-
-
 
 -- | Rules for negate
 -- Turn negate to scale with (-1)
@@ -493,6 +510,51 @@ reconstruct oldExp@(oldMp, oldN) newChildren =
                 apply (conditionAry (Piecewise marks)) newChildren
             Rotate amount _ -> apply (unary (Rotate amount)) newChildren
 
+reconstruct1 :: ExpressionMap -> Int -> [Update] -> (ExpressionMap, Int)
+reconstruct1 mp oldN childrenChanges =
+    let (oldShape, oldNode) = retrieveInternal oldN mp
+        contextMp = IM.unions $ [mp] ++ map extraEntries childrenChanges
+        apply' option = applySameContext contextMp (option `hasShape` oldShape) -- keep the old shape
+        childrenNs = map rootId childrenChanges
+     in case oldNode of
+            Var _ -> (contextMp, oldN)
+            DVar _ -> (contextMp, oldN)
+            Const _ -> (contextMp, oldN)
+            Sum et _ ->
+                apply' (naryET Sum (ElementSpecific et)) $
+                sortArgs1 contextMp childrenNs
+            Mul et _ ->
+                apply' (naryET Mul (ElementSpecific et)) $
+                sortArgs1 contextMp childrenNs
+            Power x _ -> apply' (unary (Power x)) childrenNs
+            Neg et _ -> apply' (unaryET Neg (ElementSpecific et)) childrenNs
+            Scale et _ _ ->
+                apply' (binaryET Scale (ElementSpecific et)) childrenNs
+            Div _ _ -> apply' (binary Div) childrenNs
+            Sqrt _ -> apply' (unary Sqrt) childrenNs
+            Sin _ -> apply' (unary Sin) childrenNs
+            Cos _ -> apply' (unary Cos) childrenNs
+            Tan _ -> apply' (unary Tan) childrenNs
+            Exp _ -> apply' (unary Exp) childrenNs
+            Log _ -> apply' (unary Log) childrenNs
+            Sinh _ -> apply' (unary Sinh) childrenNs
+            Cosh _ -> apply' (unary Cosh) childrenNs
+            Tanh _ -> apply' (unary Tanh) childrenNs
+            Asin _ -> apply' (unary Asin) childrenNs
+            Acos _ -> apply' (unary Acos) childrenNs
+            Atan _ -> apply' (unary Atan) childrenNs
+            Asinh _ -> apply' (unary Asinh) childrenNs
+            Acosh _ -> apply' (unary Acosh) childrenNs
+            Atanh _ -> apply' (unary Atanh) childrenNs
+            RealImag _ _ -> apply' (binary RealImag) childrenNs
+            RealPart _ -> apply' (unary RealPart) childrenNs
+            ImagPart _ -> apply' (unary ImagPart) childrenNs
+            InnerProd et _ _ ->
+                apply' (binaryET InnerProd (ElementSpecific et)) childrenNs
+            Piecewise marks _ _ ->
+                apply' (conditionAry (Piecewise marks)) childrenNs
+            Rotate amount _ -> apply' (unary (Rotate amount)) childrenNs
+
 -- | Sort the arguments (now only for Sum and Mul)
 --
 sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
@@ -501,3 +563,11 @@ sortArgs = concat . map (sortWith snd) . groupBy nodeType . sortWith weight
     nodeType (mp1, n1) (mp2, n2) =
         sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)
     weight (mp, n) = nodeTypeWeight $ retrieveNode n mp
+
+-- | Sort the arguments (now only for Sum and Mul)
+--
+sortArgs1 :: ExpressionMap -> [Int] -> [Int]
+sortArgs1 mp = concat . map sort . groupBy nodeType . sortWith weight
+  where
+    nodeType n1 n2 = sameNodeType (retrieveNode n1 mp) (retrieveNode n2 mp)
+    weight n = nodeTypeWeight $ retrieveNode n mp

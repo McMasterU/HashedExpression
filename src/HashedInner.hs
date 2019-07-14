@@ -60,29 +60,39 @@ wrap = uncurry $ flip Expression
 highestShape :: [(ExpressionMap, Int)] -> Shape
 highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
 
+highestShape1 :: ExpressionMap -> [Int] -> Shape
+highestShape1 mp = last . sortOn length . map (`retrieveShape` mp)
+
 -- | R < C < Covector
 --
 highestElementType :: [(ExpressionMap, Int)] -> ET
 highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 
+highestElementType1 :: ExpressionMap -> [Int] -> ET
+highestElementType1 mp = maximum . map (`retrieveElementType` mp)
 -- | The apply function that is used everywhere
 --
 apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
-apply (Normal nodeOutcome shapeOutcome) exps =
-    let mergedMap =
-            if null exps
-                then error "List empty here????"
-                else foldl1 IM.union . map fst $ exps
+apply option exprs = applySameContext mergedMap option (map snd exprs)
+  where
+    mergedMap = IM.unions . map fst $ exprs
+
+-- | Apply operation to nodes in the same Expresison Map
+--
+applySameContext :: ExpressionMap -> OperationOption -> [Int] -> (ExpressionMap, Int)
+applySameContext mp (Normal nodeOutcome shapeOutcome) ns =
+    let
+        getShape n = retrieveShape n mp
         shape =
             case shapeOutcome of
                 ShapeSpecific s -> s
-                _ -> highestShape exps
+                _ -> highestShape1 mp ns
         elementType elementOutcome =
             case elementOutcome of
                 ElementSpecific et -> et
-                _ -> highestElementType exps
+                _ -> highestElementType1 mp ns
         node =
-            case (nodeOutcome, map snd exps) of
+            case (nodeOutcome, ns) of
                 (OpOne op, [arg]) -> op arg
                 (OpOneElement op elm, [arg]) -> op (elementType elm) arg
                 (OpTwo op, [arg1, arg2]) -> op arg1 arg2
@@ -90,17 +100,14 @@ apply (Normal nodeOutcome shapeOutcome) exps =
                     op (elementType elm) arg1 arg2
                 (OpMany op, args) -> op args
                 (OpManyElement op elm, args) -> op (elementType elm) args
-                _ -> error "HashedInner.apply"
-     in addEntry mergedMap (shape, node)
-apply (Condition op) exps@(conditionArg:branchArgs) =
-    let unionMap
-            | checkMergeConflict = safeUnion
-            | otherwise = IM.union
-        mergedMap = foldl1 unionMap . map fst $ exps
-        (headBranchMp, headBranchN) = head branchArgs
-        shape = retrieveShape headBranchN headBranchMp
-        node = op (snd conditionArg) $ map snd branchArgs
-     in addEntry mergedMap (shape, node)
+                _ -> error "HashedInner.applySameScope"
+     in addEntry mp (shape, node)
+applySameContext mp (Condition op) ns@(conditionN:branchesNs) =
+    let
+        headBranchN = head branchesNs
+        shape = retrieveShape headBranchN mp
+        node = op conditionN branchesNs
+     in addEntry mp (shape, node)
 
 -- | General multiplication and sum
 --
