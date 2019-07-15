@@ -55,9 +55,9 @@ spec =
             simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
         simplify ((x + y) ^
             2) `shouldBe` simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
-        simplify ((x - y) ^
-            2) `shouldBe`
-            simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2))
+        prettify (simplify ((x - y) ^
+            2)) `shouldBe`
+            prettify (simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2)))
         simplify ((x - y) * (x - y)) `shouldBe` simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2))
         simplify ((x * y) ^ 2) `shouldBe` simplify ((x ^ 2) * (y ^ 2))
         simplify ((x * y) * (x * y)) `shouldBe` simplify ((x ^ 2) * (y ^ 2))

@@ -80,8 +80,8 @@ spec = do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
             (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
-            simplify (simplify (x <.> (y + z))) `shouldBe`
-                simplify ((x <.> y) + (x <.> z))
+            prettify (simplify (simplify (x <.> (y + z)))) `shouldBe`
+                prettify (simplify ((x <.> y) + (x <.> z)))
             simplify ((y + z) <.> x) `shouldBe` simplify ((x <.> y) + (x <.> z))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
@@ -108,8 +108,8 @@ spec = do
         specify "group constants together" $ do
             simplify (product [one, one, x, y, one, z]) `shouldBe`
                 product [x, y, z]
-            simplify (sum [one, one, x, y, one, z]) `shouldBe`
-                simplify (sum [const 3, x, y, z])
+            prettify (simplify (sum [one, one, x, y, one, z])) `shouldBe`
+                prettify (simplify (sum [const 3, x, y, z]))
             simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
                 simplify (product [const 6, x, y, z])
         specify "combine same terms" $

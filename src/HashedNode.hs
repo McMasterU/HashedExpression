@@ -140,6 +140,8 @@ retrieveShape n mp =
         Just (dim, _) -> dim
         _ -> error "expression not in map"
 
+-- |
+--
 expressionElementType :: Expression d et -> ET
 expressionElementType (Expression n mp) =
     case IM.lookup n mp of
