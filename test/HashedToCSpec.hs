@@ -70,8 +70,7 @@ evaluateCodeC exp valMaps = do
     let fullFileName = "C/" ++ fileName ++ ".c"
     let program = generateProgram valMaps exp
     TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
-    threadDelay 50000
-    readProcess "cc" [fullFileName, "-o", "C/" ++ fileName, "-lm"] ""
+    readProcess "gcc" [fullFileName, "-o", "C/" ++ fileName, "-lm"] ""
     let runCommand = "C/" ++ fileName
     output <- readProcess runCommand [] ""
     readProcess "rm" [fullFileName] ""
