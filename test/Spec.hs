@@ -15,6 +15,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -34,12 +35,11 @@ import Prelude hiding
     , sum
     , tan
     , tanh
-    , (^)
     )
+import qualified SimplifyEval.OneCSpec as OneCSpec
+import qualified SimplifyEval.OneRSpec as OneRSpec
 import qualified SimplifyEval.ZeroCSpec as ZeroCSpec
 import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
-import qualified SimplifyEval.OneRSpec as OneRSpec
-import qualified SimplifyEval.OneCSpec as OneCSpec
 import qualified Test1
 import qualified Test2
 
@@ -51,12 +51,12 @@ import Test.Hspec
 
 main :: IO ()
 main = do
+    hspec spec
+
 --    measureTime $ do
 --        let exp1 = (((((n+:l))^3))^3)
 --        let exp2 = ((k+:u)+(p+:j))
 --        showExp $ simplify $ exp1 * exp2
-    hspec spec
-
 spec :: Spec
 spec = do
     describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec

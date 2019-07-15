@@ -402,9 +402,14 @@ powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Scale et scalar scalee <- retrieveNode nId mp
     , val > 0 =
-        let powerScalar = applyDiff mp (unary (Power val)) [withNoExtraEntry scalar]
-            powerScalee = applyDiff mp (unary (Power val)) [withNoExtraEntry scalee]
-         in applyDiff mp (binaryET Scale (ElementSpecific et)) [powerScalar, powerScalee]
+        let powerScalar =
+                applyDiff mp (unary (Power val)) [withNoExtraEntry scalar]
+            powerScalee =
+                applyDiff mp (unary (Power val)) [withNoExtraEntry scalee]
+         in applyDiff
+                mp
+                (binaryET Scale (ElementSpecific et))
+                [powerScalar, powerScalee]
     | otherwise = withNoExtraEntry n
 
 -- | Rules for constant multiplication

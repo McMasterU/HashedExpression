@@ -490,7 +490,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                     error
                         "ListCapture not in the Map ListCapture [Int] which should never happens"
             PConst pc -> diffConst (retrieveShape originalN originalMp) pc
-            PSumList ptl -> sumManyDiff originalMp . buildFromPatternList exp match $ ptl
+            PSumList ptl ->
+                sumManyDiff originalMp . buildFromPatternList exp match $ ptl
             PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
             PMul sps -> mulManyDiff originalMp . map buildFromPattern' $ sps
             PNeg sp ->

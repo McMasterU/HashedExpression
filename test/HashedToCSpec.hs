@@ -3,15 +3,17 @@
 
 module HashedToCSpec where
 
-import Data.Array
 import Commons
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM_)
+import Data.Array
 import Data.Complex (Complex(..))
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
@@ -24,8 +26,6 @@ import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
-import qualified Data.Text.IO as TIO
-import qualified Data.Text as T
 import Test.Hspec
 import Test.QuickCheck
 
@@ -153,7 +153,8 @@ spec =
                 putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 outputSimple <- evaluateCodeC (simplify exp) valMaps
-                let resultSimplify = listArray (0, vectorSize - 1) $ readR output
+                let resultSimplify =
+                        listArray (0, vectorSize - 1) $ readR output
                 let resultInterpSimplify = eval valMaps (simplify exp)
                 putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
                 putStrLn $

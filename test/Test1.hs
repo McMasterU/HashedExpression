@@ -53,12 +53,12 @@ spec =
         simplify (x / y) `shouldBe` simplify (x * y ^ (-1))
         simplify ((x + y) * (x + y)) `shouldBe`
             simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
-        simplify ((x + y) ^
-            2) `shouldBe` simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
-        prettify (simplify ((x - y) ^
-            2)) `shouldBe`
+        simplify ((x + y) ^ 2) `shouldBe`
+            simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
+        prettify (simplify ((x - y) ^ 2)) `shouldBe`
             prettify (simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2)))
-        simplify ((x - y) * (x - y)) `shouldBe` simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2))
+        simplify ((x - y) * (x - y)) `shouldBe`
+            simplify ((const (-2.0) *. (x * y)) + (x ^ 2) + (y ^ 2))
         simplify ((x * y) ^ 2) `shouldBe` simplify ((x ^ 2) * (y ^ 2))
         simplify ((x * y) * (x * y)) `shouldBe` simplify ((x ^ 2) * (y ^ 2))
         simplify ((x / y) * (x / y)) `shouldBe` simplify ((y ^ (-2)) * (x ^ 2))
@@ -74,12 +74,19 @@ spec =
         simplify (x / x / y) `shouldBe` simplify (y ^ (-1)) --((x*(x^-1))*(y^-1))
         simplify ((x * y) ^ 3) `shouldBe` simplify ((x ^ 3) * (y ^ 3))
         simplify (((x * y) ^ 3) * x / y) `shouldBe` simplify ((y ^ 2) * (x ^ 4))
-        simplify (((x * y) ^ 3) * x + y) `shouldBe` simplify (y + ((y ^ 3) * (x ^ 4))) --Without Paranthesis
-        simplify (((x * y) ^ 3) * (x + y)) `shouldBe` simplify (((y ^ 3) * (x ^ 4)) + ((x ^ 3) * (y ^ 4))) -- With paranthesis
+        simplify (((x * y) ^ 3) * x + y) `shouldBe`
+            simplify (y + ((y ^ 3) * (x ^ 4))) --Without Paranthesis
+        simplify (((x * y) ^ 3) * (x + y)) `shouldBe`
+            simplify (((y ^ 3) * (x ^ 4)) + ((x ^ 3) * (y ^ 4))) -- With paranthesis
         simplify (x / (x ^ 3)) `shouldBe` simplify (x ^ (-2)) --FIXED
         simplify ((x ^ 2) ^ 2) `shouldBe` simplify (x ^ 4)
-        simplify ((x + y) * (x + y)) `shouldBe` simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
-        simplify (((x + y) * (x + y)) * (x + y)) `shouldBe` simplify ((const 3.0 *. (y * (x ^ 2))) + ((const 3.0) *. (x * (y ^ 2))) + (x ^ 3) + (y ^ 3))
+        simplify ((x + y) * (x + y)) `shouldBe`
+            simplify ((const 2.0 *. (x * y)) + (x ^ 2) + (y ^ 2))
+        simplify (((x + y) * (x + y)) * (x + y)) `shouldBe`
+            simplify
+                ((const 3.0 *. (y * (x ^ 2))) + ((const 3.0) *. (x * (y ^ 2))) +
+                 (x ^ 3) +
+                 (y ^ 3))
 --        simplify ((x - y) ^ 2) `shouldBe` simplify (   (const 2.0 *. (x * (negate (y)))) + (x ^ 2) + ((negate (y)) ^ 2))
         simplify (((x * y) ^ 3) * (x + y) ^ 2) `shouldBe`
             simplify
@@ -97,7 +104,10 @@ spec =
         simplify (y * (y ^ 2) ^ 2) `shouldBe` simplify (y ^ 5)
         simplify (x / ((y ^ 2) ^ 3)) `shouldBe` simplify (x * y ^ (-6))
         simplify (((x * y) ^ 2) / x) `shouldBe` simplify (x * y ^ 2)
-        prettify (simplify (((x + y) ^ 2) * ((x - y) ^ 2))) `shouldBe` prettify (simplify ((const (-2.0) *. ((x ^ 2) * (y ^ 2))) + (x ^ 4) + (y ^ 4)))
+        prettify (simplify (((x + y) ^ 2) * ((x - y) ^ 2))) `shouldBe`
+            prettify
+                (simplify
+                     ((const (-2.0) *. ((x ^ 2) * (y ^ 2))) + (x ^ 4) + (y ^ 4)))
         simplify (((x + y) ^ 2) + ((x - y) ^ 2)) `shouldBe`
             simplify ((const 2.0 *. (x ^ 2)) + (const 2.0 *. (y ^ 2)))
         simplify (((x + y) ^ 2) - ((x - y) ^ 2)) `shouldBe`
@@ -122,4 +132,6 @@ spec =
         simplify (x <.> (x + x)) `shouldBe` simplify (const 2.0 *. (x ^ 2))
         simplify (x <.> (const 1 / x)) `shouldBe` const 1
         simplify (x <.> (y / x)) `shouldBe` simplify y
-        simplify ((x <.> (x + y)) ^ 2) `shouldBe` simplify (((x ^ 2) * (y ^ 2)) + (const 2.0 *. (y * (x ^ 3))) + (x ^ 4))
+        simplify ((x <.> (x + y)) ^ 2) `shouldBe`
+            simplify
+                (((x ^ 2) * (y ^ 2)) + (const 2.0 *. (y * (x ^ 3))) + (x ^ 4))
