@@ -71,7 +71,6 @@ evaluateCodeC exp valMaps = do
     let program = generateProgram valMaps exp
     TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
     readProcess "gcc" [fullFileName, "-o", "C/" ++ fileName, "-lm"] ""
-    threadDelay 500000 -- TODO: the file is not ready right after compile it, so need to wait for a while
     let runCommand = "C/" ++ fileName
     output <- readProcess runCommand [] ""
     readProcess "rm" [fullFileName] ""
