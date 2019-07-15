@@ -4,6 +4,7 @@
 module HashedToCSpec where
 
 import Commons
+import Control.Concurrent
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM_)
 import Data.Array
@@ -69,6 +70,7 @@ evaluateCodeC exp valMaps = do
     let fullFileName = "C/" ++ fileName ++ ".c"
     let program = generateProgram valMaps exp
     TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
+    threadDelay 50000
     readProcess "cc" [fullFileName, "-o", "C/" ++ fileName] ""
     let runCommand = "C/" ++ fileName
     output <- readProcess runCommand [] ""

@@ -53,10 +53,6 @@ main :: IO ()
 main = do
     hspec spec
 
---    measureTime $ do
---        let exp1 = (((((n+:l))^3))^3)
---        let exp2 = ((k+:u)+(p+:j))
---        showExp $ simplify $ exp1 * exp2
 spec :: Spec
 spec = do
     describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
