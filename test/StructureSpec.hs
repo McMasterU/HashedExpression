@@ -1,6 +1,8 @@
 module StructureSpec where
 
 import Commons
+import Control.Monad (replicateM_)
+import Data.IntMap.Strict as IM
 import Data.Map.Strict
 import Data.Maybe (fromJust)
 import HashedExpression
@@ -38,9 +40,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
-import Data.IntMap.Strict as IM
 import Test.QuickCheck
-import Control.Monad (replicateM_)
 
 -- |
 --
@@ -72,6 +72,12 @@ spec =
                 exp2 <- generate (arbitrary :: Gen (Expression Zero C))
                 measureTime $ do
                     putStrLn "----------------------------"
-                    putStrLn $ "Generate exp1 -> " ++ show (sz exp1) ++ " subexpressions"
-                    putStrLn $ "Generate exp2 -> " ++ show (sz exp2) ++ " subexpressions"
-                    putStrLn $ "Simplifing (exp1 * exp2) -> " ++ show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
+                    putStrLn $
+                        "Generate exp1 -> " ++
+                        show (sz exp1) ++ " subexpressions"
+                    putStrLn $
+                        "Generate exp2 -> " ++
+                        show (sz exp2) ++ " subexpressions"
+                    putStrLn $
+                        "Simplifing (exp1 * exp2) -> " ++
+                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"

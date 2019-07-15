@@ -85,7 +85,6 @@ inspect x =
         showExp x
         return x
 
-
 -- |
 --
 vectorSize :: Int

@@ -18,6 +18,7 @@ import qualified Data.Text.IO as TIO
 import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
+import GHC.IO.Exception (ExitCode(..))
 import HashedExpression (C, DimensionType, Expression(..), NumType, R, Zero)
 import HashedInner
 import HashedInterp
@@ -29,7 +30,6 @@ import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
-import GHC.IO.Exception (ExitCode(..))
 
 -- |
 --
@@ -64,7 +64,10 @@ prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
 -- |
 --
 evaluateCodeC ::
-       (DimensionType d, NumType et) => Expression d et -> ValMaps -> IO (ExitCode, String)
+       (DimensionType d, NumType et)
+    => Expression d et
+    -> ValMaps
+    -> IO (ExitCode, String)
 evaluateCodeC exp valMaps = do
     readProcessWithExitCode "mkdir" ["C"] ""
     fileName <- fmap (toString . fromJust) nextUUID
@@ -77,7 +80,6 @@ evaluateCodeC exp valMaps = do
     readProcess "rm" [fullFileName] ""
     readProcess "rm" ["C/" ++ fileName] ""
     return (exitCode, output)
-
 
 -- | Parse output of the C program
 --

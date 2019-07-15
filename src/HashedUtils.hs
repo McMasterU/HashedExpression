@@ -39,8 +39,8 @@ import qualified Prelude
 
 import Data.Complex
 import Data.Maybe
+import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
-import Data.Time (getCurrentTime, diffUTCTime)
 
 -- | Forward pipe operator in Elm
 --
@@ -271,4 +271,3 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
-
