@@ -120,7 +120,6 @@ spec = do
             simplify (sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1]) `shouldBe`
                 simplify (sum [const 4 *. y1, z1])
             simplify (x1 - x1) `shouldBe` zero1
---            pendingWith "Fix me scalar because *. becomes * for scalars"
             prettify (simplify (sum [one *. x, x, x, const 3 *. y, y])) `shouldBe`
                 prettify (simplify (sum [const 3 *. x, const 4 *. y]))
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
