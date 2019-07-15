@@ -40,6 +40,7 @@ import qualified Prelude
 import Data.Complex
 import Data.Maybe
 import GHC.IO.Unsafe (unsafePerformIO)
+import Data.Time (getCurrentTime, diffUTCTime)
 
 -- | Forward pipe operator in Elm
 --
@@ -52,6 +53,15 @@ infixl 1 |>
 --
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
+
+-- |
+--
+measureTime :: IO a -> IO ()
+measureTime action = do
+    beforeTime <- getCurrentTime
+    action
+    afterTime <- getCurrentTime
+    putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
 -- |
 --
@@ -261,3 +271,4 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
+

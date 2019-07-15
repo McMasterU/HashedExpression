@@ -85,14 +85,6 @@ inspect x =
         showExp x
         return x
 
--- |
---
-measureTime :: IO a -> IO ()
-measureTime action = do
-    beforeTime <- getCurrentTime
-    action
-    afterTime <- getCurrentTime
-    putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
 -- |
 --
