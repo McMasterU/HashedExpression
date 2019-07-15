@@ -16,12 +16,14 @@
 -------------------------------------------------------------------------------
 module HashedPattern where
 
+import qualified Data.IntMap.Strict as IM
 import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
 import HashedExpression
+import HashedInner
 import HashedInner
 import HashedNode
 import HashedOperation
@@ -243,60 +245,55 @@ infixl 8 &&.
 (||.) :: Condition -> Condition -> Condition
 (||.) condition1 condition2 expr match =
     condition1 expr match || condition2 expr match
+
 -- |
 --
 isScalar :: Pattern -> Condition
-isScalar p exp match = retrieveShape n mp == []
-  where
-    (mp, n) = buildFromPattern exp match p
-
--- |
---
-isNotConst :: Pattern -> Condition
-isNotConst p exp match =
-  let (mp, n) = buildFromPattern exp match p
-  in case retrieveNode n mp of
-      Const _ -> False
-      _ -> True
-
-
-
--- |
---
-isReal :: Pattern -> Condition
-isReal p exp match = retrieveElementType n mp == R
-  where
-    (mp, n) = buildFromPattern exp match p
+isScalar p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in retrieveShape newRootId (IM.union extraEntries originMp) == []
 
 -- |
 --
 isConst :: Pattern -> Condition
-isConst p exp match
-    | Const _ <- retrieveNode n mp = True
-    | otherwise = False
-  where
-    (mp, n) = buildFromPattern exp match p
+isConst p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in case retrieveNode newRootId (IM.union extraEntries originMp) of
+            Const _ -> True
+            _ -> False
+
+-- |
+--
+isNotConst :: Pattern -> Condition
+isNotConst p exp match = not $ isConst p exp match
+
+-- |
+--
+isReal :: Pattern -> Condition
+isReal p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in retrieveElementType newRootId (IM.union extraEntries originMp) == R
 
 -- |
 --
 isComplex :: Pattern -> Condition
-isComplex p exp match = retrieveElementType n mp == C
-  where
-    (mp, n) = buildFromPattern exp match p
-
--- |
---
-isCovector :: Pattern -> Condition
-isCovector p exp match = retrieveElementType n mp == Covector
-  where
-    (mp, n) = buildFromPattern exp match p
+isComplex p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in retrieveElementType newRootId (IM.union extraEntries originMp) == C
 
 -- |
 --
 sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
-    getET = uncurry (flip retrieveElementType) . buildFromPattern exp match
+    getET p =
+        let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+            originMp = fst exp
+         in retrieveElementType newRootId (IM.union extraEntries originMp)
 
 -- |
 --
@@ -464,7 +461,7 @@ turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
 buildFromPatternList ::
-       (ExpressionMap, Int) -> Match -> PatternList -> [(ExpressionMap, Int)]
+       (ExpressionMap, Int) -> Match -> PatternList -> [ExpressionDiff]
 buildFromPatternList exp match (PListHole fs listCapture)
     | Just ns <- Map.lookup listCapture (listCapturesMap match) =
         map (buildFromPattern exp match . turnToPattern fs) ns
@@ -472,17 +469,17 @@ buildFromPatternList exp match (PListHole fs listCapture)
         error
             "ListCapture not in the Map ListCapture [Int] which should never happens"
 
-buildFromPattern ::
-       (ExpressionMap, Int) -> Match -> Pattern -> (ExpressionMap, Int)
+buildFromPattern :: (ExpressionMap, Int) -> Match -> Pattern -> ExpressionDiff
 buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
-    buildFromPattern' :: Pattern -> (ExpressionMap, Int)
+    applyDiff' = applyDiff originalMp
+    buildFromPattern' :: Pattern -> ExpressionDiff
     buildFromPattern' pattern =
         case pattern of
-            PRef nId -> (originalMp, nId)
+            PRef nId -> withNoExtraEntry nId
             PHole capture
                 | Just nId <- Map.lookup capture (capturesMap match) ->
-                    (originalMp, nId)
+                    withNoExtraEntry nId
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
@@ -492,56 +489,51 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                 | otherwise ->
                     error
                         "ListCapture not in the Map ListCapture [Int] which should never happens"
-            PConst pc ->
-                case retrieveShape originalN originalMp of
-                    [] -> unwrap $ const pc
-                    [size] -> unwrap $ const1d size pc
-                    [size1, size2] -> unwrap $ const2d (size1, size2) pc
-                    [size1, size2, size3] ->
-                        unwrap $ const3d (size1, size2, size3) pc
-                    _ -> error "Dimension > 3"
-            PSumList ptl -> sumMany . buildFromPatternList exp match $ ptl
-            PSum sps -> sumMany . map buildFromPattern' $ sps
-            PMul sps -> mulMany . map buildFromPattern' $ sps
-            PNeg sp -> apply (unaryET Neg ElementDefault) [buildFromPattern' sp]
+            PConst pc -> diffConst (retrieveShape originalN originalMp) pc
+            PSumList ptl ->
+                sumManyDiff originalMp . buildFromPatternList exp match $ ptl
+            PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
+            PMul sps -> mulManyDiff originalMp . map buildFromPattern' $ sps
+            PNeg sp ->
+                applyDiff' (unaryET Neg ElementDefault) [buildFromPattern' sp]
             PScale sp1 sp2 ->
-                apply (binaryET Scale ElementDefault) $
+                applyDiff' (binaryET Scale ElementDefault) $
                 map buildFromPattern' [sp1, sp2]
             PDiv sp1 sp2 ->
-                apply (binary Div) $ map buildFromPattern' [sp1, sp2]
-            PSqrt sp -> apply (unary Sqrt) [buildFromPattern' sp]
-            PSin sp -> apply (unary Sin) [buildFromPattern' sp]
-            PCos sp -> apply (unary Cos) [buildFromPattern' sp]
-            PTan sp -> apply (unary Tan) [buildFromPattern' sp]
-            PExp sp -> apply (unary Exp) [buildFromPattern' sp]
-            PLog sp -> apply (unary Log) [buildFromPattern' sp]
-            PSinh sp -> apply (unary Sinh) [buildFromPattern' sp]
-            PCosh sp -> apply (unary Cosh) [buildFromPattern' sp]
-            PTanh sp -> apply (unary Tanh) [buildFromPattern' sp]
-            PAsin sp -> apply (unary Asin) [buildFromPattern' sp]
-            PAcos sp -> apply (unary Acos) [buildFromPattern' sp]
-            PAtan sp -> apply (unary Atan) [buildFromPattern' sp]
-            PAsinh sp -> apply (unary Asinh) [buildFromPattern' sp]
-            PAcosh sp -> apply (unary Acosh) [buildFromPattern' sp]
-            PAtanh sp -> apply (unary Atanh) [buildFromPattern' sp]
+                applyDiff' (binary Div) $ map buildFromPattern' [sp1, sp2]
+            PSqrt sp -> applyDiff' (unary Sqrt) [buildFromPattern' sp]
+            PSin sp -> applyDiff' (unary Sin) [buildFromPattern' sp]
+            PCos sp -> applyDiff' (unary Cos) [buildFromPattern' sp]
+            PTan sp -> applyDiff' (unary Tan) [buildFromPattern' sp]
+            PExp sp -> applyDiff' (unary Exp) [buildFromPattern' sp]
+            PLog sp -> applyDiff' (unary Log) [buildFromPattern' sp]
+            PSinh sp -> applyDiff' (unary Sinh) [buildFromPattern' sp]
+            PCosh sp -> applyDiff' (unary Cosh) [buildFromPattern' sp]
+            PTanh sp -> applyDiff' (unary Tanh) [buildFromPattern' sp]
+            PAsin sp -> applyDiff' (unary Asin) [buildFromPattern' sp]
+            PAcos sp -> applyDiff' (unary Acos) [buildFromPattern' sp]
+            PAtan sp -> applyDiff' (unary Atan) [buildFromPattern' sp]
+            PAsinh sp -> applyDiff' (unary Asinh) [buildFromPattern' sp]
+            PAcosh sp -> applyDiff' (unary Acosh) [buildFromPattern' sp]
+            PAtanh sp -> applyDiff' (unary Atanh) [buildFromPattern' sp]
             PRealImag sp1 sp2 ->
-                apply (binary RealImag) $ map buildFromPattern' [sp1, sp2]
-            PRealPart sp -> apply (unary RealPart) [buildFromPattern' sp]
-            PImagPart sp -> apply (unary ImagPart) [buildFromPattern' sp]
+                applyDiff' (binary RealImag) $ map buildFromPattern' [sp1, sp2]
+            PRealPart sp -> applyDiff' (unary RealPart) [buildFromPattern' sp]
+            PImagPart sp -> applyDiff' (unary ImagPart) [buildFromPattern' sp]
             PInnerProd sp1 sp2 ->
-                apply (binaryET InnerProd ElementDefault `hasShape` []) $
+                applyDiff' (binaryET InnerProd ElementDefault `hasShape` []) $
                 map buildFromPattern' [sp1, sp2]
             PPiecewise _ _ ->
                 error
                     "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"
             PMulRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-                    mulMany $
-                    (map (originalMp, ) $ ns) ++ map (buildFromPattern') sps
+                    mulManyDiff originalMp $
+                    (map withNoExtraEntry ns) ++ map (buildFromPattern') sps
             PSumRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-                    sumMany $
-                    (map (originalMp, ) $ ns) ++ map (buildFromPattern') sps
+                    sumManyDiff originalMp $
+                    (map withNoExtraEntry $ ns) ++ map (buildFromPattern') sps
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

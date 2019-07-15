@@ -241,4 +241,3 @@ instance (ElementType et) =>
          RotateOp (Int, Int, Int) (Expression Three et) where
     rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
     rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
-

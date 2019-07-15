@@ -124,13 +124,22 @@ hiddenPrettify pastable (mp, n) =
             Var name -> T.concat [T.pack name, shapeSignature]
             DVar name -> T.concat ["d", T.pack name, shapeSignature]
             Const val
-                | pastable -> case shape of
-                    [] ->
-                        wrapParentheses $
-                        T.concat ["const ", wrapParentheses . T.pack . show $ val]
-                    [x] ->
-                        wrapParentheses $
-                        T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
+                | pastable ->
+                    case shape of
+                        [] ->
+                            wrapParentheses $
+                            T.concat
+                                [ "const "
+                                , wrapParentheses . T.pack . show $ val
+                                ]
+                        [x] ->
+                            wrapParentheses $
+                            T.concat
+                                [ "const1d "
+                                , T.pack . show $ x
+                                , " "
+                                , wrapParentheses . T.pack . show $ val
+                                ]
                 | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
             Sum _ args
                 | pastable && length args > 2 ->

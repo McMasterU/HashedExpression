@@ -15,6 +15,7 @@ import Prelude hiding
     , (+)
     , (-)
     , (/)
+    , (^)
     , acos
     , acosh
     , asin
@@ -35,10 +36,10 @@ import Prelude hiding
     , tan
     , tanh
     )
+import qualified SimplifyEval.OneCSpec as OneCSpec
+import qualified SimplifyEval.OneRSpec as OneRSpec
 import qualified SimplifyEval.ZeroCSpec as ZeroCSpec
 import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
-import qualified SimplifyEval.OneRSpec as OneRSpec
-import qualified SimplifyEval.OneCSpec as OneCSpec
 import qualified Test1
 import qualified Test2
 
@@ -54,11 +55,11 @@ main = do
 
 spec :: Spec
 spec = do
-    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
-    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
-    describe "SimplifyEval.OneRSpec" OneRSpec.spec
-    describe "SimplifyEval.OneCSpec" OneCSpec.spec
-    describe "SimplifySpec" HashedSimplifySpec.spec
-    describe "Test1" Test1.spec
-    describe "Test2" Test2.spec
+--    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
+--    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
+--    describe "SimplifyEval.OneRSpec" OneRSpec.spec
+--    describe "SimplifyEval.OneCSpec" OneCSpec.spec
+--    describe "SimplifySpec" HashedSimplifySpec.spec
+--    describe "Test1" Test1.spec
+--    describe "Test2" Test2.spec
     describe "HashedToCSpec" HashedToCSpec.spec
