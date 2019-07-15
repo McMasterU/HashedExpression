@@ -4,8 +4,8 @@
 module HashedToCSpec where
 
 import Commons
-import Control.Concurrent
 import Control.Applicative (liftA2)
+import Control.Concurrent
 import Control.Monad (replicateM_)
 import Data.Array
 import Data.Complex (Complex(..))
@@ -22,13 +22,14 @@ import HashedExpression (C, DimensionType, Expression(..), NumType, R, Zero)
 import HashedInner
 import HashedInterp
 import HashedNode
-import HashedPrettify (showExp)
+import HashedPrettify (showExp, showExpDebug)
 import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
+import GHC.IO.Exception (ExitCode(..))
 
 -- |
 --
@@ -63,7 +64,7 @@ prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
 -- |
 --
 evaluateCodeC ::
-       (DimensionType d, NumType et) => Expression d et -> ValMaps -> IO String
+       (DimensionType d, NumType et) => Expression d et -> ValMaps -> IO (ExitCode, String)
 evaluateCodeC exp valMaps = do
     readProcessWithExitCode "mkdir" ["C"] ""
     fileName <- fmap (toString . fromJust) nextUUID
@@ -72,10 +73,11 @@ evaluateCodeC exp valMaps = do
     TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
     readProcess "gcc" [fullFileName, "-o", "C/" ++ fileName, "-lm"] ""
     let runCommand = "C/" ++ fileName
-    output <- readProcess runCommand [] ""
+    (exitCode, output, _) <- readProcessWithExitCode runCommand [] ""
     readProcess "rm" [fullFileName] ""
     readProcess "rm" ["C/" ++ fileName] ""
-    return output
+    return (exitCode, output)
+
 
 -- | Parse output of the C program
 --
@@ -104,16 +106,8 @@ spec =
             replicateM_ 10 $ do
                 SuiteZeroR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
-                -- Evaluate by C code should equal to HashedInterp
-                output <- evaluateCodeC exp valMaps
-                let result = read . head . splitOn " " $ output
-                let resultInterp = eval valMaps exp
-                putStrLn $ "Result C Code: " ++ show result
-                putStrLn $ "Result Interp: " ++ show resultInterp
-                result `shouldApprox` resultInterp
-                putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
-                outputSimple <- evaluateCodeC (simplify exp) valMaps
+                (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
                 let resultSimplify = read . head . splitOn " " $ outputSimple
                 let resultInterpSimplify = eval valMaps (simplify exp)
                 putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
@@ -130,7 +124,7 @@ spec =
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
                     intercalate "\n" . generateProgram valMaps $ simplifiedExp
-                outputCodeC <- evaluateCodeC (simplify exp) valMaps
+                (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 let ([im], [re]) = readC outputCodeC
                 let resultSimplify = im :+ re
                 let resultInterpSimplify = eval valMaps simplifiedExp
@@ -145,7 +139,7 @@ spec =
                 SuiteOneR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
                 -- Evaluate by C code should equal to HashedInterp
-                output <- evaluateCodeC exp valMaps
+                (exitCode, output) <- evaluateCodeC exp valMaps
                 let result = listArray (0, vectorSize - 1) $ readR output
                 let resultInterp = eval valMaps exp
                 putStrLn $ "Result C Code: " ++ show result
@@ -153,7 +147,7 @@ spec =
                 result `shouldApprox` resultInterp
                 putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
-                outputSimple <- evaluateCodeC (simplify exp) valMaps
+                (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
                 let resultSimplify =
                         listArray (0, vectorSize - 1) $ readR output
                 let resultInterpSimplify = eval valMaps (simplify exp)
@@ -171,13 +165,14 @@ spec =
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
                     intercalate "\n" . generateProgram valMaps $ simplifiedExp
-                outputCodeC <- evaluateCodeC (simplify exp) valMaps
+                (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 putStrLn outputCodeC
---                let (re, im) = readC outputCodeC
---                let resultSimplify = listArray (0, vectorSize) $ zipWith (:+) re im
---                let resultInterpSimplify = eval valMaps simplifiedExp
---                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
---                putStrLn $
---                    "Result Interp (Simplified): " ++ show resultInterpSimplify
---                resultSimplify `shouldApprox` resultInterpSimplify
---                putStrLn "OK!"
+                let (re, im) = readC outputCodeC
+                let resultSimplify =
+                        listArray (0, vectorSize - 1) $ zipWith (:+) re im
+                let resultInterpSimplify = eval valMaps simplifiedExp
+                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
+                putStrLn $
+                    "Result Interp (Simplified): " ++ show resultInterpSimplify
+                resultSimplify `shouldApprox` resultInterpSimplify
+                putStrLn "OK!"

@@ -162,7 +162,7 @@ primitiveZeroR = do
         replicate 4 (const dbl, [[], [], [], []])
 
 operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof $ replicate 9 primitiveZeroR ++ replicate 1 genZeroR -- ratio 9 / 1
+operandZeroR = oneof $ replicate 8 primitiveZeroR ++ replicate 2 genZeroR
 
 fromNaryZeroR ::
        ([Expression Zero R] -> Expression Zero R)
@@ -218,8 +218,8 @@ genZeroR = do
     oneof . concat $
         -- some of the time will be from inner product of higher dimension
         -- some of the time will be from a complex
-        replicate 20 ([primitiveZeroR] ++ nary ++ binary ++ unary) ++
-        replicate 1 [fromInnerProdHigherZeroR] ++ replicate 1 [fromZeroCZeroR]
+        replicate 4 ([primitiveZeroR] ++ nary ++ binary ++ unary) ++
+        replicate 1 [fromInnerProdHigherZeroR] ++ replicate 2 [fromZeroCZeroR]
 
 instance Arbitrary (Expression Zero R) where
     arbitrary = fmap fst genZeroR
@@ -266,7 +266,7 @@ primitiveZeroC = do
         ]
 
 operandZeroC :: Gen (Expression Zero C, Vars)
-operandZeroC = oneof $ replicate 9 primitiveZeroC ++ replicate 1 genZeroC -- ratio 9 / 1
+operandZeroC = oneof $ replicate 9 primitiveZeroC ++ replicate 1 genZeroC
 
 fromNaryZeroC ::
        ([Expression Zero C] -> Expression Zero C)
@@ -319,7 +319,7 @@ genZeroC = do
         unary = map fromUnaryZeroC [negate, (^ 2)]
     oneof . concat $
         -- some of the time will be from inner product of higher dimension
-        replicate 15 ([primitiveZeroC] ++ nary ++ binary ++ unary) ++
+        replicate 5 ([primitiveZeroC] ++ nary ++ binary ++ unary) ++
         replicate 1 [fromInnerProdHigherZeroC] ++
         replicate 1 [fromRealImagZeroC]
 
@@ -362,7 +362,7 @@ primitiveOneR = do
         replicate 4 (const1d vectorSize dbl, [[], [], [], []])
 
 operandOneR :: Gen (Expression One R, Vars)
-operandOneR = oneof $ replicate 9 primitiveOneR ++ replicate 1 genOneR -- ratio 9 / 2
+operandOneR = oneof $ replicate 8 primitiveOneR ++ replicate 2 genOneR --
 
 fromNaryOneR ::
        ([Expression One R] -> Expression One R) -> Gen (Expression One R, Vars)
@@ -405,7 +405,7 @@ genOneR = do
         binary = map fromBinaryOneR [(+), (-)]
         unary = map fromUnaryOneR [negate, (^ 2)]
     oneof . concat $
-        replicate 9 ([primitiveOneR] ++ nary ++ binary ++ unary) ++
+        replicate 4 ([primitiveOneR] ++ nary ++ binary ++ unary) ++
         replicate 2 [fromScaleOneR]
 
 instance Arbitrary (Expression One R) where
@@ -461,7 +461,7 @@ primitiveOneC = do
             , [[], [], [], []])
 
 operandOneC :: Gen (Expression One C, Vars)
-operandOneC = oneof $ replicate 9 primitiveOneC ++ replicate 1 genOneC -- ratio 9 / 1
+operandOneC = oneof $ replicate 9 primitiveOneC ++ replicate 1 genOneC
 
 fromNaryOneC ::
        ([Expression One C] -> Expression One C) -> Gen (Expression One C, Vars)

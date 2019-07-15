@@ -96,13 +96,3 @@ spec =
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply
-        specify "Check size" $
-            replicateM_ 10 $ do
-                let sz = IM.size . exMap
-                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
-                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
-                measureTime $ do
-                    putStrLn "----------------------------"
-                    putStrLn $ "Generate exp1 -> " ++ show (sz exp1) ++ " subexpressions"
-                    putStrLn $ "Generate exp2 -> " ++ show (sz exp2) ++ " subexpressions"
-                    putStrLn $ "Simplifing (exp1 * exp2) -> " ++ show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"

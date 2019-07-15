@@ -49,6 +49,6 @@ import Test.QuickCheck hiding (scale)
 
 main = do
 --    let sum = fromJust . HashedOperation.sum
-    let exp = xRe ((((const (-6.47649210672457))+:(const (1.0)))*(s+:x)*((const (9.69566198711258))+:(const (1.0)))))
+    let exp = xIm((((b+:p)<.>(c+:i))<.>((const (-16.940794010912455))+:(const (0.0)))))
     showExp exp
     showExp $ simplify exp
