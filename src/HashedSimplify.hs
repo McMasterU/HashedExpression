@@ -115,8 +115,7 @@ simplify e =
             (toRecursiveTransformation combineScaleRules) >>>
             (toRecursiveTransformation constPowerRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>>
-            id
+            (toRecursiveTransformation reduceSumProdRules) >>> id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 toRecursiveTransformation :: Simplification -> Transformation

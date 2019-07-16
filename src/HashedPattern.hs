@@ -314,7 +314,6 @@ one = PConst 1
 zero :: Pattern
 zero = PConst 0
 
-
 scalarOne :: Pattern
 scalarOne = PScalarConst 1
 

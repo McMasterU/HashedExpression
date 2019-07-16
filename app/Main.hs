@@ -58,13 +58,17 @@ prod1 = fromJust . HashedOperation.sum
 main = do
     let valMaps =
             emptyVms |>
-            withVm0
-                (fromList $ map (, 1) . map return $ ['a' .. 'z']) |>
+            withVm0 (fromList $ map (, 1) . map return $ ['a' .. 'z']) |>
             withVm1
                 (fromList $
                  map (, listArray (0, 9) [1 .. 10]) . map (++ "1") . map return $
                  ['a' .. 'z'])
-    let exp1 = ((t+:j)<.>(j+:y))
-    let exp2 = ((((((const1d 10 (-19.72113497952217)+: const1d 10 (-5.632752111669537))^2))^2)<.>((e1+:i1)+negate((j1+:m1)))))
+    let exp1 = ((t +: j) <.> (j +: y))
+    let exp2 =
+            ((((((const1d 10 (-19.72113497952217) +:
+                  const1d 10 (-5.632752111669537)) ^
+                 2)) ^
+               2) <.>
+              ((e1 +: i1) + negate ((j1 +: m1)))))
     print $ eval valMaps exp1 * eval valMaps exp2
     print $ eval valMaps $ simplify $ exp1 * exp2
