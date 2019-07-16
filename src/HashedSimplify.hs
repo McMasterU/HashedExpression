@@ -238,37 +238,36 @@ otherRules =
 --
 reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
-     case retrieveNode n mp of
-            Sum _ ns
+    case retrieveNode n mp of
+        Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
-                | length ns == 1 -> withoutExtraEntry $ head ns
+            | length ns == 1 -> withoutExtraEntry $ head ns
                 -- to make sure filter (not . isZero mp) ns is not empty
-                | all (isZero mp) ns -> withoutExtraEntry $ head ns
+            | all (isZero mp) ns -> withoutExtraEntry $ head ns
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
-                | any (isZero mp) ns ->
-                    sumManyDiff mp .
-                    map withoutExtraEntry . filter (not . isZero mp) $
-                    ns
-            Mul _ ns
+            | any (isZero mp) ns ->
+                sumManyDiff mp .
+                map withoutExtraEntry . filter (not . isZero mp) $
+                ns
+        Mul _ ns
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
-                | length ns == 1 -> withoutExtraEntry $ head ns
+            | length ns == 1 -> withoutExtraEntry $ head ns
                 -- to make sure filter (not . isOne mp) ns is not empty
-                | all (isOne mp) ns -> withoutExtraEntry $ head ns
+            | all (isOne mp) ns -> withoutExtraEntry $ head ns
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
-                | any (isOne mp) ns ->
-                    mulManyDiff mp .
-                    map withoutExtraEntry . filter (not . isOne mp) $
-                    ns
+            | any (isOne mp) ns ->
+                mulManyDiff mp . map withoutExtraEntry . filter (not . isOne mp) $
+                ns
                 -- if any is zero, collapse to zero
                 -- product(x, y, z, 0, t, u, v) = 0
-                | nId:_ <- filter (isZero mp) ns -> withoutExtraEntry nId
+            | nId:_ <- filter (isZero mp) ns -> withoutExtraEntry nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-            _ -> withoutExtraEntry n
+        _ -> withoutExtraEntry n
 
 -- |
 --
@@ -535,20 +534,24 @@ combineChildrenDiffs ::
 combineChildrenDiffs contextMp n childrenDiffs =
     let (oldShape, oldNode) = retrieveInternal n contextMp
         oldChildren = nodeArgs oldNode
+        newChildren = map newRootId childrenDiffs
         combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-        combineWith option childrenNs
-            | oldChildren == childrenNs &&
-                  all (== IM.empty) (map extraEntries childrenDiffs) =
-                withoutExtraEntry n
-            | otherwise =
-                let (extraEntries, newRootId) =
-                        addEntryWithContext
-                            (IM.union contextMp combinedExtraEntries) -- context (to lookup all the nodes involved)
-                            combinedExtraEntries
-                            (option `hasShape` oldShape)
-                            childrenNs -- keep the old shape
-                 in ExpressionDiff extraEntries newRootId
-        childrenNs = map newRootId childrenDiffs
+        combine option =
+            applyDiff
+                contextMp
+                (option `hasShape` oldShape)
+                childrenDiffs
+        sortAndCombine =
+            let a = 1
+             in undefined
+        combineWith option childrenNs =
+            let (extraEntries, newRootId) =
+                    addEntryWithContext
+                        (IM.union contextMp combinedExtraEntries) -- context (to lookup all the nodes involved)
+                        combinedExtraEntries
+                        (option `hasShape` oldShape)
+                        childrenNs -- keep the old shape
+             in ExpressionDiff extraEntries newRootId
         getNode :: Int -> Node
         getNode nId
             | Just (_, node) <- IM.lookup nId contextMp = node
@@ -557,43 +560,44 @@ combineChildrenDiffs contextMp n childrenDiffs =
         weight n = nodeTypeWeight $ getNode n
         sortArgs :: [Int] -> [Int]
         sortArgs = concat . map sort . groupBy nodeType . sortWith weight
-     in case oldNode of
-            Var _ -> withoutExtraEntry n
-            DVar _ -> withoutExtraEntry n
-            Const _ -> withoutExtraEntry n
-            Sum et _ ->
-                combineWith (naryET Sum (ElementSpecific et)) $
-                sortArgs childrenNs
-            Mul et _ ->
-                combineWith (naryET Mul (ElementSpecific et)) $
-                sortArgs childrenNs
-            Power x _ -> combineWith (unary (Power x)) childrenNs
-            Neg et _ ->
-                combineWith (unaryET Neg (ElementSpecific et)) childrenNs
-            Scale et _ _ ->
-                combineWith (binaryET Scale (ElementSpecific et)) childrenNs
-            Div _ _ -> combineWith (binary Div) childrenNs
-            Sqrt _ -> combineWith (unary Sqrt) childrenNs
-            Sin _ -> combineWith (unary Sin) childrenNs
-            Cos _ -> combineWith (unary Cos) childrenNs
-            Tan _ -> combineWith (unary Tan) childrenNs
-            Exp _ -> combineWith (unary Exp) childrenNs
-            Log _ -> combineWith (unary Log) childrenNs
-            Sinh _ -> combineWith (unary Sinh) childrenNs
-            Cosh _ -> combineWith (unary Cosh) childrenNs
-            Tanh _ -> combineWith (unary Tanh) childrenNs
-            Asin _ -> combineWith (unary Asin) childrenNs
-            Acos _ -> combineWith (unary Acos) childrenNs
-            Atan _ -> combineWith (unary Atan) childrenNs
-            Asinh _ -> combineWith (unary Asinh) childrenNs
-            Acosh _ -> combineWith (unary Acosh) childrenNs
-            Atanh _ -> combineWith (unary Atanh) childrenNs
-            RealImag _ _ -> combineWith (binary RealImag) childrenNs
-            RealPart _ -> combineWith (unary RealPart) childrenNs
-            ImagPart _ -> combineWith (unary ImagPart) childrenNs
-            InnerProd et _ _ ->
-                combineWith (binaryET InnerProd (ElementSpecific et)) childrenNs
-            Piecewise marks _ _ ->
-                combineWith (conditionAry (Piecewise marks)) childrenNs
-            Rotate amount _ -> combineWith (unary (Rotate amount)) childrenNs
-
+     in if oldChildren == newChildren &&
+           all (== IM.empty) (map extraEntries childrenDiffs)
+            then withoutExtraEntry n
+            else case oldNode of
+                     Var _ -> withoutExtraEntry n
+                     DVar _ -> withoutExtraEntry n
+                     Const _ -> withoutExtraEntry n
+                     Sum et _ ->
+                         combineWith (naryET Sum (ElementSpecific et)) $
+                         sortArgs newChildren
+                     Mul et _ ->
+                         combineWith (naryET Mul (ElementSpecific et)) $
+                         sortArgs newChildren
+                     Power x _ -> combineWith (unary (Power x)) newChildren
+                     Neg et _ -> combine (unaryET Neg (ElementSpecific et))
+                     Scale et _ _ ->
+                         combine (binaryET Scale (ElementSpecific et))
+                     Div _ _ -> combine (binary Div)
+                     Sqrt _ -> combine (unary Sqrt)
+                     Sin _ -> combine (unary Sin)
+                     Cos _ -> combine (unary Cos)
+                     Tan _ -> combine (unary Tan)
+                     Exp _ -> combine (unary Exp)
+                     Log _ -> combine (unary Log)
+                     Sinh _ -> combine (unary Sinh)
+                     Cosh _ -> combine (unary Cosh)
+                     Tanh _ -> combine (unary Tanh)
+                     Asin _ -> combine (unary Asin)
+                     Acos _ -> combine (unary Acos)
+                     Atan _ -> combine (unary Atan)
+                     Asinh _ -> combine (unary Asinh)
+                     Acosh _ -> combine (unary Acosh)
+                     Atanh _ -> combine (unary Atanh)
+                     RealImag _ _ -> combine (binary RealImag)
+                     RealPart _ -> combine (unary RealPart)
+                     ImagPart _ -> combine (unary ImagPart)
+                     InnerProd et _ _ ->
+                         combine (binaryET InnerProd (ElementSpecific et))
+                     Piecewise marks _ _ ->
+                         combine (conditionAry (Piecewise marks))
+                     Rotate amount _ -> combine (unary (Rotate amount))
