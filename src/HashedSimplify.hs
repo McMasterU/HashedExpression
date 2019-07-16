@@ -184,7 +184,7 @@ complexNumRules =
     , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+
       ((x + u) +: (y + v))
     , (x +: y) *. (z +: w) |.~~~~~~> (x *. z - y *. w) +: (x *. w + y *. z)
-    , (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z - y <.> w) +: (x <.> w + y <.> z)
+    , (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z - y <.> w) +: (x <.> w + y <.> z) -- FIXME: Conjugate ???
     ]
 
 -- | Rules with dot product and scale
@@ -193,7 +193,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
-    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
+--    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y --> TODO: This is not true
     ]
 
 -- | Rules of distributive over sum

@@ -138,18 +138,10 @@ spec =
             replicateM_ 10 $ do
                 SuiteOneR exp valMaps <- generate arbitrary
                 putStrLn "------------------------"
-                -- Evaluate by C code should equal to HashedInterp
-                (exitCode, output) <- evaluateCodeC exp valMaps
-                let result = listArray (0, vectorSize - 1) $ readR output
-                let resultInterp = eval valMaps exp
-                putStrLn $ "Result C Code: " ++ show result
-                putStrLn $ "Result Interp: " ++ show resultInterp
-                result `shouldApprox` resultInterp
-                putStrLn "OK!"
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
                 let resultSimplify =
-                        listArray (0, vectorSize - 1) $ readR output
+                        listArray (0, vectorSize - 1) $ readR outputSimple
                 let resultInterpSimplify = eval valMaps (simplify exp)
                 putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
                 putStrLn $
