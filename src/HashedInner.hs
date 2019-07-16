@@ -12,6 +12,7 @@ import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
+import Debug.Trace (traceShowId)
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -218,5 +219,5 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 
 -- |
 --
-withNoExtraEntry :: Int -> ExpressionDiff
-withNoExtraEntry = ExpressionDiff IM.empty
+withoutExtraEntry :: Int -> ExpressionDiff
+withoutExtraEntry = ExpressionDiff IM.empty

@@ -144,7 +144,7 @@ hiddenPrettify pastable (mp, n) =
             Sum _ args
                 | pastable && length args > 2 ->
                     T.concat
-                        [ "sum ["
+                        [ "sum1 ["
                         , T.intercalate ", " . map innerPrettify $ args
                         , "]"
                         ]

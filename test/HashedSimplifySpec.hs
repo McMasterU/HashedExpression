@@ -74,8 +74,8 @@ spec = do
             simplify (x <.> zero) `shouldBe` zero
             simplify (zero <.> x) `shouldBe` zero
             prettify (simplify ((s *. x) <.> y)) `shouldBe`
-                prettify (simplify (s * (x <.> y)))
-            simplify (x <.> (s *. y)) `shouldBe` simplify (s * (x <.> y))
+                prettify (simplify (s *. (x <.> y)))
+            simplify (x <.> (s *. y)) `shouldBe` simplify (s *. (x <.> y))
         specify "distributivity" $ do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
@@ -151,8 +151,8 @@ spec = do
         specify "dot product higher dimension with scaling and point wise" $ do
             simplify (x1 <.> zero1) `shouldBe` zero
             simplify (zero1 <.> x1) `shouldBe` zero
-            simplify ((s *. x1) <.> y1) `shouldBe` simplify (s * (x1 <.> y1))
-            simplify (x1 <.> (s *. y1)) `shouldBe` simplify (s * (x1 <.> y1))
+            simplify ((s *. x1) <.> y1) `shouldBe` simplify (s *. (x1 <.> y1))
+            simplify (x1 <.> (s *. y1)) `shouldBe` simplify (s *. (x1 <.> y1))
             simplify (x1 * (y1 + z1)) `shouldBe` simplify (x1 * y1 + x1 * z1)
             simplify ((y1 + z1) * x1) `shouldBe` simplify (x1 * y1 + x1 * z1)
             simplify (s *. (y1 + z1)) `shouldBe` simplify (s *. y1 + s *. z1)

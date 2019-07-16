@@ -85,6 +85,7 @@ data Pattern
     | PSumList PatternList
     -- MARK: Reflex Node in HashedExpression
     | PConst Double
+    | PScalarConst Double -- Pattern for scalar const used in RHS
     | PSum [Pattern]
     | PMul [Pattern]
     | PNeg Pattern
@@ -313,6 +314,13 @@ one = PConst 1
 zero :: Pattern
 zero = PConst 0
 
+
+scalarOne :: Pattern
+scalarOne = PScalarConst 1
+
+scalarZero :: Pattern
+scalarZero = PScalarConst 0
+
 num :: Double -> Pattern
 num = PConst
 
@@ -476,10 +484,10 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
     buildFromPattern' :: Pattern -> ExpressionDiff
     buildFromPattern' pattern =
         case pattern of
-            PRef nId -> withNoExtraEntry nId
+            PRef nId -> withoutExtraEntry nId
             PHole capture
                 | Just nId <- Map.lookup capture (capturesMap match) ->
-                    withNoExtraEntry nId
+                    withoutExtraEntry nId
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
@@ -489,7 +497,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                 | otherwise ->
                     error
                         "ListCapture not in the Map ListCapture [Int] which should never happens"
-            PConst pc -> diffConst (retrieveShape originalN originalMp) pc
+            PConst val -> diffConst (retrieveShape originalN originalMp) val
+            PScalarConst val -> diffConst [] val
             PSumList ptl ->
                 sumManyDiff originalMp . buildFromPatternList exp match $ ptl
             PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
@@ -529,11 +538,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PMulRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     mulManyDiff originalMp $
-                    (map withNoExtraEntry ns) ++ map (buildFromPattern') sps
+                    (map withoutExtraEntry ns) ++ map (buildFromPattern') sps
             PSumRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     sumManyDiff originalMp $
-                    (map withNoExtraEntry $ ns) ++ map (buildFromPattern') sps
+                    (map withoutExtraEntry $ ns) ++ map (buildFromPattern') sps
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

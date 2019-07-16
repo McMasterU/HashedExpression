@@ -9,3 +9,16 @@ main = do
 ```
 - Have a collections of lots of expressions for testing 
 - makeRecursive use topological sort
+
+- Fix bug: 15/07/2019: This is not correct
+```haskell
+    [ (s *. x) <.> y |.~~~~~~> s * (x <.> y)
+    , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+    ]
+```
+Changed to 
+```haskell
+    [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y)
+    , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
+    ]
+```

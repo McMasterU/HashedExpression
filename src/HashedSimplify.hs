@@ -114,7 +114,9 @@ simplify e =
             (toRecursiveTransformation negateRules) >>>
             (toRecursiveTransformation combineScaleRules) >>>
             (toRecursiveTransformation constPowerRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>> id
+            (toRecursiveTransformation flattenSumProdRules) >>>
+            (toRecursiveTransformation reduceSumProdRules) >>>
+            id
      in wrap . removeUnreachable . applyRules . unwrap $ e
 
 toRecursiveTransformation :: Simplification -> Transformation
@@ -122,12 +124,16 @@ toRecursiveTransformation = applySimplification . makeRecursive
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
-    chain . map (toRecursiveTransformation . fromSubstitution) $
-    zeroOneRules ++
-    scaleRules ++
-    complexNumRules ++
-    dotProductRules ++
-    distributiveRules ++ piecewiseRules ++ exponentRules ++ otherRules
+    chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+    [ complexNumRules
+    , zeroOneRules
+    , scaleRules
+    , dotProductRules
+    , distributiveRules
+    , piecewiseRules
+    , exponentRules
+    , otherRules
+    ]
 
 -- | Rules with zero and one
 --
@@ -146,10 +152,8 @@ zeroOneRules =
     , one *. x |.~~~~~~> x
     , x + zero |.~~~~~~> x
     , zero + x |.~~~~~~> x
-    , (x <.> zero) |.~~~~~~> zero
-    , zero <.> x |.~~~~~~> zero
-    , x <.> one |.~~~~~~> x
-    , one <.> x |.~~~~~~> x
+    , x <.> zero |.~~~~~~> scalarZero
+    , zero <.> x |.~~~~~~> scalarZero
     , negate zero |.~~~~~~> zero
     , negate (negate x) |.~~~~~~> x
     , num (-1) *. negate (x) |.~~~~~~> x
@@ -188,8 +192,8 @@ complexNumRules =
 --
 dotProductRules :: [Substitution]
 dotProductRules =
-    [ (s *. x) <.> y |.~~~~~~> s * (x <.> y) --
-    , x <.> (s *. y) |.~~~~~~> s * (x <.> y)
+    [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
+    , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
     , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
     ]
 
@@ -239,43 +243,55 @@ reduceSumProdRules exp@(mp, n) =
             Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
-                | length ns == 1 -> withNoExtraEntry $ head ns
+                | length ns == 1 -> withoutExtraEntry $ head ns
                 -- to make sure filter (not . isZero mp) ns is not empty
-                | all (isZero mp) ns -> withNoExtraEntry $ head ns
+                | all (isZero mp) ns -> withoutExtraEntry $ head ns
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
                     combineDiffs .
-                    map withNoExtraEntry . filter (not . isZero mp) $
-                    ns
-                -- if the sum contains any sum, just flatten them out
-                -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
-                | otherwise ->
-                    combineDiffs .
-                    map withNoExtraEntry . concatMap (pullSumOperands mp) $
+                    map withoutExtraEntry . filter (not . isZero mp) $
                     ns
             Mul _ ns
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
-                | length ns == 1 -> withNoExtraEntry $ head ns
+                | length ns == 1 -> withoutExtraEntry $ head ns
                 -- to make sure filter (not . isOne mp) ns is not empty
-                | all (isOne mp) ns -> withNoExtraEntry $ head ns
+                | all (isOne mp) ns -> withoutExtraEntry $ head ns
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->
                     combineDiffs .
-                    map withNoExtraEntry . filter (not . isOne mp) $
+                    map withoutExtraEntry . filter (not . isOne mp) $
                     ns
                 -- if any is zero, collapse to zero
                 -- product(x, y, z, 0, t, u, v) = 0
-                | nId:_ <- filter (isZero mp) ns -> withNoExtraEntry nId
+                | nId:_ <- filter (isZero mp) ns -> withoutExtraEntry nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-                | otherwise ->
-                    combineDiffs .
-                    map withNoExtraEntry . concatMap (pullProdOperands mp) $
-                    ns
-            _ -> withNoExtraEntry n
+            _ -> withoutExtraEntry n
+
+-- |
+--
+flattenSumProdRules :: Simplification
+flattenSumProdRules exp@(mp, n) =
+    let combineDiffs = combineChildrenDiffs mp n
+     in case retrieveNode n mp of
+            Sum _ ns
+                -- if the sum contains any sum, just flatten them out
+                -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
+             ->
+                combineDiffs .
+                map withoutExtraEntry . concatMap (pullSumOperands mp) $
+                ns
+            Mul _ ns
+                -- if the prod contains any prod, just flatten them out
+                -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
+             ->
+                combineDiffs .
+                map withoutExtraEntry . concatMap (pullProdOperands mp) $
+                ns
+            _ -> withoutExtraEntry n
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
@@ -290,15 +306,15 @@ groupConstantsRules exp@(mp, n) =
                 , let diffNewConst = diffConst shape . Prelude.sum $ cs ->
                     combineDiffs $
                     diffNewConst :
-                    (map withNoExtraEntry . filter (not . isConstant mp) $ ns)
+                    (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
             Mul _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
                 , let diffNewConst = diffConst shape . Prelude.product $ cs ->
                     combineDiffs $
                     diffNewConst :
-                    (map withNoExtraEntry . filter (not . isConstant mp) $ ns)
-            _ -> withNoExtraEntry n
+                    (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
+            _ -> withoutExtraEntry n
 
 -- |
 --
@@ -311,7 +327,7 @@ combineTermsRules exp@(mp, n)
         combineChildrenDiffs mp n .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -323,10 +339,10 @@ combineTermsRules exp@(mp, n)
     fn x y = fst x == fst y
     toDiff :: (Int, Double) -> ExpressionDiff
     toDiff (nId, val)
-        | val == 1 = withNoExtraEntry nId
+        | val == 1 = withoutExtraEntry nId
         | otherwise =
             applyDiff' (binaryET Scale ElementDefault) $
-            [diffConst [] val, withNoExtraEntry nId]
+            [diffConst [] val, withoutExtraEntry nId]
 
 -- |
 --
@@ -338,7 +354,7 @@ combineTermsRulesProd exp@(mp, n)
         combineChildrenDiffs mp n .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -352,8 +368,8 @@ combineTermsRulesProd exp@(mp, n)
         | C <- retrieveElementType y mp = False
         | otherwise = x == y
     toDiff (nId, val)
-        | val == 1 = withNoExtraEntry nId
-        | otherwise = applyDiff' (unary (Power val)) [withNoExtraEntry nId]
+        | val == 1 = withoutExtraEntry nId
+        | otherwise = applyDiff' (unary (Power val)) [withoutExtraEntry nId]
 
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
@@ -363,8 +379,8 @@ combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
         applyDiff mp (unary (Power (outerVal * innerVal))) $
-        [withNoExtraEntry innerN]
-    | otherwise = withNoExtraEntry n
+        [withoutExtraEntry innerN]
+    | otherwise = withoutExtraEntry n
 
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
@@ -373,7 +389,7 @@ powerSumRealImagRules :: Simplification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , isSumOrRealImag nId = replicateMul val nId
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
   where
     inverse diff = applyDiff mp (unary $ Power (-1)) $ [diff]
     isSumOrRealImag nId
@@ -381,10 +397,11 @@ powerSumRealImagRules exp@(mp, n)
         | RealImag _ _ <- retrieveNode nId mp = True
         | otherwise = False
     replicateMul val nId
-        | val > 1 = mulManyDiff mp . replicate val $ withNoExtraEntry nId
+        | val > 1 = mulManyDiff mp . replicate val $ withoutExtraEntry nId
         | val < -1 =
-            inverse . mulManyDiff mp . replicate (-val) . withNoExtraEntry $ nId
-        | otherwise = withNoExtraEntry n
+            inverse . mulManyDiff mp . replicate (-val) . withoutExtraEntry $
+            nId
+        | otherwise = withoutExtraEntry n
 
 -- | Rules for power product
 -- (a*b)^2 should be a^2 * b^2
@@ -392,8 +409,8 @@ powerProdRules :: Simplification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ _ <- retrieveNode nId mp
-    , val > 0 = mulManyDiff mp . replicate val . withNoExtraEntry $ nId
-    | otherwise = withNoExtraEntry n
+    , val > 0 = mulManyDiff mp . replicate val . withoutExtraEntry $ nId
+    | otherwise = withoutExtraEntry n
 
 -- | Rules for power scale
 -- (a*b)^2 should be a^2 * b^2
@@ -403,14 +420,14 @@ powerScaleRules exp@(mp, n)
     , Scale et scalar scalee <- retrieveNode nId mp
     , val > 0 =
         let powerScalar =
-                applyDiff mp (unary (Power val)) [withNoExtraEntry scalar]
+                applyDiff mp (unary (Power val)) [withoutExtraEntry scalar]
             powerScalee =
-                applyDiff mp (unary (Power val)) [withNoExtraEntry scalee]
+                applyDiff mp (unary (Power val)) [withoutExtraEntry scalee]
          in applyDiff
                 mp
                 (binaryET Scale (ElementSpecific et))
                 [powerScalar, powerScalee]
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
 
 -- | Rules for constant multiplication
 -- (Const val)^t ---> Const (val)^t
@@ -419,7 +436,7 @@ constPowerRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Const constVal <- retrieveNode nId mp
     , val > 0 = diffConst (retrieveShape n mp) (constVal ^ val)
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
 
 -- | Rules for negate
 -- if is a const:
@@ -429,7 +446,7 @@ constPowerRules exp@(mp, n)
 negateRules :: Simplification
 negateRules exp@(mp, n)
     | Neg _ nId <- retrieveNode n mp = turnToScale nId
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
   where
     turnToScale nId
         | Const val <- retrieveNode nId mp =
@@ -438,7 +455,7 @@ negateRules exp@(mp, n)
             applyDiff
                 mp
                 (binaryET Scale ElementDefault)
-                [diffConst [] (-1), withNoExtraEntry nId]
+                [diffConst [] (-1), withoutExtraEntry nId]
 
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
@@ -449,10 +466,10 @@ combineScaleRules exp@(mp, n)
     , any (/= 1) . map snd $ extracted =
         let combinedConstants = Prelude.product $ map snd extracted
             combinedScalees =
-                mulManyDiff mp . map (withNoExtraEntry . fst) $ extracted
+                mulManyDiff mp . map (withoutExtraEntry . fst) $ extracted
          in applyDiff mp (binaryET Scale ElementDefault) $
             [diffConst [] (combinedConstants), combinedScalees]
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
   where
     extract nId
         | Scale _ scalar scalee <- retrieveNode nId mp
@@ -478,12 +495,12 @@ fromSubstitution :: Substitution -> Simplification
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
-    | otherwise = withNoExtraEntry n
+    | otherwise = withoutExtraEntry n
 
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
 standardize :: Simplification
-standardize = makeRecursive (withNoExtraEntry . snd)
+standardize = makeRecursive (withoutExtraEntry . snd)
 
 -- | Turn a simplification to a recursive one, apply rules bottom up
 --
@@ -510,7 +527,7 @@ combineChildrenDiffs contextMp n childrenDiffs =
         combineWith option childrenNs
             | oldChildren == childrenNs &&
                   all (== IM.empty) (map extraEntries childrenDiffs) =
-                withNoExtraEntry n
+                withoutExtraEntry n
             | otherwise =
                 let (extraEntries, newRootId) =
                         addEntryWithContext
@@ -529,9 +546,9 @@ combineChildrenDiffs contextMp n childrenDiffs =
         sortArgs :: [Int] -> [Int]
         sortArgs = concat . map sort . groupBy nodeType . sortWith weight
      in case oldNode of
-            Var _ -> withNoExtraEntry n
-            DVar _ -> withNoExtraEntry n
-            Const _ -> withNoExtraEntry n
+            Var _ -> withoutExtraEntry n
+            DVar _ -> withoutExtraEntry n
+            Const _ -> withoutExtraEntry n
             Sum et _ ->
                 combineWith (naryET Sum (ElementSpecific et)) $
                 sortArgs childrenNs
