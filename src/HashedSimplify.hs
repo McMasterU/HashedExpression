@@ -537,29 +537,19 @@ combineChildrenDiffs contextMp n childrenDiffs =
         newChildren = map newRootId childrenDiffs
         combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
         combine option =
-            applyDiff
-                contextMp
-                (option `hasShape` oldShape)
-                childrenDiffs
-        sortAndCombine =
+            applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
+        sortAndCombine option =
             let a = 1
-             in undefined
-        combineWith option childrenNs =
-            let (extraEntries, newRootId) =
-                    addEntryWithContext
-                        (IM.union contextMp combinedExtraEntries) -- context (to lookup all the nodes involved)
-                        combinedExtraEntries
-                        (option `hasShape` oldShape)
-                        childrenNs -- keep the old shape
-             in ExpressionDiff extraEntries newRootId
-        getNode :: Int -> Node
-        getNode nId
-            | Just (_, node) <- IM.lookup nId contextMp = node
-            | Just (_, node) <- IM.lookup nId combinedExtraEntries = node
-        nodeType n1 n2 = sameNodeType (getNode n1) (getNode n2)
-        weight n = nodeTypeWeight $ getNode n
-        sortArgs :: [Int] -> [Int]
-        sortArgs = concat . map sort . groupBy nodeType . sortWith weight
+                getNode diff
+                    | Just (_, node) <- IM.lookup (newRootId diff) contextMp =
+                        node
+                    | Just (_, node) <-
+                         IM.lookup (newRootId diff) combinedExtraEntries = node
+                nodeType diff1 diff2 =
+                    sameNodeType (getNode diff1) (getNode diff2)
+                weight diff = nodeTypeWeight $ getNode diff
+                sortArgs = concat . map (sortWith newRootId) . groupBy nodeType . sortWith weight
+             in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $ childrenDiffs
      in if oldChildren == newChildren &&
            all (== IM.empty) (map extraEntries childrenDiffs)
             then withoutExtraEntry n
@@ -568,12 +558,10 @@ combineChildrenDiffs contextMp n childrenDiffs =
                      DVar _ -> withoutExtraEntry n
                      Const _ -> withoutExtraEntry n
                      Sum et _ ->
-                         combineWith (naryET Sum (ElementSpecific et)) $
-                         sortArgs newChildren
+                         sortAndCombine (naryET Sum (ElementSpecific et))
                      Mul et _ ->
-                         combineWith (naryET Mul (ElementSpecific et)) $
-                         sortArgs newChildren
-                     Power x _ -> combineWith (unary (Power x)) newChildren
+                         sortAndCombine (naryET Mul (ElementSpecific et))
+                     Power x _ -> combine (unary (Power x))
                      Neg et _ -> combine (unaryET Neg (ElementSpecific et))
                      Scale et _ _ ->
                          combine (binaryET Scale (ElementSpecific et))
