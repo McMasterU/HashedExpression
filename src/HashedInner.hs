@@ -4,8 +4,12 @@
 --
 --
 -------------------------------------------------------------------------------
+{-# LANGUAGE TupleSections #-}
 module HashedInner where
 
+import Data.Set (Set, empty, insert, member)
+import qualified Data.Set as Set
+import Prelude hiding ((-))
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort, sortBy, sortOn)
 import Debug.Trace (traceShowId)
@@ -13,6 +17,8 @@ import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
+import Data.Maybe (mapMaybe)
+import Data.Graph (topSort, buildG)
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -221,3 +227,29 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 --
 withoutExtraEntry :: Int -> ExpressionDiff
 withoutExtraEntry = ExpressionDiff IM.empty
+
+-- | Topological sort the expression map, all the dependencies will appear before the depended node
+--
+topologicalSort :: (ExpressionMap, Int) -> [Int]
+topologicalSort expr@(mp, n) =
+    reverse . mapMaybe (`IM.lookup` vertices2nId) $ topSort graph
+  where
+    nId2vertices = IM.fromList $ zip (IM.keys mp) [0 ..]
+    vertices2nId = IM.fromList $ zip [0 ..] (IM.keys mp)
+    exNodeEdges = expressionEdges expr
+    verticesEdges =
+        mapMaybe
+            (bringMaybeOut . mapBoth (`IM.lookup` nId2vertices))
+            exNodeEdges
+    graph = buildG (0, IM.size mp - 1) verticesEdges
+
+-- | Get all the edges of the expressions
+--
+expressionEdges :: (ExpressionMap, Int) -> [(Int, Int)]
+expressionEdges (mp, n) = Set.toList $ edges n
+  where
+    edges :: Int -> Set (Int, Int)
+    edges nId =
+        let args = nodeArgs $ retrieveNode nId mp
+            thisNode = Set.fromList . map (nId, ) $ args
+         in Set.unions $ thisNode : map edges args
