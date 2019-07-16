@@ -115,8 +115,9 @@ simplify e =
             (toRecursiveTransformation combineScaleRules) >>>
             (toRecursiveTransformation constPowerRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>> id
-     in wrap . removeUnreachable . applyRules . unwrap $ e
+            (toRecursiveTransformation reduceSumProdRules) >>>
+            removeUnreachable >>> checkTopo
+     in wrap . applyRules . unwrap $ e
 
 toRecursiveTransformation :: Simplification -> Transformation
 toRecursiveTransformation = applySimplification . makeRecursive
@@ -193,9 +194,9 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
     , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
---    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y --> TODO: This is not true
     ]
 
+--    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y --> TODO: This is not true
 -- | Rules of distributive over sum
 --
 distributiveRules :: [Substitution]
@@ -237,8 +238,7 @@ otherRules =
 --
 reduceSumProdRules :: Simplification
 reduceSumProdRules exp@(mp, n) =
-    let combineDiffs = combineChildrenDiffs mp n
-     in case retrieveNode n mp of
+     case retrieveNode n mp of
             Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
@@ -248,7 +248,7 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
                 | any (isZero mp) ns ->
-                    combineDiffs .
+                    sumManyDiff mp .
                     map withoutExtraEntry . filter (not . isZero mp) $
                     ns
             Mul _ ns
@@ -260,7 +260,7 @@ reduceSumProdRules exp@(mp, n) =
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
                 | any (isOne mp) ns ->
-                    combineDiffs .
+                    mulManyDiff mp .
                     map withoutExtraEntry . filter (not . isOne mp) $
                     ns
                 -- if any is zero, collapse to zero
@@ -274,43 +274,41 @@ reduceSumProdRules exp@(mp, n) =
 --
 flattenSumProdRules :: Simplification
 flattenSumProdRules exp@(mp, n) =
-    let combineDiffs = combineChildrenDiffs mp n
-     in case retrieveNode n mp of
-            Sum _ ns
-                -- if the sum contains any sum, just flatten them out
-                -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
-             ->
-                combineDiffs .
-                map withoutExtraEntry . concatMap (pullSumOperands mp) $
-                ns
-            Mul _ ns
-                -- if the prod contains any prod, just flatten them out
-                -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-             ->
-                combineDiffs .
-                map withoutExtraEntry . concatMap (pullProdOperands mp) $
-                ns
-            _ -> withoutExtraEntry n
+    case retrieveNode n mp of
+        Sum _ ns
+        -- if the sum contains any sum, just flatten them out
+        -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
+         ->
+            sumManyDiff mp .
+            map withoutExtraEntry . concatMap (pullSumOperands mp) $
+            ns
+        Mul _ ns
+        -- if the prod contains any prod, just flatten them out
+        -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
+         ->
+            mulManyDiff mp .
+            map withoutExtraEntry . concatMap (pullProdOperands mp) $
+            ns
+        _ -> withoutExtraEntry n
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
 groupConstantsRules :: Simplification
 groupConstantsRules exp@(mp, n) =
     let shape = retrieveShape n mp
-        combineDiffs = combineChildrenDiffs mp n
      in case retrieveNode n mp of
             Sum _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
                 , let diffNewConst = diffConst shape . Prelude.sum $ cs ->
-                    combineDiffs $
+                    sumManyDiff mp $
                     diffNewConst :
                     (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
             Mul _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
                 , let diffNewConst = diffConst shape . Prelude.product $ cs ->
-                    combineDiffs $
+                    mulManyDiff mp $
                     diffNewConst :
                     (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
             _ -> withoutExtraEntry n
@@ -323,7 +321,7 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Simplification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
-        combineChildrenDiffs mp n .
+        sumManyDiff mp .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
     | otherwise = withoutExtraEntry n
@@ -350,7 +348,7 @@ combineTermsRules exp@(mp, n)
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
-        combineChildrenDiffs mp n .
+        mulManyDiff mp .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
     | otherwise = withoutExtraEntry n
@@ -496,6 +494,13 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     , condition exp match = buildFromPattern exp match replacementPattern
     | otherwise = withoutExtraEntry n
 
+checkTopo :: Transformation
+checkTopo exp@(mp, n) =
+    let lst = last $ topologicalSort exp
+     in if (n == lst)
+            then exp
+            else error "Wrong topo"
+
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
 standardize :: Simplification
@@ -515,7 +520,15 @@ makeRecursive smp = recursiveSmp
             ExpressionDiff exEntries newId = smp newExp
          in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
 
--- | Combine diffs from children of current node and return an ExpressionDiff
+-- |
+--
+makeRecursive1 :: Simplification -> Simplification
+makeRecursive1 smp exp@(mp, n) = undefined
+  where
+    a = 1
+
+-- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
+-- and return the combined difference
 --
 combineChildrenDiffs ::
        ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
@@ -530,7 +543,7 @@ combineChildrenDiffs contextMp n childrenDiffs =
             | otherwise =
                 let (extraEntries, newRootId) =
                         addEntryWithContext
-                            (IM.union contextMp combinedExtraEntries)
+                            (IM.union contextMp combinedExtraEntries) -- context (to lookup all the nodes involved)
                             combinedExtraEntries
                             (option `hasShape` oldShape)
                             childrenNs -- keep the old shape
@@ -584,11 +597,3 @@ combineChildrenDiffs contextMp n childrenDiffs =
                 combineWith (conditionAry (Piecewise marks)) childrenNs
             Rotate amount _ -> combineWith (unary (Rotate amount)) childrenNs
 
--- | Sort the arguments (now only for Sum and Mul)
---
-sortArgs :: [(ExpressionMap, Int)] -> [(ExpressionMap, Int)]
-sortArgs = concat . map (sortWith snd) . groupBy nodeType . sortWith weight
-  where
-    nodeType (mp1, n1) (mp2, n2) =
-        sameNodeType (retrieveNode n1 mp1) (retrieveNode n2 mp2)
-    weight (mp, n) = nodeTypeWeight $ retrieveNode n mp

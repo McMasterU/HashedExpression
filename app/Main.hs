@@ -56,15 +56,19 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
-    let valMaps =
-            emptyVms |>
-            withVm0 (fromList $ map (, 1) . map return $ ['a' .. 'z']) |>
-            withVm1
-                (fromList $
-                 map (, listArray (0, 9) [1 .. 10]) . map (++ "1") . map return $
-                 ['a' .. 'z'])
-    let exp = (((const1d 10 (17.896497401304458))+negate(xIm((p*.(v1+:g1)))))+j1)
-    showExpDebug exp
-    showExpDebug $ simplify exp
-    print $ eval valMaps exp
-    print $ eval valMaps (simplify exp)
+--    let valMaps =
+--            emptyVms |>
+--            withVm0 (fromList $ map (, 1) . map return $ ['a' .. 'z']) |>
+--            withVm1
+--                (fromList $
+--                 map (, listArray (0, 9) [1 .. 10]) . map (++ "1") . map return $
+--                 ['a' .. 'z'])
+--    let exp = (((const1d 10 (17.896497401304458))+negate(xIm((p*.(v1+:g1)))))+j1)
+--    showExpDebug exp
+--    showExpDebug $ simplify exp
+--    print $ eval valMaps exp
+--    print $ eval valMaps (simplify exp)
+    measureTime $ do
+        let exp1 = (((((n+:l))^3))^3)
+        let exp2 = ((k+:u)+(p+:j))
+        showExp $ simplify $ exp1 * exp2
