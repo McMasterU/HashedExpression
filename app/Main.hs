@@ -69,7 +69,9 @@ main
 --    print $ eval valMaps exp
 --    print $ eval valMaps (simplify exp)
  = do
-    let exp1 = ((one +: c) <.> ((one +: one) *. (negate (((one +: zero) *. (one +: zero))))))
+    let exp1 =
+            ((one +: c) <.>
+             ((one +: one) *. (negate (((one +: zero) *. (one +: zero))))))
     showExp $ simplify exp1
     let valMaps =
             ValMaps
