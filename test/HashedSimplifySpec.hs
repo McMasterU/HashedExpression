@@ -82,7 +82,7 @@ spec = do
             (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
             prettify (simplify (simplify (x <.> (y + z)))) `shouldBe`
                 prettify (simplify ((x <.> y) + (x <.> z)))
-            simplify ((y + z) <.> x) `shouldBe` simplify ((x <.> y) + (x <.> z))
+            simplify ((y + z) <.> x) `shouldBe` simplify ((y <.> x) + (z <.> x))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] * x) `shouldBe`
@@ -92,7 +92,7 @@ spec = do
             simplify (x <.> sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x <.>) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
-                simplify (sum (map (x <.>) [y, z, t, u, v]))
+                simplify (sum (map (<.> x) [y, z, t, u, v]))
             prettify (simplify (product [a, b, c, sum [x, y, z]])) `shouldBe`
                 prettify
                     (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
@@ -159,7 +159,7 @@ spec = do
             simplify (x1 <.> (y1 + z1)) `shouldBe`
                 simplify ((x1 <.> y1) + (x1 <.> z1))
             simplify ((y1 + z1) <.> x1) `shouldBe`
-                simplify ((x1 <.> y1) + (x1 <.> z1))
+                simplify ((y1 <.> x1) + (z1 <.> x1))
         specify "log and exp higher" $ do
             simplify (log (exp x1)) `shouldBe` x1
             simplify (exp (log x1)) `shouldBe` x1

@@ -225,11 +225,11 @@ instance Evaluable Zero C (Complex Double) where
                     case retrieveShape arg1 mp of
                         [] ->
                             eval valMap (expZeroC mp arg1) *
-                            eval valMap (expZeroC mp arg2)
+                            conjugate (eval valMap (expZeroC mp arg2))
                         [size] ->
                             let res1 = eval valMap $ expOneC mp arg1
                                 res2 = eval valMap $ expOneC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size - 1]
                                     , let x = res1 ! i
                                     , let y = res2 ! i
@@ -237,7 +237,7 @@ instance Evaluable Zero C (Complex Double) where
                         [size1, size2] ->
                             let res1 = eval valMap $ expTwoC mp arg1
                                 res2 = eval valMap $ expTwoC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
                                     , let x = res1 ! (i, j)
@@ -246,7 +246,7 @@ instance Evaluable Zero C (Complex Double) where
                         [size1, size2, size3] ->
                             let res1 = eval valMap $ expThreeC mp arg1
                                 res2 = eval valMap $ expThreeC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
                                     , k <- [0 .. size3 - 1]

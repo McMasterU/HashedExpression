@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-while  stack test --test-arguments '--match "/HashedToCSpec/Hashed To C spec/Evaluate hash interp should equal to C code evaluation (Expression One R)/"' --fast; do
+while  stack test --test-arguments '--match "/SimplifyEval.ZeroCSpec/simplify & eval property for Zero C/prop_Multiply/"' --fast; do
     echo "sucess"
 done
 #while stack test --fast; do

@@ -185,7 +185,7 @@ complexNumRules =
     , restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+
       ((x + u) +: (y + v))
     , (x +: y) *. (z +: w) |.~~~~~~> (x *. z - y *. w) +: (x *. w + y *. z)
-    , (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z - y <.> w) +: (x <.> w + y <.> z) -- FIXME: Conjugate ???
+    , (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z + y <.> w) +: (y <.> z - x <.> w)
     ]
 
 -- | Rules with dot product and scale
@@ -193,10 +193,12 @@ complexNumRules =
 dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
-    , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
+    , x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y)
+    , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate (t)) *. (x <.> y) -- Conjugate if the scalar is complex
+    , x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~>
+      (x * y)
     ]
 
---    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y --> TODO: This is not true
 -- | Rules of distributive over sum
 --
 distributiveRules :: [Substitution]
@@ -204,7 +206,7 @@ distributiveRules =
     [ x * sumOf (each) |.~~~~~~> sumOf (x * each)
     , sumOf (each) * x |.~~~~~~> sumOf (x * each)
     , x <.> sumOf (each) |.~~~~~~> sumOf (x <.> each)
-    , sumOf (each) <.> x |.~~~~~~> sumOf (x <.> each)
+    , sumOf (each) <.> x |.~~~~~~> sumOf (each <.> x)
     , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
     , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (restOfProduct ~* each)

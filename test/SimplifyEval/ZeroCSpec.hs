@@ -71,8 +71,11 @@ prop_Multiply :: SuiteZeroC -> SuiteZeroC -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) x@(simplify1, simplify2, simplifyMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
-        else error $ prettifyDebug exp1' ++ "\n" ++ prettifyDebug exp2'
+        else error $ prettifyDebug exp1' ++ "\n-----------\n" ++ prettifyDebug exp2' ++ "\n-----------\n" ++ show valMaps ++ "\n-----------n"
+            ++ show lhs ++ " not equals " ++ show rhs
   where
+    lhs = eval valMaps exp1' * eval valMaps exp2'
+    rhs = eval valMaps expMul'
     valMaps = mergeValMaps valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1

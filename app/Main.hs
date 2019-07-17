@@ -69,9 +69,25 @@ main
 --    print $ eval valMaps exp
 --    print $ eval valMaps (simplify exp)
  = do
-    measureTime $ do
-        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
-        let exp2 = ((k +: u) + (p +: j))
-        showExp $ simplify $ exp1 * exp2
---        let exp = x + x
---        showExp $ simplify $ exp
+    let exp1 = ((one +: c) <.> ((one +: one) *. (negate (((one +: zero) *. (one +: zero))))))
+    showExp $ simplify exp1
+    let valMaps =
+            ValMaps
+                { vm0 =
+                      fromList
+                          [ ("c", 1)
+                          , ("f", 1)
+                          , ("g", 1)
+                          , ("i", 1)
+                          , ("j", 1)
+                          , ("k", 1)
+                          , ("m", 1)
+                          , ("n", 1)
+                          , ("s", 1)
+                          ]
+                , vm1 = fromList []
+                , vm2 = fromList []
+                , vm3 = fromList []
+                }
+    print $ eval valMaps exp1
+    print $ eval valMaps $ simplify $ exp1
