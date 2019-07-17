@@ -11,9 +11,10 @@ import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (group, groupBy, intercalate, sort)
+import Data.List (foldl', group, groupBy, intercalate, sort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
@@ -115,8 +116,7 @@ simplify e =
             (toRecursiveTransformation combineScaleRules) >>>
             (toRecursiveTransformation constPowerRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>>
-            removeUnreachable >>> checkTopo
+            (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
 
 toRecursiveTransformation :: Simplification -> Transformation
@@ -548,8 +548,12 @@ combineChildrenDiffs contextMp n childrenDiffs =
                 nodeType diff1 diff2 =
                     sameNodeType (getNode diff1) (getNode diff2)
                 weight diff = nodeTypeWeight $ getNode diff
-                sortArgs = concat . map (sortWith newRootId) . groupBy nodeType . sortWith weight
-             in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $ childrenDiffs
+                sortArgs =
+                    concat .
+                    map (sortWith newRootId) .
+                    groupBy nodeType . sortWith weight
+             in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
+                childrenDiffs
      in if oldChildren == newChildren &&
            all (== IM.empty) (map extraEntries childrenDiffs)
             then withoutExtraEntry n

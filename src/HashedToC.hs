@@ -26,7 +26,6 @@ import HashedNode
 import HashedPrettify (prettifyDebug)
 import HashedUtils
 
-
 -- | Mem map (offset, R or C, shape)
 --
 type MemMapEntry = (Int, EntryType, Shape)

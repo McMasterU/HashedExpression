@@ -5,20 +5,21 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+
 module HashedInner where
 
-import Data.Set (Set, empty, insert, member)
-import qualified Data.Set as Set
-import Prelude hiding ((-))
+import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort, sortBy, sortOn)
+import Data.Maybe (mapMaybe)
+import Data.Set (Set, empty, insert, member)
+import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
-import Data.Maybe (mapMaybe)
-import Data.Graph (topSort, buildG)
+import Prelude hiding ((-))
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
