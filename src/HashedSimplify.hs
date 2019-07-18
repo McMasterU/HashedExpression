@@ -522,77 +522,66 @@ makeRecursive smp = recursiveSmp
             ExpressionDiff exEntries newId = smp newExp
          in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
 
--- |
---
-makeRecursive1 :: Simplification -> Simplification
-makeRecursive1 smp exp@(mp, n) = undefined
-  where
-    a = 1
 
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
 --
 combineChildrenDiffs ::
        ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs contextMp n childrenDiffs =
-    let (oldShape, oldNode) = retrieveInternal n contextMp
-        oldChildren = nodeArgs oldNode
-        newChildren = map newRootId childrenDiffs
-        combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-        combine option =
-            applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
-        sortAndCombine option =
-            let a = 1
-                getNode diff
-                    | Just (_, node) <- IM.lookup (newRootId diff) contextMp =
-                        node
-                    | Just (_, node) <-
-                         IM.lookup (newRootId diff) combinedExtraEntries = node
-                nodeType diff1 diff2 =
-                    sameNodeType (getNode diff1) (getNode diff2)
-                weight diff = nodeTypeWeight $ getNode diff
-                sortArgs =
-                    concat .
-                    map (sortWith newRootId) .
-                    groupBy nodeType . sortWith weight
-             in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
-                childrenDiffs
-     in if oldChildren == newChildren &&
-           all (== IM.empty) (map extraEntries childrenDiffs)
-            then withoutExtraEntry n
-            else case oldNode of
-                     Var _ -> withoutExtraEntry n
-                     DVar _ -> withoutExtraEntry n
-                     Const _ -> withoutExtraEntry n
-                     Sum et _ ->
-                         sortAndCombine (naryET Sum (ElementSpecific et))
-                     Mul et _ ->
-                         sortAndCombine (naryET Mul (ElementSpecific et))
-                     Power x _ -> combine (unary (Power x))
-                     Neg et _ -> combine (unaryET Neg (ElementSpecific et))
-                     Scale et _ _ ->
-                         combine (binaryET Scale (ElementSpecific et))
-                     Div _ _ -> combine (binary Div)
-                     Sqrt _ -> combine (unary Sqrt)
-                     Sin _ -> combine (unary Sin)
-                     Cos _ -> combine (unary Cos)
-                     Tan _ -> combine (unary Tan)
-                     Exp _ -> combine (unary Exp)
-                     Log _ -> combine (unary Log)
-                     Sinh _ -> combine (unary Sinh)
-                     Cosh _ -> combine (unary Cosh)
-                     Tanh _ -> combine (unary Tanh)
-                     Asin _ -> combine (unary Asin)
-                     Acos _ -> combine (unary Acos)
-                     Atan _ -> combine (unary Atan)
-                     Asinh _ -> combine (unary Asinh)
-                     Acosh _ -> combine (unary Acosh)
-                     Atanh _ -> combine (unary Atanh)
-                     RealImag _ _ -> combine (binary RealImag)
-                     RealPart _ -> combine (unary RealPart)
-                     ImagPart _ -> combine (unary ImagPart)
-                     InnerProd et _ _ ->
-                         combine (binaryET InnerProd (ElementSpecific et))
-                     Piecewise marks _ _ ->
-                         combine (conditionAry (Piecewise marks))
-                     Rotate amount _ -> combine (unary (Rotate amount))
+combineChildrenDiffs contextMp n childrenDiffs
+    | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
+    | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
+    | oldChildren == newChildren &&
+          all (== IM.empty) (map extraEntries childrenDiffs) =
+        withoutExtraEntry n
+    | otherwise =
+        case oldNode of
+            Var _ -> withoutExtraEntry n
+            DVar _ -> withoutExtraEntry n
+            Const _ -> withoutExtraEntry n
+            Power x _ -> combine (unary (Power x))
+            Neg et _ -> combine (unaryET Neg (ElementSpecific et))
+            Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
+            Div _ _ -> combine (binary Div)
+            Sqrt _ -> combine (unary Sqrt)
+            Sin _ -> combine (unary Sin)
+            Cos _ -> combine (unary Cos)
+            Tan _ -> combine (unary Tan)
+            Exp _ -> combine (unary Exp)
+            Log _ -> combine (unary Log)
+            Sinh _ -> combine (unary Sinh)
+            Cosh _ -> combine (unary Cosh)
+            Tanh _ -> combine (unary Tanh)
+            Asin _ -> combine (unary Asin)
+            Acos _ -> combine (unary Acos)
+            Atan _ -> combine (unary Atan)
+            Asinh _ -> combine (unary Asinh)
+            Acosh _ -> combine (unary Acosh)
+            Atanh _ -> combine (unary Atanh)
+            RealImag _ _ -> combine (binary RealImag)
+            RealPart _ -> combine (unary RealPart)
+            ImagPart _ -> combine (unary ImagPart)
+            InnerProd et _ _ ->
+                combine (binaryET InnerProd (ElementSpecific et))
+            Piecewise marks _ _ -> combine (conditionAry (Piecewise marks))
+            Rotate amount _ -> combine (unary (Rotate amount))
+  where
+    (oldShape, oldNode) = retrieveInternal n contextMp
+    oldChildren = nodeArgs oldNode
+    newChildren = map newRootId childrenDiffs
+    combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
+    combine option =
+        applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
+    sortAndCombine option =
+        let getNode diff
+                | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
+                | Just (_, node) <-
+                     IM.lookup (newRootId diff) combinedExtraEntries = node
+            debug x = traceShow (map newRootId x) x
+            nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
+            weight diff = nodeTypeWeight $ getNode diff
+            sortArgs =
+                concat .
+                map (sortWith newRootId) . groupBy nodeType . sortWith weight
+         in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
+            childrenDiffs

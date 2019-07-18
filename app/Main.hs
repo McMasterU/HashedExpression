@@ -57,8 +57,11 @@ prod1 = fromJust . HashedOperation.sum
 
 
 main = do
-    let exp = (x1 <.> y1) *. z
+--    let exp = (x1 <.> (x1 * y1))
+    let exp = x1 * y1
+    print exp
     showExp exp
+    print $ exteriorDerivative allVars exp
     showExp $ simplify $ exteriorDerivative allVars exp
 
 
