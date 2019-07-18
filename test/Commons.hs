@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Commons where
 
@@ -8,8 +9,8 @@ import Control.Monad (forM)
 import Data.Array
 import Data.Complex
 import Data.Function.HT (nest)
+import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
-import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
@@ -156,7 +157,7 @@ primitiveZeroR = do
         ]
 
 operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (2, genZeroR)]
+operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (3, genZeroR)]
 
 genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR =
@@ -170,8 +171,6 @@ genZeroR =
     , (4, fromBinaryZeroR (<.>))
     , (2, fromUnaryZeroR negate)
     , (1, fromUnaryZeroR (^ 2))
-    , (2, fromUnaryZeroR sin)
-    , (2, fromUnaryZeroR cos)
     , (1, fromInnerProdHigherZeroR)
     , (2, fromZeroCZeroR)
     ]
@@ -265,18 +264,18 @@ primitiveZeroC = do
         ]
 
 operandZeroC :: Gen (Expression Zero C, Vars)
-operandZeroC = oneof . withRatio $ [(9, primitiveZeroC), (1, genZeroC)]
+operandZeroC = oneof . withRatio $ [(9, primitiveZeroC), (2, genZeroC)]
 
 genZeroC :: Gen (Expression Zero C, Vars)
 genZeroC =
     oneof . withRatio $
     [ (6, fromNaryZeroC sum)
-    , (6, fromNaryZeroC product)
+    , (3, fromNaryZeroC product)
     , (6, fromBinaryZeroC (*.))
     , (6, fromBinaryZeroC (+))
-    , (6, fromBinaryZeroC (*))
+    , (3, fromBinaryZeroC (*))
     , (6, fromBinaryZeroC (-))
-    , (6, fromBinaryZeroC (<.>))
+    , (3, fromBinaryZeroC (<.>))
     , (3, fromUnaryZeroC negate)
     , (1, fromUnaryZeroC (^ 2))
     , (1, fromInnerProdHigherZeroC)
@@ -364,7 +363,7 @@ primitiveOneR = do
         ]
 
 operandOneR :: Gen (Expression One R, Vars)
-operandOneR = oneof . withRatio $ [(8, primitiveOneR), (2, genOneR)]
+operandOneR = oneof . withRatio $ [(8, primitiveOneR), (3, genOneR)]
 
 genOneR :: Gen (Expression One R, Vars)
 genOneR =
@@ -374,8 +373,6 @@ genOneR =
     , (4, fromBinaryOneR (+))
     , (4, fromBinaryOneR (*))
     , (4, fromBinaryOneR (-))
-    , (2, fromUnaryOneR sin)
-    , (2, fromUnaryOneR cos)
     , (3, fromUnaryOneR negate)
     , (1, fromUnaryOneR (^ 2))
     , (1, fromScaleOneR)
@@ -477,16 +474,16 @@ primitiveOneC = do
         ]
 
 operandOneC :: Gen (Expression One C, Vars)
-operandOneC = oneof . withRatio $ [(9, primitiveOneC), (1, genOneC)]
+operandOneC = oneof . withRatio $ [(9, primitiveOneC), (2, genOneC)]
 
 genOneC :: Gen (Expression One C, Vars)
 genOneC =
     oneof . withRatio $
     [ (6, fromNaryOneC sum)
-    , (6, fromNaryOneC product)
+    , (3, fromNaryOneC product)
     , (6, fromBinaryOneC (+))
     , (6, fromBinaryOneC (-))
-    , (6, fromBinaryOneC (*))
+    , (3, fromBinaryOneC (*))
     , (3, fromUnaryOneC negate)
     , (1, fromUnaryOneC (^ 2))
     , (2, fromScaleOneC)
@@ -562,3 +559,32 @@ instance Arbitrary SuiteOneC where
         (exp, vars) <- genOneC
         valMaps <- genValMaps vars
         return $ SuiteOneC exp valMaps
+
+-------------------------------------------------------------------------------
+-- | MARK: Arbitrary instance for all kinds of expressions
+--
+--
+-------------------------------------------------------------------------------
+data ArbitraryExpresion =
+    forall d et. (DimensionType d, ElementType et) =>
+                 ArbitraryExpresion (Expression d et)
+
+instance Show ArbitraryExpresion where
+    show (ArbitraryExpresion exp) = show exp
+
+instance Arbitrary ArbitraryExpresion where
+    arbitrary =
+        let option1 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero R))
+            option2 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero C))
+            option3 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression One R))
+            option4 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression One C))
+         in oneof [option1, option2, option3, option4]
+
+-- |
+--
+sz :: Expression d et -> Int
+sz = IM.size . exMap
