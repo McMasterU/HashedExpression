@@ -119,10 +119,11 @@ class PowerOp a b | a -> b where
     (^) :: a -> b -> a
 
 class AddableOp b =>
-      VectorSpaceOp a b
+      VectorSpaceOp a b c
+    | a b -> c
     where
-    scale :: a -> b -> b
-    (*.) :: a -> b -> b
+    scale :: a -> b -> c
+    (*.) :: a -> b -> c
     (*.) = scale
 
 class NumOp a where

@@ -210,6 +210,7 @@ distributiveRules =
     , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
     , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
     , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (restOfProduct ~* each)
+    , sumOf (each) *. x |.~~~~~~> sumOf (each *. x)
     ]
 
 -- | Rules of piecewise

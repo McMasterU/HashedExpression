@@ -136,7 +136,7 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
-         VectorSpaceOp (Expression Zero s) (Expression d et) where
+         VectorSpaceOp (Expression Zero s) (Expression d et) (Expression d et) where
     scale :: Expression Zero s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =

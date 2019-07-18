@@ -43,8 +43,8 @@ nodeTypeWeight :: Node -> Int
 nodeTypeWeight node =
     case node of
         Var {} -> 1
-        DVar {} -> 800
-        Const {} -> -9999
+        DVar {} -> -9999 -- DVar first (actually it should be at the end like math notation, but does it matter?)
+        Const {} -> 0
         Sum {} -> 9999 -- Sum at the end
         Mul {} -> 3
         Power {} -> 28
