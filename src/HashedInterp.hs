@@ -101,6 +101,9 @@ treeRotation ::
 treeRotation (x,y,z) xs =
   threeDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y,z) xs
 
+
+
+
 -- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R

@@ -179,6 +179,8 @@ type ConditionArg = Int
 
 type BranchArg = Int
 
+-- | Rotation in each dimension.
+-- | Property:  the length of this must match the dimension of the data
 type RotateAmount = [Int]
 
 -- | Data representation of element type
