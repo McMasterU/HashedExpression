@@ -21,6 +21,7 @@ import HashedHash
 import HashedInner
 import HashedNode
 import HashedOperation
+import HashedSimplify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -55,7 +56,8 @@ exteriorDerivative ::
     => Set String
     -> Expression d R
     -> Expression d Covector
-exteriorDerivative = hiddenDerivative
+--exteriorDerivative = hiddenDerivative
+exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 
 -- | Placeholder for any dimension type
 --
@@ -142,7 +144,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in constX *. (f ^ (x - 1)) |*| df
                  -- d(-f) = -d(f)
             Neg et arg -> d1Input (Neg et) arg
-            Scale et arg1 arg2 ->
+            Scale _ arg1 arg2 ->
                 let s = Expression arg1 mp :: Expression Zero NT_
                     f = Expression arg2 mp :: Expression D_ NT_
                     ds = hiddenDerivative' s :: Expression Zero Covector
@@ -252,6 +254,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                 let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative' f
                  in one shape / (one shape - f * f) |*| df
+            -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here?
                 -- d(xRe(f)) = xRe(d(f))
             RealPart arg -> d1Input RealPart arg
                 -- d(xIm(f)) = xIm(d(f))
@@ -317,7 +320,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
 (|*.|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op =
             binaryET Scale (ElementSpecific Covector) `hasShape`
-            expressionShape e1
+            expressionShape e2
      in applyBinary op e1 e2
 
 infixl 7 |*|

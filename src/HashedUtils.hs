@@ -7,6 +7,7 @@ module HashedUtils where
 import Data.Array
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
+import HashedPrettify
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import HashedExpression
@@ -86,7 +87,7 @@ ensureSameShape e1 e2 after
     | otherwise =
         error $
         "Ensure same shape failed " ++
-        show (expressionShape e1) ++ " " ++ show (expressionShape e2)
+        show (prettifyDebug e1) ++ " " ++ show (prettifyDebug e2)
 
 ensureSameShapeList :: [Expression d et] -> a -> a
 ensureSameShapeList es after

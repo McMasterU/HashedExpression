@@ -39,17 +39,22 @@ nodeElementType node mp =
         Piecewise _ _ branches -> retrieveElementType (head branches) mp
         Rotate _ arg -> retrieveElementType arg mp
 
+-- | For ordering things inside Sum or Product so we can write rules like
+--   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
+--   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
+--   ...
+--
 nodeTypeWeight :: Node -> Int
 nodeTypeWeight node =
     case node of
         Var {} -> 1
-        DVar {} -> -9999 -- DVar first (actually it should be at the end like math notation, but does it matter?)
+        DVar {} -> -9999 -- TODO: DVar first (actually it should be at the end like math notation, but does it matter?)
         Const {} -> 0
         Sum {} -> 9999 -- Sum at the end
         Mul {} -> 3
         Power {} -> 28
         Neg {} -> 4
-        Scale {} -> 5
+        Scale {} -> 7777
         Div {} -> 6
         Sqrt {} -> 7
         Sin {} -> 8

@@ -113,7 +113,7 @@ simplify e =
             (toRecursiveTransformation combinePowerRules) >>>
             (toRecursiveTransformation powerSumRealImagRules) >>>
             (toRecursiveTransformation negateRules) >>>
-            (toRecursiveTransformation combineScaleRules) >>>
+            (toRecursiveTransformation combineConstantScalarRules) >>>
             (toRecursiveTransformation constPowerRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
             (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
@@ -166,6 +166,7 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
     ]
 
 --    , x *. y |. sameElementType [x, y] &&. isScalar y &&. isNotConst x ~~~~~~> x * y -- TODO
@@ -458,8 +459,8 @@ negateRules exp@(mp, n)
 
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
-combineScaleRules :: Simplification
-combineScaleRules exp@(mp, n)
+combineConstantScalarRules :: Simplification
+combineConstantScalarRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp
     , let extracted = map extract ns
     , any (/= 1) . map snd $ extracted =
