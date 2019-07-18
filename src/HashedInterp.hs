@@ -94,12 +94,40 @@ threeDArrayRotateGenerator (x1,y1,z1) (x2,y2,z2) (rotateAmountX,rotateAmountY,ro
   array ((x1,y1,z1),(x2,y2,z2)) ([(((shiftCalc i rotateAmountX x1 x2),(shiftCalc j rotateAmountY y1 y2),(shiftCalc z rotateAmountZ z1 z2)),xs!(i,j,z))| (i,j,z) <- range ((x1,y1,z1),(x2,y2,z2))])
 
   -- | three dimension Array rotation
-treeRotation ::
+threeRotation ::
   (Int,Int,Int) -- ^ Rotation Amount
   -> (Array (Int,Int,Int) Double)  -- ^ Input Array
   -> (Array (Int,Int,Int) Double)  -- ^ Output Array
-treeRotation (x,y,z) xs =
+threeRotation (x,y,z) xs =
   threeDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y,z) xs
+
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt1D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 1
+  -> Array Int Double  -- ^ Input : Input one dimension array
+  -> Array Int Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt1D rotationAmount xs = oneDRotation (head rotationAmount) xs
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt2D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 2
+  -> Array (Int,Int) Double  -- ^ Input : Input two dimension array
+  -> Array (Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt2D rotationAmount xs = twoRotation (head rotationAmount,rotationAmount !! 1) xs
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt3D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 3
+  -> Array (Int,Int,Int) Double  -- ^ Input : Input three dimenstion Array
+  -> Array (Int,Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt3D rotationAmount xs = threeRotation (head rotationAmount,rotationAmount !! 1,rotationAmount !! 2) xs
 
 
 
@@ -414,7 +442,7 @@ instance Evaluable One R (Array Int Double) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
-                    -- Rotate [x] arg -> oneDRotation [x] (eval valMap $ expOneR mp arg)
+                    Rotate [x] arg -> rotationOpt1D [x] (eval valMap $ expOneR mp arg)
                     _ -> error "expression structure One R is wrong"
         | otherwise = error "one r but shape is not [size] ??"
 
@@ -570,6 +598,7 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                                               (cdt ! (i, j))
                                               branches
                                 ]
+                    Rotate [x] arg -> rotationOpt2D [x] (eval valMap $ expTwoR mp arg)
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -741,6 +770,7 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                                               (cdt ! (i, j, k))
                                               branches
                                 ]
+                    Rotate [x] arg -> rotationOpt3D [x] (eval valMap $ expThreeR mp arg)
                     _ -> error "expression structure Three R is wrong"
         | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
