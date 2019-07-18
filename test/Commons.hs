@@ -170,6 +170,8 @@ genZeroR =
     , (4, fromBinaryZeroR (<.>))
     , (2, fromUnaryZeroR negate)
     , (1, fromUnaryZeroR (^ 2))
+    , (2, fromUnaryZeroR sin)
+    , (2, fromUnaryZeroR cos)
     , (1, fromInnerProdHigherZeroR)
     , (2, fromZeroCZeroR)
     ]
@@ -372,6 +374,8 @@ genOneR =
     , (4, fromBinaryOneR (+))
     , (4, fromBinaryOneR (*))
     , (4, fromBinaryOneR (-))
+    , (2, fromUnaryOneR sin)
+    , (2, fromUnaryOneR cos)
     , (3, fromUnaryOneR negate)
     , (1, fromUnaryOneR (^ 2))
     , (1, fromScaleOneR)
