@@ -22,3 +22,13 @@ Changed to
     , x <.> (s *. y) |.~~~~~~> s *. (x <.> y)
     ]
 ```
+- Update 18/07: The rules above changed to:
+```haskell
+    [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
+    , x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y)
+    , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate (t)) *. (x <.> y) -- Conjugate if the scalar is complex
+    , x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~>
+      (x * y)
+    ]
+```
+because the conjugation of complex numbers

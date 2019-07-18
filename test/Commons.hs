@@ -9,7 +9,6 @@ import Data.Array
 import Data.Complex
 import Data.Function.HT (nest)
 import Data.List (intercalate)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -159,53 +158,6 @@ primitiveZeroR = do
 operandZeroR :: Gen (Expression Zero R, Vars)
 operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (2, genZeroR)]
 
---    replicate 8 primitiveZeroR ++ replicate 2 genZeroR
-fromNaryZeroR ::
-       ([Expression Zero R] -> Expression Zero R)
-    -> Gen (Expression Zero R, Vars)
-fromNaryZeroR f = do
-    numOperands <- elements [3 .. 4]
-    ons <- vectorOf numOperands operandZeroR
-    let exp = f . map fst $ ons
-        vars = mergeVars . map snd $ ons
-    return (exp, vars)
-
-fromInnerProdHigherZeroR :: Gen (Expression Zero R, Vars)
-fromInnerProdHigherZeroR = do
-    operand1 <- genOneR
-    operand2 <- genOneR
-    let exp = fst operand1 <.> fst operand2
-        vars = mergeVars [snd operand1, snd operand2]
-    return (exp, vars)
-
-fromUnaryZeroR ::
-       (Expression Zero R -> Expression Zero R) -> Gen (Expression Zero R, Vars)
-fromUnaryZeroR f = do
-    on <- operandZeroR
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryZeroR ::
-       (Expression Zero R -> Expression Zero R -> Expression Zero R)
-    -> Gen (Expression Zero R, Vars)
-fromBinaryZeroR f = do
-    on1 <- operandZeroR
-    on2 <- operandZeroR
-    let exp = f (fst on1) (fst on2)
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
-fromZeroCZeroR :: Gen (Expression Zero R, Vars)
-fromZeroCZeroR = do
-    rand <- elements [True, False]
-    (zeroC, vars) <- genZeroC
-    let exp =
-            if rand
-                then xRe zeroC
-                else xIm zeroC
-    return (exp, vars)
-
 genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR =
     oneof . withRatio $
@@ -221,6 +173,50 @@ genZeroR =
     , (1, fromInnerProdHigherZeroR)
     , (2, fromZeroCZeroR)
     ]
+    --    replicate 8 primitiveZeroR ++ replicate 2 genZeroR
+  where
+    fromNaryZeroR ::
+           ([Expression Zero R] -> Expression Zero R)
+        -> Gen (Expression Zero R, Vars)
+    fromNaryZeroR f = do
+        numOperands <- elements [3 .. 4]
+        ons <- vectorOf numOperands operandZeroR
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromInnerProdHigherZeroR :: Gen (Expression Zero R, Vars)
+    fromInnerProdHigherZeroR = do
+        operand1 <- genOneR
+        operand2 <- genOneR
+        let exp = fst operand1 <.> fst operand2
+            vars = mergeVars [snd operand1, snd operand2]
+        return (exp, vars)
+    fromUnaryZeroR ::
+           (Expression Zero R -> Expression Zero R)
+        -> Gen (Expression Zero R, Vars)
+    fromUnaryZeroR f = do
+        on <- operandZeroR
+        let exp = f . fst $ on
+            names = snd on
+        return (exp, names)
+    fromBinaryZeroR ::
+           (Expression Zero R -> Expression Zero R -> Expression Zero R)
+        -> Gen (Expression Zero R, Vars)
+    fromBinaryZeroR f = do
+        on1 <- operandZeroR
+        on2 <- operandZeroR
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromZeroCZeroR :: Gen (Expression Zero R, Vars)
+    fromZeroCZeroR = do
+        rand <- elements [True, False]
+        (zeroC, vars) <- genZeroC
+        let exp =
+                if rand
+                    then xRe zeroC
+                    else xIm zeroC
+        return (exp, vars)
 
 instance Arbitrary (Expression Zero R) where
     arbitrary = fmap fst genZeroR
@@ -269,50 +265,6 @@ primitiveZeroC = do
 operandZeroC :: Gen (Expression Zero C, Vars)
 operandZeroC = oneof . withRatio $ [(9, primitiveZeroC), (1, genZeroC)]
 
-fromNaryZeroC ::
-       ([Expression Zero C] -> Expression Zero C)
-    -> Gen (Expression Zero C, Vars)
-fromNaryZeroC f = do
-    numOperands <- elements [3]
-    ons <- vectorOf numOperands operandZeroC
-    let exp = f . map fst $ ons
-        vars = mergeVars . map snd $ ons
-    return (exp, vars)
-
-fromUnaryZeroC ::
-       (Expression Zero C -> Expression Zero C) -> Gen (Expression Zero C, Vars)
-fromUnaryZeroC f = do
-    on <- operandZeroC
-    let exp = f . fst $ on
-        vars = snd on
-    return (exp, vars)
-
-fromInnerProdHigherZeroC :: Gen (Expression Zero C, Vars)
-fromInnerProdHigherZeroC = do
-    operand1 <- genOneC
-    operand2 <- genOneC
-    let exp = fst operand1 <.> fst operand2
-        vars = mergeVars [snd operand1, snd operand2]
-    return (exp, vars)
-
-fromBinaryZeroC ::
-       (Expression Zero C -> Expression Zero C -> Expression Zero C)
-    -> Gen (Expression Zero C, Vars)
-fromBinaryZeroC f = do
-    on1 <- operandZeroC
-    on2 <- operandZeroC
-    let exp = f (fst on1) (fst on2)
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
-fromRealImagZeroC :: Gen (Expression Zero C, Vars)
-fromRealImagZeroC = do
-    on1 <- genZeroR
-    on2 <- genZeroR
-    let exp = fst on1 +: fst on2
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
 genZeroC :: Gen (Expression Zero C, Vars)
 genZeroC =
     oneof . withRatio $
@@ -328,6 +280,47 @@ genZeroC =
     , (1, fromInnerProdHigherZeroC)
     , (2, fromRealImagZeroC)
     ]
+  where
+    fromNaryZeroC ::
+           ([Expression Zero C] -> Expression Zero C)
+        -> Gen (Expression Zero C, Vars)
+    fromNaryZeroC f = do
+        numOperands <- elements [3]
+        ons <- vectorOf numOperands operandZeroC
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromUnaryZeroC ::
+           (Expression Zero C -> Expression Zero C)
+        -> Gen (Expression Zero C, Vars)
+    fromUnaryZeroC f = do
+        on <- operandZeroC
+        let exp = f . fst $ on
+            vars = snd on
+        return (exp, vars)
+    fromInnerProdHigherZeroC :: Gen (Expression Zero C, Vars)
+    fromInnerProdHigherZeroC = do
+        operand1 <- genOneC
+        operand2 <- genOneC
+        let exp = fst operand1 <.> fst operand2
+            vars = mergeVars [snd operand1, snd operand2]
+        return (exp, vars)
+    fromBinaryZeroC ::
+           (Expression Zero C -> Expression Zero C -> Expression Zero C)
+        -> Gen (Expression Zero C, Vars)
+    fromBinaryZeroC f = do
+        on1 <- operandZeroC
+        on2 <- operandZeroC
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromRealImagZeroC :: Gen (Expression Zero C, Vars)
+    fromRealImagZeroC = do
+        on1 <- genZeroR
+        on2 <- genZeroR
+        let exp = fst on1 +: fst on2
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
 
 instance Arbitrary (Expression Zero C) where
     arbitrary = fmap fst genZeroC
@@ -371,51 +364,6 @@ primitiveOneR = do
 operandOneR :: Gen (Expression One R, Vars)
 operandOneR = oneof . withRatio $ [(8, primitiveOneR), (2, genOneR)]
 
-fromNaryOneR ::
-       ([Expression One R] -> Expression One R) -> Gen (Expression One R, Vars)
-fromNaryOneR f = do
-    numOperands <- elements [3 .. 4]
-    ons <- vectorOf numOperands operandOneR
-    let exp = f . map fst $ ons
-        vars = mergeVars . map snd $ ons
-    return (exp, vars)
-
-fromUnaryOneR ::
-       (Expression One R -> Expression One R) -> Gen (Expression One R, Vars)
-fromUnaryOneR f = do
-    on <- operandOneR
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryOneR ::
-       (Expression One R -> Expression One R -> Expression One R)
-    -> Gen (Expression One R, Vars)
-fromBinaryOneR f = do
-    on1 <- operandOneR
-    on2 <- operandOneR
-    let exp = f (fst on1) (fst on2)
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
-fromScaleOneR :: Gen (Expression One R, Vars)
-fromScaleOneR = do
-    scalar <- operandZeroR
-    scalee <- operandOneR
-    let exp = fst scalar *. fst scalee
-        vars = mergeVars [snd scalar, snd scalee]
-    return (exp, vars)
-
-fromOneCOneR :: Gen (Expression One R, Vars)
-fromOneCOneR = do
-    rand <- elements [True, False]
-    (oneC, vars) <- genOneC
-    let exp =
-            if rand
-                then xRe oneC
-                else xIm oneC
-    return (exp, vars)
-
 genOneR :: Gen (Expression One R, Vars)
 genOneR =
     oneof . withRatio $
@@ -429,6 +377,49 @@ genOneR =
     , (1, fromScaleOneR)
     , (1, fromOneCOneR)
     ]
+  where
+    fromNaryOneR ::
+           ([Expression One R] -> Expression One R)
+        -> Gen (Expression One R, Vars)
+    fromNaryOneR f = do
+        numOperands <- elements [3 .. 4]
+        ons <- vectorOf numOperands operandOneR
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromUnaryOneR ::
+           (Expression One R -> Expression One R)
+        -> Gen (Expression One R, Vars)
+    fromUnaryOneR f = do
+        on <- operandOneR
+        let exp = f . fst $ on
+            names = snd on
+        return (exp, names)
+    fromBinaryOneR ::
+           (Expression One R -> Expression One R -> Expression One R)
+        -> Gen (Expression One R, Vars)
+    fromBinaryOneR f = do
+        on1 <- operandOneR
+        on2 <- operandOneR
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromScaleOneR :: Gen (Expression One R, Vars)
+    fromScaleOneR = do
+        scalar <- operandZeroR
+        scalee <- operandOneR
+        let exp = fst scalar *. fst scalee
+            vars = mergeVars [snd scalar, snd scalee]
+        return (exp, vars)
+    fromOneCOneR :: Gen (Expression One R, Vars)
+    fromOneCOneR = do
+        rand <- elements [True, False]
+        (oneC, vars) <- genOneC
+        let exp =
+                if rand
+                    then xRe oneC
+                    else xIm oneC
+        return (exp, vars)
 
 instance Arbitrary (Expression One R) where
     arbitrary = fmap fst genOneR
@@ -484,47 +475,6 @@ primitiveOneC = do
 operandOneC :: Gen (Expression One C, Vars)
 operandOneC = oneof . withRatio $ [(9, primitiveOneC), (1, genOneC)]
 
-fromNaryOneC ::
-       ([Expression One C] -> Expression One C) -> Gen (Expression One C, Vars)
-fromNaryOneC f = do
-    numOperands <- elements [3]
-    ons <- vectorOf numOperands operandOneC
-    let exp = f . map fst $ ons
-        vars = mergeVars . map snd $ ons
-    return (exp, vars)
-
-fromUnaryOneC ::
-       (Expression One C -> Expression One C) -> Gen (Expression One C, Vars)
-fromUnaryOneC f = do
-    on <- operandOneC
-    let exp = f . fst $ on
-        names = snd on
-    return (exp, names)
-
-fromBinaryOneC ::
-       (Expression One C -> Expression One C -> Expression One C)
-    -> Gen (Expression One C, Vars)
-fromBinaryOneC f = do
-    on1 <- operandOneC
-    on2 <- operandOneC
-    let exp = f (fst on1) (fst on2)
-        vars = mergeVars [snd on1, snd on2]
-    return (exp, vars)
-
-fromScaleOneC :: Gen (Expression One C, Vars)
-fromScaleOneC = do
-    scalarR <- operandZeroR
-    scalarC <- operandZeroC
-    scalee <- operandOneC
-    rand <- elements [True, False]
-    let (exp, vars) =
-            if rand
-                then ( fst scalarR *. fst scalee
-                     , mergeVars [snd scalarR, snd scalee])
-                else ( fst scalarC *. fst scalee
-                     , mergeVars [snd scalarC, snd scalee])
-    return (exp, vars)
-
 genOneC :: Gen (Expression One C, Vars)
 genOneC =
     oneof . withRatio $
@@ -537,6 +487,46 @@ genOneC =
     , (1, fromUnaryOneC (^ 2))
     , (2, fromScaleOneC)
     ]
+  where
+    fromNaryOneC ::
+           ([Expression One C] -> Expression One C)
+        -> Gen (Expression One C, Vars)
+    fromNaryOneC f = do
+        numOperands <- elements [3]
+        ons <- vectorOf numOperands operandOneC
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromUnaryOneC ::
+           (Expression One C -> Expression One C)
+        -> Gen (Expression One C, Vars)
+    fromUnaryOneC f = do
+        on <- operandOneC
+        let exp = f . fst $ on
+            names = snd on
+        return (exp, names)
+    fromBinaryOneC ::
+           (Expression One C -> Expression One C -> Expression One C)
+        -> Gen (Expression One C, Vars)
+    fromBinaryOneC f = do
+        on1 <- operandOneC
+        on2 <- operandOneC
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromScaleOneC :: Gen (Expression One C, Vars)
+    fromScaleOneC = do
+        scalarR <- operandZeroR
+        scalarC <- operandZeroC
+        scalee <- operandOneC
+        rand <- elements [True, False]
+        let (exp, vars) =
+                if rand
+                    then ( fst scalarR *. fst scalee
+                         , mergeVars [snd scalarR, snd scalee])
+                    else ( fst scalarC *. fst scalee
+                         , mergeVars [snd scalarC, snd scalee])
+        return (exp, vars)
 
 instance Arbitrary (Expression One C) where
     arbitrary = fmap fst genOneC
