@@ -90,12 +90,18 @@ spec =
             property prop_StructureOneC
         specify "Check size" $
             replicateM_ 35 $ do
-                ArbitraryExpresion exp <-
-                    generate (arbitrary :: Gen ArbitraryExpresion)
+                let sz = IM.size . exMap
+                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
+                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
                 measureTime $ do
                     putStrLn "----------------------------"
                     putStrLn $
-                        "Generate exp -> " ++ show (sz exp) ++ " subexpressions"
+                        "Generate exp1 -> " ++
+                        show (sz exp1) ++ " subexpressions"
                     putStrLn $
-                        "Simplifing (exp) -> " ++
-                        show (sz $ simplify exp) ++ " subexpressions"
+                        "Generate exp2 -> " ++
+                        show (sz exp2) ++ " subexpressions"
+                    putStrLn $
+                        "Simplifing (exp1 * exp2) -> " ++
+                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
+
