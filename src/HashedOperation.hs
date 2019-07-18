@@ -242,7 +242,6 @@ instance (ElementType et) =>
     rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
     rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
 
-
 -- | Rotate Operation
 rt ::
   Int -- ^ Input : Rotate Amount as Integer
