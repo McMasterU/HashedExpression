@@ -74,15 +74,15 @@ spec = do
             simplify (x <.> zero) `shouldBe` zero
             simplify (zero <.> x) `shouldBe` zero
             prettify (simplify ((s *. x) <.> y)) `shouldBe`
-                prettify (simplify (s * (x <.> y)))
-            simplify (x <.> (s *. y)) `shouldBe` simplify (s * (x <.> y))
+                prettify (simplify (s *. (x <.> y)))
+            simplify (x <.> (s *. y)) `shouldBe` simplify (s *. (x <.> y))
         specify "distributivity" $ do
             simplify (x * (y + z)) `shouldBe` (x * y + x * z)
             simplify ((y + z) * x) `shouldBe` (x * y + x * z)
             (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
-            simplify (simplify (x <.> (y + z))) `shouldBe`
-                simplify ((x <.> y) + (x <.> z))
-            simplify ((y + z) <.> x) `shouldBe` simplify ((x <.> y) + (x <.> z))
+            prettify (simplify (simplify (x <.> (y + z)))) `shouldBe`
+                prettify (simplify ((x <.> y) + (x <.> z)))
+            simplify ((y + z) <.> x) `shouldBe` simplify ((y <.> x) + (z <.> x))
             simplify (x * sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x *) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] * x) `shouldBe`
@@ -92,7 +92,7 @@ spec = do
             simplify (x <.> sum [y, z, t, u, v]) `shouldBe`
                 simplify (sum (map (x <.>) [y, z, t, u, v]))
             simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
-                simplify (sum (map (x <.>) [y, z, t, u, v]))
+                simplify (sum (map (<.> x) [y, z, t, u, v]))
             prettify (simplify (product [a, b, c, sum [x, y, z]])) `shouldBe`
                 prettify
                     (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
@@ -108,8 +108,8 @@ spec = do
         specify "group constants together" $ do
             simplify (product [one, one, x, y, one, z]) `shouldBe`
                 product [x, y, z]
-            simplify (sum [one, one, x, y, one, z]) `shouldBe`
-                simplify (sum [const 3, x, y, z])
+            prettify (simplify (sum [one, one, x, y, one, z])) `shouldBe`
+                prettify (simplify (sum [const 3, x, y, z]))
             simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
                 simplify (product [const 6, x, y, z])
         specify "combine same terms" $
@@ -120,7 +120,6 @@ spec = do
             simplify (sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1]) `shouldBe`
                 simplify (sum [const 4 *. y1, z1])
             simplify (x1 - x1) `shouldBe` zero1
-            pendingWith "Fix me scalar because *. becomes * for scalars"
             prettify (simplify (sum [one *. x, x, x, const 3 *. y, y])) `shouldBe`
                 prettify (simplify (sum [const 3 *. x, const 4 *. y]))
             simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
@@ -152,15 +151,15 @@ spec = do
         specify "dot product higher dimension with scaling and point wise" $ do
             simplify (x1 <.> zero1) `shouldBe` zero
             simplify (zero1 <.> x1) `shouldBe` zero
-            simplify ((s *. x1) <.> y1) `shouldBe` simplify (s * (x1 <.> y1))
-            simplify (x1 <.> (s *. y1)) `shouldBe` simplify (s * (x1 <.> y1))
+            simplify ((s *. x1) <.> y1) `shouldBe` simplify (s *. (x1 <.> y1))
+            simplify (x1 <.> (s *. y1)) `shouldBe` simplify (s *. (x1 <.> y1))
             simplify (x1 * (y1 + z1)) `shouldBe` simplify (x1 * y1 + x1 * z1)
             simplify ((y1 + z1) * x1) `shouldBe` simplify (x1 * y1 + x1 * z1)
             simplify (s *. (y1 + z1)) `shouldBe` simplify (s *. y1 + s *. z1)
             simplify (x1 <.> (y1 + z1)) `shouldBe`
                 simplify ((x1 <.> y1) + (x1 <.> z1))
             simplify ((y1 + z1) <.> x1) `shouldBe`
-                simplify ((x1 <.> y1) + (x1 <.> z1))
+                simplify ((y1 <.> x1) + (z1 <.> x1))
         specify "log and exp higher" $ do
             simplify (log (exp x1)) `shouldBe` x1
             simplify (exp (log x1)) `shouldBe` x1

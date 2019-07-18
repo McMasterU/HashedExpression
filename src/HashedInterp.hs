@@ -329,11 +329,11 @@ instance Evaluable Zero C (Complex Double) where
                     case retrieveShape arg1 mp of
                         [] ->
                             eval valMap (expZeroC mp arg1) *
-                            eval valMap (expZeroC mp arg2)
+                            conjugate (eval valMap (expZeroC mp arg2))
                         [size] ->
                             let res1 = eval valMap $ expOneC mp arg1
                                 res2 = eval valMap $ expOneC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size - 1]
                                     , let x = res1 ! i
                                     , let y = res2 ! i
@@ -341,7 +341,7 @@ instance Evaluable Zero C (Complex Double) where
                         [size1, size2] ->
                             let res1 = eval valMap $ expTwoC mp arg1
                                 res2 = eval valMap $ expTwoC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
                                     , let x = res1 ! (i, j)
@@ -350,7 +350,7 @@ instance Evaluable Zero C (Complex Double) where
                         [size1, size2, size3] ->
                             let res1 = eval valMap $ expThreeC mp arg1
                                 res2 = eval valMap $ expThreeC mp arg2
-                             in sum [ x * y
+                             in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
                                     , k <- [0 .. size3 - 1]
@@ -403,7 +403,7 @@ instance Evaluable One R (Array Int Double) where
                     Sum R args ->
                         foldl1' (+) . map (eval valMap . expOneR mp) $ args
                     Mul R args ->
-                        foldl1' (+) . map (eval valMap . expOneR mp) $ args
+                        foldl1' (*) . map (eval valMap . expOneR mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expOneR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expOneR mp arg
                     Scale R arg1 arg2 ->
@@ -480,7 +480,7 @@ instance Evaluable One C (Array Int (Complex Double)) where
                     Sum C args ->
                         foldl1' (+) . map (eval valMap . expOneC mp) $ args
                     Mul C args ->
-                        foldl1' (+) . map (eval valMap . expOneC mp) $ args
+                        foldl1' (*) . map (eval valMap . expOneC mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expOneC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expOneC mp arg
                     Scale C arg1 arg2 ->
@@ -556,7 +556,7 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Sum R args ->
                         foldl1' (+) . map (eval valMap . expTwoR mp) $ args
                     Mul R args ->
-                        foldl1' (+) . map (eval valMap . expTwoR mp) $ args
+                        foldl1' (*) . map (eval valMap . expTwoR mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expTwoR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expTwoR mp arg
                     Scale R arg1 arg2 ->
@@ -639,7 +639,7 @@ instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
                     Sum C args ->
                         foldl1' (+) . map (eval valMap . expTwoC mp) $ args
                     Mul C args ->
-                        foldl1' (+) . map (eval valMap . expTwoC mp) $ args
+                        foldl1' (*) . map (eval valMap . expTwoC mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expTwoC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expTwoC mp arg
                     Scale C arg1 arg2 ->
@@ -724,7 +724,7 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                     Sum R args ->
                         foldl1' (+) . map (eval valMap . expThreeR mp) $ args
                     Mul R args ->
-                        foldl1' (+) . map (eval valMap . expThreeR mp) $ args
+                        foldl1' (*) . map (eval valMap . expThreeR mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expThreeR mp arg)
                     Neg R arg -> fmap negate . eval valMap $ expThreeR mp arg
                     Scale R arg1 arg2 ->
@@ -819,7 +819,7 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                     Sum C args ->
                         foldl1' (+) . map (eval valMap . expThreeC mp) $ args
                     Mul C args ->
-                        foldl1' (+) . map (eval valMap . expThreeC mp) $ args
+                        foldl1' (*) . map (eval valMap . expThreeC mp) $ args
                     Power x arg -> fmap (^ x) (eval valMap $ expThreeC mp arg)
                     Neg C arg -> fmap negate . eval valMap $ expThreeC mp arg
                     Scale C arg1 arg2 ->

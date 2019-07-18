@@ -1,3 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module HashedUtils where
 
 import Data.Array
@@ -8,9 +12,34 @@ import qualified Data.Set as Set
 import HashedExpression
 import HashedHash
 import HashedNode
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , cos
+    , cosh
+    , exp
+    , negate
+    , sin
+    , sinh
+    , sqrt
+    , tan
+    , tanh
+    )
+import qualified Prelude
 
 import Data.Complex
 import Data.Maybe
+import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
 
 -- | Forward pipe operator in Elm
@@ -24,6 +53,15 @@ infixl 1 |>
 --
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
+
+-- |
+--
+measureTime :: IO a -> IO ()
+measureTime action = do
+    beforeTime <- getCurrentTime
+    action
+    afterTime <- getCurrentTime
+    putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
 -- |
 --
@@ -146,3 +184,90 @@ mergeValMaps (ValMaps vm10 vm11 vm12 vm13) (ValMaps vm20 vm21 vm22 vm23) =
         (Map.union vm11 vm21)
         (Map.union vm12 vm22)
         (Map.union vm13 vm23)
+
+-- | Prelude version of * and +
+--
+times :: (Num a) => a -> a -> a
+times a b = Prelude.product [a, b]
+
+plus :: (Num a) => a -> a -> a
+plus a b = Prelude.sum [a, b]
+
+-------------------------------------------------------------------------------
+-- | Instance of built-in types for our type classes
+--
+--
+-------------------------------------------------------------------------------
+-- | MARK: (+)
+--
+instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
+    (+) = plus
+    negate = Prelude.negate
+
+instance AddableOp (Array Int Double) where
+    (+) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+    negate arr =
+        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
+      where
+        size = length . elems $ arr
+
+instance AddableOp (Array Int (Complex Double)) where
+    (+) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+    negate arr =
+        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
+      where
+        size = length . elems $ arr
+
+-- | MARK: (*)
+--
+instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
+    (*) = times
+
+instance MultiplyOp (Array Int Double) (Array Int Double) (Array Int Double) where
+    (*) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+
+instance MultiplyOp (Array Int (Complex Double)) (Array Int (Complex Double)) (Array Int (Complex Double)) where
+    (*) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+
+-- | MARK: Other
+--
+instance PowerOp Double Int where
+    (^) x y = x Prelude.^ y
+
+instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
+    sqrt = Prelude.sqrt
+    exp = Prelude.exp
+    log = Prelude.log
+    sin = Prelude.sin
+    cos = Prelude.cos
+    tan = Prelude.tan
+    asin = Prelude.asin
+    acos = Prelude.acos
+    atan = Prelude.atan
+    sinh = Prelude.sinh
+    cosh = Prelude.cosh
+    tanh = Prelude.tanh
+    asinh = Prelude.asinh
+    acosh = Prelude.acosh
+    atanh = Prelude.atanh
+    (/) x y = x Prelude./ y

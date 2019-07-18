@@ -321,4 +321,5 @@ hiddenDerivative vars (Expression n mp) = coerce res
      in applyBinary op e1 e2
 
 infixl 7 |*|
+
 infixl 8 |<.>|, |*.|
