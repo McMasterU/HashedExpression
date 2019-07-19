@@ -77,10 +77,8 @@ data Pattern
     = PHole Capture
     -- Ref to a node in the expression
     | PRef Int
-    -- Ref to head of the list captures e.g:
-    -- ListCapture(2) -> [2132, 34512, 4542],
-    -- PHead (transformation) 2 ---> transformation 2132
-    | PHead (Pattern -> Pattern) ListCapture
+    -- Ref to head of the list captures:
+    | PHead PatternList
     -- MARK: For list capture
     | PSumList PatternList
     -- MARK: Reflex Node in HashedExpression
@@ -306,11 +304,11 @@ scalarZero = PScalarConst 0
 num :: Double -> Pattern
 num = PConst
 
-each :: PatternList
-each = PListHole id 1
+ys :: PatternList
+ys = PListHole id 1
 
-sumOf :: PatternList -> Pattern
-sumOf = PSumList
+sum :: PatternList -> Pattern
+sum = PSumList
 
 -- |
 --
@@ -321,7 +319,7 @@ branches :: PatternList
 branches = PListHole id 2
 
 headOf :: PatternList -> Pattern
-headOf (PListHole trans listCapture) = PHead trans listCapture
+headOf = PHead
 
 -- |
 --
@@ -473,12 +471,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
-            PHead fs listCapture
-                | Just ns <- Map.lookup listCapture (listCapturesMap match)
-                , let pt = turnToPattern fs . head $ ns -> buildFromPattern' pt
-                | otherwise ->
-                    error
-                        "ListCapture not in the Map ListCapture [Int] which should never happens"
+            PHead pl -> head $ buildFromPatternList exp match pl
             PConst val -> diffConst (retrieveShape originalN originalMp) val
             PScalarConst val -> diffConst [] val
             PSumList ptl ->

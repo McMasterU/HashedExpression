@@ -204,14 +204,14 @@ dotProductRules =
 --
 distributiveRules :: [Substitution]
 distributiveRules =
-    [ x * sumOf (each) |.~~~~~~> sumOf (mapL (x *) each)
-    , sumOf (each) * x |.~~~~~~> sumOf (mapL (* x) each)
-    , x <.> sumOf (each) |.~~~~~~> sumOf (mapL (x <.>) each)
-    , sumOf (each) <.> x |.~~~~~~> sumOf (mapL (<.> x) each)
-    , x *. sumOf (each) |.~~~~~~> sumOf (mapL (x *.) each)
-    , negate (sumOf (each)) |.~~~~~~> sumOf (mapL negate each)
-    , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (mapL (restOfProduct ~*) each)
-    , sumOf (each) *. x |.~~~~~~> sumOf (mapL (*. x) each)
+    [ x * sum (ys) |.~~~~~~> sum (mapL (x *) ys)
+    , sum (ys) * x |.~~~~~~> sum (mapL (* x) ys)
+    , x <.> sum (ys) |.~~~~~~> sum (mapL (x <.>) ys)
+    , sum (ys) <.> x |.~~~~~~> sum (mapL (<.> x) ys)
+    , x *. sum (ys) |.~~~~~~> sum (mapL (x *.) ys)
+    , negate (sum (ys)) |.~~~~~~> sum (mapL negate ys)
+    , restOfProduct ~* sum (ys) |.~~~~~~> sum (mapL (restOfProduct ~*) ys)
+    , sum (ys) *. x |.~~~~~~> sum (mapL (*. x) ys)
     ]
 
 -- | Rules of piecewise
@@ -273,7 +273,7 @@ reduceSumProdRules exp@(mp, n) =
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
         _ -> withoutExtraEntry n
 
--- |
+-- | If sum or product contains sub-sum or sub-product, flatten them out
 --
 flattenSumProdRules :: Simplification
 flattenSumProdRules exp@(mp, n) =
@@ -347,7 +347,7 @@ combineTermsRules exp@(mp, n)
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or complex
+-- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
 combineTermsRulesProd :: Simplification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
@@ -413,7 +413,7 @@ powerProdRules exp@(mp, n)
     | otherwise = withoutExtraEntry n
 
 -- | Rules for power scale
--- (a*b)^2 should be a^2 * b^2
+-- (a*.b)^2 should be a^2 *. b^2
 powerScaleRules :: Simplification
 powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
