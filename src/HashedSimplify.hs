@@ -56,7 +56,6 @@ import qualified Prelude
 
 -- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
 --
-
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
 multipleTimes :: Int -> Transformation -> Transformation
@@ -83,8 +82,7 @@ simplify ::
 simplify e =
     let applyRules =
             multipleTimes 100 $
-            standardize >>>
-            rulesFromPattern >>>
+            (toRecursiveTransformation evaluateIfPossibleRules) >>>
             (toRecursiveTransformation groupConstantsRules) >>>
             (toRecursiveTransformation combineTermsRules) >>>
             (toRecursiveTransformation combineTermsRulesProd) >>>
@@ -94,11 +92,11 @@ simplify e =
             (toRecursiveTransformation powerSumRealImagRules) >>>
             (toRecursiveTransformation negateRules) >>>
             (toRecursiveTransformation combineConstantScalarRules) >>>
-            (toRecursiveTransformation constPowerRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
+            (toRecursiveTransformation reduceSumProdRules) >>>
+            rulesFromPattern >>>
+            removeUnreachable
      in wrap . applyRules . unwrap $ e
-
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
@@ -196,9 +194,7 @@ distributiveRules =
 --
 piecewiseRules :: [Substitution]
 piecewiseRules =
-    [ piecewise condition branches |. allTheSame branches ~~~~~~>
-      headL branches
-    ]
+    [piecewise condition branches |. allTheSame branches ~~~~~~> headL branches]
 
 -- | Rules of exponent and log
 --
@@ -212,11 +208,9 @@ exponentRules =
 -- |
 --
 otherRules :: [Substitution]
-otherRules =
-    [
---    sum (ys) |. lengthOf ys == 1 ~~~~~~> headOf ys
-    ]
+otherRules = []
 
+--    sum (ys) |. lengthOf ys == 1 ~~~~~~> headOf ys
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
 reduceSumProdRules :: Modification
@@ -408,15 +402,6 @@ powerScaleRules exp@(mp, n)
                 [powerScalar, powerScalee]
     | otherwise = withoutExtraEntry n
 
--- | Rules for constant multiplication
--- (Const val)^t ---> Const (val)^t
-constPowerRules :: Modification
-constPowerRules exp@(mp, n)
-    | Power val nId <- retrieveNode n mp
-    , Const constVal <- retrieveNode nId mp
-    , val > 0 = diffConst (retrieveShape n mp) (constVal ^ val)
-    | otherwise = withoutExtraEntry n
-
 -- | Rules for negate
 -- if is a const:
 -- -(const val) = const (-val)
@@ -427,14 +412,11 @@ negateRules exp@(mp, n)
     | Neg _ nId <- retrieveNode n mp = turnToScale nId
     | otherwise = withoutExtraEntry n
   where
-    turnToScale nId
-        | Const val <- retrieveNode nId mp =
-            diffConst (retrieveShape nId mp) (-val)
-        | otherwise =
-            applyDiff
-                mp
-                (binaryET Scale ElementDefault)
-                [diffConst [] (-1), withoutExtraEntry nId]
+    turnToScale nId =
+        applyDiff
+            mp
+            (binaryET Scale ElementDefault)
+            [diffConst [] (-1), withoutExtraEntry nId]
 
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
@@ -463,6 +445,27 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
     | otherwise = withoutExtraEntry n
+
+evaluateIfPossibleRules :: Modification
+evaluateIfPossibleRules exp@(mp, n) =
+    case (node, pulledVals) of
+        (Sum R _, Just vals) -> res $ Prelude.sum vals
+        (Mul R _, Just vals) -> res $ Prelude.product vals
+        (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
+        (Neg R _, Just [val]) -> res $ 0 - val
+        (Power x _, Just [val]) -> res $ val ^ x
+        (InnerProd R arg1 arg2, Just [val1, val2]) ->
+            res $ val1 * val2 * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
+        (Rotate _ _, Just [val]) -> res val
+        -- TODO: sin, sos, ...
+        _ -> withoutExtraEntry n
+  where
+    (shape, node) = retrieveInternal n mp
+    getVal nId
+        | Const val <- retrieveNode nId mp = Just val
+        | otherwise = Nothing
+    pulledVals = sequence . map getVal . nodeArgs $ node
+    res val = diffConst shape val
 
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
