@@ -307,6 +307,9 @@ num = PConst
 ys :: PatternList
 ys = PListHole id 1
 
+xs :: PatternList
+xs = PListHole id 2
+
 sum :: PatternList -> Pattern
 sum = PSumList
 
@@ -318,8 +321,8 @@ piecewise = PPiecewise
 branches :: PatternList
 branches = PListHole id 2
 
-headOf :: PatternList -> Pattern
-headOf = PHead
+headL :: PatternList -> Pattern
+headL = PHead
 
 -- |
 --

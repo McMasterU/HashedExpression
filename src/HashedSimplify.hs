@@ -197,7 +197,7 @@ distributiveRules =
 piecewiseRules :: [Substitution]
 piecewiseRules =
     [ piecewise condition branches |. allTheSame branches ~~~~~~>
-      headOf branches
+      headL branches
     ]
 
 -- | Rules of exponent and log
@@ -213,7 +213,8 @@ exponentRules =
 --
 otherRules :: [Substitution]
 otherRules =
-    [ sqrt (x * x) |.~~~~~~> x --
+    [
+--    sum (ys) |. lengthOf ys == 1 ~~~~~~> headOf ys
     ]
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
