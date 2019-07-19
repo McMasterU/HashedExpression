@@ -51,6 +51,11 @@ import GHC.IO.Unsafe (unsafePerformIO)
 
 infixl 1 |>
 
+-- | Chain a list of endomorphisms to a endomorphism
+--
+chain :: [a -> a] -> a -> a
+chain = flip $ foldl (|>)
+
 -- |
 --
 mapBoth :: (a -> b) -> (a, a) -> (b, b)

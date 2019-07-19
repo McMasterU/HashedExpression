@@ -62,13 +62,5 @@ main = do
         let exp1 = (((((n+:l))^3))^3)
         let exp2 = ((k+:u)+(p+:j))
         showExp $ simplify $ exp1 * exp2
---    let exp = x1 <.> (s *. (x1 * (a *. y1)))
---    let exp2 = x + 2
---    let exp = x1 * y1
---    print exp
---    showExp exp
---    print $ exteriorDerivative allVars exp
---    showExp $ simplify $ exteriorDerivative allVars exp
---    showExp $ simplify $ exteriorDerivative allVars $ simplify exp
 
 

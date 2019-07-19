@@ -54,24 +54,9 @@ import Prelude hiding
     )
 import qualified Prelude
 
-
 -- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
 --
 type Simplification = Modification
-
--- | Chain n simplifications together to a simplification
---
-chain :: [a -> a] -> a -> a
-chain = flip $ foldl (|>)
-
--- |
---
-toTransformation :: Simplification -> Transformation
-toTransformation simp exp@(mp, n) =
-    let diff = simp exp
-        newMp = IM.union mp (extraEntries diff)
-        newN = newRootId diff
-     in (newMp, newN)
 
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
@@ -473,7 +458,6 @@ combineConstantScalarRules exp@(mp, n)
         | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
         | otherwise = (nId, 1)
 
-
 -- | Turn HashedPattern to a simplification
 --
 fromSubstitution :: Substitution -> Simplification
@@ -486,4 +470,3 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
 --
 standardize :: Simplification
 standardize = makeRecursive (withoutExtraEntry . snd)
-

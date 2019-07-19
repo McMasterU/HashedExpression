@@ -11,7 +11,7 @@ module HashedInner where
 import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (groupBy, sort, sortBy, sortOn)
+import Data.List (foldl', groupBy, sort, sortBy, sortOn)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
@@ -257,6 +257,11 @@ data ExpressionDiff =
         }
     deriving (Eq, Ord, Show)
 
+-- | Check if there is no difference
+--
+isNoDiff :: (ExpressionMap, Int) -> ExpressionDiff -> Bool
+isNoDiff (mp, n) diff = extraEntries diff == IM.empty && newRootId diff == n
+
 -- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
 --
 type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
@@ -265,6 +270,31 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 -- the new index of the root expression) between the modified and original expression
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
+
+-- | Turn 2 modifications to 1, i.e, try to apply first one, if there is no diff, then try to apply second one
+--
+eitherM :: Modification -> Modification -> Modification
+eitherM first second expr
+    | isNoDiff expr resFirst = second expr
+    | otherwise = resFirst
+  where
+    resFirst = first expr
+
+-- | Chain a list of modifications
+--
+chainM :: [Modification] -> Modification
+chainM = foldl1 eitherM
+
+-- | Strict version
+--
+chainM1 :: [Modification] -> Modification
+chainM1 ms expr@(mp, n) = foldl' f noDiff ms
+  where
+    noDiff = withoutExtraEntry n
+    f :: ExpressionDiff -> Modification -> ExpressionDiff
+    f diff nextMod
+        | isNoDiff expr diff = nextMod expr
+        | otherwise = diff
 
 -- | Turn a Modification to a recursive one, apply rules bottom up
 --
@@ -279,6 +309,15 @@ makeRecursive smp = recursiveSmp
             newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
             ExpressionDiff exEntries newId = smp newExp
          in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
+
+-- |
+--
+toTransformation :: Modification -> Transformation
+toTransformation simp exp@(mp, n) =
+    let diff = simp exp
+        newMp = IM.union mp (extraEntries diff)
+        newN = newRootId diff
+     in (newMp, newN)
 
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
