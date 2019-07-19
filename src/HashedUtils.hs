@@ -280,6 +280,17 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
 -}
 
 -- | Calculate the real value of shift base on the range and index of the to be changes array
+shiftAmount::
+    Int -- ^ Input : Position to be changes
+    -> Int -- ^ Input : Shift amount
+    -> Int -- ^ Input : First Element of Range
+    -> Int -- ^ Input : Last Element of Range
+    -> Int -- ^ Output : Calculated shift amount
+shiftAmount po shift first last
+  | ((last - first) + 1 == shift) = po
+  | ((last - first) + 1 < shift) = let newShift = shift - ((last - first) + 1) in shiftCalc po newShift first last
+  | otherwise = shiftCalc po shift first last
+
 shiftCalc ::
   Int -- ^ Input : Position to be changes
   -> Int -- ^ Input : Shift amount
@@ -298,7 +309,7 @@ oneDArrayRotateGenerator ::
   -> (Array Int Double) -- ^ Target Array
   -> (Array Int Double) -- ^ Result Array
 oneDArrayRotateGenerator n  m rotateAmountX xs =
-  array (n,m) ([((shiftCalc i rotateAmountX n m),xs!i)| i <- [n..m]])
+  array (n,m) ([((shiftAmount i rotateAmountX n m),xs!i)| i <- [n..m]])
 
 -- | One dimension Array rotation
 oneDRotation ::
@@ -316,7 +327,7 @@ twoDArrayRotateGenerator ::
   -> (Array (Int,Int) Double) -- ^ Input Array
   -> (Array (Int,Int) Double) -- ^ Output Array
 twoDArrayRotateGenerator (x1,y1) (x2,y2) (rotateAmountX,rotateAmountY) xs =
-  array ((x1,y1),(x2,y2)) ([(((shiftCalc i rotateAmountX x1 x2),(shiftCalc j rotateAmountY y1 y2)),xs!(i,j))| (i,j) <- range ((x1,y1),(x2,y2))])
+  array ((x1,y1),(x2,y2)) ([(((shiftAmount i rotateAmountX x1 x2),(shiftAmount j rotateAmountY y1 y2)),xs!(i,j))| (i,j) <- range ((x1,y1),(x2,y2))])
 
   -- | Two dimension Array rotation
 twoRotation ::
@@ -335,7 +346,7 @@ threeDArrayRotateGenerator ::
   -> (Array (Int,Int,Int) Double) -- ^ Input Array
   -> (Array (Int,Int,Int) Double) -- ^ Output Array
 threeDArrayRotateGenerator (x1,y1,z1) (x2,y2,z2) (rotateAmountX,rotateAmountY,rotateAmountZ) xs =
-  array ((x1,y1,z1),(x2,y2,z2)) ([(((shiftCalc i rotateAmountX x1 x2),(shiftCalc j rotateAmountY y1 y2),(shiftCalc z rotateAmountZ z1 z2)),xs!(i,j,z))| (i,j,z) <- range ((x1,y1,z1),(x2,y2,z2))])
+  array ((x1,y1,z1),(x2,y2,z2)) ([(((shiftAmount i rotateAmountX x1 x2),(shiftAmount j rotateAmountY y1 y2),(shiftAmount z rotateAmountZ z1 z2)),xs!(i,j,z))| (i,j,z) <- range ((x1,y1,z1),(x2,y2,z2))])
 
   -- | three dimension Array rotation
 threeRotation ::
