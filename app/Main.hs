@@ -59,27 +59,29 @@ main = do
     let exp = (x1 <.> y1) <.> x
     let dexp = exteriorDerivative (Set.fromList ["x", "x1", "y1"]) exp
     showExpDebug . simplify $ dexp
-    let exp1 =
-            ((const1d 10 (-33.14089886934511)) *
-             (const1d 10 (42.93922615907499)) *
-             ((sum1
-                   [ (((w1 * a1) *
-                       ((v1 * l1) +
-                        ((w1 + negate (q1)) *
-                         ((t1 + negate (f1)) *
-                          (r1 + (const1d 10 (40.05705005113543))) *
-                          l1) *
-                         ((e1 * (const1d 10 (-31.071143436528015)) * t1) *
-                          (const1d 10 (42.40551964200626)) *
-                          ((const1d 10 (-21.84066503367097)) * (n1 * y1))))) *
-                       u1 *
-                       m1))
-                   , (const1d 10 (19.544329396315522))
-                   , a1
-                   , t1
-                   ])) *
-             (n1))
-    let exp2 = sin ((const1d 10 (-14.72865791946098)))
+--    let exp1 =
+--            ((const1d 10 (-33.14089886934511)) *
+--             (const1d 10 (42.93922615907499)) *
+--             ((sum1
+--                   [ (((w1 * a1) *
+--                       ((v1 * l1) +
+--                        ((w1 + negate (q1)) *
+--                         ((t1 + negate (f1)) *
+--                          (r1 + (const1d 10 (40.05705005113543))) *
+--                          l1) *
+--                         ((e1 * (const1d 10 (-31.071143436528015)) * t1) *
+--                          (const1d 10 (42.40551964200626)) *
+--                          ((const1d 10 (-21.84066503367097)) * (n1 * y1))))) *
+--                       u1 *
+--                       m1))
+--                   , (const1d 10 (19.544329396315522))
+--                   , a1
+--                   , t1
+--                   ])) *
+--             (n1))
+--  let exp2 = sin ((const1d 10 (-14.72865791946098)))
+--  1D array Test Case for rotation
+    let exp1 = rotate 12 a1
     let valMaps =
             ValMaps
                 { vm0 = fromList []
@@ -272,5 +274,5 @@ main = do
                 , vm3 = fromList []
                 }
     print $ eval valMaps exp1
-    print $ eval valMaps (simplify exp1)
-    print "Hello world"
+    -- print $ eval valMaps (simplify exp1)
+    print "Hello Habib."

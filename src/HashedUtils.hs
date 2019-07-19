@@ -271,3 +271,107 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
+
+
+{--
+    =========================
+    ==  Rotate Operations  ==
+    =========================
+-}
+
+-- | Calculate the real value of shift base on the range and index of the to be changes array
+shiftCalc ::
+  Int -- ^ Input : Position to be changes
+  -> Int -- ^ Input : Shift amount
+  -> Int -- ^ Input : First Element of Range
+  -> Int -- ^ Input : Last Element of Range
+  -> Int -- ^ Output : Calculated shift amount
+shiftCalc po shift first last
+  | ((po + shift) <= last) = (+) po shift
+  | otherwise = (first -1) + ((po + shift) - last)
+
+-- | The 'oneDArrayRotateGenerator' Generates an array based on the input arguments
+oneDArrayRotateGenerator ::
+  Int -- ^ Range first element
+  -> Int -- ^ Range last element
+  -> Int -- ^ Shift Amount
+  -> (Array Int Double) -- ^ Target Array
+  -> (Array Int Double) -- ^ Result Array
+oneDArrayRotateGenerator n  m rotateAmountX xs =
+  array (n,m) ([((shiftCalc i rotateAmountX n m),xs!i)| i <- [n..m]])
+
+-- | One dimension Array rotation
+oneDRotation ::
+  Int -- ^ Rotation Amount
+  -> (Array Int Double)  -- ^ Input Array
+  -> (Array Int Double)  -- ^ Output Array
+oneDRotation n xs =
+ oneDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) n xs
+
+-- | The 'twoDArrayRotateGenerator' Generates an array based on the input arguments
+twoDArrayRotateGenerator ::
+  (Int,Int) -- ^ Range first Element
+  -> (Int,Int) -- ^ Range last element
+  -> (Int,Int) -- ^ Rotate Amount in each direction
+  -> (Array (Int,Int) Double) -- ^ Input Array
+  -> (Array (Int,Int) Double) -- ^ Output Array
+twoDArrayRotateGenerator (x1,y1) (x2,y2) (rotateAmountX,rotateAmountY) xs =
+  array ((x1,y1),(x2,y2)) ([(((shiftCalc i rotateAmountX x1 x2),(shiftCalc j rotateAmountY y1 y2)),xs!(i,j))| (i,j) <- range ((x1,y1),(x2,y2))])
+
+  -- | Two dimension Array rotation
+twoRotation ::
+  (Int,Int) -- ^ Rotation Amount
+  -> (Array (Int,Int) Double)  -- ^ Input Array
+  -> (Array (Int,Int) Double)  -- ^ Output Array
+twoRotation (x,y) xs =
+ twoDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y) xs
+
+
+-- | The 'threeDArrayRotateGenerator' Generates an array based on the input with 3d indexing arguments
+threeDArrayRotateGenerator ::
+  (Int,Int,Int) -- ^ Range first Element
+  -> (Int,Int,Int) -- ^ Range last element
+  -> (Int,Int,Int) -- ^ Rotate Amount in each direction
+  -> (Array (Int,Int,Int) Double) -- ^ Input Array
+  -> (Array (Int,Int,Int) Double) -- ^ Output Array
+threeDArrayRotateGenerator (x1,y1,z1) (x2,y2,z2) (rotateAmountX,rotateAmountY,rotateAmountZ) xs =
+  array ((x1,y1,z1),(x2,y2,z2)) ([(((shiftCalc i rotateAmountX x1 x2),(shiftCalc j rotateAmountY y1 y2),(shiftCalc z rotateAmountZ z1 z2)),xs!(i,j,z))| (i,j,z) <- range ((x1,y1,z1),(x2,y2,z2))])
+
+  -- | three dimension Array rotation
+threeRotation ::
+  (Int,Int,Int) -- ^ Rotation Amount
+  -> (Array (Int,Int,Int) Double)  -- ^ Input Array
+  -> (Array (Int,Int,Int) Double)  -- ^ Output Array
+threeRotation (x,y,z) xs =
+  threeDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y,z) xs
+
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt1D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 1
+  -> Array Int Double  -- ^ Input : Input one dimension array
+  -> Array Int Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt1D rotationAmount xs = oneDRotation (head rotationAmount) xs
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt2D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 2
+  -> Array (Int,Int) Double  -- ^ Input : Input two dimension array
+  -> Array (Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt2D rotationAmount xs = twoRotation (head rotationAmount,rotationAmount !! 1) xs
+
+-- | Rotation of a Array
+-- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
+-- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
+rotationOpt3D ::
+  [Int] -- ^ Input : Rotation Amount as List. Length must be 3
+  -> Array (Int,Int,Int) Double  -- ^ Input : Input three dimenstion Array
+  -> Array (Int,Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
+rotationOpt3D rotationAmount xs = threeRotation (head rotationAmount,rotationAmount !! 1,rotationAmount !! 2) xs
+
+
+
