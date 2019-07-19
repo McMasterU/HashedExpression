@@ -99,8 +99,6 @@ simplify e =
             (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
 
-toRecursiveTransformation :: Modification -> Transformation
-toRecursiveTransformation = toTransformation . makeRecursive
 
 rulesFromPattern :: Transformation
 rulesFromPattern =

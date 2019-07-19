@@ -271,7 +271,7 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
--- | Turn a Modification to a recursive one, apply rules bottom up
+-- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
 --
 makeRecursive :: Modification -> Modification
 makeRecursive smp = recursiveSmp
@@ -293,6 +293,11 @@ toTransformation simp exp@(mp, n) =
         newMp = IM.union mp (extraEntries diff)
         newN = newRootId diff
      in (newMp, newN)
+
+-- | Turn a modification to a recursive transformation
+--
+toRecursiveTransformation :: Modification -> Transformation
+toRecursiveTransformation = toTransformation . makeRecursive
 
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
