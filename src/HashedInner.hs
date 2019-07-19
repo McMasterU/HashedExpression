@@ -271,31 +271,6 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
--- | Turn 2 modifications to 1, i.e, try to apply first one, if there is no diff, then try to apply second one
---
-eitherM :: Modification -> Modification -> Modification
-eitherM first second expr
-    | isNoDiff expr resFirst = second expr
-    | otherwise = resFirst
-  where
-    resFirst = first expr
-
--- | Chain a list of modifications
---
-chainM :: [Modification] -> Modification
-chainM = foldl1 eitherM
-
--- | Strict version
---
-chainM1 :: [Modification] -> Modification
-chainM1 ms expr@(mp, n) = foldl' f noDiff ms
-  where
-    noDiff = withoutExtraEntry n
-    f :: ExpressionDiff -> Modification -> ExpressionDiff
-    f diff nextMod
-        | isNoDiff expr diff = nextMod expr
-        | otherwise = diff
-
 -- | Turn a Modification to a recursive one, apply rules bottom up
 --
 makeRecursive :: Modification -> Modification
@@ -378,8 +353,14 @@ combineChildrenDiffs contextMp n childrenDiffs
             sortArgs =
                 concatMap (sortWith newRootId) .
                 groupBy nodeType . sortWith weight
-         in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
-            childrenDiffs
+            sortedChildrenDiffs = sortArgs childrenDiffs
+         in if oldChildren == map newRootId sortedChildrenDiffs &&
+               all (== IM.empty) (map extraEntries sortedChildrenDiffs)
+                then withoutExtraEntry n
+                else applyDiff
+                         contextMp
+                         (option `hasShape` oldShape)
+                         sortedChildrenDiffs
 
 -- | Remove unreachable nodes
 --

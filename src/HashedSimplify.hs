@@ -56,7 +56,6 @@ import qualified Prelude
 
 -- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
 --
-type Simplification = Modification
 
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
@@ -84,7 +83,7 @@ simplify ::
 simplify e =
     let applyRules =
             multipleTimes 100 $
-            (toRecursiveTransformation standardize) >>>
+            standardize >>>
             rulesFromPattern >>>
             (toRecursiveTransformation groupConstantsRules) >>>
             (toRecursiveTransformation combineTermsRules) >>>
@@ -100,7 +99,7 @@ simplify e =
             (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
 
-toRecursiveTransformation :: Simplification -> Transformation
+toRecursiveTransformation :: Modification -> Transformation
 toRecursiveTransformation = toTransformation . makeRecursive
 
 rulesFromPattern :: Transformation
@@ -221,7 +220,7 @@ otherRules =
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
-reduceSumProdRules :: Simplification
+reduceSumProdRules :: Modification
 reduceSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
@@ -256,7 +255,7 @@ reduceSumProdRules exp@(mp, n) =
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
-flattenSumProdRules :: Simplification
+flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
@@ -277,7 +276,7 @@ flattenSumProdRules exp@(mp, n) =
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
-groupConstantsRules :: Simplification
+groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
     let shape = retrieveShape n mp
      in case retrieveNode n mp of
@@ -302,7 +301,7 @@ groupConstantsRules exp@(mp, n) =
 -- Sum(x,(-1) *. x,y) -> Sum(y)
 -- Sum(2 *. x, (-1) *. x,y) -> Sum(x,y)
 -- Sum(x,x,y) -> Sum(2 *. x,y)
-combineTermsRules :: Simplification
+combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
         sumManyDiff mp .
@@ -329,7 +328,7 @@ combineTermsRules exp@(mp, n)
 --
 -- Mul(x^(-1) * x,y) -> y
 -- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
-combineTermsRulesProd :: Simplification
+combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
         mulManyDiff mp .
@@ -355,7 +354,7 @@ combineTermsRulesProd exp@(mp, n)
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
 -- (x^2)^-1 -> x^-2
-combinePowerRules :: Simplification
+combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
@@ -366,7 +365,7 @@ combinePowerRules exp@(mp, n)
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
 -- (a +: b) ^ 2 should be (a +: b) * (a +: b)
-powerSumRealImagRules :: Simplification
+powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , isSumOrRealImag nId = replicateMul val nId
@@ -386,7 +385,7 @@ powerSumRealImagRules exp@(mp, n)
 
 -- | Rules for power product
 -- (a*b)^2 should be a^2 * b^2
-powerProdRules :: Simplification
+powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ _ <- retrieveNode nId mp
@@ -395,7 +394,7 @@ powerProdRules exp@(mp, n)
 
 -- | Rules for power scale
 -- (a*.b)^2 should be a^2 *. b^2
-powerScaleRules :: Simplification
+powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Scale et scalar scalee <- retrieveNode nId mp
@@ -412,7 +411,7 @@ powerScaleRules exp@(mp, n)
 
 -- | Rules for constant multiplication
 -- (Const val)^t ---> Const (val)^t
-constPowerRules :: Simplification
+constPowerRules :: Modification
 constPowerRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Const constVal <- retrieveNode nId mp
@@ -424,7 +423,7 @@ constPowerRules exp@(mp, n)
 -- -(const val) = const (-val)
 -- otherwise:
 -- (-x) ---> (-1) *. x
-negateRules :: Simplification
+negateRules :: Modification
 negateRules exp@(mp, n)
     | Neg _ nId <- retrieveNode n mp = turnToScale nId
     | otherwise = withoutExtraEntry n
@@ -440,7 +439,7 @@ negateRules exp@(mp, n)
 
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
-combineConstantScalarRules :: Simplification
+combineConstantScalarRules :: Modification
 combineConstantScalarRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp
     , let extracted = map extract ns
@@ -460,7 +459,7 @@ combineConstantScalarRules exp@(mp, n)
 
 -- | Turn HashedPattern to a simplification
 --
-fromSubstitution :: Substitution -> Simplification
+fromSubstitution :: Substitution -> Modification
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
@@ -468,5 +467,5 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
 
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
-standardize :: Simplification
-standardize = makeRecursive (withoutExtraEntry . snd)
+standardize :: Transformation
+standardize = toRecursiveTransformation (withoutExtraEntry . snd)
