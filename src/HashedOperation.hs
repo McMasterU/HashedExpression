@@ -95,11 +95,14 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 
 -- | Element-wise sum
 --
-instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
+instance (DimensionType d, Addable et) =>
+         AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
     (+) e1 e2 =
         let op = naryET Sum ElementDefault `hasShape` expressionShape e1
          in ensureSameShape e1 e2 $ applyBinary op e1 e2
+
+instance (DimensionType d) => NegateOp (Expression d et) where
     negate :: Expression d et -> Expression d et
     negate =
         let op = unaryET Neg ElementDefault
@@ -114,7 +117,7 @@ sum es = Just . applyNary (naryET Sum ElementDefault) $ es
 -- | Element-wise multiplication
 --
 instance (DimensionType d, NumType et) =>
-         MultiplyOp (Expression d et) (Expression d et) (Expression d et) where
+         MultiplyOp (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
@@ -136,7 +139,7 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
-         VectorSpaceOp (Expression Zero s) (Expression d et) (Expression d et) where
+         VectorSpaceOp (Expression Zero s) (Expression d et) where
     scale :: Expression Zero s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =
@@ -195,7 +198,11 @@ instance (InnerProductSpace d s) =>
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss
 --
-huber :: (DimensionType d) => Double -> Expression d R -> Expression d R
+huber ::
+       forall d. (DimensionType d)
+    => Double
+    -> Expression d R
+    -> Expression d R
 huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
   where
     deltaVector =
@@ -204,7 +211,11 @@ huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
     lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
     largerThan = e * deltaVector - const 0.5 *. deltaVector
 
-huber2 :: (DimensionType d) => Double -> Expression d R -> Expression d R
+huber2 ::
+       forall d. (DimensionType d)
+    => Double
+    -> Expression d R
+    -> Expression d R
 huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
   where
     deltaVector =

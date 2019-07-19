@@ -49,6 +49,7 @@ import HashedVar
 import Test.Hspec
 import Test.QuickCheck hiding (scale)
 
+
 sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 sum1 = fromJust . HashedOperation.sum
 
@@ -58,6 +59,7 @@ prod1 = fromJust . HashedOperation.sum
 
 main = do
     let exp = x1 <.> (s *. (x1 * (a *. y1)))
+--    let exp2 = x + 2
 --    let exp = x1 * y1
 --    print exp
     showExp exp

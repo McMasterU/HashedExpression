@@ -108,22 +108,22 @@ instance VectorSpace d s s => InnerProductSpace d s
 --
 class AddableOp a where
     (+) :: a -> a -> a
-    negate :: a -> a
-    (-) :: a -> a -> a
-    x - y = x + negate y
 
-class MultiplyOp a b c | a b -> c where
-    (*) :: a -> b -> c
+class NegateOp a where
+    negate :: a -> a
+
+(-) :: (AddableOp a, NegateOp a) => a -> a -> a
+x - y = x + negate y
+
+class MultiplyOp a where
+    (*) :: a -> a -> a
 
 class PowerOp a b | a -> b where
     (^) :: a -> b -> a
 
-class AddableOp b =>
-      VectorSpaceOp a b c
-    | a b -> c
-    where
-    scale :: a -> b -> c
-    (*.) :: a -> b -> c
+class VectorSpaceOp a b where
+    scale :: a -> b -> b
+    (*.) :: a -> b -> b
     (*.) = scale
 
 class NumOp a where

@@ -204,14 +204,14 @@ dotProductRules =
 --
 distributiveRules :: [Substitution]
 distributiveRules =
-    [ x * sumOf (each) |.~~~~~~> sumOf (x * each)
-    , sumOf (each) * x |.~~~~~~> sumOf (x * each)
-    , x <.> sumOf (each) |.~~~~~~> sumOf (x <.> each)
-    , sumOf (each) <.> x |.~~~~~~> sumOf (each <.> x)
-    , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
-    , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
-    , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (restOfProduct ~* each)
-    , sumOf (each) *. x |.~~~~~~> sumOf (each *. x)
+    [ x * sumOf (each) |.~~~~~~> sumOf (mapL (x *) each)
+    , sumOf (each) * x |.~~~~~~> sumOf (mapL (* x) each)
+    , x <.> sumOf (each) |.~~~~~~> sumOf (mapL (x <.>) each)
+    , sumOf (each) <.> x |.~~~~~~> sumOf (mapL (<.> x) each)
+    , x *. sumOf (each) |.~~~~~~> sumOf (mapL (x *.) each)
+    , negate (sumOf (each)) |.~~~~~~> sumOf (mapL negate each)
+    , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (mapL (restOfProduct ~*) each)
+    , sumOf (each) *. x |.~~~~~~> sumOf (mapL (*. x) each)
     ]
 
 -- | Rules of piecewise

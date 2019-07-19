@@ -128,9 +128,6 @@ class MulRestOp a b c | a b -> c where
 instance MulRestOp Pattern Pattern Pattern where
     (~*) (PMulRest listCapture ps) p = PMulRest listCapture (ps ++ [p])
 
-instance MulRestOp Pattern PatternList PatternList where
-    (~*) rest (PListHole fs listHole) = PListHole ((rest ~*) . fs) listHole
-
 class SumRestOp a b c | a b -> c where
     (~+) :: a -> b -> c
 
@@ -144,12 +141,14 @@ instance SumRestOp Pattern PatternList PatternList where
 --
 instance AddableOp Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
+
+instance NegateOp Pattern where
     negate = PNeg
 
-instance MultiplyOp Pattern Pattern Pattern where
+instance MultiplyOp Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
 
-instance VectorSpaceOp Pattern Pattern Pattern where
+instance VectorSpaceOp Pattern Pattern where
     scale = PScale
 
 instance NumOp Pattern where
@@ -183,29 +182,8 @@ instance PowerOp Pattern Pattern where
 
 -- | Pattern List
 --
-instance AddableOp PatternList where
-    (+) = error "Not implementation for adding two pattern list yet"
-    negate (PListHole f listCapture) = PListHole (negate . f) listCapture
-
-instance MultiplyOp Pattern PatternList PatternList where
-    (*) wh1 (PListHole f listCapture) = PListHole ((wh1 *) . f) listCapture
-
-instance MultiplyOp PatternList Pattern PatternList where
-    (*) (PListHole f listCapture) wh2 = PListHole ((* wh2) . f) listCapture
-
-instance InnerProductSpaceOp Pattern PatternList PatternList where
-    (<.>) wh1 (PListHole f listCapture) = PListHole ((wh1 <.>) . f) listCapture
-
-instance InnerProductSpaceOp PatternList Pattern PatternList where
-    (<.>) (PListHole f listCapture) wh2 = PListHole ((<.> wh2) . f) listCapture
-
-instance VectorSpaceOp Pattern PatternList PatternList where
-    scale wh1 (PListHole f listCapture) =
-        PListHole ((wh1 `scale`) . f) listCapture
-
-instance VectorSpaceOp PatternList Pattern PatternList where
-    scale (PListHole f listCapture) wh1 =
-        PListHole ((`scale` wh1) . f) listCapture
+mapL :: (Pattern -> Pattern) -> PatternList -> PatternList
+mapL f (PListHole fs listCapture) = PListHole (f . fs) listCapture
 
 -- | Guarded patterns for simplification
 --
@@ -311,6 +289,7 @@ allTheSame pl@(PListHole _ listCapture) exp match
 -- |
 --
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
+
 
 one :: Pattern
 one = PConst 1

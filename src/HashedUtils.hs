@@ -1,18 +1,19 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module HashedUtils where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
-import HashedPrettify
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import HashedExpression
 import HashedHash
 import HashedNode
+import HashedPrettify
 import Prelude hiding
     ( (*)
     , (+)
@@ -195,15 +196,12 @@ plus :: (Num a) => a -> a -> a
 plus a b = Prelude.sum [a, b]
 
 -------------------------------------------------------------------------------
--- | Instance of built-in types for our type classes
+-- | MARK: (+)
 --
 --
 -------------------------------------------------------------------------------
--- | MARK: (+)
---
 instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
     (+) = plus
-    negate = Prelude.negate
 
 instance AddableOp (Array Int Double) where
     (+) arr1 arr2 =
@@ -212,10 +210,6 @@ instance AddableOp (Array Int Double) where
             [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
       where
         size = length . elems $ arr1
-    negate arr =
-        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
-      where
-        size = length . elems $ arr
 
 instance AddableOp (Array Int (Complex Double)) where
     (+) arr1 arr2 =
@@ -224,17 +218,37 @@ instance AddableOp (Array Int (Complex Double)) where
             [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
       where
         size = length . elems $ arr1
+
+-------------------------------------------------------------------------------
+-- | MARK: Negate
+--
+--
+-------------------------------------------------------------------------------
+instance {-# OVERLAPPABLE #-} Num a => NegateOp a where
+    negate = Prelude.negate
+
+instance NegateOp (Array Int Double) where
     negate arr =
         listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
       where
         size = length . elems $ arr
 
+instance NegateOp (Array Int (Complex Double)) where
+    negate arr =
+        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
+      where
+        size = length . elems $ arr
+
+-------------------------------------------------------------------------------
 -- | MARK: (*)
 --
-instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a a a where
+--
+--
+-------------------------------------------------------------------------------
+instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a where
     (*) = times
 
-instance MultiplyOp (Array Int Double) (Array Int Double) (Array Int Double) where
+instance MultiplyOp (Array Int Double) where
     (*) arr1 arr2 =
         listArray
             (0, size - 1)
@@ -242,7 +256,7 @@ instance MultiplyOp (Array Int Double) (Array Int Double) (Array Int Double) whe
       where
         size = length . elems $ arr1
 
-instance MultiplyOp (Array Int (Complex Double)) (Array Int (Complex Double)) (Array Int (Complex Double)) where
+instance MultiplyOp (Array Int (Complex Double)) where
     (*) arr1 arr2 =
         listArray
             (0, size - 1)
