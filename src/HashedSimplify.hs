@@ -54,14 +54,10 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
---
-type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
--- | Simplification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
--- the new index of the root expression) between the simplified and original expression
+-- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
 --
-type Simplification = (ExpressionMap, Int) -> ExpressionDiff
+type Simplification = Modification
 
 -- | Chain n simplifications together to a simplification
 --
@@ -70,8 +66,8 @@ chain = flip $ foldl (|>)
 
 -- |
 --
-applySimplification :: Simplification -> Transformation
-applySimplification simp exp@(mp, n) =
+toTransformation :: Simplification -> Transformation
+toTransformation simp exp@(mp, n) =
     let diff = simp exp
         newMp = IM.union mp (extraEntries diff)
         newN = newRootId diff
@@ -120,7 +116,7 @@ simplify e =
      in wrap . applyRules . unwrap $ e
 
 toRecursiveTransformation :: Simplification -> Transformation
-toRecursiveTransformation = applySimplification . makeRecursive
+toRecursiveTransformation = toTransformation . makeRecursive
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
@@ -477,17 +473,6 @@ combineConstantScalarRules exp@(mp, n)
         | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
         | otherwise = (nId, 1)
 
--- | Remove unreachable nodes
---
-removeUnreachable :: Transformation
-removeUnreachable (mp, n) =
-    let collectNode n =
-            IS.insert n . IS.unions . map collectNode . nodeArgs $
-            retrieveNode n mp
-        reachableNodes = collectNode n -- Set Int
-        reducedMap =
-            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
-     in (reducedMap, n)
 
 -- | Turn HashedPattern to a simplification
 --
@@ -497,92 +482,8 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     , condition exp match = buildFromPattern exp match replacementPattern
     | otherwise = withoutExtraEntry n
 
-checkTopo :: Transformation
-checkTopo exp@(mp, n) =
-    let lst = last $ topologicalSort exp
-     in if (n == lst)
-            then exp
-            else error "Wrong topo"
-
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
 standardize :: Simplification
 standardize = makeRecursive (withoutExtraEntry . snd)
 
--- | Turn a simplification to a recursive one, apply rules bottom up
---
-makeRecursive :: Simplification -> Simplification
-makeRecursive smp = recursiveSmp
-  where
-    recursiveSmp :: Simplification
-    recursiveSmp exp@(mp, n) =
-        let children = nodeArgs $ retrieveNode n mp
-            childrenDiffs = map recursiveSmp . map (mp, ) $ children
-            nodeDiff = combineChildrenDiffs mp n childrenDiffs
-            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-            ExpressionDiff exEntries newId = smp newExp
-         in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
-
-
--- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
--- and return the combined difference
---
-combineChildrenDiffs ::
-       ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs contextMp n childrenDiffs
-    | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
-    | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
-    | oldChildren == newChildren &&
-          all (== IM.empty) (map extraEntries childrenDiffs) =
-        withoutExtraEntry n
-    | otherwise =
-        case oldNode of
-            Var _ -> withoutExtraEntry n
-            DVar _ -> withoutExtraEntry n
-            Const _ -> withoutExtraEntry n
-            Power x _ -> combine (unary (Power x))
-            Neg et _ -> combine (unaryET Neg (ElementSpecific et))
-            Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
-            Div _ _ -> combine (binary Div)
-            Sqrt _ -> combine (unary Sqrt)
-            Sin _ -> combine (unary Sin)
-            Cos _ -> combine (unary Cos)
-            Tan _ -> combine (unary Tan)
-            Exp _ -> combine (unary Exp)
-            Log _ -> combine (unary Log)
-            Sinh _ -> combine (unary Sinh)
-            Cosh _ -> combine (unary Cosh)
-            Tanh _ -> combine (unary Tanh)
-            Asin _ -> combine (unary Asin)
-            Acos _ -> combine (unary Acos)
-            Atan _ -> combine (unary Atan)
-            Asinh _ -> combine (unary Asinh)
-            Acosh _ -> combine (unary Acosh)
-            Atanh _ -> combine (unary Atanh)
-            RealImag _ _ -> combine (binary RealImag)
-            RealPart _ -> combine (unary RealPart)
-            ImagPart _ -> combine (unary ImagPart)
-            InnerProd et _ _ ->
-                combine (binaryET InnerProd (ElementSpecific et))
-            Piecewise marks _ _ -> combine (conditionAry (Piecewise marks))
-            Rotate amount _ -> combine (unary (Rotate amount))
-  where
-    (oldShape, oldNode) = retrieveInternal n contextMp
-    oldChildren = nodeArgs oldNode
-    newChildren = map newRootId childrenDiffs
-    combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-    combine option =
-        applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
-    sortAndCombine option =
-        let getNode diff
-                | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
-                | Just (_, node) <-
-                     IM.lookup (newRootId diff) combinedExtraEntries = node
-            debug x = traceShow (map newRootId x) x
-            nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
-            weight diff = nodeTypeWeight $ getNode diff
-            sortArgs =
-                concat .
-                map (sortWith newRootId) . groupBy nodeType . sortWith weight
-         in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
-            childrenDiffs
