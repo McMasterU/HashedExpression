@@ -279,7 +279,7 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     =========================
 -}
 
--- | Find out if it is going to be a righ or left shift and calculate the shift amount
+-- | Calculate the real value of shift base on the range and index of the to be changes array
 shiftAmount::
     Int -- ^ Input : Position to be changes
     -> Int -- ^ Input : Shift amount
@@ -287,41 +287,21 @@ shiftAmount::
     -> Int -- ^ Input : Last Element of Range
     -> Int -- ^ Output : Calculated shift amount
 shiftAmount po shift first last
-  | shift == 0 = po -- There is not shift. Just return the position itself
-  | shift > 0 = rightShiftCalc po shift first last -- It is a right shift. Go and invoke the right shift function
-  | otherwise = leftShiftCalc po shift first last -- It is a left shift. Go and invoke the left shift function
+  | (mod shift indexNumber)  == 0 = po
+  | ((last - first) + 1 < shift) = let newShift = shift - ((last - first) + 1) in shiftCalc po newShift first last
+  | otherwise = shiftCalc po shift first last
+  where indexNumber = (last - first) +1
 
 
--- | Calculate the right shift amount and pass it to shiftAmount function
-rightShiftCalc ::
+shiftCalc ::
   Int -- ^ Input : Position to be changes
   -> Int -- ^ Input : Shift amount
   -> Int -- ^ Input : First Element of Range
   -> Int -- ^ Input : Last Element of Range
   -> Int -- ^ Output : Calculated shift amount
-rightShiftCalc po shift first last
-  | modShift == 0 = po -- If no shift happen, return the position itself
-  | otherwise =  (first -1) + mod realShift shift -- Calculate the real amount of shift based on the first index position
-  where indexAmount=(last - first) + 1  -- calculating the number or elements in index list
-        modShift= mod shift indexAmount -- calculating the shift amount based on mod function
-        realShift = (+) po modShift -- calculating the real shift amount after mod shift calculation
-
--- | Calculate the left shift amount and pass it to shiftAmount function
-leftShiftCalc ::
-  Int -- ^ Input : Position to be changes
-  -> Int -- ^ Input : Shift amount
-  -> Int -- ^ Input : First Element of Range
-  -> Int -- ^ Input : Last Element of Range
-  -> Int -- ^ Output : Calculated shift amount
-leftShiftCalc po shift first last
-  | modeShift == 0 = po -- Do nothing and return the position itself since there is no shift
-  | otherwise =  (first -1) + mod realShift shift -- calculate the real amount of shift and return its value
-  where indexAmount=(last - first) + 1 -- calculating the number or elements in index list
-        leftShiftAmount= indexAmount + shift -- calculate a basic for right shift, based on the left shift value
-        modeShift= mod leftShiftAmount indexAmount -- calculating the shift amount based on mod function
-        realShift = (+) po modeShift -- calculating the real shift amount after mod shift calculation
-
-
+shiftCalc po shift first last
+  | ((po + shift) <= last) = (+) po shift
+  | otherwise = (first -1) + ((po + shift) - last)
 
 -- | The 'oneDArrayRotateGenerator' Generates an array based on the input arguments
 oneDArrayRotateGenerator ::
