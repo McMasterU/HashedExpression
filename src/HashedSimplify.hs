@@ -130,10 +130,6 @@ zeroOneRules =
     , zero + x |.~~~~~~> x
     , x <.> zero |.~~~~~~> scalarZero
     , zero <.> x |.~~~~~~> scalarZero
-    , negate zero |.~~~~~~> zero
-    , negate (negate x) |.~~~~~~> x
-    , num (-1) *. negate (x) |.~~~~~~> x
-    , num (-1) * negate (x) |.~~~~~~> x
     ]
 
 scaleRules :: [Substitution]
