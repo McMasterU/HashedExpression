@@ -100,7 +100,7 @@ instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
 
 instance (DimensionType d) => VectorSpace d C C
 
-instance (DimensionType d, NumType nt) => VectorSpace d Covector nt -- TODO? True with C??
+instance (DimensionType d) => VectorSpace d Covector R
 
 instance VectorSpace d s s => InnerProductSpace d s
 
