@@ -301,10 +301,10 @@ rightShiftCalc ::
   -> Int -- ^ Output : Calculated shift amount
 rightShiftCalc po shift first last
   | modShift == 0 = po -- If no shift happen, return the position itself
-  | otherwise =  (first -1) + mod realShift shift -- Calculate the real amount of shift based on the first index position
-  where indexAmount=(last - first) + 1  -- calculating the number or elements in index list
-        modShift= mod shift indexAmount -- calculating the shift amount based on mod function
-        realShift = (+) po modShift -- calculating the real shift amount after mod shift calculation
+  | otherwise = realShift `mod` rangeLength -- Calculate the real amount of shift based on the first index position
+  where rangeLength = (length . range) (first,last)   -- calculating the number or elements in index list
+        modShift= shift `mod` rangeLength -- calculating the shift amount based on mod function
+        realShift = po + modShift -- calculating the real shift amount after mod shift calculation
 
 -- | Calculate the left shift amount and pass it to shiftAmount function
 leftShiftCalc ::
@@ -314,12 +314,10 @@ leftShiftCalc ::
   -> Int -- ^ Input : Last Element of Range
   -> Int -- ^ Output : Calculated shift amount
 leftShiftCalc po shift first last
-  | modeShift == 0 = po -- Do nothing and return the position itself since there is no shift
-  | otherwise =  (first -1) + mod realShift shift -- calculate the real amount of shift and return its value
-  where indexAmount=(last - first) + 1 -- calculating the number or elements in index list
-        leftShiftAmount= indexAmount + shift -- calculate a basic for right shift, based on the left shift value
-        modeShift= mod leftShiftAmount indexAmount -- calculating the shift amount based on mod function
-        realShift = (+) po modeShift -- calculating the real shift amount after mod shift calculation
+  = rightShiftCalc po eqRightShift first last
+  where eqRightShift= rangeLength + shift
+        rangeLength = (length . range) (first,last)
+
 
 
 
