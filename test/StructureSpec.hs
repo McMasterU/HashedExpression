@@ -10,7 +10,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import HashedExpression
-import HashedInner (expressionEdges, topologicalSort, unwrap, D_, ET_)
+import HashedInner (topologicalSort, unwrap, D_, ET_)
 import HashedInterp
 import HashedNode
 import HashedOperation hiding (product, sum)
@@ -89,23 +89,23 @@ spec :: Spec
 spec =
     describe "Structure spec" $ do
         specify "Topological sort" $ property prop_TopologicalSort
---        specify "Simplify a Zero C would give the form x +: y" $
---            property prop_StructureZeroC
---        specify "Simplify a One C would give the form x +: y" $
---            property prop_StructureOneC
---        specify "Check size" $
---            replicateM_ 35 $ do
---                let sz = IM.size . exMap
---                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
---                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
---                measureTime $ do
---                    putStrLn "----------------------------"
---                    putStrLn $
---                        "Generate exp1 -> " ++
---                        show (sz exp1) ++ " subexpressions"
---                    putStrLn $
---                        "Generate exp2 -> " ++
---                        show (sz exp2) ++ " subexpressions"
---                    putStrLn $
---                        "Simplifing (exp1 * exp2) -> " ++
---                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
+        specify "Simplify a Zero C would give the form x +: y" $
+            property prop_StructureZeroC
+        specify "Simplify a One C would give the form x +: y" $
+            property prop_StructureOneC
+        specify "Check size" $
+            replicateM_ 35 $ do
+                let sz = IM.size . exMap
+                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
+                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
+                measureTime $ do
+                    putStrLn "----------------------------"
+                    putStrLn $
+                        "Generate exp1 -> " ++
+                        show (sz exp1) ++ " subexpressions"
+                    putStrLn $
+                        "Generate exp2 -> " ++
+                        show (sz exp2) ++ " subexpressions"
+                    putStrLn $
+                        "Simplifing (exp1 * exp2) -> " ++
+                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"

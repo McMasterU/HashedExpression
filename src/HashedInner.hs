@@ -241,70 +241,33 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 withoutExtraEntry :: Int -> ExpressionDiff
 withoutExtraEntry = ExpressionDiff IM.empty
 
--- | Topological sort the expression map, all the dependencies will appear before the depended node
---
-topologicalSort1 :: (ExpressionMap, Int) -> [Int]
-topologicalSort1 expr@(mp, n) =
-    reverse . mapMaybe (`IM.lookup` vertices2nId) $ topSort graph
-  where
-    nId2vertices = IM.fromList $ zip (IM.keys mp) [0 ..]
-    vertices2nId = IM.fromList $ zip [0 ..] (IM.keys mp)
-    exNodeEdges = expressionEdges expr
-    verticesEdges =
-        mapMaybe
-            (bringMaybeOut . mapBoth (`IM.lookup` nId2vertices))
-            exNodeEdges
-    graph = buildG (0, IM.size mp - 1) verticesEdges
-
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
 topologicalSort expr@(mp, n) =
-    map vertices2nId . filter (/= -1) . UA.elems $ topoOrderVertices
+    filter (/= -1) . UA.elems $ topoOrderVertices
   where
-    nId2verticesMap = IM.fromList $ zip (IM.keys mp) [0 ..]
-    vertices2nIdMap = IM.fromList $ zip [0 ..] (IM.keys mp)
-    nId2vertices nId = fromJust $ IM.lookup nId nId2verticesMap
-    vertices2nId v = fromJust $ IM.lookup v vertices2nIdMap
-    adj u = map nId2vertices . nodeArgs $ retrieveNode (vertices2nId u) mp
-    len = IM.size nId2verticesMap
+    n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
+    toPos nId = fromJust $ IM.lookup nId n2Pos
+    len = IM.size n2Pos
+    adj nId = nodeArgs $ retrieveNode nId mp
     topoOrderVertices =
         runSTUArray $ do
             marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
             order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
             cnt <- newSTRef 0 :: ST s (STRef s Int)
             let dfs u = do
-                    writeArray marked u True
+                    let arrayPos = toPos u
+                    writeArray marked arrayPos True
                     forM_ (adj u) $ \v -> do
-                        isMarked <- readArray marked v
+                        isMarked <- readArray marked (toPos v)
                         unless isMarked $ dfs v
                     cntVal <- readSTRef cnt
                     writeArray order cntVal u
                     writeSTRef cnt (cntVal + 1)
-            dfs (nId2vertices n)
+            dfs n
             return order
-
-expressionEdges1 :: (ExpressionMap, Int) -> [(Int, Int)]
-expressionEdges1 exp@(mp, n) = undefined
-  where
-    edges :: (Int, Internal) -> [(Int, Int)]
-    edges (nId, (_, node)) = map (nId, ) . nodeArgs $ node
-    allEdges :: [(Int, Int)]
-    allEdges = concatMap edges . IM.toList $ mp
-
---    a = runSTUArray $ do
---        undefined
--- | Get all the edges of the expressions
---
-expressionEdges :: (ExpressionMap, Int) -> [(Int, Int)]
-expressionEdges (mp, n) = Set.toList $ edges n
-  where
-    edges :: Int -> Set (Int, Int)
-    edges nId =
-        let args = nodeArgs $ retrieveNode nId mp
-            thisNode = Set.fromList . map (nId, ) $ args
-         in Set.unions $ thisNode : map edges args
 
 -- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
 --
@@ -329,10 +292,8 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
--- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
---
-makeRecursive :: Modification -> Modification
-makeRecursive smp = recursiveSmp
+makeRecursive1 :: Modification -> Modification
+makeRecursive1 smp = recursiveSmp
   where
     recursiveSmp :: Modification
     recursiveSmp exp@(mp, n) =
@@ -342,6 +303,26 @@ makeRecursive smp = recursiveSmp
             newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
             ExpressionDiff exEntries newId = smp newExp
          in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
+
+-- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
+--
+makeRecursive :: Modification -> Modification
+makeRecursive smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+  where
+    topoOrder = topologicalSort exp
+    f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
+    f diffs nId =
+        let children = nodeArgs $ retrieveNode nId mp
+            childrenDiffs = map (fromJust . flip IM.lookup diffs) children
+            nodeDiff = combineChildrenDiffs mp nId childrenDiffs
+            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
+            ExpressionDiff exEntries newId = smp newExp
+            diff =
+                ExpressionDiff
+                    (IM.union exEntries (extraEntries nodeDiff))
+                    newId
+         in IM.insert nId diff diffs
+    diffs = foldl' f IM.empty topoOrder
 
 -- |
 --
@@ -411,6 +392,15 @@ combineChildrenDiffs contextMp n childrenDiffs
                 | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
                 | Just (_, node) <-
                      IM.lookup (newRootId diff) combinedExtraEntries = node
+                | otherwise =
+                    error $
+                    " " ++
+                    show diff ++
+                    "\n" ++
+                    show combinedExtraEntries ++
+                    "\n" ++
+                    show contextMp ++
+                    "\n" ++ show oldNode ++ "\n" ++ show childrenDiffs
             nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
             weight diff = nodeTypeWeight $ getNode diff
             sortArgs =
