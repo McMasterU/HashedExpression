@@ -59,8 +59,6 @@ exteriorDerivative ::
 --exteriorDerivative = hiddenDerivative
 exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 
-
-
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
 coerce :: Expression d1 et1 -> Expression d2 et2

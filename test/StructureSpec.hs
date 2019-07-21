@@ -10,7 +10,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import HashedExpression
-import HashedInner (topologicalSort, unwrap, D_, ET_)
+import HashedInner (D_, ET_, topologicalSort, unwrap)
 import HashedInterp
 import HashedNode
 import HashedOperation hiding (product, sum)

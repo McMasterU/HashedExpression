@@ -27,6 +27,7 @@ unwrap (Expression n mp) = (mp, n)
 
 wrap :: (ExpressionMap, Int) -> Expression d et
 wrap = uncurry $ flip Expression
+
 -- | Pretty exp
 --
 showExp ::

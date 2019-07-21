@@ -245,8 +245,7 @@ withoutExtraEntry = ExpressionDiff IM.empty
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) =
-    filter (/= -1) . UA.elems $ topoOrderVertices
+topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrderVertices
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos

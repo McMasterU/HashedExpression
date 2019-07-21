@@ -94,8 +94,7 @@ simplify e =
             (toRecursiveTransformation combineConstantScalarRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
             (toRecursiveTransformation reduceSumProdRules) >>>
-            rulesFromPattern >>>
-            removeUnreachable
+            rulesFromPattern >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
 
 rulesFromPattern :: Transformation
@@ -451,7 +450,9 @@ evaluateIfPossibleRules exp@(mp, n) =
         (Neg R _, Just [val]) -> res $ 0 - val
         (Power x _, Just [val]) -> res $ val ^ x
         (InnerProd R arg1 arg2, Just [val1, val2]) ->
-            res $ val1 * val2 * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
+            res $
+            val1 * val2 *
+            (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
         (Rotate _ _, Just [val]) -> res val
         -- TODO: sin, sos, ...
         _ -> withoutExtraEntry n

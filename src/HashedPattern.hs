@@ -288,7 +288,6 @@ allTheSame pl@(PListHole _ listCapture) exp match
 --
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
-
 one :: Pattern
 one = PConst 1
 

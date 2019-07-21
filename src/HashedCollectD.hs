@@ -47,8 +47,6 @@ import Prelude hiding
     )
 import qualified Prelude
 
-
-
-collectDifferentials :: (DimensionType d) => Expression d Covector -> Expression d Covector
+collectDifferentials ::
+       (DimensionType d) => Expression d Covector -> Expression d Covector
 collectDifferentials = undefined
-

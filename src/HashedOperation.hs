@@ -95,8 +95,7 @@ const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
 
 -- | Element-wise sum
 --
-instance (DimensionType d, Addable et) =>
-         AddableOp (Expression d et) where
+instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
     (+) :: Expression d et -> Expression d et -> Expression d et
     (+) e1 e2 =
         let op = naryET Sum ElementDefault `hasShape` expressionShape e1
@@ -116,8 +115,7 @@ sum es = Just . applyNary (naryET Sum ElementDefault) $ es
 
 -- | Element-wise multiplication
 --
-instance (DimensionType d, NumType et) =>
-         MultiplyOp (Expression d et) where
+instance (DimensionType d, NumType et) => MultiplyOp (Expression d et) where
     (*) :: Expression d et -> Expression d et -> Expression d et
     (*) e1 e2 =
         let op = naryET Mul ElementDefault `hasShape` expressionShape e1
