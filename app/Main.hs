@@ -64,6 +64,8 @@ main = do
         showExp $ simplify $ exp1 * exp2
 --main = do
 --    let exp = (x1 <.> y1) *. (z2 + t2)
+--    let exp1 = (x + y) ^ 4
+--    showExp . simplify $ exp1
 --    showExp $ exteriorDerivative allVars exp
 
 

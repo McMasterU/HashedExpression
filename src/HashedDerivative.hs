@@ -59,10 +59,6 @@ exteriorDerivative ::
 --exteriorDerivative = hiddenDerivative
 exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 
--- | Placeholder for any dimension type
---
-data D_
-    deriving (Typeable, DimensionType)
 
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't

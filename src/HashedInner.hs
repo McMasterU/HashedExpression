@@ -5,14 +5,23 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module HashedInner where
 
+import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.ST.Strict
+import Data.Array.MArray
+import Data.Array.ST
+import qualified Data.Array.Unboxed as UA
+import Data.Data (Typeable)
 import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl', groupBy, sort, sortBy, sortOn)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromJust, mapMaybe)
+import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
@@ -21,7 +30,7 @@ import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
-import Prelude hiding ((-))
+import Prelude hiding ((+), (-))
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -33,6 +42,16 @@ checkMergeConflict = False
 --
 safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
 safeUnion = IM.union
+
+-- | Placeholder for any dimension type
+--
+data D_
+    deriving (Typeable, DimensionType)
+
+-- | Placeholder for any element type
+--
+data ET_
+    deriving (Typeable, ElementType)
 
 -- |
 --
@@ -224,8 +243,8 @@ withoutExtraEntry = ExpressionDiff IM.empty
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node
 --
-topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) =
+topologicalSort1 :: (ExpressionMap, Int) -> [Int]
+topologicalSort1 expr@(mp, n) =
     reverse . mapMaybe (`IM.lookup` vertices2nId) $ topSort graph
   where
     nId2vertices = IM.fromList $ zip (IM.keys mp) [0 ..]
@@ -237,6 +256,45 @@ topologicalSort expr@(mp, n) =
             exNodeEdges
     graph = buildG (0, IM.size mp - 1) verticesEdges
 
+-- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
+-- unreachable nodes will be ignored
+--
+topologicalSort :: (ExpressionMap, Int) -> [Int]
+topologicalSort expr@(mp, n) =
+    map vertices2nId . filter (/= -1) . UA.elems $ topoOrderVertices
+  where
+    nId2verticesMap = IM.fromList $ zip (IM.keys mp) [0 ..]
+    vertices2nIdMap = IM.fromList $ zip [0 ..] (IM.keys mp)
+    nId2vertices nId = fromJust $ IM.lookup nId nId2verticesMap
+    vertices2nId v = fromJust $ IM.lookup v vertices2nIdMap
+    adj u = map nId2vertices . nodeArgs $ retrieveNode (vertices2nId u) mp
+    len = IM.size nId2verticesMap
+    topoOrderVertices =
+        runSTUArray $ do
+            marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
+            order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
+            cnt <- newSTRef 0 :: ST s (STRef s Int)
+            let dfs u = do
+                    writeArray marked u True
+                    forM_ (adj u) $ \v -> do
+                        isMarked <- readArray marked v
+                        unless isMarked $ dfs v
+                    cntVal <- readSTRef cnt
+                    writeArray order cntVal u
+                    writeSTRef cnt (cntVal + 1)
+            dfs (nId2vertices n)
+            return order
+
+expressionEdges1 :: (ExpressionMap, Int) -> [(Int, Int)]
+expressionEdges1 exp@(mp, n) = undefined
+  where
+    edges :: (Int, Internal) -> [(Int, Int)]
+    edges (nId, (_, node)) = map (nId, ) . nodeArgs $ node
+    allEdges :: [(Int, Int)]
+    allEdges = concatMap edges . IM.toList $ mp
+
+--    a = runSTUArray $ do
+--        undefined
 -- | Get all the edges of the expressions
 --
 expressionEdges :: (ExpressionMap, Int) -> [(Int, Int)]
@@ -371,10 +429,7 @@ combineChildrenDiffs contextMp n childrenDiffs
 --
 removeUnreachable :: Transformation
 removeUnreachable (mp, n) =
-    let collectNode n =
-            IS.insert n . IS.unions . map collectNode . nodeArgs $
-            retrieveNode n mp
-        reachableNodes = collectNode n -- Set Int
+    let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
         reducedMap =
             IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
      in (reducedMap, n)
