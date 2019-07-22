@@ -6,4 +6,3 @@ dist-newstyle
 *.iml
 C/**
 out/
-buildscripts
