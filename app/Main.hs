@@ -45,6 +45,7 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import HashedToC (generateProgram)
+import HashedCollectD
 import HashedUtils
 import HashedVar
 import Test.Hspec
@@ -56,11 +57,11 @@ sum1 = fromJust . HashedOperation.sum
 prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
-main = do
-    measureTime $ do
-        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
-        let exp2 = ((k +: u) + (p +: j))
-        showExp $ simplify $ exp1 * exp2
 --main = do
---    let exp = ((x1 <.> y1) *. z2) <.> y2
---    showExp $ exteriorDerivative allVars exp
+--    measureTime $ do
+--        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
+--        let exp2 = ((k +: u) + (p +: j))
+--        showExp $ exteriorDerivative allVars . simplify $ xRe (exp1 * exp2)
+main = do
+    let exp = ((x1 <.> y1) *. z2) <.> y2
+    showExp $ collectDifferentials $ exteriorDerivative allVars exp

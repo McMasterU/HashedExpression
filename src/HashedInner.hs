@@ -305,6 +305,16 @@ toTransformation simp exp@(mp, n) =
 toRecursiveTransformation :: Modification -> Transformation
 toRecursiveTransformation = toTransformation . makeRecursive
 
+-- | Apply maximum k times, or stop if the expression doesn't change
+--
+multipleTimes :: Int -> Transformation -> Transformation
+multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
+  where
+    go 0 _ curExp = curExp
+    go k lastExp curExp
+        | snd lastExp == snd curExp = curExp
+        | otherwise = go (k - 1) curExp (smp curExp)
+
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
 --

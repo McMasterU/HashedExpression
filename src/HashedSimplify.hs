@@ -54,18 +54,6 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
---
--- | Apply maximum k times, or stop if the expression doesn't change
---
-multipleTimes :: Int -> Transformation -> Transformation
-multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
-  where
-    go 0 _ curExp = curExp
-    go k lastExp curExp
-        | snd lastExp == snd curExp = curExp
-        | otherwise = go (k - 1) curExp (smp curExp)
-
 -- | For debugging a single simplification rule
 --
 makeTrans ::
@@ -79,22 +67,22 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify e =
-    let applyRules =
-            multipleTimes 100 $
-            (toRecursiveTransformation evaluateIfPossibleRules) >>>
-            (toRecursiveTransformation groupConstantsRules) >>>
-            (toRecursiveTransformation combineTermsRules) >>>
-            (toRecursiveTransformation combineTermsRulesProd) >>>
-            (toRecursiveTransformation powerProdRules) >>>
-            (toRecursiveTransformation powerScaleRules) >>>
-            (toRecursiveTransformation combinePowerRules) >>>
-            (toRecursiveTransformation powerSumRealImagRules) >>>
-            (toRecursiveTransformation combineConstantScalarRules) >>>
-            (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>>
-            rulesFromPattern >>> removeUnreachable
-     in wrap . applyRules . unwrap $ e
+simplify = wrap . applyRules . unwrap
+  where
+    applyRules =
+        multipleTimes 100 $
+        (toRecursiveTransformation evaluateIfPossibleRules) >>>
+        (toRecursiveTransformation groupConstantsRules) >>>
+        (toRecursiveTransformation combineTermsRules) >>>
+        (toRecursiveTransformation combineTermsRulesProd) >>>
+        (toRecursiveTransformation powerProdRules) >>>
+        (toRecursiveTransformation powerScaleRules) >>>
+        (toRecursiveTransformation combinePowerRules) >>>
+        (toRecursiveTransformation powerSumRealImagRules) >>>
+        (toRecursiveTransformation combineConstantScalarRules) >>>
+        (toRecursiveTransformation flattenSumProdRules) >>>
+        (toRecursiveTransformation reduceSumProdRules) >>>
+        rulesFromPattern >>> removeUnreachable
 
 rulesFromPattern :: Transformation
 rulesFromPattern =

@@ -17,6 +17,7 @@ import HashedNode
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
+import HashedSimplify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -47,5 +48,21 @@ import Prelude hiding
     )
 import qualified Prelude
 
+-- | Precondition:
+-- - No complex in the input (:+, xRe, xIm)
+--
 collectDifferentials :: Expression Zero Covector -> Expression Zero Covector
-collectDifferentials = undefined
+collectDifferentials = wrap . applyRules . unwrap . simplify
+  where
+    applyRules = multipleTimes 100 $ rulesFromSubstitution >>> id
+
+rulesFromSubstitution :: Transformation
+rulesFromSubstitution =
+    chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+    [normalizedRules]
+
+normalizedRules :: [Substitution]
+normalizedRules =
+    [ x *. y |. isScalar y ~~~~~~> x * y
+    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
+    ]
