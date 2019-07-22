@@ -43,6 +43,7 @@ import Prelude hiding
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
+import Data.STRef.Strict
 import HashedToC (generateProgram)
 import HashedUtils
 import HashedVar
@@ -61,7 +62,5 @@ main = do
         let exp2 = ((k +: u) + (p +: j))
         showExp $ simplify $ exp1 * exp2
 --main = do
---    let exp = (x1 <.> y1) *. (z2 + t2)
---    let exp1 = (x + y) ^ 4
---    showExp . simplify $ exp1
+--    let exp = ((x1 <.> y1) *. z2) <.> y2
 --    showExp $ exteriorDerivative allVars exp

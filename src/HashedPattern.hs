@@ -62,6 +62,8 @@ type Capture = Int
 
 type ListCapture = Int
 
+type PowerCapture = Int
+
 -- | List holes to captures many elements
 --
 data PatternList =
@@ -70,6 +72,15 @@ data PatternList =
 
 instance Show (Pattern -> Pattern) where
     show p = "(Pattern -> Pattern)"
+
+-- | Pattern power to capture the alpha in x ^ alpha
+--
+data PatternPower
+    = PPowerHole PowerCapture
+    | PPowerConst Int
+    | PPowerMul PatternPower PatternPower
+    | PPowerSum PatternPower PatternPower
+    deriving (Show)
 
 -- |
 --
@@ -111,7 +122,7 @@ data Pattern
     | PPiecewise Pattern PatternList
     | PMulRest ListCapture [Pattern]
     | PSumRest ListCapture [Pattern]
-    | PPower Pattern Pattern
+    | PPower Pattern PatternPower
     deriving (Show)
 
 -- |
@@ -175,13 +186,21 @@ instance ComplexRealOp Pattern Pattern where
 instance InnerProductSpaceOp Pattern Pattern Pattern where
     (<.>) = PInnerProd
 
-instance PowerOp Pattern Pattern where
+instance PowerOp Pattern PatternPower where
     (^) = PPower
 
 -- | Pattern List
 --
 mapL :: (Pattern -> Pattern) -> PatternList -> PatternList
 mapL f (PListHole fs listCapture) = PListHole (f . fs) listCapture
+
+-- | Pattern Power
+--
+instance AddableOp PatternPower where
+    (+) = PPowerMul
+
+instance MultiplyOp PatternPower where
+    (*) = PPowerMul
 
 -- | Guarded patterns for simplification
 --
@@ -294,11 +313,22 @@ one = PConst 1
 zero :: Pattern
 zero = PConst 0
 
+powerOne :: PatternPower
+powerOne = PPowerConst 1
+
+powerZero :: PatternPower
+powerZero = PPowerConst 0
+
+[alpha, beta, gamma] = map PPowerHole [1 .. 3]
+
 scalarOne :: Pattern
 scalarOne = PScalarConst 1
 
 scalarZero :: Pattern
 scalarZero = PScalarConst 0
+
+scalar :: Double -> Pattern
+scalar = PScalarConst
 
 num :: Double -> Pattern
 num = PConst
@@ -357,6 +387,7 @@ data Match =
     Match
         { capturesMap :: Map Capture Int
         , listCapturesMap :: Map ListCapture [Int]
+        , powerCapturesMap :: Map PowerCapture Int
         }
     deriving (Show)
 
@@ -365,6 +396,7 @@ unionMatch match1 match2 =
     Match
         (capturesMap match1 `union` capturesMap match2)
         (listCapturesMap match1 `union` listCapturesMap match2)
+        (powerCapturesMap match1 `union` powerCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
@@ -372,7 +404,7 @@ unionMatch match1 match2 =
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
-        catMatch = foldl unionMatch (Match Map.empty Map.empty)
+        catMatch = foldl unionMatch (Match Map.empty Map.empty Map.empty)
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
@@ -381,14 +413,17 @@ match (mp, n) outerWH =
             | otherwise = Nothing
      in case (retrieveNode n mp, outerWH) of
             (_, PHole capture) ->
-                Just $ Match (Map.fromList [(capture, n)]) Map.empty
+                Just $ Match (Map.fromList [(capture, n)]) Map.empty Map.empty
             (Const c, PConst whc)
-                | c == whc -> Just $ Match Map.empty Map.empty
+                | c == whc -> Just $ Match Map.empty Map.empty Map.empty
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Sum _ args, PSumList pl@(PListHole _ listCapture))
                 | Just innerArgs <- matchList mp args pl ->
                     Just $
-                    Match Map.empty (Map.fromList [(listCapture, innerArgs)])
+                    Match
+                        Map.empty
+                        (Map.fromList [(listCapture, innerArgs)])
+                        Map.empty
             (Sum _ args, PSumRest listCapture ps)
                 | length args > length ps
                 , let (rest, normalParts) =
@@ -396,7 +431,10 @@ match (mp, n) outerWH =
                 , length normalParts == length ps
                 , Just matchNormalParts <- recursiveAndCombine normalParts ps
                 , let matchListPart =
-                          Match Map.empty (Map.fromList [(listCapture, rest)]) ->
+                          Match
+                              Map.empty
+                              (Map.fromList [(listCapture, rest)])
+                              Map.empty ->
                     Just $ unionMatch matchNormalParts matchListPart
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
             (Mul _ args, PMulRest listCapture ps)
@@ -406,7 +444,10 @@ match (mp, n) outerWH =
                 , length normalParts == length ps
                 , Just matchNormalParts <- recursiveAndCombine normalParts ps
                 , let matchListPart =
-                          Match Map.empty (Map.fromList [(listCapture, rest)]) ->
+                          Match
+                              Map.empty
+                              (Map.fromList [(listCapture, rest)])
+                              Map.empty ->
                     Just $ unionMatch matchNormalParts matchListPart
             (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
@@ -436,20 +477,46 @@ match (mp, n) outerWH =
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Piecewise _ conditionArg branchArgs, PPiecewise wh pl@(PListHole _ listCapture))
                 | Just innerArgs <- matchList mp branchArgs pl
-                , Just (Match cMap lcMap) <-
-                     recursiveAndCombine [conditionArg] [wh] ->
-                    Just $
-                    Match
-                        cMap
-                        (lcMap `union` (Map.fromList [(listCapture, innerArgs)]))
-                | otherwise -> Nothing
-            (Power x arg, PPower sp (PConst val))
+                , Just matchCondition <- recursiveAndCombine [conditionArg] [wh]
+                , let matchBranches =
+                          Match
+                              Map.empty
+                              (Map.fromList [(listCapture, innerArgs)])
+                              Map.empty ->
+                    Just $ unionMatch matchCondition matchBranches
+            (Power x arg, PPower sp (PPowerConst val))
                 | fromIntegral x == val -> recursiveAndCombine [arg] [sp]
+            (Power x arg, PPower sp (PPowerHole powerCapture))
+                | Just matchInner <- recursiveAndCombine [arg] [sp]
+                , let matchPower =
+                          Match
+                              Map.empty
+                              Map.empty
+                              (Map.fromList [(powerCapture, x)]) ->
+                    Just $ unionMatch matchInner matchPower
             _ -> Nothing
 
+-- |
+--
 turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
+buildFromPatternPower :: Match -> PatternPower -> Int
+buildFromPatternPower match pp =
+    case pp of
+        PPowerHole powerCapture
+            | Just val <- Map.lookup powerCapture (powerCapturesMap match) ->
+                val
+        PPowerConst val -> val
+        PPowerMul pp1 pp2 ->
+            (buildFromPatternPower match pp1) *
+            (buildFromPatternPower match pp2)
+        PPowerSum pp1 pp2 ->
+            (buildFromPatternPower match pp1) +
+            (buildFromPatternPower match pp2)
+
+-- |
+--
 buildFromPatternList ::
        (ExpressionMap, Int) -> Match -> PatternList -> [ExpressionDiff]
 buildFromPatternList exp match (PListHole fs listCapture)
@@ -459,6 +526,8 @@ buildFromPatternList exp match (PListHole fs listCapture)
         error
             "ListCapture not in the Map ListCapture [Int] which should never happens"
 
+-- |
+--
 buildFromPattern :: (ExpressionMap, Int) -> Match -> Pattern -> ExpressionDiff
 buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
@@ -466,10 +535,10 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
     buildFromPattern' :: Pattern -> ExpressionDiff
     buildFromPattern' pattern =
         case pattern of
-            PRef nId -> withoutExtraEntry nId
+            PRef nId -> noChange nId
             PHole capture
                 | Just nId <- Map.lookup capture (capturesMap match) ->
-                    withoutExtraEntry nId
+                    noChange nId
                 | otherwise ->
                     error
                         "Capture not in the Map Capture Int which should never happens"
@@ -515,11 +584,14 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PMulRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     mulManyDiff originalMp $
-                    (map withoutExtraEntry ns) ++ map (buildFromPattern') sps
+                    (map noChange ns) ++ map (buildFromPattern') sps
             PSumRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     sumManyDiff originalMp $
-                    (map withoutExtraEntry $ ns) ++ map (buildFromPattern') sps
+                    (map noChange $ ns) ++ map (buildFromPattern') sps
+            PPower sp pp ->
+                let val = buildFromPatternPower match pp
+                 in applyDiff' (unary (Power val)) [buildFromPattern' sp]
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

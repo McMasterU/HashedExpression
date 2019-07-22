@@ -214,44 +214,18 @@ diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
 
--- |
---
-mulManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (naryET Mul ElementDefault)
-
--- |
---
-sumManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (naryET Sum ElementDefault)
-
--- |
---
-applyDiff ::
-       ExpressionMap -> OperationOption -> [ExpressionDiff] -> ExpressionDiff
-applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
-  where
-    mergedExtraEntries = IM.unions . map extraEntries $ operands
-    updatedContextMp = IM.union mergedExtraEntries contextMp
-    ns = map newRootId operands
-    (resExtraEntries, resRootId) =
-        addEntryWithContext updatedContextMp mergedExtraEntries option ns
-
--- |
---
-withoutExtraEntry :: Int -> ExpressionDiff
-withoutExtraEntry = ExpressionDiff IM.empty
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrderVertices
+topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
     len = IM.size n2Pos
     adj nId = nodeArgs $ retrieveNode nId mp
-    topoOrderVertices =
+    topoOrder =
         runSTUArray $ do
             marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
             order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
@@ -276,11 +250,6 @@ data ExpressionDiff =
         , newRootId :: Int -- New root of the expression (can change, can be the same)
         }
     deriving (Eq, Ord, Show)
-
--- | Check if there is no difference
---
-isNoDiff :: (ExpressionMap, Int) -> ExpressionDiff -> Bool
-isNoDiff (mp, n) diff = extraEntries diff == IM.empty && newRootId diff == n
 
 -- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
 --
@@ -347,12 +316,12 @@ combineChildrenDiffs contextMp n childrenDiffs
     | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
     | oldChildren == newChildren &&
           all (== IM.empty) (map extraEntries childrenDiffs) =
-        withoutExtraEntry n
+        noChange n
     | otherwise =
         case oldNode of
-            Var _ -> withoutExtraEntry n
-            DVar _ -> withoutExtraEntry n
-            Const _ -> withoutExtraEntry n
+            Var _ -> noChange n
+            DVar _ -> noChange n
+            Const _ -> noChange n
             Power x _ -> combine (unary (Power x))
             Neg et _ -> combine (unaryET Neg (ElementSpecific et))
             Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
@@ -408,7 +377,7 @@ combineChildrenDiffs contextMp n childrenDiffs
             sortedChildrenDiffs = sortArgs childrenDiffs
          in if oldChildren == map newRootId sortedChildrenDiffs &&
                all (== IM.empty) (map extraEntries sortedChildrenDiffs)
-                then withoutExtraEntry n
+                then noChange n
                 else applyDiff
                          contextMp
                          (option `hasShape` oldShape)
@@ -422,3 +391,30 @@ removeUnreachable (mp, n) =
         reducedMap =
             IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
      in (reducedMap, n)
+
+-- |
+--
+mulManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
+mulManyDiff contextMp = applyDiff contextMp (naryET Mul ElementDefault)
+
+-- |
+--
+sumManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
+sumManyDiff contextMp = applyDiff contextMp (naryET Sum ElementDefault)
+
+-- |
+--
+applyDiff ::
+       ExpressionMap -> OperationOption -> [ExpressionDiff] -> ExpressionDiff
+applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
+  where
+    mergedExtraEntries = IM.unions . map extraEntries $ operands
+    updatedContextMp = IM.union mergedExtraEntries contextMp
+    ns = map newRootId operands
+    (resExtraEntries, resRootId) =
+        addEntryWithContext updatedContextMp mergedExtraEntries option ns
+
+-- | The ExpressionDiff corresponding to no change in this node
+--
+noChange :: Int -> ExpressionDiff
+noChange = ExpressionDiff IM.empty

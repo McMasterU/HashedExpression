@@ -588,3 +588,12 @@ instance Arbitrary ArbitraryExpresion where
 --
 sz :: Expression d et -> Int
 sz = IM.size . exMap
+
+infix 1 `shouldSimplifyTo`
+
+shouldSimplifyTo ::
+       (DimensionType d, ElementType et)
+    => Expression d et
+    -> Expression d et
+    -> IO ()
+shouldSimplifyTo exp1 exp2 = simplify exp1 `shouldBe` simplify exp2

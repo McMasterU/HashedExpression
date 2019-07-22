@@ -161,7 +161,7 @@ infixl 7 *, /
 
 infixl 8 *., `scale`, <.>
 
-infix 8 ^
+infixl 8 ^
 
 -- | Shape type:
 -- []        --> scalar
