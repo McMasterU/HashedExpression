@@ -28,6 +28,7 @@ import HashedNode
 import HashedPrettify (prettify, showExp)
 import HashedUtils
 
+-- | This operation emulates the mathematical operation
 -- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R
@@ -327,6 +328,7 @@ instance Evaluable One R (Array Int Double) where
                     Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
                     RealPart arg -> fmap realPart . eval valMap $ expOneC mp arg
                     ImagPart arg -> fmap imagPart . eval valMap $ expOneC mp arg
+                    -- Rotate rA arg ->
                     Piecewise marks conditionArg branchArgs ->
                         let cdt = eval valMap $ expOneR mp conditionArg
                             branches = map (eval valMap . expOneR mp) branchArgs
@@ -337,6 +339,8 @@ instance Evaluable One R (Array Int Double) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
+                    Rotate [amount] arg ->
+                        rotate1D size amount (eval valMap $ expOneR mp arg)
                     _ -> error "expression structure One R is wrong"
         | otherwise = error "one r but shape is not [size] ??"
 
@@ -401,6 +405,8 @@ instance Evaluable One C (Array Int (Complex Double)) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
+                    Rotate [amount] arg ->
+                        rotate1D size amount (eval valMap $ expOneC mp arg)
                     _ -> error "expression structure One C is wrong"
         | otherwise = error "one C but shape is not [size] ??"
 
@@ -490,6 +496,8 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                                               (cdt ! (i, j))
                                               branches
                                 ]
+                    Rotate [amount1, amount2] arg ->
+                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoR mp arg)
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -563,6 +571,8 @@ instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
                                               (cdt ! (i, j))
                                               branches
                                 ]
+                    Rotate [amount1, amount2] arg ->
+                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoC mp arg)
                     _ -> error "expression structure Two C is wrong"
         | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -661,6 +671,8 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                                               (cdt ! (i, j, k))
                                               branches
                                 ]
+                    Rotate [amount1, amount2, amount3] arg ->
+                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeR mp arg)
                     _ -> error "expression structure Three R is wrong"
         | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
@@ -744,5 +756,49 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                                               (cdt ! (i, j, k))
                                               branches
                                 ]
+                    Rotate [amount1, amount2, amount3] arg ->
+                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeC mp arg)
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
+
+-- |
+--
+rtt :: Int -> Int -> Int
+rtt pos size = (pos + size) `mod` size
+
+-- |
+--
+rotate1D :: Int -> Int -> Array Int a -> Array Int a
+rotate1D size amount arr =
+    listArray (0, size) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
+
+-- |
+--
+rotate2D :: (Int, Int) -> (Int, Int) -> Array (Int, Int) a -> Array (Int, Int) a
+rotate2D (size1, size2) (amount1, amount2) arr =
+    listArray
+        ((0, 0), (size1 - 1, size2 - 1))
+        [ arr ! (rtt (i - amount1) size1, rtt (j - amount2) size2)
+        | i <- [0 .. size1 - 1]
+        , j <- [0 .. size2 - 1]
+        ]
+
+-- |
+--
+rotate3D ::
+       (Int, Int, Int)
+    -> (Int, Int, Int)
+    -> Array (Int, Int, Int) a
+    -> Array (Int, Int, Int) a
+rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
+    listArray
+        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+        [ arr !
+        ( rtt (i - amount1) size1
+        , rtt (j - amount2) size2
+        , rtt (k - amount3) size3)
+        | i <- [0 .. size1 - 1]
+        , j <- [0 .. size2 - 1]
+        , k <- [0 .. size3 - 1]
+        ]
+
