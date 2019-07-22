@@ -29,8 +29,6 @@ import HashedPrettify (prettify, showExp)
 import HashedUtils
 
 -- | This operation emulates the mathematical operation
-
-
 -- | Turn expression to the right type
 --
 expZeroR :: ExpressionMap -> Int -> Expression Zero R
@@ -341,15 +339,14 @@ instance Evaluable One R (Array Int Double) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
-                    Rotate [x] arg -> rotationOpt1D [x] (eval valMap $ expOneR mp arg)
+                    Rotate [amount] arg ->
+                        rotate1D size amount (eval valMap $ expOneR mp arg)
                     _ -> error "expression structure One R is wrong"
         | otherwise = error "one r but shape is not [size] ??"
 
 --                         in chooseBranch marks cdt branches
 -- |
 --
-
-
 instance Evaluable One C (Array Int (Complex Double)) where
     eval :: ValMaps -> Expression One C -> Array Int (Complex Double)
     eval valMap e@(Expression n mp)
@@ -408,6 +405,8 @@ instance Evaluable One C (Array Int (Complex Double)) where
                                 , let chosen =
                                           chooseBranch marks (cdt ! i) branches
                                 ]
+                    Rotate [amount] arg ->
+                        rotate1D size amount (eval valMap $ expOneC mp arg)
                     _ -> error "expression structure One C is wrong"
         | otherwise = error "one C but shape is not [size] ??"
 
@@ -497,7 +496,8 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                                               (cdt ! (i, j))
                                               branches
                                 ]
-                    Rotate [x] arg -> rotationOpt2D [x] (eval valMap $ expTwoR mp arg)
+                    Rotate [amount1, amount2] arg ->
+                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoR mp arg)
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -571,6 +571,8 @@ instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
                                               (cdt ! (i, j))
                                               branches
                                 ]
+                    Rotate [amount1, amount2] arg ->
+                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoC mp arg)
                     _ -> error "expression structure Two C is wrong"
         | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -669,7 +671,8 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                                               (cdt ! (i, j, k))
                                               branches
                                 ]
-                    Rotate [x] arg -> rotationOpt3D [x] (eval valMap $ expThreeR mp arg)
+                    Rotate [amount1, amount2, amount3] arg ->
+                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeR mp arg)
                     _ -> error "expression structure Three R is wrong"
         | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
@@ -753,138 +756,49 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                                               (cdt ! (i, j, k))
                                               branches
                                 ]
+                    Rotate [amount1, amount2, amount3] arg ->
+                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeC mp arg)
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
+-- |
+--
+rtt :: Int -> Int -> Int
+rtt pos size = (pos + size) `mod` size
 
+-- |
+--
+rotate1D :: Int -> Int -> Array Int a -> Array Int a
+rotate1D size amount arr =
+    listArray (0, size) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
 
-{--
-    =========================
-    ==  Rotate Operations  ==
-    =========================
--}
+-- |
+--
+rotate2D :: (Int, Int) -> (Int, Int) -> Array (Int, Int) a -> Array (Int, Int) a
+rotate2D (size1, size2) (amount1, amount2) arr =
+    listArray
+        ((0, 0), (size1 - 1, size2 - 1))
+        [ arr ! (rtt (i - amount1) size1, rtt (j - amount2) size2)
+        | i <- [0 .. size1 - 1]
+        , j <- [0 .. size2 - 1]
+        ]
 
--- | Find out if it is going to be a righ or left shift and calculate the shift amount
-shiftAmount::
-    Int -- ^ Input : Position to be changes
-    -> Int -- ^ Input : Shift amount
-    -> Int -- ^ Input : First Element of Range
-    -> Int -- ^ Input : Last Element of Range
-    -> Int -- ^ Output : Calculated shift amount
-shiftAmount po shift first last
-  | shift == 0 = po -- There is not shift. Just return the position itself
-  | shift > 0 = rightShiftCalc po shift first last -- It is a right shift. Go and invoke the right shift function
-  | otherwise = leftShiftCalc po shift first last -- It is a left shift. Go and invoke the left shift function
+-- |
+--
+rotate3D ::
+       (Int, Int, Int)
+    -> (Int, Int, Int)
+    -> Array (Int, Int, Int) a
+    -> Array (Int, Int, Int) a
+rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
+    listArray
+        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+        [ arr !
+        ( rtt (i - amount1) size1
+        , rtt (j - amount2) size2
+        , rtt (k - amount3) size3)
+        | i <- [0 .. size1 - 1]
+        , j <- [0 .. size2 - 1]
+        , k <- [0 .. size3 - 1]
+        ]
 
-
--- | Calculate the right shift amount and pass it to shiftAmount function
-rightShiftCalc ::
-  Int -- ^ Input : Position to be changes
-  -> Int -- ^ Input : Shift amount
-  -> Int -- ^ Input : First Element of Range
-  -> Int -- ^ Input : Last Element of Range
-  -> Int -- ^ Output : Calculated shift amount
-rightShiftCalc po shift first last
-  | modShift == 0 = po -- If no shift happen, return the position itself
-  | otherwise = realShift `mod` rangeLength -- Calculate the real amount of shift based on the first index position
-  where rangeLength = (length . range) (first,last)   -- calculating the number or elements in index list
-        modShift= shift `mod` rangeLength -- calculating the shift amount based on mod function
-        realShift = po + modShift -- calculating the real shift amount after mod shift calculation
-
--- | Calculate the left shift amount and pass it to shiftAmount function
-leftShiftCalc ::
-  Int -- ^ Input : Position to be changes
-  -> Int -- ^ Input : Shift amount
-  -> Int -- ^ Input : First Element of Range
-  -> Int -- ^ Input : Last Element of Range
-  -> Int -- ^ Output : Calculated shift amount
-leftShiftCalc po shift first last
-  = rightShiftCalc po eqRightShift first last
-  where eqRightShift= rangeLength + shift
-        rangeLength = (length . range) (first,last)
-
-
-
-
--- | The 'oneDArrayRotateGenerator' Generates an array based on the input arguments
-oneDArrayRotateGenerator ::
-  Int -- ^ Range first element
-  -> Int -- ^ Range last element
-  -> Int -- ^ Shift Amount
-  -> (Array Int Double) -- ^ Target Array
-  -> (Array Int Double) -- ^ Result Array
-oneDArrayRotateGenerator n  m rotateAmountX xs =
-  array (n,m) ([((shiftAmount i rotateAmountX n m),xs!i)| i <- [n..m]])
-
--- | One dimension Array rotation
-oneDRotation ::
-  Int -- ^ Rotation Amount
-  -> (Array Int Double)  -- ^ Input Array
-  -> (Array Int Double)  -- ^ Output Array
-oneDRotation n xs =
- oneDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) n xs
-
--- | The 'twoDArrayRotateGenerator' Generates an array based on the input arguments
-twoDArrayRotateGenerator ::
-  (Int,Int) -- ^ Range first Element
-  -> (Int,Int) -- ^ Range last element
-  -> (Int,Int) -- ^ Rotate Amount in each direction
-  -> (Array (Int,Int) Double) -- ^ Input Array
-  -> (Array (Int,Int) Double) -- ^ Output Array
-twoDArrayRotateGenerator (x1,y1) (x2,y2) (rotateAmountX,rotateAmountY) xs =
-  array ((x1,y1),(x2,y2)) ([(((shiftAmount i rotateAmountX x1 x2),(shiftAmount j rotateAmountY y1 y2)),xs!(i,j))| (i,j) <- range ((x1,y1),(x2,y2))])
-
-  -- | Two dimension Array rotation
-twoRotation ::
-  (Int,Int) -- ^ Rotation Amount
-  -> (Array (Int,Int) Double)  -- ^ Input Array
-  -> (Array (Int,Int) Double)  -- ^ Output Array
-twoRotation (x,y) xs =
- twoDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y) xs
-
-
--- | The 'threeDArrayRotateGenerator' Generates an array based on the input with 3d indexing arguments
-threeDArrayRotateGenerator ::
-  (Int,Int,Int) -- ^ Range first Element
-  -> (Int,Int,Int) -- ^ Range last element
-  -> (Int,Int,Int) -- ^ Rotate Amount in each direction
-  -> (Array (Int,Int,Int) Double) -- ^ Input Array
-  -> (Array (Int,Int,Int) Double) -- ^ Output Array
-threeDArrayRotateGenerator (x1,y1,z1) (x2,y2,z2) (rotateAmountX,rotateAmountY,rotateAmountZ) xs =
-  array ((x1,y1,z1),(x2,y2,z2)) ([(((shiftAmount i rotateAmountX x1 x2),(shiftAmount j rotateAmountY y1 y2),(shiftAmount z rotateAmountZ z1 z2)),xs!(i,j,z))| (i,j,z) <- range ((x1,y1,z1),(x2,y2,z2))])
-
-  -- | three dimension Array rotation
-threeRotation ::
-  (Int,Int,Int) -- ^ Rotation Amount
-  -> (Array (Int,Int,Int) Double)  -- ^ Input Array
-  -> (Array (Int,Int,Int) Double)  -- ^ Output Array
-threeRotation (x,y,z) xs =
-  threeDArrayRotateGenerator ((fst . bounds) xs) ((snd . bounds) xs) (x,y,z) xs
-
-
--- | Rotation of a Array
--- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
--- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
-rotationOpt1D ::
-  [Int] -- ^ Input : Rotation Amount as List. Length must be 1
-  -> Array Int Double  -- ^ Input : Input one dimension array
-  -> Array Int Double  -- ^ Output : Output Array (The dimension should match the input array)
-rotationOpt1D rotationAmount xs = oneDRotation (head rotationAmount) xs
-
--- | Rotation of a Array
--- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
--- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
-rotationOpt2D ::
-  [Int] -- ^ Input : Rotation Amount as List. Length must be 2
-  -> Array (Int,Int) Double  -- ^ Input : Input two dimension array
-  -> Array (Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
-rotationOpt2D rotationAmount xs = twoRotation (head rotationAmount,rotationAmount !! 1) xs
-
--- | Rotation of a Array
--- Propertiy : Do the rotation based on the rotation amount. If the length of the list is 1 then it is a one dimension
--- rotation, if it is two, then this is a two dimension rotation. If it is three, then it is a three dimension rotation.
-rotationOpt3D ::
-  [Int] -- ^ Input : Rotation Amount as List. Length must be 3
-  -> Array (Int,Int,Int) Double  -- ^ Input : Input three dimenstion Array
-  -> Array (Int,Int,Int) Double  -- ^ Output : Output Array (The dimension should match the input array)
-rotationOpt3D rotationAmount xs = threeRotation (head rotationAmount,rotationAmount !! 1,rotationAmount !! 2) xs
