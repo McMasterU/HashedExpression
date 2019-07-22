@@ -214,7 +214,6 @@ diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
 
-
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
 --
@@ -315,8 +314,7 @@ combineChildrenDiffs contextMp n childrenDiffs
     | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
     | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
     | oldChildren == newChildren &&
-          all (== IM.empty) (map extraEntries childrenDiffs) =
-        noChange n
+          all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =
         case oldNode of
             Var _ -> noChange n

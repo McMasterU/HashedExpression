@@ -361,12 +361,14 @@ powerSumRealImagRules exp@(mp, n)
         | otherwise = noChange n
 
 -- | Rules for power product
--- (a*b)^2 should be a^2 * b^2
+-- (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , Mul _ _ <- retrieveNode nId mp
-    , val > 0 = mulManyDiff mp . replicate val . noChange $ nId
+    , Mul _ args <- retrieveNode nId mp =
+        let powerEach nodeId =
+                applyDiff mp (unary (Power val)) [noChange nodeId]
+         in mulManyDiff mp . map powerEach $ args
     | otherwise = noChange n
 
 -- | Rules for power scale
@@ -417,7 +419,9 @@ evaluateIfPossibleRules exp@(mp, n) =
         (Sum R _, Just vals) -> res $ Prelude.sum vals
         (Mul R _, Just vals) -> res $ Prelude.product vals
         (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
-        (Neg R _, Just [val]) -> res $ 0 - val
+        (Neg R _, Just [val])
+            | val /= 0 -> res $ (-val)
+            | otherwise -> res 0
         (Power x _, Just [val]) -> res $ val ^ x
         (InnerProd R arg1 arg2, Just [val1, val2]) ->
             res $
