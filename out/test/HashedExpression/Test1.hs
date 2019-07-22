@@ -135,5 +135,3 @@ spec =
         simplify ((x <.> (x + y)) ^ 2) `shouldBe`
             simplify
                 (((x ^ 2) * (y ^ 2)) + (const 2.0 *. (y * (x ^ 3))) + (x ^ 4))
-
---Rotate with value as same as size of oneD array should be the same array.
