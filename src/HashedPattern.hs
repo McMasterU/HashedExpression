@@ -122,7 +122,7 @@ data Pattern
     | PPiecewise Pattern PatternList
     | PMulRest ListCapture [Pattern]
     | PSumRest ListCapture [Pattern]
-    | PPower Pattern Pattern
+    | PPower Pattern PatternPower
     | PRotate [Pattern] Pattern
 
     deriving (Show)
