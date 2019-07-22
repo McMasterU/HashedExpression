@@ -10,7 +10,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import HashedExpression
-import HashedInner (expressionEdges, topologicalSort, unwrap)
+import HashedInner (D_, ET_, topologicalSort, unwrap)
 import HashedInterp
 import HashedNode
 import HashedOperation hiding (product, sum)
@@ -52,15 +52,20 @@ import Test.QuickCheck
 --
 prop_TopologicalSort :: ArbitraryExpresion -> Bool
 prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
-    noDuplicate && all prop withChildren
+    ok exp && ok (simplify exp)
   where
-    sortedNodeId = topologicalSort (mp, n)
-    noDuplicate = sort (removeDuplicate sortedNodeId) == sort sortedNodeId
-    isAfter n other =
-        filter (liftA2 (||) (== n) (== other)) sortedNodeId == [other, n]
-    dependencies n = nodeArgs $ retrieveNode n mp
-    withChildren = zip sortedNodeId (map dependencies sortedNodeId)
-    prop (nId, childrenIds) = all (nId `isAfter`) childrenIds
+    exp = Expression n mp :: Expression D_ ET_
+    ok exp =
+        let sortedNodeId = topologicalSort (mp, n)
+            noDuplicate =
+                sort (removeDuplicate sortedNodeId) == sort sortedNodeId
+            isAfter n other =
+                filter (liftA2 (||) (== n) (== other)) sortedNodeId ==
+                [other, n]
+            dependencies n = nodeArgs $ retrieveNode n mp
+            withChildren = zip sortedNodeId (map dependencies sortedNodeId)
+            prop (nId, childrenIds) = all (nId `isAfter`) childrenIds
+         in noDuplicate && all prop withChildren
 
 -- |
 --
@@ -104,4 +109,3 @@ spec =
                     putStrLn $
                         "Simplifing (exp1 * exp2) -> " ++
                         show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
-

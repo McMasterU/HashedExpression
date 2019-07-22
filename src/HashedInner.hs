@@ -5,21 +5,32 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module HashedInner where
 
+import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.ST.Strict
+import Data.Array.MArray
+import Data.Array.ST
+import qualified Data.Array.Unboxed as UA
+import Data.Data (Typeable)
 import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
-import Data.List (sort, sortBy, sortOn)
-import Data.Maybe (mapMaybe)
+import qualified Data.IntSet as IS
+import Data.List (foldl', groupBy, sort, sortBy, sortOn)
+import Data.Maybe (fromJust, mapMaybe)
+import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
+import GHC.Exts (sortWith)
 import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
-import Prelude hiding ((-))
+import Prelude hiding ((+), (-))
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -31,6 +42,16 @@ checkMergeConflict = False
 --
 safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
 safeUnion = IM.union
+
+-- | Placeholder for any dimension type
+--
+data D_
+    deriving (Typeable, DimensionType)
+
+-- | Placeholder for any element type
+--
+data ET_
+    deriving (Typeable, ElementType)
 
 -- |
 --
@@ -186,7 +207,42 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
 
--- | Simplification will return an ExpressionDiff instead of the whole Expression to speed things up
+-- |
+--
+diffConst :: Shape -> Double -> ExpressionDiff
+diffConst shape val = ExpressionDiff mp n
+  where
+    (mp, n) = aConst shape val
+
+
+-- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
+-- unreachable nodes will be ignored
+--
+topologicalSort :: (ExpressionMap, Int) -> [Int]
+topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
+  where
+    n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
+    toPos nId = fromJust $ IM.lookup nId n2Pos
+    len = IM.size n2Pos
+    adj nId = nodeArgs $ retrieveNode nId mp
+    topoOrder =
+        runSTUArray $ do
+            marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
+            order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
+            cnt <- newSTRef 0 :: ST s (STRef s Int)
+            let dfs u = do
+                    let arrayPos = toPos u
+                    writeArray marked arrayPos True
+                    forM_ (adj u) $ \v -> do
+                        isMarked <- readArray marked (toPos v)
+                        unless isMarked $ dfs v
+                    cntVal <- readSTRef cnt
+                    writeArray order cntVal u
+                    writeSTRef cnt (cntVal + 1)
+            dfs n
+            return order
+
+-- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
 --
 data ExpressionDiff =
     ExpressionDiff
@@ -195,12 +251,146 @@ data ExpressionDiff =
         }
     deriving (Eq, Ord, Show)
 
+-- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
+--
+type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
+
+-- | Modification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
+-- the new index of the root expression) between the modified and original expression
+--
+type Modification = (ExpressionMap, Int) -> ExpressionDiff
+
+makeRecursive1 :: Modification -> Modification
+makeRecursive1 smp = recursiveSmp
+  where
+    recursiveSmp :: Modification
+    recursiveSmp exp@(mp, n) =
+        let children = nodeArgs $ retrieveNode n mp
+            childrenDiffs = map (recursiveSmp . (mp, )) children
+            nodeDiff = combineChildrenDiffs mp n childrenDiffs
+            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
+            ExpressionDiff exEntries newId = smp newExp
+         in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
+
+-- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
+--
+makeRecursive :: Modification -> Modification
+makeRecursive smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+  where
+    topoOrder = topologicalSort exp
+    f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
+    f diffs nId =
+        let children = nodeArgs $ retrieveNode nId mp
+            childrenDiffs = map (fromJust . flip IM.lookup diffs) children
+            nodeDiff = combineChildrenDiffs mp nId childrenDiffs
+            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
+            ExpressionDiff exEntries newId = smp newExp
+            diff =
+                ExpressionDiff
+                    (IM.union exEntries (extraEntries nodeDiff))
+                    newId
+         in IM.insert nId diff diffs
+    diffs = foldl' f IM.empty topoOrder
+
 -- |
 --
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
+toTransformation :: Modification -> Transformation
+toTransformation simp exp@(mp, n) =
+    let diff = simp exp
+        newMp = IM.union mp (extraEntries diff)
+        newN = newRootId diff
+     in (newMp, newN)
+
+-- | Turn a modification to a recursive transformation
+--
+toRecursiveTransformation :: Modification -> Transformation
+toRecursiveTransformation = toTransformation . makeRecursive
+
+-- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
+-- and return the combined difference
+--
+combineChildrenDiffs ::
+       ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
+combineChildrenDiffs contextMp n childrenDiffs
+    | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
+    | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
+    | oldChildren == newChildren &&
+          all (== IM.empty) (map extraEntries childrenDiffs) =
+        noChange n
+    | otherwise =
+        case oldNode of
+            Var _ -> noChange n
+            DVar _ -> noChange n
+            Const _ -> noChange n
+            Power x _ -> combine (unary (Power x))
+            Neg et _ -> combine (unaryET Neg (ElementSpecific et))
+            Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
+            Div _ _ -> combine (binary Div)
+            Sqrt _ -> combine (unary Sqrt)
+            Sin _ -> combine (unary Sin)
+            Cos _ -> combine (unary Cos)
+            Tan _ -> combine (unary Tan)
+            Exp _ -> combine (unary Exp)
+            Log _ -> combine (unary Log)
+            Sinh _ -> combine (unary Sinh)
+            Cosh _ -> combine (unary Cosh)
+            Tanh _ -> combine (unary Tanh)
+            Asin _ -> combine (unary Asin)
+            Acos _ -> combine (unary Acos)
+            Atan _ -> combine (unary Atan)
+            Asinh _ -> combine (unary Asinh)
+            Acosh _ -> combine (unary Acosh)
+            Atanh _ -> combine (unary Atanh)
+            RealImag _ _ -> combine (binary RealImag)
+            RealPart _ -> combine (unary RealPart)
+            ImagPart _ -> combine (unary ImagPart)
+            InnerProd et _ _ ->
+                combine (binaryET InnerProd (ElementSpecific et))
+            Piecewise marks _ _ -> combine (conditionAry (Piecewise marks))
+            Rotate amount _ -> combine (unary (Rotate amount))
   where
-    (mp, n) = aConst shape val
+    (oldShape, oldNode) = retrieveInternal n contextMp
+    oldChildren = nodeArgs oldNode
+    newChildren = map newRootId childrenDiffs
+    combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
+    combine option =
+        applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
+    sortAndCombine option =
+        let getNode diff
+                | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
+                | Just (_, node) <-
+                     IM.lookup (newRootId diff) combinedExtraEntries = node
+                | otherwise =
+                    error $
+                    " " ++
+                    show diff ++
+                    "\n" ++
+                    show combinedExtraEntries ++
+                    "\n" ++
+                    show contextMp ++
+                    "\n" ++ show oldNode ++ "\n" ++ show childrenDiffs
+            nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
+            weight diff = nodeTypeWeight $ getNode diff
+            sortArgs =
+                concatMap (sortWith newRootId) .
+                groupBy nodeType . sortWith weight
+            sortedChildrenDiffs = sortArgs childrenDiffs
+         in if oldChildren == map newRootId sortedChildrenDiffs &&
+               all (== IM.empty) (map extraEntries sortedChildrenDiffs)
+                then noChange n
+                else applyDiff
+                         contextMp
+                         (option `hasShape` oldShape)
+                         sortedChildrenDiffs
+
+-- | Remove unreachable nodes
+--
+removeUnreachable :: Transformation
+removeUnreachable (mp, n) =
+    let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
+        reducedMap =
+            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
+     in (reducedMap, n)
 
 -- |
 --
@@ -224,33 +414,7 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
     (resExtraEntries, resRootId) =
         addEntryWithContext updatedContextMp mergedExtraEntries option ns
 
--- |
+-- | The ExpressionDiff corresponding to no change in this node
 --
-withoutExtraEntry :: Int -> ExpressionDiff
-withoutExtraEntry = ExpressionDiff IM.empty
-
--- | Topological sort the expression map, all the dependencies will appear before the depended node
---
-topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) =
-    reverse . mapMaybe (`IM.lookup` vertices2nId) $ topSort graph
-  where
-    nId2vertices = IM.fromList $ zip (IM.keys mp) [0 ..]
-    vertices2nId = IM.fromList $ zip [0 ..] (IM.keys mp)
-    exNodeEdges = expressionEdges expr
-    verticesEdges =
-        mapMaybe
-            (bringMaybeOut . mapBoth (`IM.lookup` nId2vertices))
-            exNodeEdges
-    graph = buildG (0, IM.size mp - 1) verticesEdges
-
--- | Get all the edges of the expressions
---
-expressionEdges :: (ExpressionMap, Int) -> [(Int, Int)]
-expressionEdges (mp, n) = Set.toList $ edges n
-  where
-    edges :: Int -> Set (Int, Int)
-    edges nId =
-        let args = nodeArgs $ retrieveNode nId mp
-            thisNode = Set.fromList . map (nId, ) $ args
-         in Set.unions $ thisNode : map edges args
+noChange :: Int -> ExpressionDiff
+noChange = ExpressionDiff IM.empty

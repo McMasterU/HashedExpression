@@ -39,8 +39,9 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "Simplify spec" $ do
-        specify "simplify scalar one zero" $ do
-            x `shouldBe` x
-            simplify ((x * y * z) ^ 2) `shouldBe`
-                simplify (x ^ 2 * y ^ 2 * z ^ 2)
+    describe "More simplify spec" $
+    specify "Mixed simplified spec 1" $ do
+        negate x `shouldSimplifyTo` const (-1) *. x
+        negate x1 `shouldSimplifyTo` const (-1) *. x1
+        x ^ 2 ^ 3 `shouldSimplifyTo` x ^ 6
+        x ^ 3 / x ^ 2 `shouldSimplifyTo` x
