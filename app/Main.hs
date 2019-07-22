@@ -81,7 +81,7 @@ main = do
 --             (n1))
 --  let exp2 = sin ((const1d 10 (-14.72865791946098)))
 --  1D array Test Case for rotation
-    let exp1 = rotate (-2) a1
+    let exp1 = rotate (12) a1
     let valMaps =
             ValMaps
                 { vm0 = fromList []
