@@ -18,9 +18,15 @@ import Data.List (intercalate)
 import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression
-import HashedInner (unwrap)
 import HashedNode
-import HashedUtils
+
+-- |
+--
+unwrap :: Expression d et -> (ExpressionMap, Int)
+unwrap (Expression n mp) = (mp, n)
+
+wrap :: (ExpressionMap, Int) -> Expression d et
+wrap = uncurry $ flip Expression
 
 -- | Pretty exp
 --

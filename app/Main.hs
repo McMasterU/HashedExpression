@@ -43,6 +43,7 @@ import Prelude hiding
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
+import Data.STRef.Strict
 import HashedToC (generateProgram)
 import HashedUtils
 import HashedVar
@@ -56,6 +57,7 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
+
     let exp = (x1 <.> y1) <.> x
     let dexp = exteriorDerivative (Set.fromList ["x", "x1", "y1"]) exp
     showExpDebug . simplify $ dexp

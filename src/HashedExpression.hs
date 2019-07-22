@@ -100,7 +100,7 @@ instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
 
 instance (DimensionType d) => VectorSpace d C C
 
-instance (DimensionType d, NumType nt) => VectorSpace d Covector nt -- TODO? True with C??
+instance (DimensionType d) => VectorSpace d Covector R
 
 instance VectorSpace d s s => InnerProductSpace d s
 
@@ -108,19 +108,20 @@ instance VectorSpace d s s => InnerProductSpace d s
 --
 class AddableOp a where
     (+) :: a -> a -> a
-    negate :: a -> a
-    (-) :: a -> a -> a
-    x - y = x + negate y
 
-class MultiplyOp a b c | a b -> c where
-    (*) :: a -> b -> c
+class NegateOp a where
+    negate :: a -> a
+
+(-) :: (AddableOp a, NegateOp a) => a -> a -> a
+x - y = x + negate y
+
+class MultiplyOp a where
+    (*) :: a -> a -> a
 
 class PowerOp a b | a -> b where
     (^) :: a -> b -> a
 
-class AddableOp b =>
-      VectorSpaceOp a b
-    where
+class VectorSpaceOp a b where
     scale :: a -> b -> b
     (*.) :: a -> b -> b
     (*.) = scale
@@ -160,7 +161,7 @@ infixl 7 *, /
 
 infixl 8 *., `scale`, <.>
 
-infix 8 ^
+infixl 8 ^
 
 -- | Shape type:
 -- []        --> scalar

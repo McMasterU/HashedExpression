@@ -54,29 +54,8 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
+-- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
 --
-type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
-
--- | Simplification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
--- the new index of the root expression) between the simplified and original expression
---
-type Simplification = (ExpressionMap, Int) -> ExpressionDiff
-
--- | Chain n simplifications together to a simplification
---
-chain :: [a -> a] -> a -> a
-chain = flip $ foldl (|>)
-
--- |
---
-applySimplification :: Simplification -> Transformation
-applySimplification simp exp@(mp, n) =
-    let diff = simp exp
-        newMp = IM.union mp (extraEntries diff)
-        newN = newRootId diff
-     in (newMp, newN)
-
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
 multipleTimes :: Int -> Transformation -> Transformation
@@ -103,8 +82,7 @@ simplify ::
 simplify e =
     let applyRules =
             multipleTimes 100 $
-            (toRecursiveTransformation standardize) >>>
-            rulesFromPattern >>>
+            (toRecursiveTransformation evaluateIfPossibleRules) >>>
             (toRecursiveTransformation groupConstantsRules) >>>
             (toRecursiveTransformation combineTermsRules) >>>
             (toRecursiveTransformation combineTermsRulesProd) >>>
@@ -112,15 +90,11 @@ simplify e =
             (toRecursiveTransformation powerScaleRules) >>>
             (toRecursiveTransformation combinePowerRules) >>>
             (toRecursiveTransformation powerSumRealImagRules) >>>
-            (toRecursiveTransformation negateRules) >>>
-            (toRecursiveTransformation combineScaleRules) >>>
-            (toRecursiveTransformation constPowerRules) >>>
+            (toRecursiveTransformation combineConstantScalarRules) >>>
             (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>> removeUnreachable
+            (toRecursiveTransformation reduceSumProdRules) >>>
+            rulesFromPattern >>> removeUnreachable
      in wrap . applyRules . unwrap $ e
-
-toRecursiveTransformation :: Simplification -> Transformation
-toRecursiveTransformation = applySimplification . makeRecursive
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
@@ -142,8 +116,8 @@ zeroOneRules =
     [ one *. x |.~~~~~~> x
     , one * x |.~~~~~~> x
     , x * one |.~~~~~~> x
-    , x ^ zero |.~~~~~~> one
-    , x ^ one |.~~~~~~> x
+    , x ^ powerZero |.~~~~~~> one
+    , x ^ powerOne |.~~~~~~> x
     , zero * x |.~~~~~~> zero
     , x * zero |.~~~~~~> zero
     , zero *. x |. isReal x ~~~~~~> zero
@@ -154,10 +128,6 @@ zeroOneRules =
     , zero + x |.~~~~~~> x
     , x <.> zero |.~~~~~~> scalarZero
     , zero <.> x |.~~~~~~> scalarZero
-    , negate zero |.~~~~~~> zero
-    , negate (negate x) |.~~~~~~> x
-    , num (-1) *. negate (x) |.~~~~~~> x
-    , num (-1) * negate (x) |.~~~~~~> x
     ]
 
 scaleRules :: [Substitution]
@@ -166,9 +136,9 @@ scaleRules =
     , negate (s *. x) |.~~~~~~> s *. negate (x)
     , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
     , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
     ]
 
---    , x *. y |. sameElementType [x, y] &&. isScalar y &&. isNotConst x ~~~~~~> x * y -- TODO
 -- | Rules with complex operation
 --
 complexNumRules :: [Substitution]
@@ -203,22 +173,21 @@ dotProductRules =
 --
 distributiveRules :: [Substitution]
 distributiveRules =
-    [ x * sumOf (each) |.~~~~~~> sumOf (x * each)
-    , sumOf (each) * x |.~~~~~~> sumOf (x * each)
-    , x <.> sumOf (each) |.~~~~~~> sumOf (x <.> each)
-    , sumOf (each) <.> x |.~~~~~~> sumOf (each <.> x)
-    , x *. sumOf (each) |.~~~~~~> sumOf (x *. each)
-    , negate (sumOf (each)) |.~~~~~~> sumOf (negate each)
-    , restOfProduct ~* sumOf (each) |.~~~~~~> sumOf (restOfProduct ~* each)
+    [ x * sum (ys) |.~~~~~~> sum (mapL (x *) ys)
+    , sum (ys) * x |.~~~~~~> sum (mapL (* x) ys)
+    , x <.> sum (ys) |.~~~~~~> sum (mapL (x <.>) ys)
+    , sum (ys) <.> x |.~~~~~~> sum (mapL (<.> x) ys)
+    , x *. sum (ys) |.~~~~~~> sum (mapL (x *.) ys)
+    , negate (sum (ys)) |.~~~~~~> sum (mapL negate ys)
+    , restOfProduct ~* sum (ys) |.~~~~~~> sum (mapL (restOfProduct ~*) ys)
+    , sum (ys) *. x |.~~~~~~> sum (mapL (*. x) ys)
     ]
 
 -- | Rules of piecewise
 --
 piecewiseRules :: [Substitution]
 piecewiseRules =
-    [ piecewise condition branches |. allTheSame branches ~~~~~~>
-      headOf branches
-    ]
+    [piecewise condition branches |. allTheSame branches ~~~~~~> headL branches]
 
 -- | Rules of exponent and log
 --
@@ -233,68 +202,60 @@ exponentRules =
 --
 otherRules :: [Substitution]
 otherRules =
-    [ sqrt (x * x) |.~~~~~~> x --
+    [ negate x |.~~~~~~> scalar (-1) *. x --
+    , (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
     ]
 
--- | If sum or product contains sub-sum or sub-product, flatten them out
+-- | 1 and 0 rules for Sum and Mul since they can involve many operands
 --
-reduceSumProdRules :: Simplification
+reduceSumProdRules :: Modification
 reduceSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
-            | length ns == 1 -> withoutExtraEntry $ head ns
+            | length ns == 1 -> noChange $ head ns
                 -- to make sure filter (not . isZero mp) ns is not empty
-            | all (isZero mp) ns -> withoutExtraEntry $ head ns
+            | all (isZero mp) ns -> noChange $ head ns
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
             | any (isZero mp) ns ->
-                sumManyDiff mp .
-                map withoutExtraEntry . filter (not . isZero mp) $
-                ns
+                sumManyDiff mp . map noChange . filter (not . isZero mp) $ ns
         Mul _ ns
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
-            | length ns == 1 -> withoutExtraEntry $ head ns
+            | length ns == 1 -> noChange $ head ns
                 -- to make sure filter (not . isOne mp) ns is not empty
-            | all (isOne mp) ns -> withoutExtraEntry $ head ns
+            | all (isOne mp) ns -> noChange $ head ns
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
             | any (isOne mp) ns ->
-                mulManyDiff mp . map withoutExtraEntry . filter (not . isOne mp) $
-                ns
+                mulManyDiff mp . map noChange . filter (not . isOne mp) $ ns
                 -- if any is zero, collapse to zero
                 -- product(x, y, z, 0, t, u, v) = 0
-            | nId:_ <- filter (isZero mp) ns -> withoutExtraEntry nId
+            | nId:_ <- filter (isZero mp) ns -> noChange nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-        _ -> withoutExtraEntry n
+        _ -> noChange n
 
--- |
+-- | If sum or product contains sub-sum or sub-product, flatten them out
 --
-flattenSumProdRules :: Simplification
+flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
         -- if the sum contains any sum, just flatten them out
         -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
-         ->
-            sumManyDiff mp .
-            map withoutExtraEntry . concatMap (pullSumOperands mp) $
-            ns
+         -> sumManyDiff mp . map noChange . concatMap (pullSumOperands mp) $ ns
         Mul _ ns
         -- if the prod contains any prod, just flatten them out
         -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-         ->
-            mulManyDiff mp .
-            map withoutExtraEntry . concatMap (pullProdOperands mp) $
-            ns
-        _ -> withoutExtraEntry n
+         -> mulManyDiff mp . map noChange . concatMap (pullProdOperands mp) $ ns
+        _ -> noChange n
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
-groupConstantsRules :: Simplification
+groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
     let shape = retrieveShape n mp
      in case retrieveNode n mp of
@@ -304,28 +265,28 @@ groupConstantsRules exp@(mp, n) =
                 , let diffNewConst = diffConst shape . Prelude.sum $ cs ->
                     sumManyDiff mp $
                     diffNewConst :
-                    (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
+                    (map noChange . filter (not . isConstant mp) $ ns)
             Mul _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
                 , let diffNewConst = diffConst shape . Prelude.product $ cs ->
                     mulManyDiff mp $
                     diffNewConst :
-                    (map withoutExtraEntry . filter (not . isConstant mp) $ ns)
-            _ -> withoutExtraEntry n
+                    (map noChange . filter (not . isConstant mp) $ ns)
+            _ -> noChange n
 
 -- |
 --
 -- Sum(x,(-1) *. x,y) -> Sum(y)
 -- Sum(2 *. x, (-1) *. x,y) -> Sum(x,y)
 -- Sum(x,x,y) -> Sum(2 *. x,y)
-combineTermsRules :: Simplification
+combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
         sumManyDiff mp .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = withoutExtraEntry n
+    | otherwise = noChange n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -337,22 +298,22 @@ combineTermsRules exp@(mp, n)
     fn x y = fst x == fst y
     toDiff :: (Int, Double) -> ExpressionDiff
     toDiff (nId, val)
-        | val == 1 = withoutExtraEntry nId
+        | val == 1 = noChange nId
         | otherwise =
             applyDiff' (binaryET Scale ElementDefault) $
-            [diffConst [] val, withoutExtraEntry nId]
+            [diffConst [] val, noChange nId]
 
 -- |
 --
 -- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or complex
-combineTermsRulesProd :: Simplification
+-- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
+combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
         mulManyDiff mp .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = withoutExtraEntry n
+    | otherwise = noChange n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -366,28 +327,27 @@ combineTermsRulesProd exp@(mp, n)
         | C <- retrieveElementType y mp = False
         | otherwise = x == y
     toDiff (nId, val)
-        | val == 1 = withoutExtraEntry nId
-        | otherwise = applyDiff' (unary (Power val)) [withoutExtraEntry nId]
+        | val == 1 = noChange nId
+        | otherwise = applyDiff' (unary (Power val)) [noChange nId]
 
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
 -- (x^2)^-1 -> x^-2
-combinePowerRules :: Simplification
+combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
-        applyDiff mp (unary (Power (outerVal * innerVal))) $
-        [withoutExtraEntry innerN]
-    | otherwise = withoutExtraEntry n
+        applyDiff mp (unary (Power (outerVal * innerVal))) $ [noChange innerN]
+    | otherwise = noChange n
 
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
 -- (a +: b) ^ 2 should be (a +: b) * (a +: b)
-powerSumRealImagRules :: Simplification
+powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , isSumOrRealImag nId = replicateMul val nId
-    | otherwise = withoutExtraEntry n
+    | otherwise = noChange n
   where
     inverse diff = applyDiff mp (unary $ Power (-1)) $ [diff]
     isSumOrRealImag nId
@@ -395,79 +355,47 @@ powerSumRealImagRules exp@(mp, n)
         | RealImag _ _ <- retrieveNode nId mp = True
         | otherwise = False
     replicateMul val nId
-        | val > 1 = mulManyDiff mp . replicate val $ withoutExtraEntry nId
+        | val > 1 = mulManyDiff mp . replicate val $ noChange nId
         | val < -1 =
-            inverse . mulManyDiff mp . replicate (-val) . withoutExtraEntry $
-            nId
-        | otherwise = withoutExtraEntry n
+            inverse . mulManyDiff mp . replicate (-val) . noChange $ nId
+        | otherwise = noChange n
 
 -- | Rules for power product
 -- (a*b)^2 should be a^2 * b^2
-powerProdRules :: Simplification
+powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ _ <- retrieveNode nId mp
-    , val > 0 = mulManyDiff mp . replicate val . withoutExtraEntry $ nId
-    | otherwise = withoutExtraEntry n
+    , val > 0 = mulManyDiff mp . replicate val . noChange $ nId
+    | otherwise = noChange n
 
 -- | Rules for power scale
--- (a*b)^2 should be a^2 * b^2
-powerScaleRules :: Simplification
+-- (a*.b)^2 should be a^2 *. b^2
+powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Scale et scalar scalee <- retrieveNode nId mp
     , val > 0 =
-        let powerScalar =
-                applyDiff mp (unary (Power val)) [withoutExtraEntry scalar]
-            powerScalee =
-                applyDiff mp (unary (Power val)) [withoutExtraEntry scalee]
+        let powerScalar = applyDiff mp (unary (Power val)) [noChange scalar]
+            powerScalee = applyDiff mp (unary (Power val)) [noChange scalee]
          in applyDiff
                 mp
                 (binaryET Scale (ElementSpecific et))
                 [powerScalar, powerScalee]
-    | otherwise = withoutExtraEntry n
-
--- | Rules for constant multiplication
--- (Const val)^t ---> Const (val)^t
-constPowerRules :: Simplification
-constPowerRules exp@(mp, n)
-    | Power val nId <- retrieveNode n mp
-    , Const constVal <- retrieveNode nId mp
-    , val > 0 = diffConst (retrieveShape n mp) (constVal ^ val)
-    | otherwise = withoutExtraEntry n
-
--- | Rules for negate
--- if is a const:
--- -(const val) = const (-val)
--- otherwise:
--- (-x) ---> (-1) *. x
-negateRules :: Simplification
-negateRules exp@(mp, n)
-    | Neg _ nId <- retrieveNode n mp = turnToScale nId
-    | otherwise = withoutExtraEntry n
-  where
-    turnToScale nId
-        | Const val <- retrieveNode nId mp =
-            diffConst (retrieveShape nId mp) (-val)
-        | otherwise =
-            applyDiff
-                mp
-                (binaryET Scale ElementDefault)
-                [diffConst [] (-1), withoutExtraEntry nId]
+    | otherwise = noChange n
 
 -- | Rules for combining scale
 -- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
-combineScaleRules :: Simplification
-combineScaleRules exp@(mp, n)
+combineConstantScalarRules :: Modification
+combineConstantScalarRules exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp
     , let extracted = map extract ns
     , any (/= 1) . map snd $ extracted =
         let combinedConstants = Prelude.product $ map snd extracted
-            combinedScalees =
-                mulManyDiff mp . map (withoutExtraEntry . fst) $ extracted
+            combinedScalees = mulManyDiff mp . map (noChange . fst) $ extracted
          in applyDiff mp (binaryET Scale ElementDefault) $
             [diffConst [] (combinedConstants), combinedScalees]
-    | otherwise = withoutExtraEntry n
+    | otherwise = noChange n
   where
     extract nId
         | Scale _ scalar scalee <- retrieveNode nId mp
@@ -475,123 +403,38 @@ combineScaleRules exp@(mp, n)
         | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
         | otherwise = (nId, 1)
 
--- | Remove unreachable nodes
---
-removeUnreachable :: Transformation
-removeUnreachable (mp, n) =
-    let collectNode n =
-            IS.insert n . IS.unions . map collectNode . nodeArgs $
-            retrieveNode n mp
-        reachableNodes = collectNode n -- Set Int
-        reducedMap =
-            IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
-     in (reducedMap, n)
-
 -- | Turn HashedPattern to a simplification
 --
-fromSubstitution :: Substitution -> Simplification
+fromSubstitution :: Substitution -> Modification
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
-    | otherwise = withoutExtraEntry n
+    | otherwise = noChange n
 
-checkTopo :: Transformation
-checkTopo exp@(mp, n) =
-    let lst = last $ topologicalSort exp
-     in if (n == lst)
-            then exp
-            else error "Wrong topo"
+evaluateIfPossibleRules :: Modification
+evaluateIfPossibleRules exp@(mp, n) =
+    case (node, pulledVals) of
+        (Sum R _, Just vals) -> res $ Prelude.sum vals
+        (Mul R _, Just vals) -> res $ Prelude.product vals
+        (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
+        (Neg R _, Just [val]) -> res $ 0 - val
+        (Power x _, Just [val]) -> res $ val ^ x
+        (InnerProd R arg1 arg2, Just [val1, val2]) ->
+            res $
+            val1 * val2 *
+            (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
+        (Rotate _ _, Just [val]) -> res val
+        -- TODO: sin, sos, ...
+        _ -> noChange n
+  where
+    (shape, node) = retrieveInternal n mp
+    getVal nId
+        | Const val <- retrieveNode nId mp = Just val
+        | otherwise = Nothing
+    pulledVals = sequence . map getVal . nodeArgs $ node
+    res val = diffConst shape val
 
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
-standardize :: Simplification
-standardize = makeRecursive (withoutExtraEntry . snd)
-
--- | Turn a simplification to a recursive one, apply rules bottom up
---
-makeRecursive :: Simplification -> Simplification
-makeRecursive smp = recursiveSmp
-  where
-    recursiveSmp :: Simplification
-    recursiveSmp exp@(mp, n) =
-        let children = nodeArgs $ retrieveNode n mp
-            childrenDiffs = map recursiveSmp . map (mp, ) $ children
-            nodeDiff = combineChildrenDiffs mp n childrenDiffs
-            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-            ExpressionDiff exEntries newId = smp newExp
-         in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
-
--- |
---
-makeRecursive1 :: Simplification -> Simplification
-makeRecursive1 smp exp@(mp, n) = undefined
-  where
-    a = 1
-
--- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
--- and return the combined difference
---
-combineChildrenDiffs ::
-       ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs contextMp n childrenDiffs =
-    let (oldShape, oldNode) = retrieveInternal n contextMp
-        oldChildren = nodeArgs oldNode
-        newChildren = map newRootId childrenDiffs
-        combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-        combine option =
-            applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
-        sortAndCombine option =
-            let a = 1
-                getNode diff
-                    | Just (_, node) <- IM.lookup (newRootId diff) contextMp =
-                        node
-                    | Just (_, node) <-
-                         IM.lookup (newRootId diff) combinedExtraEntries = node
-                nodeType diff1 diff2 =
-                    sameNodeType (getNode diff1) (getNode diff2)
-                weight diff = nodeTypeWeight $ getNode diff
-                sortArgs =
-                    concat .
-                    map (sortWith newRootId) .
-                    groupBy nodeType . sortWith weight
-             in applyDiff contextMp (option `hasShape` oldShape) . sortArgs $
-                childrenDiffs
-     in if oldChildren == newChildren &&
-           all (== IM.empty) (map extraEntries childrenDiffs)
-            then withoutExtraEntry n
-            else case oldNode of
-                     Var _ -> withoutExtraEntry n
-                     DVar _ -> withoutExtraEntry n
-                     Const _ -> withoutExtraEntry n
-                     Sum et _ ->
-                         sortAndCombine (naryET Sum (ElementSpecific et))
-                     Mul et _ ->
-                         sortAndCombine (naryET Mul (ElementSpecific et))
-                     Power x _ -> combine (unary (Power x))
-                     Neg et _ -> combine (unaryET Neg (ElementSpecific et))
-                     Scale et _ _ ->
-                         combine (binaryET Scale (ElementSpecific et))
-                     Div _ _ -> combine (binary Div)
-                     Sqrt _ -> combine (unary Sqrt)
-                     Sin _ -> combine (unary Sin)
-                     Cos _ -> combine (unary Cos)
-                     Tan _ -> combine (unary Tan)
-                     Exp _ -> combine (unary Exp)
-                     Log _ -> combine (unary Log)
-                     Sinh _ -> combine (unary Sinh)
-                     Cosh _ -> combine (unary Cosh)
-                     Tanh _ -> combine (unary Tanh)
-                     Asin _ -> combine (unary Asin)
-                     Acos _ -> combine (unary Acos)
-                     Atan _ -> combine (unary Atan)
-                     Asinh _ -> combine (unary Asinh)
-                     Acosh _ -> combine (unary Acosh)
-                     Atanh _ -> combine (unary Atanh)
-                     RealImag _ _ -> combine (binary RealImag)
-                     RealPart _ -> combine (unary RealPart)
-                     ImagPart _ -> combine (unary ImagPart)
-                     InnerProd et _ _ ->
-                         combine (binaryET InnerProd (ElementSpecific et))
-                     Piecewise marks _ _ ->
-                         combine (conditionAry (Piecewise marks))
-                     Rotate amount _ -> combine (unary (Rotate amount))
+standardize :: Transformation
+standardize = toRecursiveTransformation (noChange . snd)

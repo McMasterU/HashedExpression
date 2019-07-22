@@ -1,5 +1,6 @@
 module HashedVar where
 
+import Data.Set (Set, fromList)
 import HashedExpression
 import HashedOperation
 import Prelude hiding (const)
@@ -160,3 +161,10 @@ import Prelude hiding (const)
     , var "yr" +: var "yi"
     , var "zr" +: var "zi"
     ]
+
+allVars :: Set String
+allVars =
+    fromList $
+    vars ++ map (++ "1") vars ++ map (++ "2") vars ++ map (++ "3") vars
+  where
+    vars = map return ['a' .. 'z']
