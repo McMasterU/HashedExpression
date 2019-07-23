@@ -157,7 +157,7 @@ primitiveZeroR = do
         ]
 
 operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (2, genZeroR)]
+operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (3, genZeroR)]
 
 genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR =

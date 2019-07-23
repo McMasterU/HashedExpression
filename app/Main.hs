@@ -44,7 +44,7 @@ import Prelude hiding
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
-import HashedCollectDifferentials
+import HashedCollect
 import HashedToC (generateProgram)
 import HashedUtils
 import HashedVar
@@ -64,7 +64,7 @@ prod1 = fromJust . HashedOperation.sum
 --        let exp2 = ((k +: u) + (p +: j))
 --        showExp $ simplify $ exp1 * exp2
 main = do
---    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
+    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
 --    let haha = (s)*((z*((x1*y1*z1)<.>sin(t1)))*x)
-    let exp = x *. y
+--    let exp = x *. y
     showExp . collectDifferentials . exteriorDerivative allVars $ exp

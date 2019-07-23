@@ -1,6 +1,7 @@
 import Data.Array.Unboxed as U
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
+import qualified HashedCollectSpec
 import HashedDerivative
 import HashedExpression
 import HashedInterp
@@ -56,6 +57,7 @@ main = do
 
 spec :: Spec
 spec = do
+    describe "HashedCollectSpec" HashedCollectSpec.spec
     describe "SimplifySpec" HashedSimplifySpec.spec
     describe "Test1" Test1.spec
     describe "Test2" Test2.spec

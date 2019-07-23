@@ -1,4 +1,4 @@
-module HashedCollectDifferentials where
+module HashedCollect where
 
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
@@ -16,7 +16,7 @@ import HashedNode
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedSimplify (flattenSumProdRules, simplify)
+import HashedSimplify (flattenSumProdRules, reduceSumProdRules, simplify)
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -59,6 +59,8 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             [ restructureRules
             , toRecursiveCollecting splitCovectorProdRules
             , normalizedRules
+            , toRecursiveCollecting reduceSumProdRules
+            , removeUnreachable
             ]
 
 -- |
@@ -70,12 +72,13 @@ toRecursiveCollecting = toTransformation . makeRecursive False
 --
 restructureRules :: Transformation
 restructureRules =
+    multipleTimes 100 $
     chain
-        [ fromSubstitutionRules1 --
+        [ fromSubstitutionRules --
         , toRecursiveCollecting flattenSumProdRules
         ]
   where
-    fromSubstitutionRules1 =
+    fromSubstitutionRules =
         chain . map (toRecursiveCollecting . fromSubstitution) $
         [ x *. y |. isScalar y ~~~~~~> x * y
         , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
