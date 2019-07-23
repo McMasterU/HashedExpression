@@ -259,29 +259,17 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
-makeRecursive1 :: Modification -> Modification
-makeRecursive1 smp = recursiveSmp
-  where
-    recursiveSmp :: Modification
-    recursiveSmp exp@(mp, n) =
-        let children = nodeArgs $ retrieveNode n mp
-            childrenDiffs = map (recursiveSmp . (mp, )) children
-            nodeDiff = combineChildrenDiffs mp n childrenDiffs
-            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-            ExpressionDiff exEntries newId = smp newExp
-         in ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
-
 -- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
 --
-makeRecursive :: Modification -> Modification
-makeRecursive smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+makeRecursive :: Bool -> Modification -> Modification
+makeRecursive sortSumMul smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
     f diffs nId =
         let children = nodeArgs $ retrieveNode nId mp
             childrenDiffs = map (fromJust . flip IM.lookup diffs) children
-            nodeDiff = combineChildrenDiffs mp nId childrenDiffs
+            nodeDiff = combineChildrenDiffs sortSumMul mp nId childrenDiffs
             newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
             ExpressionDiff exEntries newId = smp newExp
             diff =
@@ -300,11 +288,6 @@ toTransformation simp exp@(mp, n) =
         newN = newRootId diff
      in (newMp, newN)
 
--- | Turn a modification to a recursive transformation
---
-toRecursiveTransformation :: Modification -> Transformation
-toRecursiveTransformation = toTransformation . makeRecursive
-
 -- | Apply maximum k times, or stop if the expression doesn't change
 --
 multipleTimes :: Int -> Transformation -> Transformation
@@ -319,10 +302,12 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 -- and return the combined difference
 --
 combineChildrenDiffs ::
-       ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs contextMp n childrenDiffs
-    | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
-    | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
+       Bool -> ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
+combineChildrenDiffs sortSumMul contextMp n childrenDiffs
+    | Sum et _ <- oldNode
+    , sortSumMul = sortAndCombine (naryET Sum (ElementSpecific et))
+    | Mul et _ <- oldNode
+    , sortSumMul = sortAndCombine (naryET Mul (ElementSpecific et))
     | oldChildren == newChildren &&
           all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =
@@ -330,6 +315,8 @@ combineChildrenDiffs contextMp n childrenDiffs
             Var _ -> noChange n
             DVar _ -> noChange n
             Const _ -> noChange n
+            Sum et _ -> combine (naryET Sum (ElementSpecific et))
+            Mul et _ -> combine (naryET Mul (ElementSpecific et))
             Power x _ -> combine (unary (Power x))
             Neg et _ -> combine (unaryET Neg (ElementSpecific et))
             Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
@@ -368,15 +355,6 @@ combineChildrenDiffs contextMp n childrenDiffs
                 | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
                 | Just (_, node) <-
                      IM.lookup (newRootId diff) combinedExtraEntries = node
-                | otherwise =
-                    error $
-                    " " ++
-                    show diff ++
-                    "\n" ++
-                    show combinedExtraEntries ++
-                    "\n" ++
-                    show contextMp ++
-                    "\n" ++ show oldNode ++ "\n" ++ show childrenDiffs
             nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
             weight diff = nodeTypeWeight $ getNode diff
             sortArgs =

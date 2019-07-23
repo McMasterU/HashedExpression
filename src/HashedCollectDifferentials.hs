@@ -1,4 +1,4 @@
-module HashedCollectD where
+module HashedCollectDifferentials where
 
 import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
@@ -17,7 +17,7 @@ import HashedNode
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedSimplify
+import HashedSimplify (simplify)
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -54,15 +54,33 @@ import qualified Prelude
 collectDifferentials :: Expression Zero Covector -> Expression Zero Covector
 collectDifferentials = wrap . applyRules . unwrap . simplify
   where
-    applyRules = multipleTimes 100 $ rulesFromSubstitution >>> id
+    applyRules =
+        multipleTimes 100 $
+        toRecursiveCollecting covectorToTheEndRules >>> rulesFromSubstitution
 
+-- |
+--
 rulesFromSubstitution :: Transformation
 rulesFromSubstitution =
-    chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+    chain . map (toRecursiveCollecting . fromSubstitution) . concat $
     [normalizedRules]
 
+toRecursiveCollecting :: Modification -> Transformation
+toRecursiveCollecting = toTransformation . makeRecursive False
+
+-- |
+--
 normalizedRules :: [Substitution]
 normalizedRules =
     [ x *. y |. isScalar y ~~~~~~> x * y
     , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
+    , x <.> y |. isCovector x ~~~~~~> y <.> x
+    , x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y
     ]
+
+-- |
+--
+covectorToTheEndRules :: Modification
+covectorToTheEndRules exp@(mp, n)
+    | Mul Covector ns <- retrieveNode n mp = undefined
+    | otherwise = noChange n

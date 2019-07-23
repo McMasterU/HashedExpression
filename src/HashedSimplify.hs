@@ -3,7 +3,6 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TupleSections #-}
 
 module HashedSimplify where
 
@@ -71,22 +70,27 @@ simplify = wrap . applyRules . unwrap
   where
     applyRules =
         multipleTimes 100 $
-        (toRecursiveTransformation evaluateIfPossibleRules) >>>
-        (toRecursiveTransformation groupConstantsRules) >>>
-        (toRecursiveTransformation combineTermsRules) >>>
-        (toRecursiveTransformation combineTermsRulesProd) >>>
-        (toRecursiveTransformation powerProdRules) >>>
-        (toRecursiveTransformation powerScaleRules) >>>
-        (toRecursiveTransformation combinePowerRules) >>>
-        (toRecursiveTransformation powerSumRealImagRules) >>>
-        (toRecursiveTransformation combineRealScalarRules) >>>
-        (toRecursiveTransformation flattenSumProdRules) >>>
-        (toRecursiveTransformation reduceSumProdRules) >>>
+        toRecursiveSimplification evaluateIfPossibleRules >>>
+        toRecursiveSimplification groupConstantsRules >>>
+        toRecursiveSimplification combineTermsRules >>>
+        toRecursiveSimplification combineTermsRulesProd >>>
+        toRecursiveSimplification powerProdRules >>>
+        toRecursiveSimplification powerScaleRules >>>
+        toRecursiveSimplification combinePowerRules >>>
+        toRecursiveSimplification powerSumRealImagRules >>>
+        toRecursiveSimplification combineRealScalarRules >>>
+        toRecursiveSimplification flattenSumProdRules >>>
+        toRecursiveSimplification reduceSumProdRules >>>
         rulesFromPattern >>> removeUnreachable
+
+-- | Turn a modification to a recursive transformation
+--
+toRecursiveSimplification :: Modification -> Transformation
+toRecursiveSimplification = toTransformation . makeRecursive True
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
-    chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+    chain . map (toRecursiveSimplification . fromSubstitution) . concat $
     [ complexNumRules
     , zeroOneRules
     , scaleRules
@@ -121,9 +125,9 @@ zeroOneRules =
 scaleRules :: [Substitution]
 scaleRules =
     [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z
-    , negate (s *. x) |.~~~~~~> s *. negate (x)
-    , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe (x)
-    , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm (x)
+    , negate (s *. x) |.~~~~~~> s *. negate x
+    , xRe (s *. x) |. isReal s ~~~~~~> s *. xRe x
+    , xIm (s *. x) |. isReal s ~~~~~~> s *. xIm x
     , restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
     ]
 
@@ -152,7 +156,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
     , x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y)
-    , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate (t)) *. (x <.> y) -- Conjugate if the scalar is complex
+    , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y) -- Conjugate if the scalar is complex
     , x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~>
       (x * y)
     ]
@@ -161,14 +165,14 @@ dotProductRules =
 --
 distributiveRules :: [Substitution]
 distributiveRules =
-    [ x * sum (ys) |.~~~~~~> sum (mapL (x *) ys)
-    , sum (ys) * x |.~~~~~~> sum (mapL (* x) ys)
-    , x <.> sum (ys) |.~~~~~~> sum (mapL (x <.>) ys)
-    , sum (ys) <.> x |.~~~~~~> sum (mapL (<.> x) ys)
-    , x *. sum (ys) |.~~~~~~> sum (mapL (x *.) ys)
-    , negate (sum (ys)) |.~~~~~~> sum (mapL negate ys)
-    , restOfProduct ~* sum (ys) |.~~~~~~> sum (mapL (restOfProduct ~*) ys)
-    , sum (ys) *. x |.~~~~~~> sum (mapL (*. x) ys)
+    [ x * sum ys |.~~~~~~> sum (mapL (x *) ys)
+    , sum ys * x |.~~~~~~> sum (mapL (* x) ys)
+    , x <.> sum ys |.~~~~~~> sum (mapL (x <.>) ys)
+    , sum ys <.> x |.~~~~~~> sum (mapL (<.> x) ys)
+    , x *. sum ys |.~~~~~~> sum (mapL (x *.) ys)
+    , negate (sum ys) |.~~~~~~> sum (mapL negate ys)
+    , restOfProduct ~* sum ys |.~~~~~~> sum (mapL (restOfProduct ~*) ys)
+    , sum ys *. x |.~~~~~~> sum (mapL (*. x) ys)
     ]
 
 -- | Rules of piecewise
@@ -181,9 +185,9 @@ piecewiseRules =
 --
 exponentRules :: [Substitution]
 exponentRules =
-    [ exp (log (x)) |.~~~~~~> x --
-    , log (exp (x)) |.~~~~~~> x --
-    , exp (zero) |.~~~~~~> one
+    [ exp (log x) |.~~~~~~> x --
+    , log (exp x) |.~~~~~~> x --
+    , exp zero |.~~~~~~> one
     ]
 
 -- |
@@ -288,8 +292,9 @@ combineTermsRules exp@(mp, n)
     toDiff (nId, val)
         | val == 1 = noChange nId
         | otherwise =
-            applyDiff' (binaryET Scale ElementDefault) $
-            [diffConst [] val, noChange nId]
+            applyDiff'
+                (binaryET Scale ElementDefault)
+                [diffConst [] val, noChange nId]
 
 -- |
 --
@@ -325,7 +330,7 @@ combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
-        applyDiff mp (unary (Power (outerVal * innerVal))) $ [noChange innerN]
+        applyDiff mp (unary (Power (outerVal * innerVal))) [noChange innerN]
     | otherwise = noChange n
 
 -- | Rules for power of Sum and power of RealImag
@@ -337,7 +342,7 @@ powerSumRealImagRules exp@(mp, n)
     , isSumOrRealImag nId = replicateMul val nId
     | otherwise = noChange n
   where
-    inverse diff = applyDiff mp (unary $ Power (-1)) $ [diff]
+    inverse diff = applyDiff mp (unary $ Power (-1)) [diff]
     isSumOrRealImag nId
         | Sum _ _ <- retrieveNode nId mp = True
         | RealImag _ _ <- retrieveNode nId mp = True
@@ -384,8 +389,10 @@ combineRealScalarRules exp@(mp, n)
     , any isJust . map snd $ extracted =
         let combinedScalars = mulManyDiff mp . catMaybes $ map snd extracted
             combinedScalees = mulManyDiff mp $ map fst extracted
-         in applyDiff mp (binaryET Scale ElementDefault) $
-            [combinedScalars, combinedScalees]
+         in applyDiff
+                mp
+                (binaryET Scale ElementDefault)
+                [combinedScalars, combinedScalees]
     | otherwise = noChange n
   where
     extract nId
@@ -395,14 +402,8 @@ combineRealScalarRules exp@(mp, n)
             (noChange negatee, Just $ diffConst [] (-1))
         | otherwise = (noChange nId, Nothing)
 
--- | Turn HashedPattern to a simplification
+-- |
 --
-fromSubstitution :: Substitution -> Modification
-fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
-    | Just match <- match exp pattern
-    , condition exp match = buildFromPattern exp match replacementPattern
-    | otherwise = noChange n
-
 evaluateIfPossibleRules :: Modification
 evaluateIfPossibleRules exp@(mp, n) =
     case (node, pulledVals) of
@@ -410,7 +411,7 @@ evaluateIfPossibleRules exp@(mp, n) =
         (Mul R _, Just vals) -> res $ Prelude.product vals
         (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
         (Neg R _, Just [val])
-            | val /= 0 -> res $ (-val)
+            | val /= 0 -> res (-val)
             | otherwise -> res 0
         (Power x _, Just [val]) -> res $ val ^ x
         (InnerProd R arg1 arg2, Just [val1, val2]) ->
@@ -425,10 +426,10 @@ evaluateIfPossibleRules exp@(mp, n) =
     getVal nId
         | Const val <- retrieveNode nId mp = Just val
         | otherwise = Nothing
-    pulledVals = sequence . map getVal . nodeArgs $ node
-    res val = diffConst shape val
+    pulledVals = mapM getVal . nodeArgs $ node
+    res = diffConst shape
 
 -- | Turn expression to a standard version where arguments in Sum and Mul are sorted
 --
 standardize :: Transformation
-standardize = toRecursiveTransformation (noChange . snd)
+standardize = toRecursiveSimplification (noChange . snd)

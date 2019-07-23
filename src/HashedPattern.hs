@@ -210,6 +210,14 @@ data GuardedPattern =
 
 type Substitution = (GuardedPattern, Pattern)
 
+-- | Turn HashedPattern to a simplification
+--
+fromSubstitution :: Substitution -> Modification
+fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
+    | Just match <- match exp pattern
+    , condition exp match = buildFromPattern exp match replacementPattern
+    | otherwise = noChange n
+
 -- | Helper to make pattern and replacement without condition
 --
 (|.~~~~~~>) :: Pattern -> Pattern -> Substitution
@@ -288,6 +296,15 @@ isComplex p exp match =
 
 -- |
 --
+isCovector :: Pattern -> Condition
+isCovector p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in retrieveElementType newRootId (IM.union extraEntries originMp) ==
+        Covector
+
+-- |
+--
 sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
@@ -303,6 +320,16 @@ allTheSame pl@(PListHole _ listCapture) exp match
     | Just nIds <- Map.lookup listCapture . listCapturesMap $ match =
         allEqual nIds
     | otherwise = False
+
+-- |
+--
+isDVar :: Pattern -> Condition
+isDVar p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in case retrieveNode newRootId (IM.union extraEntries originMp) of
+            DVar _ -> True
+            _ -> False
 
 -- |
 --
