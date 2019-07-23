@@ -1,10 +1,9 @@
 module HashedCollectDifferentials where
 
-import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (foldl', group, groupBy, intercalate, sort)
+import Data.List (foldl', group, groupBy, intercalate, partition, sort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -17,7 +16,7 @@ import HashedNode
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedSimplify (simplify)
+import HashedSimplify (flattenSumProdRules, simplify)
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -48,39 +47,60 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Precondition: (satisfied by applying simplifying)
+-- | Precondition: (satisfied by first applying simplification)
 -- - No complex in the input (:+, xRe, xIm)
+-- - Scale is pushed to the outer most layer and real scalars are group together in a product
 --
 collectDifferentials :: Expression Zero Covector -> Expression Zero Covector
 collectDifferentials = wrap . applyRules . unwrap . simplify
   where
     applyRules =
-        multipleTimes 100 $
-        toRecursiveCollecting covectorToTheEndRules >>> rulesFromSubstitution
+        chain
+            [ restructureRules
+            , toRecursiveCollecting splitCovectorProdRules
+            , normalizedRules
+            ]
 
 -- |
 --
-rulesFromSubstitution :: Transformation
-rulesFromSubstitution =
-    chain . map (toRecursiveCollecting . fromSubstitution) . concat $
-    [normalizedRules]
-
 toRecursiveCollecting :: Modification -> Transformation
 toRecursiveCollecting = toTransformation . makeRecursive False
 
--- |
+-- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
 --
-normalizedRules :: [Substitution]
-normalizedRules =
-    [ x *. y |. isScalar y ~~~~~~> x * y
-    , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
-    , x <.> y |. isCovector x ~~~~~~> y <.> x
-    , x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y
-    ]
+restructureRules :: Transformation
+restructureRules =
+    chain
+        [ fromSubstitutionRules1 --
+        , toRecursiveCollecting flattenSumProdRules
+        ]
+  where
+    fromSubstitutionRules1 =
+        chain . map (toRecursiveCollecting . fromSubstitution) $
+        [ x *. y |. isScalar y ~~~~~~> x * y
+        , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
+        , x <.> y |. isCovector x ~~~~~~> y <.> x
+        ]
+
+-- | x * y * covector * z --> (x * y * z) * covector
+--
+splitCovectorProdRules :: Modification
+splitCovectorProdRules exp@(mp, n) =
+    case retrieveNode n mp of
+        Mul Covector ns ->
+            let (covectorPart, realPart) =
+                    partition ((== Covector) . flip retrieveElementType mp) ns
+                prodRealPart = mulManyDiff mp . map noChange $ realPart
+             in mulManyDiff mp $ prodRealPart : map noChange covectorPart
+        _ -> noChange n
 
 -- |
 --
-covectorToTheEndRules :: Modification
-covectorToTheEndRules exp@(mp, n)
-    | Mul Covector ns <- retrieveNode n mp = undefined
-    | otherwise = noChange n
+normalizedRules :: Transformation
+normalizedRules =
+    chain . map (toRecursiveCollecting . fromSubstitution) $
+    [ x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y
+    , x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y
+    , s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y
+    , s * (x * y) |. isDVar y ~~~~~~> (s * x) * y
+    ]

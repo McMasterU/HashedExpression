@@ -6,7 +6,6 @@
 
 module HashedSimplify where
 
-import Control.Arrow ((>>>))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
@@ -69,19 +68,21 @@ simplify ::
 simplify = wrap . applyRules . unwrap
   where
     applyRules =
-        multipleTimes 100 $
-        toRecursiveSimplification evaluateIfPossibleRules >>>
-        toRecursiveSimplification groupConstantsRules >>>
-        toRecursiveSimplification combineTermsRules >>>
-        toRecursiveSimplification combineTermsRulesProd >>>
-        toRecursiveSimplification powerProdRules >>>
-        toRecursiveSimplification powerScaleRules >>>
-        toRecursiveSimplification combinePowerRules >>>
-        toRecursiveSimplification powerSumRealImagRules >>>
-        toRecursiveSimplification combineRealScalarRules >>>
-        toRecursiveSimplification flattenSumProdRules >>>
-        toRecursiveSimplification reduceSumProdRules >>>
-        rulesFromPattern >>> removeUnreachable
+        multipleTimes 100 . chain $
+        [ toRecursiveSimplification evaluateIfPossibleRules
+        , toRecursiveSimplification groupConstantsRules
+        , toRecursiveSimplification combineTermsRules
+        , toRecursiveSimplification combineTermsRulesProd
+        , toRecursiveSimplification powerProdRules
+        , toRecursiveSimplification powerScaleRules
+        , toRecursiveSimplification combinePowerRules
+        , toRecursiveSimplification powerSumRealImagRules
+        , toRecursiveSimplification combineRealScalarRules
+        , toRecursiveSimplification flattenSumProdRules
+        , toRecursiveSimplification reduceSumProdRules
+        , rulesFromPattern
+        , removeUnreachable
+        ]
 
 -- | Turn a modification to a recursive transformation
 --
