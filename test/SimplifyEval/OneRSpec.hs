@@ -92,7 +92,7 @@ spec :: Spec
 spec =
     describe "simplify & eval property for One R" $ do
         specify "evaluate must equals simplify then evaluate " $
-            property prop_SimplifyThenEval
-        specify "prop_Add" $ property prop_Add
-        specify "prop_Multiply" $ property prop_Multiply
-        specify "prop_AddMultiply" $ property prop_AddMultiply
+            performQuickCheck prop_SimplifyThenEval
+        specify "prop_Add" $ performQuickCheck prop_Add
+        specify "prop_Multiply" $ performQuickCheck prop_Multiply
+        specify "prop_AddMultiply" $ performQuickCheck prop_AddMultiply

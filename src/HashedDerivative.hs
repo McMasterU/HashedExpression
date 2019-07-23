@@ -122,9 +122,9 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     (newMap, h) = fromNode (shape, node)
                  in Expression h newMap
                 -- Sum and multiplication are special cases because they involve multiple arguments
-            Sum _ args -> wrap . sumMany . map dOne $ args
+            Sum R args -> wrap . sumMany . map dOne $ args
                 -- multiplication rule
-            Mul _ args ->
+            Mul R args ->
                 let mkSub nId = (mp, nId)
                     dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
                  in wrap . sumMany . map dEach . removeEach $ args
@@ -135,8 +135,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     constX = const . fromIntegral $ x
                  in constX *. (f ^ (x - 1)) |*| df
                  -- d(-f) = -d(f)
-            Neg et arg -> d1Input (Neg et) arg
-            Scale _ arg1 arg2 ->
+            Neg R arg -> d1Input (Neg R) arg
+            Scale R arg1 arg2 ->
                 let s = Expression arg1 mp :: Expression Zero R
                     f = Expression arg2 mp :: Expression D_ R
                     ds = hiddenDerivative' s :: Expression Zero Covector
@@ -244,7 +244,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                 let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative' f
                  in one / (one - f * f) |*| df
-            InnerProd et arg1 arg2 ->
+            InnerProd R arg1 arg2 ->
                 let f = Expression arg1 mp :: Expression D_ R
                     df = hiddenDerivative' f :: Expression D_ Covector
                     g = Expression arg2 mp :: Expression D_ R

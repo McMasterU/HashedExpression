@@ -17,6 +17,7 @@
 module HashedPattern where
 
 import qualified Data.IntMap.Strict as IM
+import Data.List (foldl')
 import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
@@ -210,6 +211,14 @@ data GuardedPattern =
 
 type Substitution = (GuardedPattern, Pattern)
 
+-- | Turn HashedPattern to a simplification
+--
+fromSubstitution :: Substitution -> Modification
+fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
+    | Just match <- match exp pattern
+    , condition exp match = buildFromPattern exp match replacementPattern
+    | otherwise = noChange n
+
 -- | Helper to make pattern and replacement without condition
 --
 (|.~~~~~~>) :: Pattern -> Pattern -> Substitution
@@ -288,6 +297,15 @@ isComplex p exp match =
 
 -- |
 --
+isCovector :: Pattern -> Condition
+isCovector p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in retrieveElementType newRootId (IM.union extraEntries originMp) ==
+        Covector
+
+-- |
+--
 sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
@@ -303,6 +321,16 @@ allTheSame pl@(PListHole _ listCapture) exp match
     | Just nIds <- Map.lookup listCapture . listCapturesMap $ match =
         allEqual nIds
     | otherwise = False
+
+-- |
+--
+isDVar :: Pattern -> Condition
+isDVar p exp match =
+    let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+        originMp = fst exp
+     in case retrieveNode newRootId (IM.union extraEntries originMp) of
+            DVar _ -> True
+            _ -> False
 
 -- |
 --
@@ -368,11 +396,18 @@ restOfSum = PSumRest 2391 []
 --      matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
 --      matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
 --
-matchList :: ExpressionMap -> [Int] -> PatternList -> Maybe [Int]
+matchList :: ExpressionMap -> [Int] -> PatternList -> Maybe Match
 matchList mp ns (PListHole fs listCapture)
     | all isJust maybeSubMatches
     , let subMatches = catMaybes maybeSubMatches
-    , allEqual $ map otherCaptures subMatches = Just $ nIds subMatches
+    , let unionSubMatches = foldl1 unionMatch subMatches
+    , allEqual $ map otherCaptures subMatches =
+        Just $
+        unionMatch unionSubMatches $
+        Match
+            Map.empty
+            (Map.fromList [(listCapture, nIds subMatches)])
+            Map.empty
     | otherwise = Nothing
   where
     uniqueCapture = minBound :: Int
@@ -418,13 +453,8 @@ match (mp, n) outerWH =
             (Const c, PConst whc)
                 | c == whc -> Just $ Match Map.empty Map.empty Map.empty
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
-            (Sum _ args, PSumList pl@(PListHole _ listCapture))
-                | Just innerArgs <- matchList mp args pl ->
-                    Just $
-                    Match
-                        Map.empty
-                        (Map.fromList [(listCapture, innerArgs)])
-                        Map.empty
+            (Sum _ args, PSumList pl@(PListHole _ listCapture)) ->
+                matchList mp args pl
             (Sum _ args, PSumRest listCapture ps)
                 | length args > length ps
                 , let (rest, normalParts) =
@@ -477,13 +507,8 @@ match (mp, n) outerWH =
             (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
                 recursiveAndCombine [arg1, arg2] [wh1, wh2]
             (Piecewise _ conditionArg branchArgs, PPiecewise wh pl@(PListHole _ listCapture))
-                | Just innerArgs <- matchList mp branchArgs pl
-                , Just matchCondition <- recursiveAndCombine [conditionArg] [wh]
-                , let matchBranches =
-                          Match
-                              Map.empty
-                              (Map.fromList [(listCapture, innerArgs)])
-                              Map.empty ->
+                | Just matchBranches <- matchList mp branchArgs pl
+                , Just matchCondition <- recursiveAndCombine [conditionArg] [wh] ->
                     Just $ unionMatch matchCondition matchBranches
             (Power x arg, PPower sp (PPowerConst val))
                 | fromIntegral x == val -> recursiveAndCombine [arg] [sp]
