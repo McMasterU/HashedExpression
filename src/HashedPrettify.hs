@@ -148,7 +148,7 @@ hiddenPrettify pastable (mp, n) =
                                 ]
                 | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
             Sum _ args
-                | pastable && length args > 2 ->
+                | pastable ->
                     T.concat
                         [ "sum1 ["
                         , T.intercalate ", " . map innerPrettify $ args

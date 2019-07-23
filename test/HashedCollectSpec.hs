@@ -6,6 +6,7 @@ import Control.Monad (replicateM_, unless)
 import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
 import Debug.Trace (traceShow)
 import HashedCollect
 import HashedDerivative
@@ -52,8 +53,8 @@ import Test.QuickCheck
 prop_DVarStayAlone :: Expression Zero R -> IO ()
 prop_DVarStayAlone exp =
     unless property $ do
-        showExpDebug exp
-        showExpDebug collectedExp
+        showExp exp
+        showExp collectedExp
         error "DVar not standing alone"
   where
     collectedExp@(Expression rootId mp) =
@@ -71,8 +72,25 @@ prop_DVarStayAlone exp =
             Sum Covector ns -> all isDVarAlone ns
             _ -> isDVarAlone rootId
 
+prop_DVarAppearOnce :: Expression Zero R -> IO ()
+prop_DVarAppearOnce exp =
+    unless property $ do
+        showExp exp
+        showExp collectedExp
+        error "DVar not standing alone"
+  where
+    collectedExp@(Expression rootId mp) =
+        collectDifferentials . exteriorDerivative allVars $ exp
+    getDVarNames node
+        | DVar name <- node = [name]
+        | otherwise = []
+    allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
+    property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
+
 spec :: Spec
 spec =
     describe "Hashed collect differentials spec" $ do
-        specify "DVar should stay by itself after collect differentials" $ do
-            property prop_DVarStayAlone
+        specify "DVar should stay by itself after collect differentials" $
+            quickCheckWith stdArgs {maxSuccess = 200} prop_DVarStayAlone
+        specify "Each DVar appears only once after collect differentials" $
+            quickCheckWith stdArgs {maxSuccess = 200} prop_DVarAppearOnce

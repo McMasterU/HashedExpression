@@ -157,7 +157,7 @@ primitiveZeroR = do
         ]
 
 operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (3, genZeroR)]
+operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (2, genZeroR)]
 
 genZeroR :: Gen (Expression Zero R, Vars)
 genZeroR =
@@ -599,3 +599,8 @@ shouldSimplifyTo ::
 shouldSimplifyTo exp1 exp2 = do
     prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
     simplify exp1 `shouldBe` simplify exp2
+
+-- |
+--
+performQuickCheck :: Testable prop => prop -> IO ()
+performQuickCheck = quickCheckWith stdArgs {maxSuccess = 100}

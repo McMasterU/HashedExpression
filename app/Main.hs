@@ -63,8 +63,10 @@ prod1 = fromJust . HashedOperation.sum
 --        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
 --        let exp2 = ((k +: u) + (p +: j))
 --        showExp $ simplify $ exp1 * exp2
-main = do
-    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
+main
+--    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
+ = do
+    let exp = sum1 [y, l, e]
 --    let haha = (s)*((z*((x1*y1*z1)<.>sin(t1)))*x)
 --    let exp = x *. y
-    showExp . collectDifferentials . exteriorDerivative allVars $ exp
+    showExpDebug . collectDifferentials . exteriorDerivative allVars $ exp

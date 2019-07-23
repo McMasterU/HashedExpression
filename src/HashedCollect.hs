@@ -59,8 +59,9 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             [ restructureRules
             , toRecursiveCollecting splitCovectorProdRules
             , normalizedRules
-            , toRecursiveCollecting reduceSumProdRules
-            , removeUnreachable
+            , toTransformation groupByDVar
+            , aggregateByDVar
+            , reduceAndSimplify
             ]
 
 -- |
@@ -69,6 +70,7 @@ toRecursiveCollecting :: Modification -> Transformation
 toRecursiveCollecting = toTransformation . makeRecursive False
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
+-- Also move covector to the right hand side of dot product
 --
 restructureRules :: Transformation
 restructureRules =
@@ -95,7 +97,7 @@ splitCovectorProdRules exp@(mp, n) =
                     partition ((== Covector) . flip retrieveElementType mp) ns
                 prodRealPart = mulManyDiff mp . map noChange $ realPart
              in mulManyDiff mp $ prodRealPart : map noChange covectorPart
-        _ -> noChange n
+        x -> noChange n
 
 -- |
 --
@@ -107,3 +109,53 @@ normalizedRules =
     , s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y
     , s * (x * y) |. isDVar y ~~~~~~> (s * x) * y
     ]
+
+-- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
+-- (f * dx + h * dy + x * dx + t1 <.> dx1 + f1 <.> dx1) -->
+--   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
+--
+groupByDVar :: Modification
+groupByDVar exp@(mp, n) =
+    case retrieveNode n mp of
+        Sum Covector ns ->
+            let groups =
+                    groupBy sameDVar .
+                    sortWith getDVar . filter (not . isZero mp) $
+                    ns
+                mulOneIfAlone nId
+                    | DVar _ <- retrieveNode nId mp =
+                        mulManyDiff mp [diffConst [] 1, noChange nId]
+                    | otherwise = noChange nId
+             in sumManyDiff mp . map (sumManyDiff mp . map mulOneIfAlone) $
+                groups
+        _ -> noChange n
+  where
+    getDVar :: Int -> String
+    getDVar nId
+        | DVar name <- retrieveNode nId mp = name
+        | Mul Covector [_, cId] <- retrieveNode nId mp
+        , DVar name <- retrieveNode cId mp = name
+        | InnerProd Covector _ cId <- retrieveNode nId mp
+        , DVar name <- retrieveNode cId mp = name
+    sameDVar :: Int -> Int -> Bool
+    sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
+
+-- | After group Dvar to groups, we aggregate result in each group
+--   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
+--   --> ((f + x) * dx) + (h * dy) + ((t1 + f1) <.> dx1)
+--
+aggregateByDVar :: Transformation
+aggregateByDVar =
+    chain . map (toRecursiveCollecting . fromSubstitution) $
+    [ sum (mapL (* y) xs) |. isDVar y ~~~~~~> sum xs * y
+    , sum (mapL (<.> y) xs) |. isDVar y ~~~~~~> sum xs <.> y
+    ]
+
+-- | TODO: Simplify each partial differential?
+--
+reduceAndSimplify :: Transformation
+reduceAndSimplify =
+    chain
+        [ multipleTimes 100 $ toRecursiveCollecting reduceSumProdRules
+        , removeUnreachable
+        ]
