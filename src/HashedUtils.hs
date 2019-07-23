@@ -291,5 +291,3 @@ instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
     acosh = Prelude.acosh
     atanh = Prelude.atanh
     (/) x y = x Prelude./ y
-
-

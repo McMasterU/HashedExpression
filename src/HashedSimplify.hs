@@ -14,7 +14,7 @@ import qualified Data.IntSet as IS
 import Data.List (foldl', group, groupBy, intercalate, sort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (catMaybes, fromJust, isJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
@@ -79,7 +79,7 @@ simplify = wrap . applyRules . unwrap
         (toRecursiveTransformation powerScaleRules) >>>
         (toRecursiveTransformation combinePowerRules) >>>
         (toRecursiveTransformation powerSumRealImagRules) >>>
-        (toRecursiveTransformation combineConstantScalarRules) >>>
+        (toRecursiveTransformation combineRealScalarRules) >>>
         (toRecursiveTransformation flattenSumProdRules) >>>
         (toRecursiveTransformation reduceSumProdRules) >>>
         rulesFromPattern >>> removeUnreachable
@@ -374,24 +374,26 @@ powerScaleRules exp@(mp, n)
                 [powerScalar, powerScalee]
     | otherwise = noChange n
 
--- | Rules for combining scale
--- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
-combineConstantScalarRules :: Modification
-combineConstantScalarRules exp@(mp, n)
-    | Mul _ ns <- retrieveNode n mp
+-- | Rules for combining scalar
+-- (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
+--
+combineRealScalarRules :: Modification
+combineRealScalarRules exp@(mp, n)
+    | Mul R ns <- retrieveNode n mp
     , let extracted = map extract ns
-    , any (/= 1) . map snd $ extracted =
-        let combinedConstants = Prelude.product $ map snd extracted
-            combinedScalees = mulManyDiff mp . map (noChange . fst) $ extracted
+    , any isJust . map snd $ extracted =
+        let combinedScalars = mulManyDiff mp . catMaybes $ map snd extracted
+            combinedScalees = mulManyDiff mp $ map fst extracted
          in applyDiff mp (binaryET Scale ElementDefault) $
-            [diffConst [] (combinedConstants), combinedScalees]
+            [combinedScalars, combinedScalees]
     | otherwise = noChange n
   where
     extract nId
-        | Scale _ scalar scalee <- retrieveNode nId mp
-        , Const constVal <- retrieveNode scalar mp = (scalee, constVal)
-        | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
-        | otherwise = (nId, 1)
+        | Scale _ scalar scalee <- retrieveNode nId mp =
+            (noChange scalee, Just $ noChange scalar)
+        | Neg R negatee <- retrieveNode nId mp =
+            (noChange negatee, Just $ diffConst [] (-1))
+        | otherwise = (noChange nId, Nothing)
 
 -- | Turn HashedPattern to a simplification
 --

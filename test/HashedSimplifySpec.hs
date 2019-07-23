@@ -43,125 +43,118 @@ spec :: Spec
 spec = do
     describe "Simplify spec" $ do
         specify "simplify scalar one zero" $ do
-            simplify (const 0.0 *. const 9.0) `shouldBe` const 0.0
-            simplify (x * one) `shouldBe` x
-            simplify (one * x) `shouldBe` x
-            simplify (x * zero) `shouldBe` zero
-            simplify (zero * x) `shouldBe` zero
-            simplify (y * (x * zero)) `shouldBe` zero
-            simplify (zero * (x * one)) `shouldBe` zero
-            simplify (zero * x * one) `shouldBe` zero
-            simplify (zero * (x * y)) `shouldBe` zero
-            simplify ((x * y) * zero) `shouldBe` zero
-            simplify ((x * zero) * one) `shouldBe` zero
-            prettify (simplify ((x * y) * one)) `shouldBe` prettify (x * y)
-            simplify (x * y * z * one) `shouldBe` simplify (x * y * z)
-            simplify (product [x, y, z, t, w, zero]) `shouldBe` zero
+            const 0.0 *. const 9.0 `shouldSimplifyTo` const 0.0
+            x * one `shouldSimplifyTo` x
+            one * x `shouldSimplifyTo` x
+            x * zero `shouldSimplifyTo` zero
+            zero * x `shouldSimplifyTo` zero
+            y * (x * zero) `shouldSimplifyTo` zero
+            zero * (x * one) `shouldSimplifyTo` zero
+            zero * x * one `shouldSimplifyTo` zero
+            zero * (x * y) `shouldSimplifyTo` zero
+            (x * y) * zero `shouldSimplifyTo` zero
+            (x * zero) * one `shouldSimplifyTo` zero
+            ((x * y) * one) `shouldSimplifyTo` (x * y)
+            x * y * z * one `shouldSimplifyTo` x * y * z
+            product [x, y, z, t, w, zero] `shouldSimplifyTo` zero
         specify "simplify log and exponential" $ do
-            simplify (log (exp x)) `shouldBe` x
-            simplify (exp (log x)) `shouldBe` x
+            log (exp x) `shouldSimplifyTo` x
+            exp (log x) `shouldSimplifyTo` x
         specify "complex related" $ do
-            prettify (simplify ((x +: y) * (z +: w))) `shouldBe`
-                prettify (simplify ((x * z - y * w) +: (x * w + y * z)))
-            simplify (xRe (x +: y)) `shouldBe` x
-            simplify (xIm (x +: y)) `shouldBe` y
-            simplify ((x +: y) + (u +: v)) `shouldBe`
-                simplify ((x + u) +: (y + v))
-            simplify (s *. (x +: y)) `shouldBe` simplify ((s *. x) +: (s *. y))
-            simplify ((x +: y) * (z +: w)) `shouldBe`
-                simplify ((x * z - y * w) +: (x * w + y * z))
+            ((x +: y) * (z +: w)) `shouldSimplifyTo`
+                ((x * z - y * w) +: (x * w + y * z))
+            xRe (x +: y) `shouldSimplifyTo` x
+            xIm (x +: y) `shouldSimplifyTo` y
+            (x +: y) + (u +: v) `shouldSimplifyTo` (x + u) +: (y + v)
+            s *. (x +: y) `shouldSimplifyTo` (s *. x) +: (s *. y)
+            (x +: y) *
+                (z +: w) `shouldSimplifyTo` (x * z - y * w) +: (x * w + y * z)
         specify "dot product" $ do
-            simplify (x <.> zero) `shouldBe` zero
-            simplify (zero <.> x) `shouldBe` zero
-            prettify (simplify ((s *. x) <.> y)) `shouldBe`
-                prettify (simplify (s *. (x <.> y)))
-            simplify (x <.> (s *. y)) `shouldBe` simplify (s *. (x <.> y))
+            x <.> zero `shouldSimplifyTo` zero
+            zero <.> x `shouldSimplifyTo` zero
+            ((s *. x) <.> y) `shouldSimplifyTo` (s *. (x <.> y))
+            x <.> (s *. y) `shouldSimplifyTo` s *. (x <.> y)
         specify "distributivity" $ do
-            simplify (x * (y + z)) `shouldBe` (x * y + x * z)
-            simplify ((y + z) * x) `shouldBe` (x * y + x * z)
-            (simplify (x *. (y + z))) `shouldBe` (simplify (x *. y + x *. z))
-            prettify (simplify (simplify (x <.> (y + z)))) `shouldBe`
-                prettify (simplify ((x <.> y) + (x <.> z)))
-            simplify ((y + z) <.> x) `shouldBe` simplify ((y <.> x) + (z <.> x))
-            simplify (x * sum [y, z, t, u, v]) `shouldBe`
-                simplify (sum (map (x *) [y, z, t, u, v]))
-            simplify (sum [y, z, t, u, v] * x) `shouldBe`
-                simplify (sum (map (x *) [y, z, t, u, v]))
-            simplify (x *. sum [y, z, t, u, v]) `shouldBe`
-                simplify (sum (map (x *.) [y, z, t, u, v]))
-            simplify (x <.> sum [y, z, t, u, v]) `shouldBe`
-                simplify (sum (map (x <.>) [y, z, t, u, v]))
-            simplify (sum [y, z, t, u, v] <.> x) `shouldBe`
-                simplify (sum (map (<.> x) [y, z, t, u, v]))
-            prettify (simplify (product [a, b, c, sum [x, y, z]])) `shouldBe`
-                prettify
-                    (simplify (sum (map (product . (: [a, b, c])) [x, y, z])))
-            simplify ((x + y) * (z + t) * a * b) `shouldBe`
-                simplify
-                    (a * b * x * z + a * b * x * t + a * b * y * z +
-                     a * b * y * t)
+            x * (y + z) `shouldSimplifyTo` (x * y + x * z)
+            (y + z) * x `shouldSimplifyTo` (x * y + x * z)
+            (x *. (y + z)) `shouldSimplifyTo` (x *. y + x *. z)
+            (x <.> (y + z)) `shouldSimplifyTo` ((x <.> y) + (x <.> z))
+            (y + z) <.> x `shouldSimplifyTo` (y <.> x) + (z <.> x)
+            x *
+                sum [y, z, t, u, v] `shouldSimplifyTo`
+                sum (map (x *) [y, z, t, u, v])
+            sum [y, z, t, u, v] *
+                x `shouldSimplifyTo` sum (map (x *) [y, z, t, u, v])
+            x *. sum [y, z, t, u, v] `shouldSimplifyTo`
+                sum (map (x *.) [y, z, t, u, v])
+            x <.> sum [y, z, t, u, v] `shouldSimplifyTo`
+                sum (map (x <.>) [y, z, t, u, v])
+            sum [y, z, t, u, v] <.> x `shouldSimplifyTo`
+                sum (map (<.> x) [y, z, t, u, v])
+            product [a, b, c, sum [x, y, z]] `shouldSimplifyTo`
+                sum (map (product . (: [a, b, c])) [x, y, z])
+            (x + y) * (z + t) * a *
+                b `shouldSimplifyTo`
+                (a * b * x * z + a * b * x * t + a * b * y * z + a * b * y * t)
         specify "flatten sum and product" $ do
-            simplify (product [x * y, product [z, t, w], one]) `shouldBe`
-                simplify (product [x, y, z, t, w])
-            simplify (sum [x + y, sum [z, t, w + s], zero]) `shouldBe`
-                simplify (sum [x, y, z, t, w, s])
+            product [x * y, product [z, t, w], one] `shouldSimplifyTo`
+                product [x, y, z, t, w]
+            sum [x + y, sum [z, t, w + s], zero] `shouldSimplifyTo`
+                sum [x, y, z, t, w, s]
         specify "group constants together" $ do
-            simplify (product [one, one, x, y, one, z]) `shouldBe`
+            product [one, one, x, y, one, z] `shouldSimplifyTo`
                 product [x, y, z]
-            prettify (simplify (sum [one, one, x, y, one, z])) `shouldBe`
-                prettify (simplify (sum [const 3, x, y, z]))
-            simplify (product [const 1, const 2, x, y, const 3, z]) `shouldBe`
-                simplify (product [const 6, x, y, z])
+            sum [one, one, x, y, one, z] `shouldSimplifyTo`
+                sum [const 3, x, y, z]
+            product [const 1, const 2, x, y, const 3, z] `shouldSimplifyTo`
+                product [const 6, x, y, z]
         specify "combine same terms" $
             -- Higher dimension this is correct
          do
-            prettify (simplify (sum [one *. x1, x1, x1, const 3 *. y1, y1])) `shouldBe`
-                prettify (simplify (sum [const 3 *. x1, const 4 *. y1]))
-            simplify (sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1]) `shouldBe`
-                simplify (sum [const 4 *. y1, z1])
-            simplify (x1 - x1) `shouldBe` zero1
-            prettify (simplify (sum [one *. x, x, x, const 3 *. y, y])) `shouldBe`
-                prettify (simplify (sum [const 3 *. x, const 4 *. y]))
-            simplify (sum [const (-1) *. x, x, const 3 *. y, y, z]) `shouldBe`
-                simplify (sum [const 4 *. y, z])
-            simplify (x - x) `shouldBe` zero
+            sum [one *. x1, x1, x1, const 3 *. y1, y1] `shouldSimplifyTo`
+                sum [const 3 *. x1, const 4 *. y1]
+            sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1] `shouldSimplifyTo`
+                sum [const 4 *. y1, z1]
+            x1 - x1 `shouldSimplifyTo` zero1
+            sum [one *. x, x, x, const 3 *. y, y] `shouldSimplifyTo`
+                sum [const 3 *. x, const 4 *. y]
+            sum [const (-1) *. x, x, const 3 *. y, y, z] `shouldSimplifyTo`
+                sum [const 4 *. y, z]
+            x - x `shouldSimplifyTo` zero
         specify "scale rules" $ do
-            simplify (x *. (y *. v)) `shouldBe` simplify ((x * y) *. v)
-            simplify (xRe (x *. xc)) `shouldBe` simplify (x *. xRe xc)
-            simplify (xIm (x *. xc)) `shouldBe` simplify (x *. xIm xc)
+            x *. (y *. v) `shouldSimplifyTo` (x * y) *. v
+            xRe (x *. xc) `shouldSimplifyTo` x *. xRe xc
+            xIm (x *. xc) `shouldSimplifyTo` x *. xIm xc
         specify "negate rules" $ do
-            simplify (negate (negate x)) `shouldBe` simplify x
-            prettify (simplify (negate (negate (x + y)))) `shouldBe`
-                prettify (simplify (x + y))
-            simplify (negate zero) `shouldBe` zero
+            negate (negate x) `shouldSimplifyTo` simplify x
+            negate (negate (x + y)) `shouldSimplifyTo` (x + y)
+            negate zero `shouldSimplifyTo` zero
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
-            simplify (x1 * one1) `shouldBe` x1
-            simplify (one1 * x1) `shouldBe` x1
-            simplify (x1 * zero1) `shouldBe` zero1
-            simplify (zero1 * x1) `shouldBe` zero1
-            simplify (y1 * (x1 * zero1)) `shouldBe` zero1
-            simplify (zero1 * (x1 * one1)) `shouldBe` zero1
-            simplify (zero1 * x1 * one1) `shouldBe` zero1
-            simplify (zero1 * (x1 * y1)) `shouldBe` zero1
-            simplify ((x1 * y1) * zero1) `shouldBe` zero1
-            simplify ((x1 * zero1) * one1) `shouldBe` zero1
-            simplify ((x1 * y1) * one1) `shouldBe` (x1 * y1)
-            simplify (x1 * y1 * z1 * one1) `shouldBe` simplify (x1 * y1 * z1)
+            x1 * one1 `shouldSimplifyTo` x1
+            one1 * x1 `shouldSimplifyTo` x1
+            x1 * zero1 `shouldSimplifyTo` zero1
+            zero1 * x1 `shouldSimplifyTo` zero1
+            y1 * (x1 * zero1) `shouldSimplifyTo` zero1
+            zero1 * (x1 * one1) `shouldSimplifyTo` zero1
+            zero1 * x1 * one1 `shouldSimplifyTo` zero1
+            zero1 * (x1 * y1) `shouldSimplifyTo` zero1
+            (x1 * y1) * zero1 `shouldSimplifyTo` zero1
+            (x1 * zero1) * one1 `shouldSimplifyTo` zero1
+            (x1 * y1) * one1 `shouldSimplifyTo` (x1 * y1)
+            x1 * y1 * z1 * one1 `shouldSimplifyTo` x1 * y1 * z1
         specify "dot product higher dimension with scaling and point wise" $ do
-            simplify (x1 <.> zero1) `shouldBe` zero
-            simplify (zero1 <.> x1) `shouldBe` zero
-            simplify ((s *. x1) <.> y1) `shouldBe` simplify (s *. (x1 <.> y1))
-            simplify (x1 <.> (s *. y1)) `shouldBe` simplify (s *. (x1 <.> y1))
-            simplify (x1 * (y1 + z1)) `shouldBe` simplify (x1 * y1 + x1 * z1)
-            simplify ((y1 + z1) * x1) `shouldBe` simplify (x1 * y1 + x1 * z1)
-            simplify (s *. (y1 + z1)) `shouldBe` simplify (s *. y1 + s *. z1)
-            simplify (x1 <.> (y1 + z1)) `shouldBe`
-                simplify ((x1 <.> y1) + (x1 <.> z1))
-            simplify ((y1 + z1) <.> x1) `shouldBe`
-                simplify ((y1 <.> x1) + (z1 <.> x1))
+            x1 <.> zero1 `shouldSimplifyTo` zero
+            zero1 <.> x1 `shouldSimplifyTo` zero
+            (s *. x1) <.> y1 `shouldSimplifyTo` s *. (x1 <.> y1)
+            x1 <.> (s *. y1) `shouldSimplifyTo` s *. (x1 <.> y1)
+            x1 * (y1 + z1) `shouldSimplifyTo` x1 * y1 + x1 * z1
+            (y1 + z1) * x1 `shouldSimplifyTo` x1 * y1 + x1 * z1
+            s *. (y1 + z1) `shouldSimplifyTo` s *. y1 + s *. z1
+            x1 <.> (y1 + z1) `shouldSimplifyTo` (x1 <.> y1) + (x1 <.> z1)
+            (y1 + z1) <.> x1 `shouldSimplifyTo` (y1 <.> x1) + (z1 <.> x1)
         specify "log and exp higher" $ do
-            simplify (log (exp x1)) `shouldBe` x1
-            simplify (exp (log x1)) `shouldBe` x1
-            simplify (log (exp x2)) `shouldBe` x2
-            simplify (exp (log x2)) `shouldBe` x2
+            log (exp x1) `shouldSimplifyTo` x1
+            exp (log x1) `shouldSimplifyTo` x1
+            log (exp x2) `shouldSimplifyTo` x2
+            exp (log x2) `shouldSimplifyTo` x2

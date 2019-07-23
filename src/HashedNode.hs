@@ -1,11 +1,12 @@
 module HashedNode where
 
 import Data.IntMap.Strict as IM
+import GHC.Stack (HasCallStack)
 import HashedExpression
 
 -- | Helpers functions for Expression nodes
 --
-nodeElementType :: Node -> ExpressionMap -> ET
+nodeElementType :: HasCallStack => Node -> ExpressionMap -> ET
 nodeElementType node mp =
     case node of
         Var _ -> R
@@ -44,17 +45,17 @@ nodeElementType node mp =
 --   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
 --   ...
 --
-nodeTypeWeight :: Node -> Int
+nodeTypeWeight :: HasCallStack => Node -> Int
 nodeTypeWeight node =
     case node of
         Var {} -> 1
-        DVar {} -> -9999 -- TODO: DVar first (actually it should be at the end like math notation, but does it matter?)
+        DVar {} -> 6666 -- After Scale
         Const {} -> 0
         Sum {} -> 9999 -- Sum at the end
         Mul {} -> 3
         Power {} -> 28
         Neg {} -> 4
-        Scale {} -> 7777
+        Scale {} -> 7777 -- Right after RealImag
         Div {} -> 6
         Sqrt {} -> 7
         Sin {} -> 8
@@ -80,7 +81,7 @@ nodeTypeWeight node =
 
 -- |
 --
-sameNodeType :: Node -> Node -> Bool
+sameNodeType :: HasCallStack => Node -> Node -> Bool
 sameNodeType node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
 
 -- | Get list of arguments of this node
@@ -121,25 +122,29 @@ nodeArgs node =
 
 -- | Auxiliary functions for operations
 --
-retrieveNode :: Int -> ExpressionMap -> Node
+{-# INLINE retrieveNode #-}
+retrieveNode :: HasCallStack => Int -> ExpressionMap -> Node
 retrieveNode n mp =
     case IM.lookup n mp of
         Just (_, node) -> node
         _ -> error "node not in map"
 
-retrieveInternal :: Int -> ExpressionMap -> Internal
+{-# INLINE retrieveInternal #-}
+retrieveInternal :: HasCallStack => Int -> ExpressionMap -> Internal
 retrieveInternal n mp =
     case IM.lookup n mp of
         Just internal -> internal
         _ -> error "node not in map"
 
-retrieveElementType :: Int -> ExpressionMap -> ET
+{-# INLINE retrieveElementType #-}
+retrieveElementType :: HasCallStack => Int -> ExpressionMap -> ET
 retrieveElementType n mp =
     case IM.lookup n mp of
         Just (_, node) -> nodeElementType node mp
         _ -> error "expression not in map"
 
-retrieveShape :: Int -> ExpressionMap -> Shape
+{-# INLINE retrieveShape #-}
+retrieveShape :: HasCallStack => Int -> ExpressionMap -> Shape
 retrieveShape n mp =
     case IM.lookup n mp of
         Just (dim, _) -> dim
@@ -147,25 +152,29 @@ retrieveShape n mp =
 
 -- |
 --
-expressionElementType :: Expression d et -> ET
+{-# INLINE expressionElementType #-}
+expressionElementType :: HasCallStack => Expression d et -> ET
 expressionElementType (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> nodeElementType node mp
         _ -> error "expression not in map"
 
-expressionShape :: Expression d et -> Shape
+{-# INLINE expressionShape #-}
+expressionShape :: HasCallStack => Expression d et -> Shape
 expressionShape (Expression n mp) =
     case IM.lookup n mp of
         Just (dim, _) -> dim
         _ -> error "expression not in map"
 
-expressionInternal :: Expression d et -> Internal
+{-# INLINE expressionInternal #-}
+expressionInternal :: HasCallStack => Expression d et -> Internal
 expressionInternal (Expression n mp) =
     case IM.lookup n mp of
         Just internal -> internal
         _ -> error "expression not in map"
 
-expressionNode :: Expression d et -> Node
+{-# INLINE expressionNode #-}
+expressionNode :: HasCallStack => Expression d et -> Node
 expressionNode (Expression n mp) =
     case IM.lookup n mp of
         Just (_, node) -> node

@@ -48,7 +48,7 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Precondition:
+-- | Precondition: (satisfied by applying simplifying)
 -- - No complex in the input (:+, xRe, xIm)
 --
 collectDifferentials :: Expression Zero Covector -> Expression Zero Covector

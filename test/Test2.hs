@@ -45,3 +45,5 @@ spec =
         negate x1 `shouldSimplifyTo` const (-1) *. x1
         x ^ 2 ^ 3 `shouldSimplifyTo` x ^ 6
         x ^ 3 / x ^ 2 `shouldSimplifyTo` x
+        (a *. x) * (b *. y) *
+            (c *. z) `shouldSimplifyTo` (a * b * c) *. (x * y * z)
