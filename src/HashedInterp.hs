@@ -497,7 +497,10 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                                               branches
                                 ]
                     Rotate [amount1, amount2] arg ->
-                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoR mp arg)
+                        rotate2D
+                            (size1, size2)
+                            (amount1, amount2)
+                            (eval valMap $ expTwoR mp arg)
                     _ -> error "expression structure Two R is wrong"
         | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -572,7 +575,10 @@ instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
                                               branches
                                 ]
                     Rotate [amount1, amount2] arg ->
-                        rotate2D (size1, size2) (amount1, amount2) (eval valMap $ expTwoC mp arg)
+                        rotate2D
+                            (size1, size2)
+                            (amount1, amount2)
+                            (eval valMap $ expTwoC mp arg)
                     _ -> error "expression structure Two C is wrong"
         | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -672,7 +678,10 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                                               branches
                                 ]
                     Rotate [amount1, amount2, amount3] arg ->
-                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeR mp arg)
+                        rotate3D
+                            (size1, size2, size3)
+                            (amount1, amount2, amount3)
+                            (eval valMap $ expThreeR mp arg)
                     _ -> error "expression structure Three R is wrong"
         | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
@@ -757,7 +766,10 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                                               branches
                                 ]
                     Rotate [amount1, amount2, amount3] arg ->
-                        rotate3D (size1, size2, size3) (amount1, amount2, amount3) (eval valMap $ expThreeC mp arg)
+                        rotate3D
+                            (size1, size2, size3)
+                            (amount1, amount2, amount3)
+                            (eval valMap $ expThreeC mp arg)
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
@@ -801,4 +813,3 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
         , j <- [0 .. size2 - 1]
         , k <- [0 .. size3 - 1]
         ]
-

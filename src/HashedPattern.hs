@@ -124,7 +124,6 @@ data Pattern
     | PSumRest ListCapture [Pattern]
     | PPower Pattern PatternPower
     | PRotate [Pattern] Pattern
-
     deriving (Show)
 
 -- |
@@ -179,7 +178,6 @@ instance NumOp Pattern where
     acosh = PAcosh
     atanh = PAtanh
     (/) = PDiv
-
 
 instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag

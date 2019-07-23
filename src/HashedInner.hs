@@ -214,7 +214,6 @@ diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
 
-
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
 --
@@ -306,6 +305,16 @@ toTransformation simp exp@(mp, n) =
 toRecursiveTransformation :: Modification -> Transformation
 toRecursiveTransformation = toTransformation . makeRecursive
 
+-- | Apply maximum k times, or stop if the expression doesn't change
+--
+multipleTimes :: Int -> Transformation -> Transformation
+multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
+  where
+    go 0 _ curExp = curExp
+    go k lastExp curExp
+        | snd lastExp == snd curExp = curExp
+        | otherwise = go (k - 1) curExp (smp curExp)
+
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
 --
@@ -315,8 +324,7 @@ combineChildrenDiffs contextMp n childrenDiffs
     | Sum et _ <- oldNode = sortAndCombine (naryET Sum (ElementSpecific et))
     | Mul et _ <- oldNode = sortAndCombine (naryET Mul (ElementSpecific et))
     | oldChildren == newChildren &&
-          all (== IM.empty) (map extraEntries childrenDiffs) =
-        noChange n
+          all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =
         case oldNode of
             Var _ -> noChange n

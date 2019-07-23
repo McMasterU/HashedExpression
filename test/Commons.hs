@@ -592,8 +592,10 @@ sz = IM.size . exMap
 infix 1 `shouldSimplifyTo`
 
 shouldSimplifyTo ::
-       (DimensionType d, ElementType et)
+       (HasCallStack, DimensionType d, ElementType et, Typeable et, Typeable d)
     => Expression d et
     -> Expression d et
     -> IO ()
-shouldSimplifyTo exp1 exp2 = simplify exp1 `shouldBe` simplify exp2
+shouldSimplifyTo exp1 exp2 = do
+    prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
+    simplify exp1 `shouldBe` simplify exp2

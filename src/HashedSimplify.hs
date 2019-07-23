@@ -14,7 +14,7 @@ import qualified Data.IntSet as IS
 import Data.List (foldl', group, groupBy, intercalate, sort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (catMaybes, fromJust, isJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
@@ -54,18 +54,6 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Simplification is alias for Modification, which is (ExpressionMap, Int) -> ExpressionDiff
---
--- | Apply maximum k times, or stop if the expression doesn't change
---
-multipleTimes :: Int -> Transformation -> Transformation
-multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
-  where
-    go 0 _ curExp = curExp
-    go k lastExp curExp
-        | snd lastExp == snd curExp = curExp
-        | otherwise = go (k - 1) curExp (smp curExp)
-
 -- | For debugging a single simplification rule
 --
 makeTrans ::
@@ -79,22 +67,22 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify e =
-    let applyRules =
-            multipleTimes 100 $
-            (toRecursiveTransformation evaluateIfPossibleRules) >>>
-            (toRecursiveTransformation groupConstantsRules) >>>
-            (toRecursiveTransformation combineTermsRules) >>>
-            (toRecursiveTransformation combineTermsRulesProd) >>>
-            (toRecursiveTransformation powerProdRules) >>>
-            (toRecursiveTransformation powerScaleRules) >>>
-            (toRecursiveTransformation combinePowerRules) >>>
-            (toRecursiveTransformation powerSumRealImagRules) >>>
-            (toRecursiveTransformation combineConstantScalarRules) >>>
-            (toRecursiveTransformation flattenSumProdRules) >>>
-            (toRecursiveTransformation reduceSumProdRules) >>>
-            rulesFromPattern >>> removeUnreachable
-     in wrap . applyRules . unwrap $ e
+simplify = wrap . applyRules . unwrap
+  where
+    applyRules =
+        multipleTimes 100 $
+        (toRecursiveTransformation evaluateIfPossibleRules) >>>
+        (toRecursiveTransformation groupConstantsRules) >>>
+        (toRecursiveTransformation combineTermsRules) >>>
+        (toRecursiveTransformation combineTermsRulesProd) >>>
+        (toRecursiveTransformation powerProdRules) >>>
+        (toRecursiveTransformation powerScaleRules) >>>
+        (toRecursiveTransformation combinePowerRules) >>>
+        (toRecursiveTransformation powerSumRealImagRules) >>>
+        (toRecursiveTransformation combineRealScalarRules) >>>
+        (toRecursiveTransformation flattenSumProdRules) >>>
+        (toRecursiveTransformation reduceSumProdRules) >>>
+        rulesFromPattern >>> removeUnreachable
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
@@ -361,12 +349,14 @@ powerSumRealImagRules exp@(mp, n)
         | otherwise = noChange n
 
 -- | Rules for power product
--- (a*b)^2 should be a^2 * b^2
+-- (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , Mul _ _ <- retrieveNode nId mp
-    , val > 0 = mulManyDiff mp . replicate val . noChange $ nId
+    , Mul _ args <- retrieveNode nId mp =
+        let powerEach nodeId =
+                applyDiff mp (unary (Power val)) [noChange nodeId]
+         in mulManyDiff mp . map powerEach $ args
     | otherwise = noChange n
 
 -- | Rules for power scale
@@ -384,24 +374,26 @@ powerScaleRules exp@(mp, n)
                 [powerScalar, powerScalee]
     | otherwise = noChange n
 
--- | Rules for combining scale
--- ((-1) *. x) * (2 *. y) * (3 *. z) --> (-6) *. (x * y * z)
-combineConstantScalarRules :: Modification
-combineConstantScalarRules exp@(mp, n)
-    | Mul _ ns <- retrieveNode n mp
+-- | Rules for combining scalar
+-- (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
+--
+combineRealScalarRules :: Modification
+combineRealScalarRules exp@(mp, n)
+    | Mul R ns <- retrieveNode n mp
     , let extracted = map extract ns
-    , any (/= 1) . map snd $ extracted =
-        let combinedConstants = Prelude.product $ map snd extracted
-            combinedScalees = mulManyDiff mp . map (noChange . fst) $ extracted
+    , any isJust . map snd $ extracted =
+        let combinedScalars = mulManyDiff mp . catMaybes $ map snd extracted
+            combinedScalees = mulManyDiff mp $ map fst extracted
          in applyDiff mp (binaryET Scale ElementDefault) $
-            [diffConst [] (combinedConstants), combinedScalees]
+            [combinedScalars, combinedScalees]
     | otherwise = noChange n
   where
     extract nId
-        | Scale _ scalar scalee <- retrieveNode nId mp
-        , Const constVal <- retrieveNode scalar mp = (scalee, constVal)
-        | Neg _ negateNum <- retrieveNode nId mp = (negateNum, -1)
-        | otherwise = (nId, 1)
+        | Scale _ scalar scalee <- retrieveNode nId mp =
+            (noChange scalee, Just $ noChange scalar)
+        | Neg R negatee <- retrieveNode nId mp =
+            (noChange negatee, Just $ diffConst [] (-1))
+        | otherwise = (noChange nId, Nothing)
 
 -- | Turn HashedPattern to a simplification
 --
@@ -417,7 +409,9 @@ evaluateIfPossibleRules exp@(mp, n) =
         (Sum R _, Just vals) -> res $ Prelude.sum vals
         (Mul R _, Just vals) -> res $ Prelude.product vals
         (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
-        (Neg R _, Just [val]) -> res $ 0 - val
+        (Neg R _, Just [val])
+            | val /= 0 -> res $ (-val)
+            | otherwise -> res 0
         (Power x _, Just [val]) -> res $ val ^ x
         (InnerProd R arg1 arg2, Just [val1, val2]) ->
             res $
