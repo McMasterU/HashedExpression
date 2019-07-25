@@ -782,7 +782,7 @@ rtt pos size = (pos + size) `mod` size
 --
 rotate1D :: Int -> Int -> Array Int a -> Array Int a
 rotate1D size amount arr =
-    listArray (0, size) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
+    listArray (0, size - 1) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
 
 -- |
 --
