@@ -80,6 +80,7 @@ simplify = wrap . applyRules . unwrap
         , toRecursiveSimplification combineRealScalarRules
         , toRecursiveSimplification flattenSumProdRules
         , toRecursiveSimplification reduceSumProdRules
+        . toRecursiveSimplification combineRotateRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -434,3 +435,31 @@ evaluateIfPossibleRules exp@(mp, n) =
 --
 standardize :: Transformation
 standardize = toRecursiveSimplification (noChange . snd)
+
+
+
+{--
+--    ==============================================
+--    ==  Rotate operation simplification rules   ==
+--    ==============================================
+---}
+-- | Combining the Rotate
+-- rotate [2] (rotate [1] arg) -> rotate [3] arg
+combineRotateRules :: Modification
+combineRotateRules exp@(mp, n)
+  | Rotate outerVal outerN <- retrieveNode n mp
+  , Rotate innerVal innerN <- retrieveNode outerN mp =
+        applyDiff mp (unary (Rotate (listAdd outerVal innerVal))) [noChange innerN]
+  | otherwise = noChange n
+
+-- Which one is better?
+-- =============================================================
+
+---- | Emulate the element wise add operation
+--listAdd :: [Int] -> [Int] -> [Int]
+--listAdd (x:xs) (y:ys) =  (x + y) : listAdd xs ys
+--listAdd _ _=  error "length mismatch"
+
+-- | Emulate the element wise add operation
+listAdd :: [Int] -> [Int] -> [Int]
+listAdd xs ys =  zipWith (+) xs ys

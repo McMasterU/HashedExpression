@@ -773,42 +773,60 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
--- |
+-- | Calculate the real shift amount. Based on the  position in the list, size of the shift and length fo the range.
 --
 rtt :: Int -> Int -> Int
 rtt pos size = (pos + size) `mod` size
 
--- |
+-- | Calculate the real shift amount. Based on the  position in the list, size of the shift and length fo the range.
 --
-rotate1D :: Int -> Int -> Array Int a -> Array Int a
-rotate1D size amount arr =
-    listArray (0, size) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
+rtt1 :: Int -- ^ Input : Position in the list
+  -> Int  -- ^ Input : Real size of the array
+  -> Int  -- ^ Input : Amount of the shift
+  -> Int -- ^ Output : Real shift amount
+rtt1 pos size amount = (pos + (amount `mod` size)) `mod` size
 
--- |
+
+
+-- | One dimension rotation
 --
-rotate2D :: (Int, Int) -> (Int, Int) -> Array (Int, Int) a -> Array (Int, Int) a
+rotate1D ::
+  Int -- ^ Input : Size of the array
+  -> Int -- ^ Input : amount of shift
+  -> Array Int a -- ^ Input : Input array
+  -> Array Int a -- ^ Output : Output, rotated array
+rotate1D size amount arr =
+    listArray (0, size-1) [arr ! rtt1 i size  (-amount) | i <- [0 .. size - 1]]
+
+-- | Two dimension rotation
+--
+rotate2D ::
+  (Int, Int) -- ^ Input : Size of the 2d array
+  -> (Int, Int) -- ^ Input : amount of shift for 2d array
+  -> Array (Int, Int) a -- ^ Input : Input 2d array
+  -> Array (Int, Int) a -- ^ Output : Output, rotated 2d array
 rotate2D (size1, size2) (amount1, amount2) arr =
     listArray
         ((0, 0), (size1 - 1, size2 - 1))
-        [ arr ! (rtt (i - amount1) size1, rtt (j - amount2) size2)
+        [ arr ! (rtt1 i size1 (-amount1), rtt1 j size2 (-amount2))
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         ]
 
--- |
+-- | Three dimension rotation
 --
 rotate3D ::
-       (Int, Int, Int)
-    -> (Int, Int, Int)
-    -> Array (Int, Int, Int) a
-    -> Array (Int, Int, Int) a
+       (Int, Int, Int) -- ^ Input : Size of 3d array
+    -> (Int, Int, Int) -- ^ Input : amount of shift for 3d array
+    -> Array (Int, Int, Int) a -- ^ Input : Input 3d array
+    -> Array (Int, Int, Int) a -- ^ Output : Output, rotated 3d array
 rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
     listArray
         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
         [ arr !
-        ( rtt (i - amount1) size1
-        , rtt (j - amount2) size2
-        , rtt (k - amount3) size3)
+        ( rtt1 i size1 (-amount1)
+        , rtt1 j size2 (-amount2)
+        , rtt1 k size3 (-amount3))
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         , k <- [0 .. size3 - 1]
