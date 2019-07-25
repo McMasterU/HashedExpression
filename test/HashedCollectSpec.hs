@@ -87,10 +87,55 @@ prop_DVarAppearOnce exp =
     allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
     property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
 
+prop_DVarStayAloneWithOneR :: Expression One R -> Expression One R -> IO ()
+prop_DVarStayAloneWithOneR exp1 exp2 =
+    unless property $ do
+        showExp exp
+        showExp collectedExp
+        error "DVar not standing alone"
+  where
+    exp = exp1 <.> exp2
+    collectedExp@(Expression rootId mp) =
+        collectDifferentials . exteriorDerivative allVars $ exp
+    isDVarAlone nId
+        | Const 0 <- retrieveNode nId mp = True
+        | DVar _ <- retrieveNode nId mp = True
+        | Mul Covector [_, cId] <- retrieveNode nId mp
+        , DVar _ <- retrieveNode cId mp = True
+        | InnerProd Covector _ cId <- retrieveNode nId mp
+        , DVar _ <- retrieveNode cId mp = True
+        | otherwise = traceShow (retrieveNode nId mp) False
+    property =
+        case retrieveNode rootId mp of
+            Sum Covector ns -> all isDVarAlone ns
+            _ -> isDVarAlone rootId
+
+prop_DVarAppearOnceWithOneR :: Expression One R -> Expression One R -> IO ()
+prop_DVarAppearOnceWithOneR exp1 exp2 =
+    unless property $ do
+        showExp exp
+        showExp collectedExp
+        error "DVar not standing alone"
+  where
+    exp = exp1 <.> exp2
+    collectedExp@(Expression rootId mp) =
+        collectDifferentials . exteriorDerivative allVars $ exp
+    getDVarNames node
+        | DVar name <- node = [name]
+        | otherwise = []
+    allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
+    property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
+
 spec :: Spec
 spec =
     describe "Hashed collect differentials spec" $ do
         specify "DVar should stay by itself after collect differentials" $
-            quickCheckWith stdArgs {maxSuccess = 200} prop_DVarStayAlone
+            performQuickCheck prop_DVarStayAlone
         specify "Each DVar appears only once after collect differentials" $
-            quickCheckWith stdArgs {maxSuccess = 200} prop_DVarAppearOnce
+            performQuickCheck prop_DVarAppearOnce
+        specify
+            "DVar should stay by itself after collect differentials (from dot product)" $
+            performQuickCheck prop_DVarStayAloneWithOneR
+        specify
+            "Each DVar appears only once after collect differentials (from dot product)" $
+            performQuickCheck prop_DVarAppearOnceWithOneR

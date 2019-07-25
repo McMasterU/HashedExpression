@@ -798,6 +798,8 @@ rotate1D ::
 rotate1D size amount arr =
     listArray (0, size-1) [arr ! rtt1 i size  (-amount) | i <- [0 .. size - 1]]
 
+-- Previous one : listArray (0, size - 1) [arr ! rtt (i - amount) size | i <- [0 .. size - 1]]
+
 -- | Two dimension rotation
 --
 rotate2D ::
