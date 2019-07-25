@@ -116,7 +116,7 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
         -> Bool
     a ~= b = (indices a == indices b) && and (zipWith (~=) (elems a) (elems b))
 
--- |
+-- | These should be commented properly.
 --
 class Evaluable d rc output | d rc -> output where
     eval :: ValMaps -> Expression d rc -> output
