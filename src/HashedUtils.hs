@@ -107,16 +107,27 @@ constWithShape shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
+-- |
+--
+isScalarShape :: Shape -> Bool
+isScalarShape = null
+
+-- |
+--
 pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
 pullConstant mp n
     | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)
     | otherwise = Nothing
 
+-- |
+--
 pullConstants :: ExpressionMap -> [Int] -> Maybe (Shape, [Double])
 pullConstants mp ns
     | xs@(x:_) <- mapMaybe (pullConstant mp) ns = Just (fst x, map snd xs)
     | otherwise = Nothing
 
+-- |
+--
 isZero :: ExpressionMap -> Int -> Bool
 isZero mp nId
     | Const 0 <- retrieveNode nId mp = True
@@ -125,6 +136,8 @@ isZero mp nId
     , Const 0 <- retrieveNode arg2 mp = True
     | otherwise = False
 
+-- |
+--
 isOne :: ExpressionMap -> Int -> Bool
 isOne mp nId
     | Const 1 <- retrieveNode nId mp = True
@@ -133,21 +146,29 @@ isOne mp nId
     , Const 0 <- retrieveNode arg2 mp = True
     | otherwise = False
 
+-- |
+--
 isConstant :: ExpressionMap -> Int -> Bool
 isConstant mp nId
     | Const _ <- retrieveNode nId mp = True
     | otherwise = False
 
+-- |
+--
 pullSumOperands :: ExpressionMap -> Int -> [Int]
 pullSumOperands mp nId
     | Sum _ operands <- retrieveNode nId mp = operands
     | otherwise = [nId]
 
+-- |
+--
 pullProdOperands :: ExpressionMap -> Int -> [Int]
 pullProdOperands mp nId
     | Mul _ operands <- retrieveNode nId mp = operands
     | otherwise = [nId]
 
+-- |
+--
 aConst :: Shape -> Double -> (ExpressionMap, Int)
 aConst shape val = (IM.fromList [(h, node)], h)
   where

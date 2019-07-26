@@ -599,8 +599,3 @@ shouldSimplifyTo ::
 shouldSimplifyTo exp1 exp2 = do
     prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
     simplify exp1 `shouldBe` simplify exp2
-
--- |
---
-performQuickCheck :: Testable prop => prop -> IO ()
-performQuickCheck = quickCheckWith stdArgs {maxSuccess = 100}
