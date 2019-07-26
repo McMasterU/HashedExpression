@@ -166,8 +166,8 @@ infixl 8 ^
 -- | Shape type:
 -- []        --> scalar
 -- [n]       --> 1D with size n
--- [n, m]    --> 2D with size n ï¿½ m
--- [n, m, p] --> 3D with size n ï¿½ m ï¿½ p
+-- [n, m]    --> 2D with size n × m
+-- [n, m, p] --> 3D with size n × m × p
 type Shape = [Int]
 
 -- | Args - list of indices of arguments in the ExpressionMap
