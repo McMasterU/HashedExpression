@@ -21,51 +21,51 @@ import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (Nat)
 import Prelude hiding
-  ( (*)
-  , (+)
-  , (-)
-  , (/)
-  , (^)
-  , acos
-  , acosh
-  , asin
-  , asinh
-  , atan
-  , atanh
-  , cos
-  , cosh
-  , exp
-  , negate
-  , sin
-  , sinh
-  , tan
-  , tanh
-  )
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , cos
+    , cosh
+    , exp
+    , negate
+    , sin
+    , sinh
+    , tan
+    , tanh
+    )
 
 -- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
 data R
-  deriving (NumType, ElementType, Addable, Typeable)
+    deriving (NumType, ElementType, Addable, Typeable)
 
 data C
-  deriving (NumType, ElementType, Addable, Typeable)
+    deriving (NumType, ElementType, Addable, Typeable)
 
 data Covector
-  deriving (ElementType, Addable, Typeable)
+    deriving (ElementType, Addable, Typeable)
 
 -- | Type representation of vector dimension
 --
 data Zero
-  deriving (DimensionType, Typeable)
+    deriving (DimensionType, Typeable)
 
 data One
-  deriving (DimensionType, Typeable)
+    deriving (DimensionType, Typeable)
 
 data Two
-  deriving (DimensionType, Typeable)
+    deriving (DimensionType, Typeable)
 
 data Three
-  deriving (DimensionType, Typeable)
+    deriving (DimensionType, Typeable)
 
 -- | Classes as constraints
 --
@@ -95,7 +95,8 @@ class VectorSpace d s s =>
 -- if the arguments don't satisfy the constraints
 --
 --instance {-# OVERLAPPABLE #-} ElementType et => Addable et
-instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) => VectorSpace d et R
+instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
+                              VectorSpace d et R
 
 instance (DimensionType d) => VectorSpace d C C
 
@@ -106,53 +107,53 @@ instance VectorSpace d s s => InnerProductSpace d s
 -- | Classes for operations so that both Expression and Pattern (in HashedPattern) can implement
 --
 class AddableOp a where
-  (+) :: a -> a -> a
+    (+) :: a -> a -> a
 
 class NegateOp a where
-  negate :: a -> a
+    negate :: a -> a
 
 (-) :: (AddableOp a, NegateOp a) => a -> a -> a
 x - y = x + negate y
 
 class MultiplyOp a where
-  (*) :: a -> a -> a
+    (*) :: a -> a -> a
 
 class PowerOp a b | a -> b where
-  (^) :: a -> b -> a
+    (^) :: a -> b -> a
 
 class VectorSpaceOp a b where
-  scale :: a -> b -> b
-  (*.) :: a -> b -> b
-  (*.) = scale
+    scale :: a -> b -> b
+    (*.) :: a -> b -> b
+    (*.) = scale
 
 class NumOp a where
-  sqrt :: a -> a
-  exp :: a -> a
-  log :: a -> a
-  sin :: a -> a
-  cos :: a -> a
-  tan :: a -> a
-  asin :: a -> a
-  acos :: a -> a
-  atan :: a -> a
-  sinh :: a -> a
-  cosh :: a -> a
-  tanh :: a -> a
-  asinh :: a -> a
-  acosh :: a -> a
-  atanh :: a -> a
-  (/) :: a -> a -> a
+    sqrt :: a -> a
+    exp :: a -> a
+    log :: a -> a
+    sin :: a -> a
+    cos :: a -> a
+    tan :: a -> a
+    asin :: a -> a
+    acos :: a -> a
+    atan :: a -> a
+    sinh :: a -> a
+    cosh :: a -> a
+    tanh :: a -> a
+    asinh :: a -> a
+    acosh :: a -> a
+    atanh :: a -> a
+    (/) :: a -> a -> a
 
 class ComplexRealOp r c | r -> c, c -> r where
-  (+:) :: r -> r -> c
-  xRe :: c -> r
-  xIm :: c -> r
+    (+:) :: r -> r -> c
+    xRe :: c -> r
+    xIm :: c -> r
 
 class InnerProductSpaceOp a b c | a b -> c where
-  (<.>) :: a -> b -> c
+    (<.>) :: a -> b -> c
 
 class RotateOp k a | a -> k where
-  rotate :: k -> a -> a
+    rotate :: k -> a -> a
 
 infixl 6 +, -
 
@@ -186,10 +187,10 @@ type RotateAmount = [Int]
 -- | Data representation of element type
 --
 data ET
-  = R
-  | C
-  | Covector
-  deriving (Show, Eq, Ord)
+    = R
+    | C
+    | Covector
+    deriving (Show, Eq, Ord)
 
 -- | Internal
 -- Shape: Shape of the expression
@@ -204,50 +205,50 @@ type ExpressionMap = IntMap Internal
 -- | Expression with 2 phantom types (dimension and num type)
 --
 data Expression d et =
-  Expression
-    { exIndex :: Int -- the index this expression
-    , exMap :: ExpressionMap -- all subexpressions
-    }
-  deriving (Show, Eq, Ord, Typeable)
+    Expression
+        { exIndex :: Int -- the index this expression
+        , exMap :: ExpressionMap -- all subexpressions
+        }
+    deriving (Show, Eq, Ord, Typeable)
 
 type role Expression nominal nominal -- So the users cannot use Data.Coerce.coerce to convert between expression types
 
 -- | Node type
 --
 data Node
-  = Var String
-  | DVar String -- only contained in **Expression d Covector (1-form)**
-  | Const Double -- only all elements the same
+    = Var String
+    | DVar String -- only contained in **Expression d Covector (1-form)**
+    | Const Double -- only all elements the same
     -- MARK: Basics
-  | Sum ET Args -- element-wise sum
-  | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-  | Power Int Arg -- TODO: Power for Complex or not ?
-  | Neg ET Arg
-  | Scale ET Arg Arg
+    | Sum ET Args -- element-wise sum
+    | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
+    | Power Int Arg -- TODO: Power for Complex or not ?
+    | Neg ET Arg
+    | Scale ET Arg Arg
     -- MARK: only apply to R
-  | Div Arg Arg
-  | Sqrt Arg
-  | Sin Arg
-  | Cos Arg
-  | Tan Arg
-  | Exp Arg
-  | Log Arg
-  | Sinh Arg
-  | Cosh Arg
-  | Tanh Arg
-  | Asin Arg
-  | Acos Arg
-  | Atan Arg
-  | Asinh Arg
-  | Acosh Arg
-  | Atanh Arg
+    | Div Arg Arg
+    | Sqrt Arg
+    | Sin Arg
+    | Cos Arg
+    | Tan Arg
+    | Exp Arg
+    | Log Arg
+    | Sinh Arg
+    | Cosh Arg
+    | Tanh Arg
+    | Asin Arg
+    | Acos Arg
+    | Atan Arg
+    | Asinh Arg
+    | Acosh Arg
+    | Atanh Arg
     -- MARK: Complex related
-  | RealImag Arg Arg -- from real and imagine
-  | RealPart Arg -- extract real part
-  | ImagPart Arg -- extract imaginary part
+    | RealImag Arg Arg -- from real and imagine
+    | RealPart Arg -- extract real part
+    | ImagPart Arg -- extract imaginary part
     -- MARK: Inner product Space
-  | InnerProd ET Arg Arg
+    | InnerProd ET Arg Arg
     -- MARK: Piecewise
-  | Piecewise [Double] ConditionArg [BranchArg]
-  | Rotate RotateAmount Arg
-  deriving (Show, Eq, Ord)
+    | Piecewise [Double] ConditionArg [BranchArg]
+    | Rotate RotateAmount Arg
+    deriving (Show, Eq, Ord)
