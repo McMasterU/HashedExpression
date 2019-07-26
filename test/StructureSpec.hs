@@ -88,11 +88,11 @@ prop_StructureOneC exp
 spec :: Spec
 spec =
     describe "Structure spec" $ do
-        specify "Topological sort" $ performQuickCheck prop_TopologicalSort
+        specify "Topological sort" $ property prop_TopologicalSort
         specify "Simplify a Zero C would give the form x +: y" $
-            performQuickCheck prop_StructureZeroC
+            property prop_StructureZeroC
         specify "Simplify a One C would give the form x +: y" $
-            performQuickCheck prop_StructureOneC
+            property prop_StructureOneC
         specify "Check size" $
             replicateM_ 35 $ do
                 let sz = IM.size . exMap

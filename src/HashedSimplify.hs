@@ -65,9 +65,14 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . applyRules . unwrap
+simplify = wrap . simplifyingTransformation . unwrap
+
+-- | Combine all the transformations
+--
+simplifyingTransformation :: Transformation
+simplifyingTransformation = secondPass . firstPass
   where
-    applyRules =
+    firstPass =
         multipleTimes 100 . chain $
         [ toRecursiveSimplification evaluateIfPossibleRules
         , toRecursiveSimplification groupConstantsRules
@@ -79,16 +84,48 @@ simplify = wrap . applyRules . unwrap
         , toRecursiveSimplification powerSumRealImagRules
         , toRecursiveSimplification combineRealScalarRules
         , toRecursiveSimplification flattenSumProdRules
-        , toRecursiveSimplification reduceSumProdRules .
-          toRecursiveSimplification combineRotateRules
+        , toRecursiveSimplification zeroOneSumProdRules
+        , toRecursiveSimplification collapseSumProdRules
+        , toRecursiveSimplification combineRotateRules
         , rulesFromPattern
         , removeUnreachable
         ]
+    secondPass = toMultiplyIfPossible
 
 -- | Turn a modification to a recursive transformation
 --
 toRecursiveSimplification :: Modification -> Transformation
 toRecursiveSimplification = toTransformation . makeRecursive True
+
+-- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
+-- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
+--
+toMultiplyIfPossible :: Transformation
+toMultiplyIfPossible = toRecursiveSimplification rule
+  where
+    rule exp@(mp, n)
+        | Scale et scalar scalee <- retrieveNode n mp
+        , et /= C
+        , isScalarShape (retrieveShape scalee mp) =
+            mulManyDiff mp [noChange scalar, noChange scalee]
+        | InnerProd et arg1 arg2 <- retrieveNode n mp
+        , isScalarShape (retrieveShape arg1 mp)
+        , isScalarShape (retrieveShape arg2 mp)
+        , et /= C = mulManyDiff mp [noChange arg1, noChange arg2]
+        | otherwise = noChange n
+
+-- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
+--
+toMultiplyIfPossible1 :: Transformation
+toMultiplyIfPossible1 =
+    chain . map (toRecursiveSimplification . fromSubstitution) $
+    [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y
+    , x *. y |. isCovector y &&. isScalar y ~~~~~~> x * y
+    , x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y
+    , x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y
+    , x <.> y |. isCovector y &&. isScalar y &&. isScalar x ~~~~~~> x * y
+    , x <.> y |. isCovector x &&. isScalar x &&. isScalar y ~~~~~~> x * y
+    ]
 
 rulesFromPattern :: Transformation
 rulesFromPattern =
@@ -202,13 +239,10 @@ otherRules =
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands
 --
-reduceSumProdRules :: Modification
-reduceSumProdRules exp@(mp, n) =
+zeroOneSumProdRules :: Modification
+zeroOneSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
-                -- if the sum has only one, collapse it
-                -- sum(x) -> x
-            | length ns == 1 -> noChange $ head ns
                 -- to make sure filter (not . isZero mp) ns is not empty
             | all (isZero mp) ns -> noChange $ head ns
                 -- if the sum has any zero, remove them
@@ -216,9 +250,6 @@ reduceSumProdRules exp@(mp, n) =
             | any (isZero mp) ns ->
                 sumManyDiff mp . map noChange . filter (not . isZero mp) $ ns
         Mul _ ns
-                -- if the mul has only one, collapse it
-                -- product(x) -> x
-            | length ns == 1 -> noChange $ head ns
                 -- to make sure filter (not . isOne mp) ns is not empty
             | all (isOne mp) ns -> noChange $ head ns
                 -- if the product has any one, remove them
@@ -230,6 +261,21 @@ reduceSumProdRules exp@(mp, n) =
             | nId:_ <- filter (isZero mp) ns -> noChange nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
+        _ -> noChange n
+
+-- |
+--
+collapseSumProdRules :: Modification
+collapseSumProdRules exp@(mp, n) =
+    case retrieveNode n mp of
+        Sum _ ns
+                -- if the sum has only one, collapse it
+                -- sum(x) -> x
+            | length ns == 1 -> noChange $ head ns
+        Mul _ ns
+                -- if the mul has only one, collapse it
+                -- product(x) -> x
+            | length ns == 1 -> noChange $ head ns
         _ -> noChange n
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
@@ -430,11 +476,6 @@ evaluateIfPossibleRules exp@(mp, n) =
         | otherwise = Nothing
     pulledVals = mapM getVal . nodeArgs $ node
     res = diffConst shape
-
--- | Turn expression to a standard version where arguments in Sum and Mul are sorted
---
-standardize :: Transformation
-standardize = toRecursiveSimplification (noChange . snd)
 
 -- | Combining the Rotate
 -- rotate [2] (rotate [1] arg) -> rotate [3] arg

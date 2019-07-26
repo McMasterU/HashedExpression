@@ -15,35 +15,36 @@ import qualified HashedOperation
 import HashedPrettify
 import HashedSimplify
 import Prelude hiding
-  ( (*)
-  , (+)
-  , (-)
-  , (/)
-  , (^)
-  , acos
-  , acosh
-  , asin
-  , asinh
-  , atan
-  , atanh
-  , const
-  , cos
-  , cosh
-  , exp
-  , log
-  , negate
-  , product
-  , sin
-  , sinh
-  , sqrt
-  , sum
-  , tan
-  , tanh
-  )
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , cos
+    , cosh
+    , exp
+    , log
+    , negate
+    , product
+    , sin
+    , sinh
+    , sqrt
+    , sum
+    , tan
+    , tanh
+    )
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
+import HashedCollect
 import HashedToC (generateProgram)
 import HashedUtils
 import HashedVar
@@ -65,6 +66,22 @@ prod1 = fromJust . HashedOperation.sum
 main
 --    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
  = do
-  let exp = (x1 - y1) <.> (x1 - y1)
+    let exp =
+            Expression
+                { exIndex = 4615994729
+                , exMap =
+                      IM.fromList
+                          [ (4614, ([], Var "g"))
+                          , (5029, ([], Var "l"))
+                          , (6025, ([], Var "x"))
+                          , (2999986292, ([], Const 0.0))
+                          , ( 4615994729
+                            , ([], Mul R [5418990404, 4815047263, 27399273777]))
+                          , (4815047263, ([], Mul R [5029, 6025]))
+                          , (5418990404, ([], Power 2 2999986292))
+                          , (27399273777, ([], InnerProd R 4614 5029))
+                          ]
+                } :: Expression Zero R
 --    let exp = x *. y
-  showExp . exteriorDerivative (Set.fromList ["x1"]) $ exp--    showExp . collectDifferentials . exteriorDerivative (Set.fromList ["x1"]) $ exp
+    showExp exp
+    showExpDebug . collectDifferentials . exteriorDerivative allVars $ exp
