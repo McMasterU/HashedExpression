@@ -447,7 +447,9 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Var name ->
                         case Map.lookup name $ vm2 valMap of
                             Just val -> val
-                            _ -> error "no value associated with the variable"
+                            _ ->
+                                error $
+                                "no value associated with the variable" ++ name
                     Const val ->
                         listArray ((0, 0), (size1 - 1, size2 - 1)) $
                         replicate (size1 * size2) val
@@ -773,21 +775,7 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
                     _ -> error "expression structure Three C is wrong"
         | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
--- | Calculate the actual position of the value after rotation
---
-actualPos ::
-       Int -- ^ Requested rotation amount
-    -> Int -- ^ Real size of the array
-    -> Int -- ^ Real rotation amount
-actualPos pos size = (pos + size) `mod` size
-
----- | Calculate the real shift amount. Based on the  position in the list, size of the shift and length fo the range.
-----
---rtt1 :: Int -- ^ Input : Position in the list
---  -> Int  -- ^ Input : Real size of the array
---  -> Int  -- ^ Input : Amount of the shift
---  -> Int -- ^ Output : Real shift amount
---rtt1 pos size amount = (pos + (amount `mod` size)) `mod` size
+-- NOTE: `mod` in Haskell works with negative number, e.g, (-5) `mod` 3 = 1
 -- | One dimension rotation
 --
 rotate1D ::
@@ -798,9 +786,8 @@ rotate1D ::
 rotate1D size amount arr =
     listArray
         (0, size - 1)
-        [arr ! actualPos (i - amount) size | i <- [0 .. size - 1]]
+        [arr ! ((i - amount) `mod` size) | i <- [0 .. size - 1]]
 
--- Previous one : listArray (0, size-1) [arr ! rtt i size  (-amount) | i <- [0 .. size - 1]]
 -- | Two dimension rotation
 --
 rotate2D ::
@@ -811,7 +798,7 @@ rotate2D ::
 rotate2D (size1, size2) (amount1, amount2) arr =
     listArray
         ((0, 0), (size1 - 1, size2 - 1))
-        [ arr ! (actualPos (i - amount1) size1, actualPos (j - amount2) size2)
+        [ arr ! ((i - amount1) `mod` size1, (j - amount2) `mod` size2)
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         ]
@@ -827,9 +814,9 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
     listArray
         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
         [ arr !
-        ( actualPos (i - amount1) size1
-        , actualPos (j - amount2) size2
-        , actualPos (k - amount3) size3)
+        ( (i - amount1) `mod` size1
+        , (j - amount2) `mod` size2
+        , (k - amount3) `mod` size3)
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         , k <- [0 .. size3 - 1]
