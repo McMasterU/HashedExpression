@@ -86,6 +86,7 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification flattenSumProdRules
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
+        , toRecursiveSimplification combineRotateRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -475,3 +476,13 @@ evaluateIfPossibleRules exp@(mp, n) =
         | otherwise = Nothing
     pulledVals = mapM getVal . nodeArgs $ node
     res = diffConst shape
+
+-- | Combining the Rotate
+-- rotate [2] (rotate [1] arg) -> rotate [3] arg
+combineRotateRules :: Modification
+combineRotateRules exp@(mp, n)
+    | Rotate outerVal outerN <- retrieveNode n mp
+    , Rotate innerVal innerN <- retrieveNode outerN mp =
+        let totalAmount = zipWith (+) outerVal innerVal
+         in applyDiff mp (unary (Rotate totalAmount)) [noChange innerN]
+    | otherwise = noChange n

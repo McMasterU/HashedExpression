@@ -242,7 +242,7 @@ topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
             return order
 
 -- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
---
+-- What ExpressionDiff stands for?
 data ExpressionDiff =
     ExpressionDiff
         { extraEntries :: ExpressionMap -- Extra entries we need to add to the original Expression Map
