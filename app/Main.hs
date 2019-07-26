@@ -67,5 +67,6 @@ main
  = do
     let exp = (x1 - y1) <.> (x1 - y1)
 --    let exp = x *. y
-    showExp . collectDifferentials . exteriorDerivative (Set.fromList ["x1"]) $ exp
+    showExp . exteriorDerivative (Set.fromList ["x1"]) $ exp
+--    showExp . collectDifferentials . exteriorDerivative (Set.fromList ["x1"]) $ exp
 
