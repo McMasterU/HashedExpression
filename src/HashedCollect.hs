@@ -16,7 +16,7 @@ import HashedNode
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedSimplify (flattenSumProdRules, reduceSumProdRules, simplify)
+import HashedSimplify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -56,12 +56,13 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
   where
     applyRules =
         chain
-            [ restructureRules
+            [ restructure
             , toRecursiveCollecting splitCovectorProdRules
-            , normalizedRules
+            , separateDVarAlone
             , toTransformation groupByDVar
             , aggregateByDVar
-            , reduceAndSimplify
+            , simplifyEachPartialDerivative
+            , removeUnreachable
             ]
 
 -- |
@@ -72,20 +73,10 @@ toRecursiveCollecting = toTransformation . makeRecursive False
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
 -- Also move covector to the right hand side of dot product
 --
-restructureRules :: Transformation
-restructureRules =
+restructure :: Transformation
+restructure =
     multipleTimes 100 $
-    chain
-        [ fromSubstitutionRules --
-        , toRecursiveCollecting flattenSumProdRules
-        ]
-  where
-    fromSubstitutionRules =
-        chain . map (toRecursiveCollecting . fromSubstitution) $
-        [ x *. y |. isScalar y ~~~~~~> x * y
-        , x <.> y |. isScalar x &&. isScalar y ~~~~~~> x * y
-        , x <.> y |. isCovector x ~~~~~~> y <.> x
-        ]
+    chain [toMultiplyIfPossible, toRecursiveCollecting flattenSumProdRules]
 
 -- | x * y * covector * z --> (x * y * z) * covector
 --
@@ -101,8 +92,8 @@ splitCovectorProdRules exp@(mp, n) =
 
 -- |
 --
-normalizedRules :: Transformation
-normalizedRules =
+separateDVarAlone :: Transformation
+separateDVarAlone =
     chain . map (toRecursiveCollecting . fromSubstitution) $
     [ x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y
     , x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y
@@ -151,11 +142,17 @@ aggregateByDVar =
     , sum (mapL (<.> y) xs) |. isDVar y ~~~~~~> sum xs <.> y
     ]
 
--- | TODO: Simplify each partial differential?
+-- | Simplify each partial derivative
 --
-reduceAndSimplify :: Transformation
-reduceAndSimplify =
-    chain
-        [ multipleTimes 100 $ toRecursiveCollecting reduceSumProdRules
-        , removeUnreachable
-        ]
+simplifyEachPartialDerivative :: Transformation
+simplifyEachPartialDerivative exp@(mp, n)
+    | Sum Covector ns <- retrieveNode n mp = sumMany $ map simplifyEach ns
+    | otherwise = simplifyEach n
+  where
+    simplifyEach nId
+        | Mul Covector [partialDeriv, dVar] <- retrieveNode nId mp =
+            mulMany [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]
+        | InnerProd Covector partialDeriv dVar <- retrieveNode nId mp =
+            apply
+                (binaryET InnerProd ElementDefault)
+                [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]
