@@ -102,8 +102,8 @@ separateDVarAlone =
     ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
--- (f * dx + h * dy + x * dx + t1 <.> dx1 + f1 <.> dx1) -->
---   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
+-- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->
+--   ((f * dx + 1 * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
 --
 groupByDVar :: Modification
 groupByDVar exp@(mp, n) =
@@ -113,13 +113,9 @@ groupByDVar exp@(mp, n) =
                     groupBy sameDVar .
                     sortWith getDVar . filter (not . isZero mp) $
                     ns
-                mulOneIfAlone nId
-                    | DVar _ <- retrieveNode nId mp =
-                        mulManyDiff mp [diffConst [] 1, noChange nId]
-                    | otherwise = noChange nId
              in sumManyDiff mp . map (sumManyDiff mp . map mulOneIfAlone) $
                 groups
-        _ -> noChange n
+        _ -> mulOneIfAlone n
   where
     getDVar :: Int -> String
     getDVar nId
@@ -130,6 +126,10 @@ groupByDVar exp@(mp, n) =
         , DVar name <- retrieveNode cId mp = name
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
+    mulOneIfAlone nId
+        | DVar _ <- retrieveNode nId mp =
+            mulManyDiff mp [diffConst [] 1, noChange nId]
+        | otherwise = noChange nId
 
 -- | After group Dvar to groups, we aggregate result in each group
 --   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
@@ -147,12 +147,13 @@ aggregateByDVar =
 simplifyEachPartialDerivative :: Transformation
 simplifyEachPartialDerivative exp@(mp, n)
     | Sum Covector ns <- retrieveNode n mp = sumMany $ map simplifyEach ns
-    | otherwise = simplifyEach n
+    | InnerProd Covector _ _ <- retrieveNode n mp = simplifyEach n
+    | otherwise = (mp, n)
   where
     simplifyEach nId
         | Mul Covector [partialDeriv, dVar] <- retrieveNode nId mp =
             mulMany [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]
         | InnerProd Covector partialDeriv dVar <- retrieveNode nId mp =
             apply
-                (binaryET InnerProd ElementDefault)
+                (binaryET InnerProd ElementDefault `hasShape` [])
                 [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]

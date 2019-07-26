@@ -65,7 +65,7 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . removeUnreachable . simplifyingTransformation . unwrap
+simplify = wrap . simplifyingTransformation . unwrap
 
 -- | Combine all the transformations
 --
@@ -87,6 +87,7 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
         , rulesFromPattern
+        , removeUnreachable
         ]
     secondPass = toMultiplyIfPossible
 

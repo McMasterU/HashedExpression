@@ -50,12 +50,8 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
-prop_DVarStayAlone :: Expression Zero R -> IO ()
-prop_DVarStayAlone exp =
-    unless property $ do
-        showExp exp
-        showExp collectedExp
-        error "DVar not standing alone"
+prop_DVarStayAlone :: Expression Zero R -> Bool
+prop_DVarStayAlone exp = property
   where
     collectedExp@(Expression rootId mp) =
         collectDifferentials . exteriorDerivative allVars $ exp
@@ -72,12 +68,8 @@ prop_DVarStayAlone exp =
             Sum Covector ns -> all isDVarAlone ns
             _ -> isDVarAlone rootId
 
-prop_DVarAppearOnce :: Expression Zero R -> IO ()
-prop_DVarAppearOnce exp =
-    unless property $ do
-        showExp exp
-        showExp collectedExp
-        error "DVar not standing alone"
+prop_DVarAppearOnce :: Expression Zero R -> Bool
+prop_DVarAppearOnce exp = property
   where
     collectedExp@(Expression rootId mp) =
         collectDifferentials . exteriorDerivative allVars $ exp
@@ -87,12 +79,8 @@ prop_DVarAppearOnce exp =
     allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
     property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
 
-prop_DVarStayAloneWithOneR :: Expression One R -> Expression One R -> IO ()
-prop_DVarStayAloneWithOneR exp1 exp2 =
-    unless property $ do
-        showExp exp
-        showExp collectedExp
-        error "DVar not standing alone"
+prop_DVarStayAloneWithOneR :: Expression One R -> Expression One R -> Bool
+prop_DVarStayAloneWithOneR exp1 exp2 = property
   where
     exp = exp1 <.> exp2
     collectedExp@(Expression rootId mp) =
@@ -110,12 +98,8 @@ prop_DVarStayAloneWithOneR exp1 exp2 =
             Sum Covector ns -> all isDVarAlone ns
             _ -> isDVarAlone rootId
 
-prop_DVarAppearOnceWithOneR :: Expression One R -> Expression One R -> IO ()
-prop_DVarAppearOnceWithOneR exp1 exp2 =
-    unless property $ do
-        showExp exp
-        showExp collectedExp
-        error "DVar not standing alone"
+prop_DVarAppearOnceWithOneR :: Expression One R -> Expression One R -> Bool
+prop_DVarAppearOnceWithOneR exp1 exp2 = property
   where
     exp = exp1 <.> exp2
     collectedExp@(Expression rootId mp) =
@@ -130,12 +114,12 @@ spec :: Spec
 spec =
     describe "Hashed collect differentials spec" $ do
         specify "DVar should stay by itself after collect differentials" $
-            performQuickCheck prop_DVarStayAlone
+            property prop_DVarStayAlone
         specify "Each DVar appears only once after collect differentials" $
-            performQuickCheck prop_DVarAppearOnce
+            property prop_DVarAppearOnce
         specify
             "DVar should stay by itself after collect differentials (from dot product)" $
-            performQuickCheck prop_DVarStayAloneWithOneR
+            property prop_DVarStayAloneWithOneR
         specify
             "Each DVar appears only once after collect differentials (from dot product)" $
-            performQuickCheck prop_DVarAppearOnceWithOneR
+            property prop_DVarAppearOnceWithOneR

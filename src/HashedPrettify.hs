@@ -97,7 +97,7 @@ hiddenPrettify pastable (mp, n) =
     let shape = retrieveShape n mp
         wrapParentheses x = T.concat ["(", x, ")"]
         node = retrieveNode n mp
-        innerPrettify = hiddenPrettify pastable . (mp, )
+        innerPrettify = wrapParentheses . hiddenPrettify pastable . (mp, )
         shapeSignature
             | pastable = ""
             | otherwise =
@@ -133,13 +133,11 @@ hiddenPrettify pastable (mp, n) =
                 | pastable ->
                     case shape of
                         [] ->
-                            wrapParentheses $
                             T.concat
                                 [ "const "
                                 , wrapParentheses . T.pack . show $ val
                                 ]
                         [x] ->
-                            wrapParentheses $
                             T.concat
                                 [ "const1d "
                                 , T.pack . show $ x
@@ -154,45 +152,43 @@ hiddenPrettify pastable (mp, n) =
                         , T.intercalate ", " . map innerPrettify $ args
                         , "]"
                         ]
-                | otherwise ->
-                    wrapParentheses . T.intercalate "+" . map innerPrettify $
-                    args
-            Mul _ args ->
-                wrapParentheses . T.intercalate "*" . map innerPrettify $ args
-            Neg _ arg
+                | otherwise -> T.intercalate "+" . map innerPrettify $ args
+            Mul _ args
                 | pastable ->
-                    T.concat ["negate", wrapParentheses $ innerPrettify arg]
-                | otherwise ->
-                    T.concat ["-", wrapParentheses $ innerPrettify arg]
+                    T.concat
+                        [ "prod1 ["
+                        , T.intercalate ", " . map innerPrettify $ args
+                        , "]"
+                        ]
+                | otherwise -> T.intercalate "*" . map innerPrettify $ args
+            Neg _ arg
+                | pastable -> T.concat ["negate", innerPrettify arg]
+                | otherwise -> T.concat ["-", innerPrettify arg]
             Scale _ arg1 arg2 ->
-                wrapParentheses . T.concat $
-                [innerPrettify arg1, "*.", innerPrettify arg2]
+                T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
             Div arg1 arg2 ->
-                wrapParentheses . T.concat $
-                [innerPrettify arg1, "/", innerPrettify arg2]
-            Sqrt arg -> T.concat ["sqrt", wrapParentheses $ innerPrettify arg]
-            Sin arg -> T.concat ["sin", wrapParentheses $ innerPrettify arg]
-            Cos arg -> T.concat ["cos", wrapParentheses $ innerPrettify arg]
-            Tan arg -> T.concat ["tan", wrapParentheses $ innerPrettify arg]
-            Exp arg -> T.concat ["exp", wrapParentheses $ innerPrettify arg]
-            Log arg -> T.concat ["log", wrapParentheses $ innerPrettify arg]
-            Sinh arg -> T.concat ["sinh", wrapParentheses $ innerPrettify arg]
-            Cosh arg -> T.concat ["cosh", wrapParentheses $ innerPrettify arg]
-            Tanh arg -> T.concat ["tanh", wrapParentheses $ innerPrettify arg]
-            Asin arg -> T.concat ["asin", wrapParentheses $ innerPrettify arg]
-            Acos arg -> T.concat ["acos", wrapParentheses $ innerPrettify arg]
-            Atan arg -> T.concat ["atan", wrapParentheses $ innerPrettify arg]
-            Asinh arg -> T.concat ["asinh", wrapParentheses $ innerPrettify arg]
-            Acosh arg -> T.concat ["acosh", wrapParentheses $ innerPrettify arg]
-            Atanh arg -> T.concat ["atanh", wrapParentheses $ innerPrettify arg]
+                T.concat [innerPrettify arg1, "/", innerPrettify arg2]
+            Sqrt arg -> T.concat ["sqrt", innerPrettify arg]
+            Sin arg -> T.concat ["sin", innerPrettify arg]
+            Cos arg -> T.concat ["cos", innerPrettify arg]
+            Tan arg -> T.concat ["tan", innerPrettify arg]
+            Exp arg -> T.concat ["exp", innerPrettify arg]
+            Log arg -> T.concat ["log", innerPrettify arg]
+            Sinh arg -> T.concat ["sinh", innerPrettify arg]
+            Cosh arg -> T.concat ["cosh", innerPrettify arg]
+            Tanh arg -> T.concat ["tanh", innerPrettify arg]
+            Asin arg -> T.concat ["asin", innerPrettify arg]
+            Acos arg -> T.concat ["acos", innerPrettify arg]
+            Atan arg -> T.concat ["atan", innerPrettify arg]
+            Asinh arg -> T.concat ["asinh", innerPrettify arg]
+            Acosh arg -> T.concat ["acosh", innerPrettify arg]
+            Atanh arg -> T.concat ["atanh", innerPrettify arg]
             RealImag arg1 arg2 ->
-                wrapParentheses . T.concat $
-                [innerPrettify arg1, "+:", innerPrettify arg2]
-            RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
-            ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
+                T.concat [innerPrettify arg1, "+:", innerPrettify arg2]
+            RealPart arg -> T.concat ["Re", innerPrettify arg]
+            ImagPart arg -> T.concat ["Im", innerPrettify arg]
             InnerProd et arg1 arg2 ->
-                wrapParentheses . T.concat $
-                [innerPrettify arg1, "<.>", innerPrettify arg2]
+                T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
             Piecewise marks conditionArg branches ->
                 let appendedMarks = ("-∞" : map show marks) ++ ["+∞"]
                     intervals = zip appendedMarks (tail appendedMarks)
@@ -208,16 +204,10 @@ hiddenPrettify pastable (mp, n) =
                             ]
                  in T.concat
                         [ "case "
-                        , wrapParentheses $ innerPrettify conditionArg
+                        , innerPrettify conditionArg
                         , " in "
                         , T.intercalate "" $ map printCase cases
                         ]
             Rotate amount arg ->
-                T.concat
-                    [ "rotate"
-                    , T.pack . show $ amount
-                    , wrapParentheses $ innerPrettify arg
-                    ]
-            Power x arg ->
-                wrapParentheses . T.concat $
-                [wrapParentheses . innerPrettify $ arg, "^", T.pack $ show x]
+                T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]
+            Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
