@@ -447,7 +447,9 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                     Var name ->
                         case Map.lookup name $ vm2 valMap of
                             Just val -> val
-                            _ -> error "no value associated with the variable"
+                            _ ->
+                                error $
+                                "no value associated with the variable" ++ name
                     Const val ->
                         listArray ((0, 0), (size1 - 1, size2 - 1)) $
                         replicate (size1 * size2) val

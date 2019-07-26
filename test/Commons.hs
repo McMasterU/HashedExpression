@@ -17,6 +17,7 @@ import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
 import Data.Time (diffUTCTime, getCurrentTime)
 import Data.Typeable (Typeable)
+import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
@@ -113,7 +114,7 @@ genValMaps vars = do
             Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $
             list1d
     list2d <-
-        vectorOf (length names1d) . vectorOf (vectorSize * vectorSize) $
+        vectorOf (length names2d) . vectorOf (vectorSize * vectorSize) $
         arbitrary
     let vm2 =
             Map.fromList .
@@ -121,7 +122,7 @@ genValMaps vars = do
             map (listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
             list2d
     list3d <-
-        vectorOf (length names1d) .
+        vectorOf (length names3d) .
         vectorOf (vectorSize * vectorSize * vectorSize) $
         arbitrary
     let vm3 =
@@ -561,6 +562,220 @@ instance Arbitrary SuiteOneC where
         return $ SuiteOneC exp valMaps
 
 -------------------------------------------------------------------------------
+-- | MARK: Gen functions Two R
+--
+--
+-------------------------------------------------------------------------------
+primitiveTwoR :: Gen (Expression Two R, Vars)
+primitiveTwoR = do
+    name <- elements . map ((++ "2") . pure) $ ['a' .. 'z']
+    dbl <- arbitrary
+    elements . withRatio $
+        [ (6, (var2d (vectorSize, vectorSize) name, [[], [], [name], []]))
+        , (4, (const2d (vectorSize, vectorSize) dbl, [[], [], [], []]))
+        ]
+
+operandTwoR :: Gen (Expression Two R, Vars)
+operandTwoR = oneof . withRatio $ [(8, primitiveTwoR), (2, genTwoR)]
+
+genTwoR :: Gen (Expression Two R, Vars)
+genTwoR =
+    oneof . withRatio $
+    [ (4, fromNaryTwoR sum)
+    , (4, fromNaryTwoR product)
+    , (4, fromBinaryTwoR (+))
+    , (4, fromBinaryTwoR (*))
+    , (4, fromBinaryTwoR (-))
+    , (3, fromUnaryTwoR negate)
+    , (1, fromUnaryTwoR (^ 2))
+    , (1, fromScaleTwoR)
+    , (1, fromTwoCTwoR)
+    ]
+  where
+    fromNaryTwoR ::
+           ([Expression Two R] -> Expression Two R)
+        -> Gen (Expression Two R, Vars)
+    fromNaryTwoR f = do
+        numOperands <- elements [3 .. 4]
+        ons <- vectorOf numOperands operandTwoR
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromUnaryTwoR ::
+           (Expression Two R -> Expression Two R)
+        -> Gen (Expression Two R, Vars)
+    fromUnaryTwoR f = do
+        on <- operandTwoR
+        let exp = f . fst $ on
+            names = snd on
+        return (exp, names)
+    fromBinaryTwoR ::
+           (Expression Two R -> Expression Two R -> Expression Two R)
+        -> Gen (Expression Two R, Vars)
+    fromBinaryTwoR f = do
+        on1 <- operandTwoR
+        on2 <- operandTwoR
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromScaleTwoR :: Gen (Expression Two R, Vars)
+    fromScaleTwoR = do
+        scalar <- operandZeroR
+        scalee <- operandTwoR
+        let exp = fst scalar *. fst scalee
+            vars = mergeVars [snd scalar, snd scalee]
+        return (exp, vars)
+    fromTwoCTwoR :: Gen (Expression Two R, Vars)
+    fromTwoCTwoR = do
+        rand <- elements [True, False]
+        (oneC, vars) <- genTwoC
+        let exp =
+                if rand
+                    then xRe oneC
+                    else xIm oneC
+        return (exp, vars)
+
+instance Arbitrary (Expression Two R) where
+    arbitrary = fmap fst genTwoR
+
+-- |
+--
+data SuiteTwoR =
+    SuiteTwoR (Expression Two R) ValMaps
+
+instance Show SuiteTwoR where
+    show (SuiteTwoR e valMaps) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMaps)
+            , ("EvalExp", show evalExp)
+            , ("EvalExpSimplify", show evalSimplified)
+            ]
+      where
+        exp = prettifyDebug e
+        simplifiedExp = prettifyDebug . simplify $ e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
+
+-- |
+--
+instance Arbitrary SuiteTwoR where
+    arbitrary = do
+        (exp, vars) <- genTwoR
+        valMaps <- genValMaps vars
+        return $ SuiteTwoR exp valMaps
+
+-------------------------------------------------------------------------------
+-- | MARK: Gen functions Two C
+--
+--
+-------------------------------------------------------------------------------
+primitiveTwoC :: Gen (Expression Two C, Vars)
+primitiveTwoC = do
+    name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
+    name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
+    dbl1 <- arbitrary
+    dbl2 <- arbitrary
+    elements . withRatio $
+        [ ( 6
+          , ( var2d (vectorSize, vectorSize) name1 +:
+              var2d (vectorSize, vectorSize) name2
+            , [[], [], [name1, name2], []]))
+        , ( 4
+          , ( const2d (vectorSize, vectorSize) dbl1 +:
+              const2d (vectorSize, vectorSize) dbl2
+            , [[], [], [], []]))
+        ]
+
+operandTwoC :: Gen (Expression Two C, Vars)
+operandTwoC = oneof . withRatio $ [(9, primitiveTwoC), (1, genTwoC)]
+
+genTwoC :: Gen (Expression Two C, Vars)
+genTwoC =
+    oneof . withRatio $
+    [ (6, fromNaryTwoC sum)
+    , (3, fromNaryTwoC product)
+    , (6, fromBinaryTwoC (+))
+    , (6, fromBinaryTwoC (-))
+    , (3, fromBinaryTwoC (*))
+    , (3, fromUnaryTwoC negate)
+    , (1, fromUnaryTwoC (^ 2))
+    , (2, fromScaleTwoC)
+    ]
+  where
+    fromNaryTwoC ::
+           ([Expression Two C] -> Expression Two C)
+        -> Gen (Expression Two C, Vars)
+    fromNaryTwoC f = do
+        numOperands <- elements [3]
+        ons <- vectorOf numOperands operandTwoC
+        let exp = f . map fst $ ons
+            vars = mergeVars . map snd $ ons
+        return (exp, vars)
+    fromUnaryTwoC ::
+           (Expression Two C -> Expression Two C)
+        -> Gen (Expression Two C, Vars)
+    fromUnaryTwoC f = do
+        on <- operandTwoC
+        let exp = f . fst $ on
+            names = snd on
+        return (exp, names)
+    fromBinaryTwoC ::
+           (Expression Two C -> Expression Two C -> Expression Two C)
+        -> Gen (Expression Two C, Vars)
+    fromBinaryTwoC f = do
+        on1 <- operandTwoC
+        on2 <- operandTwoC
+        let exp = f (fst on1) (fst on2)
+            vars = mergeVars [snd on1, snd on2]
+        return (exp, vars)
+    fromScaleTwoC :: Gen (Expression Two C, Vars)
+    fromScaleTwoC = do
+        scalarR <- operandZeroR
+        scalarC <- operandZeroC
+        scalee <- operandTwoC
+        rand <- elements [True, False]
+        let (exp, vars) =
+                if rand
+                    then ( fst scalarR *. fst scalee
+                         , mergeVars [snd scalarR, snd scalee])
+                    else ( fst scalarC *. fst scalee
+                         , mergeVars [snd scalarC, snd scalee])
+        return (exp, vars)
+
+instance Arbitrary (Expression Two C) where
+    arbitrary = fmap fst genTwoC
+
+-- |
+--
+data SuiteTwoC =
+    SuiteTwoC (Expression Two C) ValMaps
+
+instance Show SuiteTwoC where
+    show (SuiteTwoC e valMaps) =
+        format
+            [ ("Expr", exp)
+            , ("Simplified", simplifiedExp)
+            , ("ValMap", show valMaps)
+            , ("EvalExp", show evalExp)
+            , ("EvalExpSimplify", show evalSimplified)
+            ]
+      where
+        exp = prettifyDebug e
+        simplifiedExp = prettifyDebug . simplify $ e
+        evalExp = eval valMaps e
+        evalSimplified = eval valMaps $ simplify e
+
+-- |
+--
+instance Arbitrary SuiteTwoC where
+    arbitrary = do
+        (exp, vars) <- genTwoC
+        valMaps <- genValMaps vars
+        return $ SuiteTwoC exp valMaps
+
+-------------------------------------------------------------------------------
 -- | MARK: Arbitrary instance for all kinds of expressions
 --
 --
@@ -582,7 +797,11 @@ instance Arbitrary ArbitraryExpresion where
                 fmap ArbitraryExpresion (arbitrary :: Gen (Expression One R))
             option4 =
                 fmap ArbitraryExpresion (arbitrary :: Gen (Expression One C))
-         in oneof [option1, option2, option3, option4]
+            option5 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Two R))
+            option6 =
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Two C))
+         in oneof [option1, option2, option3, option4, option5, option6]
 
 -- |
 --

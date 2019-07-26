@@ -10,7 +10,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- (c) 2014 Christopher Kumar Anand
--- Helper functions/instances to make pattern gaurds involving Expressions
+-- Helper functions/instances to make pattern guards involving Expressions
 -- easier to read.
 --
 -------------------------------------------------------------------------------
@@ -419,13 +419,22 @@ matchList mp ns (PListHole fs listCapture)
     nIds subMatches =
         catMaybes . map (Map.lookup uniqueCapture . capturesMap) $ subMatches
 
+-- | Match is the result we get when match an Expression against a Pattern
+--
+type NodeId = Int
+
+type PowerValue = Int
+
 data Match =
     Match
-        { capturesMap :: Map Capture Int
-        , listCapturesMap :: Map ListCapture [Int]
-        , powerCapturesMap :: Map PowerCapture Int
+        { capturesMap :: Map Capture NodeId -- A given capture corresponds to a node id
+        , listCapturesMap :: Map ListCapture [NodeId] -- A given list capture corresponds to a list of node ids
+        , powerCapturesMap :: Map PowerCapture PowerValue -- A given power capture corresponds to a power value
         }
     deriving (Show)
+
+emptyMatch :: Match
+emptyMatch = Match Map.empty Map.empty Map.empty
 
 unionMatch :: Match -> Match -> Match
 unionMatch match1 match2 =
@@ -451,7 +460,7 @@ match (mp, n) outerWH =
             (_, PHole capture) ->
                 Just $ Match (Map.fromList [(capture, n)]) Map.empty Map.empty
             (Const c, PConst whc)
-                | c == whc -> Just $ Match Map.empty Map.empty Map.empty
+                | c == whc -> Just emptyMatch
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
             (Sum _ args, PSumList pl@(PListHole _ listCapture)) ->
                 matchList mp args pl
@@ -527,7 +536,7 @@ match (mp, n) outerWH =
 turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
-buildFromPatternPower :: Match -> PatternPower -> Int
+buildFromPatternPower :: Match -> PatternPower -> PowerValue
 buildFromPatternPower match pp =
     case pp of
         PPowerHole powerCapture
