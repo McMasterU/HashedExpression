@@ -776,9 +776,9 @@ instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
 -- | Calculate the actual position of the value after rotation
 --
 actualPos ::
-  Int -- ^ Requested rotation amount
-  -> Int -- ^ Real size of the array
-  -> Int -- ^ Real rotation amount
+       Int -- ^ Requested rotation amount
+    -> Int -- ^ Real size of the array
+    -> Int -- ^ Real rotation amount
 actualPos pos size = (pos + size) `mod` size
 
 ---- | Calculate the real shift amount. Based on the  position in the list, size of the shift and length fo the range.
@@ -788,32 +788,30 @@ actualPos pos size = (pos + size) `mod` size
 --  -> Int  -- ^ Input : Amount of the shift
 --  -> Int -- ^ Output : Real shift amount
 --rtt1 pos size amount = (pos + (amount `mod` size)) `mod` size
-
-
 -- | One dimension rotation
 --
 rotate1D ::
-  Int -- ^ Size of the input array
-  -> Int -- ^ amount of rotation
-  -> Array Int a -- ^ Input array
-  -> Array Int a -- ^ Rotated array
+       Int -- ^ Size of the input array
+    -> Int -- ^ amount of rotation
+    -> Array Int a -- ^ Input array
+    -> Array Int a -- ^ Rotated array
 rotate1D size amount arr =
-  listArray (0, size - 1) [arr ! actualPos (i - amount) size | i <- [0 .. size - 1]]
+    listArray
+        (0, size - 1)
+        [arr ! actualPos (i - amount) size | i <- [0 .. size - 1]]
 
 -- Previous one : listArray (0, size-1) [arr ! rtt i size  (-amount) | i <- [0 .. size - 1]]
-
-
 -- | Two dimension rotation
 --
 rotate2D ::
-  (Int, Int) -- ^ Size of the 2d input array
-  -> (Int, Int) -- ^ amount of rotation for 2d array
-  -> Array (Int, Int) a -- ^ Input 2d array
-  -> Array (Int, Int) a -- ^ Rotated 2d array
+       (Int, Int) -- ^ Size of the 2d input array
+    -> (Int, Int) -- ^ amount of rotation for 2d array
+    -> Array (Int, Int) a -- ^ Input 2d array
+    -> Array (Int, Int) a -- ^ Rotated 2d array
 rotate2D (size1, size2) (amount1, amount2) arr =
     listArray
         ((0, 0), (size1 - 1, size2 - 1))
-        [ arr ! (actualPos (i-amount1) size1 , actualPos (j-amount2) size2 )
+        [ arr ! (actualPos (i - amount1) size1, actualPos (j - amount2) size2)
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         ]
@@ -829,10 +827,9 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
     listArray
         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
         [ arr !
-        ( actualPos (i-amount1) size1
-        , actualPos (j-amount2) size2
-        , actualPos (k-amount3) size3
-        )
+        ( actualPos (i - amount1) size1
+        , actualPos (j - amount2) size2
+        , actualPos (k - amount3) size3)
         | i <- [0 .. size1 - 1]
         , j <- [0 .. size2 - 1]
         , k <- [0 .. size3 - 1]
