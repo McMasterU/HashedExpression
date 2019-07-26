@@ -5,6 +5,7 @@ import qualified HashedCollectSpec
 import HashedDerivative
 import HashedExpression
 import HashedInterp
+import qualified HashedInterpSpec
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
@@ -57,6 +58,7 @@ main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
 spec :: Spec
 spec = do
+    describe "HashedInterpSpec" HashedInterpSpec.spec
     describe "HashedCollectSpec" HashedCollectSpec.spec
     describe "SimplifySpec" HashedSimplifySpec.spec
     describe "Test1" Test1.spec
