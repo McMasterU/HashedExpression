@@ -32,7 +32,7 @@ type MemMapEntry = (Int, EntryType, Shape)
 
 data MemMap =
     MemMap
-        { entryMap :: IntMap MemMapEntry -- node id -> (offset, size)
+        { entryMap :: IntMap MemMapEntry -- node id -> (offset, R or C, shape)
         , totalDoubles :: Int
         }
     deriving (Show, Eq, Ord)
@@ -50,8 +50,8 @@ data LookupPart
 
 -- | Make a memory map from an expression
 --
-makeMemMap :: (DimensionType d, NumType et) => Expression d et -> MemMap
-makeMemMap expr@(Expression n mp) = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
+makeMemMap :: ExpressionMap -> MemMap
+makeMemMap mp = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
   where
     nIds = IM.keys mp
     f :: (IntMap MemMapEntry, Int) -> Int -> (IntMap MemMapEntry, Int)
@@ -278,7 +278,7 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
     imAt = accessPtr memMap LookupImC mp
     (mp, n) = unwrap expr
     (shape, et) = (expressionShape expr, expressionElementType expr)
-    memMap = makeMemMap expr
+    memMap = makeMemMap mp
     -- allocate memory
     sz = totalDoubles memMap
     initMemory =

@@ -20,7 +20,7 @@ import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl', groupBy, sort, sortBy, sortOn)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (fromJust, mapMaybe, catMaybes)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
@@ -221,8 +221,7 @@ topologicalSort :: (ExpressionMap, Int) -> [Int]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
 topologicalSortManyRoots :: (ExpressionMap, [Int]) -> [Int]
-topologicalSortManyRoots expr@(mp, ns) =
-    filter (/= -1) . UA.elems $ topoOrder
+topologicalSortManyRoots expr@(mp, ns) = filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
@@ -246,7 +245,6 @@ topologicalSortManyRoots expr@(mp, ns) =
                 isMarked <- readArray marked (toPos n)
                 unless isMarked $ dfs n
             return order
-
 
 -- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
 -- What ExpressionDiff stands for?
@@ -412,13 +410,13 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 noChange :: Int -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
 
-
 -- | All variables in the Expression
 --
-varSet :: (ExpressionMap, Int) -> Set String
-varSet (mp, n) = Set.fromList . concatMap collect $ ns
+varSet :: (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
+varSet (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
     collect nId
-        | Var varName <- retrieveNode nId mp = [varName]
-        | otherwise = []
+        | Var varName <- retrieveNode nId mp = Just (varName, nId)
+        | DVar varName <- retrieveNode nId mp = Just (varName, nId)
+        | otherwise = Nothing
