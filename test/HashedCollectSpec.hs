@@ -57,7 +57,6 @@ prop_DVarStayAlone exp = property
         collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
         | Const 0 <- retrieveNode nId mp = True
---        | DVar _ <- retrieveNode nId mp = True
         | Mul Covector [_, cId] <- retrieveNode nId mp
         , DVar _ <- retrieveNode cId mp = True
         | InnerProd Covector _ cId <- retrieveNode nId mp
@@ -68,6 +67,7 @@ prop_DVarStayAlone exp = property
             Sum Covector ns -> all isDVarAlone ns
             _ -> isDVarAlone rootId
 
+--        | DVar _ <- retrieveNode nId mp = True
 prop_DVarAppearOnce :: Expression Zero R -> Bool
 prop_DVarAppearOnce exp = property
   where
@@ -87,7 +87,6 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
         collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
         | Const 0 <- retrieveNode nId mp = True
---        | DVar _ <- retrieveNode nId mp = True
         | Mul Covector [_, cId] <- retrieveNode nId mp
         , DVar _ <- retrieveNode cId mp = True
         | InnerProd Covector _ cId <- retrieveNode nId mp
@@ -98,6 +97,7 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
             Sum Covector ns -> all isDVarAlone ns
             _ -> isDVarAlone rootId
 
+--        | DVar _ <- retrieveNode nId mp = True
 prop_DVarAppearOnceWithOneR :: Expression One R -> Expression One R -> Bool
 prop_DVarAppearOnceWithOneR exp1 exp2 = property
   where

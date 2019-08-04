@@ -109,7 +109,8 @@ spec :: Spec
 spec =
     describe "Structure spec" $ do
         specify "Topological sort" $ property prop_TopologicalSort
-        specify "Topological sort many roots" $ property prop_TopologicalSortManyRoots
+        specify "Topological sort many roots" $
+            property prop_TopologicalSortManyRoots
         specify "Simplify a Zero C would give the form x +: y" $
             property prop_StructureZeroC
         specify "Simplify a One C would give the form x +: y" $

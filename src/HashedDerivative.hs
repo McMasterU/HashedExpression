@@ -61,7 +61,8 @@ exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 -- | Take derivative with all vars
 --
 derivativeAllVars :: DimensionType d => Expression d R -> Expression d Covector
-derivativeAllVars expr = exteriorDerivative (Set.fromList . map fst $ varSet expr) expr
+derivativeAllVars expr =
+    exteriorDerivative (Set.fromList . map fst $ varSet expr) expr
 
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
