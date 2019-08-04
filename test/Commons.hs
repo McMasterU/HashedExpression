@@ -805,6 +805,11 @@ instance Arbitrary ArbitraryExpresion where
 
 -- |
 --
+getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, Int)
+getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
+
+-- |
+--
 sz :: Expression d et -> Int
 sz = IM.size . exMap
 

@@ -218,10 +218,10 @@ diffConst shape val = ExpressionDiff mp n
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
+topologicalSort (mp, n) = topologicalSortManyRoots mp [n]
 
-topologicalSortManyRoots :: (ExpressionMap, [Int]) -> [Int]
-topologicalSortManyRoots expr@(mp, ns) = filter (/= -1) . UA.elems $ topoOrder
+topologicalSortManyRoots :: ExpressionMap -> [Int] -> [Int]
+topologicalSortManyRoots mp ns = filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
