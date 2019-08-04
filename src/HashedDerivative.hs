@@ -1,6 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TupleSections #-}
 
 -------------------------------------------------------------------------------
 -- |
@@ -59,12 +57,17 @@ exteriorDerivative ::
 --exteriorDerivative = hiddenDerivative
 exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 
+-- | Take derivative with all vars
+--
+derivativeAllVars :: DimensionType d => Expression d R -> Expression d Covector
+derivativeAllVars expr = exteriorDerivative (varSet . unwrap $ expr) expr
+
 -- | We can write our coerce function because Expression data constructor is exposed, but users can't
 --
 coerce :: Expression d1 et1 -> Expression d2 et2
 coerce (Expression n mp) = Expression n mp
 
--- | Hidden const to represent many dimension
+-- | Hidden const to represent many dimensions
 --
 c :: (DimensionType d) => Shape -> Double -> Expression d R
 c shape val = Expression h (IM.fromList [(h, node)])
@@ -88,13 +91,13 @@ hiddenDerivative vars (Expression n mp) = coerce res
     (shape, node) = retrieveInternal n mp
     one = one :: Expression D_ R
     dOne nId = unwrap . hiddenDerivative' $ Expression nId mp
-        -- For cases g = ImagPart, RealPart, FFT, .. that take 1 input
+        -- For cases g = ImagPart, RealPart, FFT, ... that take 1 input
         -- d(g(x)) = g(d(x))
     d1Input :: (Arg -> Node) -> Arg -> Expression d2 et2
     d1Input opType arg =
         let df = hiddenDerivative' (Expression arg mp)
          in applyUnary (unary opType) df
-        -- For cases g = RealImag, .. that take 2 input
+        -- For cases g = RealImag, ... that take 2 input
         -- d(g(x, y)) = g(d(x), d(y))
     d2Input :: (Arg -> Arg -> Node) -> Arg -> Arg -> Expression d2 et2
     d2Input opType arg1 arg2 =

@@ -218,7 +218,11 @@ diffConst shape val = ExpressionDiff mp n
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
+topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
+
+topologicalSortManyRoots :: (ExpressionMap, [Int]) -> [Int]
+topologicalSortManyRoots expr@(mp, ns) =
+    filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
@@ -238,8 +242,11 @@ topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
                     cntVal <- readSTRef cnt
                     writeArray order cntVal u
                     writeSTRef cnt (cntVal + 1)
-            dfs n
+            forM_ ns $ \n -> do
+                isMarked <- readArray marked (toPos n)
+                unless isMarked $ dfs n
             return order
+
 
 -- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
 -- What ExpressionDiff stands for?
@@ -404,3 +411,14 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 --
 noChange :: Int -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
+
+
+-- | All variables in the Expression
+--
+varSet :: (ExpressionMap, Int) -> Set String
+varSet (mp, n) = Set.fromList . concatMap collect $ ns
+  where
+    ns = topologicalSort (mp, n)
+    collect nId
+        | Var varName <- retrieveNode nId mp = [varName]
+        | otherwise = []

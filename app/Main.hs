@@ -66,22 +66,6 @@ prod1 = fromJust . HashedOperation.sum
 main
 --    let exp = x * (x1 * y1 * (s *. z1)) <.> sin x1 * z
  = do
-    let exp =
-            Expression
-                { exIndex = 4615994729
-                , exMap =
-                      IM.fromList
-                          [ (4614, ([], Var "g"))
-                          , (5029, ([], Var "l"))
-                          , (6025, ([], Var "x"))
-                          , (2999986292, ([], Const 0.0))
-                          , ( 4615994729
-                            , ([], Mul R [5418990404, 4815047263, 27399273777]))
-                          , (4815047263, ([], Mul R [5029, 6025]))
-                          , (5418990404, ([], Power 2 2999986292))
-                          , (27399273777, ([], InnerProd R 4614 5029))
-                          ]
-                } :: Expression Zero R
---    let exp = x *. y
+    let exp = (t *. y1 + (const 1 - t) *. x1) <.> const1d 10 1
     showExp exp
-    showExpDebug . collectDifferentials . exteriorDerivative allVars $ exp
+    showExp . collectDifferentials . exteriorDerivative allVars $ exp
