@@ -20,7 +20,7 @@ import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl', groupBy, sort, sortBy, sortOn)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
@@ -218,7 +218,12 @@ diffConst shape val = ExpressionDiff mp n
 -- unreachable nodes will be ignored
 --
 topologicalSort :: (ExpressionMap, Int) -> [Int]
-topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
+topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
+
+-- | Topological sort, but with many roots
+--
+topologicalSortManyRoots :: (ExpressionMap, [Int]) -> [Int]
+topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
@@ -238,7 +243,9 @@ topologicalSort expr@(mp, n) = filter (/= -1) . UA.elems $ topoOrder
                     cntVal <- readSTRef cnt
                     writeArray order cntVal u
                     writeSTRef cnt (cntVal + 1)
-            dfs n
+            forM_ ns $ \n -> do
+                isMarked <- readArray marked (toPos n)
+                unless isMarked $ dfs n
             return order
 
 -- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
@@ -404,3 +411,15 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 --
 noChange :: Int -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
+
+-- | All variables in the Expression
+--
+varNodes ::
+       (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
+varNodes (Expression n mp) = mapMaybe collect ns
+  where
+    ns = topologicalSort (mp, n)
+    collect nId
+        | Var varName <- retrieveNode nId mp = Just (varName, nId)
+        | DVar varName <- retrieveNode nId mp = Just (varName, nId)
+        | otherwise = Nothing

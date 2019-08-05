@@ -32,7 +32,7 @@ type MemMapEntry = (Int, EntryType, Shape)
 
 data MemMap =
     MemMap
-        { entryMap :: IntMap MemMapEntry -- node id -> (offset, size)
+        { entryMap :: IntMap MemMapEntry -- node id -> (offset, R or C, shape)
         , totalDoubles :: Int
         }
     deriving (Show, Eq, Ord)
@@ -50,8 +50,8 @@ data LookupPart
 
 -- | Make a memory map from an expression
 --
-makeMemMap :: (DimensionType d, NumType et) => Expression d et -> MemMap
-makeMemMap expr@(Expression n mp) = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
+makeMemMap :: ExpressionMap -> MemMap
+makeMemMap mp = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
   where
     nIds = IM.keys mp
     f :: (IntMap MemMapEntry, Int) -> Int -> (IntMap MemMapEntry, Int)
@@ -123,25 +123,24 @@ forWith iter shape (initCodes, codes, afterCodes)
     | otherwise = initCodes ++ codes ++ afterCodes
 
 -- | Access pointer
+-- TODO 1: the function signature is too long?
+-- TODO 2: constant should be written directly? then we have to separate left-hand side and right-hand side access?
 --
 accessPtr :: MemMap -> LookupPart -> ExpressionMap -> Int -> String -> String
-accessPtr memMap lookupPart mp nId offsetVal
-    | Const val <- retrieveNode nId mp = "(" ++ show val ++ ")"
-    | otherwise =
-        let shape = retrieveShape nId mp
-            updatedOffsetVal
-                | null shape = ""
-                | offsetVal == "0" = ""
-                | otherwise = " + " ++ offsetVal
-         in "(*(ptr + " ++
-            show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "))"
+accessPtr memMap lookupPart mp nId offsetVal =
+    let shape = retrieveShape nId mp
+        updatedOffsetVal
+            | null shape = ""
+            | offsetVal == "0" = ""
+            | otherwise = " + " ++ offsetVal
+     in "(ptr[" ++
+        show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "])"
 
--- |
+-- | Generate evaluation code (usually an expression and its partial derivatives) given an ExpressionMap and indices of nodes to be computed
 --
-generateCodeC ::
-       (DimensionType d, NumType et) => MemMap -> Expression d et -> [String]
-generateCodeC memMap expr@(Expression _ mp) =
-    concatMap genCode . topologicalSort . unwrap $ expr
+generateEvaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> [String]
+generateEvaluatingCodes memMap (mp, rootIds) =
+    concatMap genCode $ topologicalSortManyRoots (mp, rootIds)
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
@@ -165,7 +164,7 @@ generateCodeC memMap expr@(Expression _ mp) =
          in case node of
                 Var _ -> []
                 DVar _ -> error "DVar should not be here"
-                Const _ -> [] -- TODO: Do we need to assign to const ???
+                Const val -> for i n [n `at` i <<- show val]
                 Sum _ args
                     | elementType n == R ->
                         let sumAt i = intercalate " + " $ map (`at` i) args
@@ -246,44 +245,15 @@ generateCodeC memMap expr@(Expression _ mp) =
                                 i
                                 (getShape arg1)
                                 (initCodes, codes, afterCodes)
-                _ -> error $ "Not support yet " ++ prettifyDebug expr
+                _ -> error "Not support yet "
 
--- | Generate a fully functional C program that compute the expression and print out the result
+-- | Code to assign values to those in val maps
 --
-generateProgram ::
-       (DimensionType d, NumType et) => ValMaps -> Expression d et -> [String]
-generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
-    [ "#include <math.h>" --
-    , "#include <stdio.h>"
-    , "#include <stdlib.h>"
-    , "int main(){" --
-    ] ++
-    space 2 (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory) ++
-    [ "}" --
-    ]
+generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
+generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
+    concatMap codesForVar vars
   where
-    infix 9 `at`
-    -- for with only body
-    for :: String -> Int -> [String] -> [String]
-    for iter nId scopeCodes =
-        forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
-    -- Real node
-    at :: Int -> String -> String
     at = accessPtr memMap LookupR mp
-    -- Real part of complex node
-    reAt :: Int -> String -> String
-    reAt = accessPtr memMap LookupReC mp
-    -- Real part of complex node
-    imAt :: Int -> String -> String
-    imAt = accessPtr memMap LookupImC mp
-    (mp, n) = unwrap expr
-    (shape, et) = (expressionShape expr, expressionElementType expr)
-    memMap = makeMemMap expr
-    -- allocate memory
-    sz = totalDoubles memMap
-    initMemory =
-        ["double *ptr" <<- "malloc(sizeof(double) * " ++ show sz ++ ")"]
-    -- assign value to variables
     vars :: [(Int, String)]
     vars =
         let toVar nId
@@ -311,9 +281,46 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
                     ]
              in concatMap assignIndex $ indices array3d
         | otherwise = []
-    assignVals = concatMap codesForVar vars
+
+-- | Generate a fully working C program that compute the expression and print out the result
+--
+singleExpressionCProgram ::
+       (DimensionType d, NumType et) => ValMaps -> Expression d et -> [String]
+singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
+    [ "#include <math.h>" --
+    , "#include <stdio.h>"
+    , "#include <stdlib.h>"
+    , "int main(){" --
+    ] ++
+    space 2 (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory) ++
+    [ "}" --
+    ]
+  where
+    infix 9 `at`
+    -- for with only body
+    for :: String -> Int -> [String] -> [String]
+    for iter nId scopeCodes =
+        forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
+    -- Real node
+    at :: Int -> String -> String
+    at = accessPtr memMap LookupR mp
+    -- Real part of complex node
+    reAt :: Int -> String -> String
+    reAt = accessPtr memMap LookupReC mp
+    -- Real part of complex node
+    imAt :: Int -> String -> String
+    imAt = accessPtr memMap LookupImC mp
+    (mp, n) = unwrap expr
+    (shape, et) = (expressionShape expr, expressionElementType expr)
+    memMap = makeMemMap mp
+    -- allocate memory
+    sz = totalDoubles memMap
+    initMemory =
+        ["double *ptr" <<- "malloc(sizeof(double) * " ++ show sz ++ ")"]
+    -- assign value to variables
+    assignVals = generateAssignValueCodes valMaps memMap mp
     -- codes to compute
-    codes = generateCodeC memMap expr
+    codes = generateEvaluatingCodes memMap (exMap expr, [exIndex expr])
     -- print the value of expression
     printValue
         | et == R = for i n ["printf(\"%f \"," ++ n `at` i ++ ");"]
