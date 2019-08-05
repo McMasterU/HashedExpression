@@ -250,7 +250,8 @@ generateEvaluatingCodes memMap (mp, rootIds) =
 -- | Code to assign values to those in val maps
 --
 generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
-generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp = concatMap codesForVar vars
+generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
+    concatMap codesForVar vars
   where
     at = accessPtr memMap LookupR mp
     vars :: [(Int, String)]

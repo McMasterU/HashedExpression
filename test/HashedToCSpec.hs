@@ -92,7 +92,8 @@ spec =
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
-                    intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+                    intercalate "\n" . singleExpressionCProgram valMaps $
+                    simplifiedExp
                 (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 let ([im], [re]) = readC outputCodeC
                 let resultSimplify = im :+ re
@@ -125,7 +126,8 @@ spec =
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
-                    intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+                    intercalate "\n" . singleExpressionCProgram valMaps $
+                    simplifiedExp
                 (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 putStrLn outputCodeC
                 let (re, im) = readC outputCodeC

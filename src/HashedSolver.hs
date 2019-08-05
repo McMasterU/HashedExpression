@@ -115,7 +115,8 @@ constructProblem f@(Expression fId fMp) vars =
 -- |
 --
 generateProblemCode :: ValMaps -> Problem -> [String]
-generateProblemCode valMaps Problem {..} = defineStuffs ++ assignVals ++ evaluatingCodes
+generateProblemCode valMaps Problem {..} =
+    defineStuffs ++ assignVals ++ evaluatingCodes
   where
     entries = entryMap memMap
     variableSizes =
