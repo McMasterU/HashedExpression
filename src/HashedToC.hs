@@ -123,25 +123,24 @@ forWith iter shape (initCodes, codes, afterCodes)
     | otherwise = initCodes ++ codes ++ afterCodes
 
 -- | Access pointer
+-- TODO 1: the function signature is too long?
+-- TODO 2: constant should be written directly? then we have to separate left-hand side and right-hand side access?
 --
 accessPtr :: MemMap -> LookupPart -> ExpressionMap -> Int -> String -> String
-accessPtr memMap lookupPart mp nId offsetVal
-    | Const val <- retrieveNode nId mp = "(" ++ show val ++ ")"
-    | otherwise =
-        let shape = retrieveShape nId mp
-            updatedOffsetVal
-                | null shape = ""
-                | offsetVal == "0" = ""
-                | otherwise = " + " ++ offsetVal
-         in "(*(ptr + " ++
-            show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "))"
+accessPtr memMap lookupPart mp nId offsetVal =
+    let shape = retrieveShape nId mp
+        updatedOffsetVal
+            | null shape = ""
+            | offsetVal == "0" = ""
+            | otherwise = " + " ++ offsetVal
+     in "(*(ptr + " ++
+        show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "))"
 
--- |
+-- | Generate evaluation code (usually an expression and its partial derivatives) given an ExpressionMap and indices of nodes to be computed
 --
-generateCodeC ::
-       (DimensionType d, NumType et) => MemMap -> Expression d et -> [String]
-generateCodeC memMap expr@(Expression _ mp) =
-    concatMap genCode . topologicalSort . unwrap $ expr
+evaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> [String]
+evaluatingCodes memMap (mp, rootIds) =
+    concatMap genCode $ topologicalSortManyRoots (mp, rootIds)
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
@@ -165,7 +164,7 @@ generateCodeC memMap expr@(Expression _ mp) =
          in case node of
                 Var _ -> []
                 DVar _ -> error "DVar should not be here"
-                Const _ -> [] -- TODO: Do we need to assign to const ???
+                Const val -> for i n [n `at` i <<- show val]
                 Sum _ args
                     | elementType n == R ->
                         let sumAt i = intercalate " + " $ map (`at` i) args
@@ -246,13 +245,47 @@ generateCodeC memMap expr@(Expression _ mp) =
                                 i
                                 (getShape arg1)
                                 (initCodes, codes, afterCodes)
-                _ -> error $ "Not support yet " ++ prettifyDebug expr
+                _ -> error "Not support yet "
 
--- | Generate a fully functional C program that compute the expression and print out the result
+-- | Code to assign values to those in val maps
 --
-generateProgram ::
+assignValCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
+assignValCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp = concatMap codesForVar vars
+  where
+    at = accessPtr memMap LookupR mp
+    vars :: [(Int, String)]
+    vars =
+        let toVar nId
+                | Var varName <- retrieveNode nId mp = Just (nId, varName)
+                | otherwise = Nothing
+         in mapMaybe toVar . IM.keys $ mp
+    codesForVar :: (Int, String) -> [String]
+    codesForVar (n, varName)
+        | Just val <- Map.lookup varName vm0 = [n `at` noOffset <<- show val]
+        | Just array1d <- Map.lookup varName vm1 =
+            let assignIndex id = [n `at` show id <<- show (array1d ! id)]
+             in concatMap assignIndex $ indices array1d
+        | Just array2d <- Map.lookup varName vm2 =
+            let shape = retrieveShape n mp
+                assignIndex (id1, id2) =
+                    [ n `at` show (localOffset shape [id1, id2]) <<-
+                      show (array2d ! (id1, id2))
+                    ]
+             in concatMap assignIndex $ indices array2d
+        | Just array3d <- Map.lookup varName vm3 =
+            let shape = retrieveShape n mp
+                assignIndex (id1, id2, id3) =
+                    [ n `at` show (localOffset shape [id1, id2, id3]) <<-
+                      show (array3d ! (id1, id2, id2))
+                    ]
+             in concatMap assignIndex $ indices array3d
+        | otherwise = []
+
+-- | Generate a fully working C program that compute the expression and print out the result
+--
+singleExpressionCProgram ::
        (DimensionType d, NumType et) => ValMaps -> Expression d et -> [String]
-generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
+singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
     [ "#include <math.h>" --
     , "#include <stdio.h>"
     , "#include <stdlib.h>"
@@ -284,36 +317,9 @@ generateProgram (ValMaps vm0 vm1 vm2 vm3) expr =
     initMemory =
         ["double *ptr" <<- "malloc(sizeof(double) * " ++ show sz ++ ")"]
     -- assign value to variables
-    vars :: [(Int, String)]
-    vars =
-        let toVar nId
-                | Var varName <- retrieveNode nId mp = Just (nId, varName)
-                | otherwise = Nothing
-         in mapMaybe toVar . IM.keys $ mp
-    codesForVar :: (Int, String) -> [String]
-    codesForVar (n, varName)
-        | Just val <- Map.lookup varName vm0 = [n `at` noOffset <<- show val]
-        | Just array1d <- Map.lookup varName vm1 =
-            let assignIndex id = [n `at` show id <<- show (array1d ! id)]
-             in concatMap assignIndex $ indices array1d
-        | Just array2d <- Map.lookup varName vm2 =
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2) =
-                    [ n `at` show (localOffset shape [id1, id2]) <<-
-                      show (array2d ! (id1, id2))
-                    ]
-             in concatMap assignIndex $ indices array2d
-        | Just array3d <- Map.lookup varName vm3 =
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2, id3) =
-                    [ n `at` show (localOffset shape [id1, id2, id3]) <<-
-                      show (array3d ! (id1, id2, id2))
-                    ]
-             in concatMap assignIndex $ indices array3d
-        | otherwise = []
-    assignVals = concatMap codesForVar vars
+    assignVals = assignValCodes valMaps memMap mp
     -- codes to compute
-    codes = generateCodeC memMap expr
+    codes = evaluatingCodes memMap (exMap expr, [exIndex expr])
     -- print the value of expression
     printValue
         | et == R = for i n ["printf(\"%f \"," ++ n `at` i ++ ");"]

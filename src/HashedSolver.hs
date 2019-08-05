@@ -1,11 +1,15 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module HashedSolver where
 
 import qualified Data.IntMap as IM
+import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Set as Set
 import Data.Set (Set)
+import Data.Tuple.HT (fst3, thd3)
 import HashedCollect
 import HashedDerivative
 import HashedExpression
@@ -64,16 +68,14 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Zero R -> Problem
-constructProblem f@(Expression fId fMp) =
-    let df@(Expression dfId dfMp) = collectDifferentials . derivativeAllVars $ f
-        allVars = varSet f
-        -- Set of all variable names
-        vars :: Set String
-        vars = Set.fromList . map fst $ allVars
+constructProblem :: Expression Zero R -> Set String -> Problem
+constructProblem f@(Expression fId fMp) vars =
+    let df@(Expression dfId dfMp) =
+            collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
         name2Id :: Map String Int
-        name2Id = Map.fromList allVars
+        name2Id =
+            Map.fromList $ filter (flip Set.member vars . fst) $ varNodes f
         -- Map from a variable name to partial derivative id in the problem's ExpressionMap
         name2PartialDerivativeId :: Map String Int
         name2PartialDerivativeId = partialDerivativeMaps df
@@ -91,12 +93,14 @@ constructProblem f@(Expression fId fMp) =
         -- variables
         problemVariables = map toVariable . Set.toList $ vars
         mergedMap = IM.union dfMp fMp
-        relevantNs = topologicalSortManyRoots mergedMap rootNs
+        topologicalOrder = topologicalSortManyRoots (mergedMap, rootNs)
         -- expression map
         problemExpressionMap :: ExpressionMap
         problemExpressionMap =
             IM.fromList $
-            map (\nId -> (nId, fromJust $ IM.lookup nId mergedMap)) relevantNs
+            map
+                (\nId -> (nId, fromJust $ IM.lookup nId mergedMap))
+                topologicalOrder
         -- mem map
         problemMemMap = makeMemMap problemExpressionMap
         -- objective id
@@ -107,3 +111,37 @@ constructProblem f@(Expression fId fMp) =
             , memMap = problemMemMap
             , expressionMap = problemExpressionMap
             }
+
+-- |
+--
+generateProblemCode :: ValMaps -> Problem -> [String]
+generateProblemCode valMaps Problem {..} = undefined
+  where
+    entries = entryMap memMap
+    variableSizes =
+        map
+            (product . thd3 . fromJust . flip IM.lookup entries . nodeId)
+            variables
+    variableOffsets =
+        map (fst3 . fromJust . flip IM.lookup entries . nodeId) variables
+    partialDerivativeOffsets =
+        map
+            (fst3 . fromJust . flip IM.lookup entries . partialDerivativeId)
+            variables
+    objectiveOffset = fst3 . fromJust . flip IM.lookup entries $ objectiveId
+    defineStuffs =
+        [ "const int NUM_VARIABLES = " ++ show (length variables) ++ ";"
+        , "const int MEM_SIZE = " ++ show (totalDoubles memMap) ++ ";"
+        , "const int var_size[NUM_VARIABLES] = {" ++
+          (intercalate "," . map show $ variableSizes) ++ "};"
+        , "const int var_offset[NUM_VARIABLES] = {" ++
+          (intercalate "," . map show $ variableOffsets) ++ "};"
+        , "const int partial_derivative_offset[NUM_VARIABLES] = {" ++
+          (intercalate "," . map show $ partialDerivativeOffsets) ++ "};"
+        , "const int objective_offset = " ++ show objectiveOffset ++ ";"
+        , "const double ptr[MEM_SIZE];"
+        ]
+    assignVals =
+        ["void assign_values() {"] ++
+        space 2 (assignValCodes valMaps memMap expressionMap) ++ --
+        ["}"]

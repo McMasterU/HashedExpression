@@ -45,7 +45,7 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import HashedCollect
-import HashedToC (generateProgram)
+import HashedToC (singleExpressionCProgram)
 import HashedUtils
 import HashedVar
 import Test.Hspec

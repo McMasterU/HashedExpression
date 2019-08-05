@@ -42,7 +42,7 @@ evaluateCodeC exp valMaps = do
     readProcessWithExitCode "mkdir" ["C"] ""
     fileName <- fmap (toString . fromJust) nextUUID
     let fullFileName = "C/" ++ fileName ++ ".c"
-    let program = generateProgram valMaps exp
+    let program = singleExpressionCProgram valMaps exp
     TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
     readProcess "gcc" [fullFileName, "-o", "C/" ++ fileName, "-lm"] ""
     let runCommand = "C/" ++ fileName
@@ -92,7 +92,7 @@ spec =
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
-                    intercalate "\n" . generateProgram valMaps $ simplifiedExp
+                    intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
                 (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 let ([im], [re]) = readC outputCodeC
                 let resultSimplify = im :+ re
@@ -125,7 +125,7 @@ spec =
                 -- Evaluate by C code simplified version should equal to HashedInterp
                 let simplifiedExp = simplify exp
                 writeFile "C/main.c" $
-                    intercalate "\n" . generateProgram valMaps $ simplifiedExp
+                    intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
                 (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
                 putStrLn outputCodeC
                 let (re, im) = readC outputCodeC

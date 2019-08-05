@@ -81,12 +81,11 @@ prop_TopologicalSortManyRoots xs
   where
     mergedMap = IM.unions . map (fst . getWrappedExp) $ xs
     roots = map (snd . getWrappedExp) xs
-    sortedNodeId = topologicalSortManyRoots mergedMap roots
+    sortedNodeId = topologicalSortManyRoots (mergedMap, roots)
     dependencies n = nodeArgs $ retrieveNode n mergedMap
     withChildren = zip sortedNodeId (map dependencies sortedNodeId)
     prop (nId, childrenIds) = all (isAfter sortedNodeId nId) childrenIds
 
---         in noDuplicate && all prop withChildren
 -- |
 --
 prop_StructureZeroC :: Expression Zero C -> Bool
