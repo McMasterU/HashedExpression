@@ -15,8 +15,8 @@ extern void assign_values();
 extern void evaluate_partial_derivatives_and_objective();
 
 
-const double ALPHA = 0.01;
-const int MAX_ITER = 100;
+const double ALPHA = 0.1;
+const int MAX_ITER = 1000;
 const double THRESHOLD = 1e-6;
 
 int main() {
@@ -44,8 +44,10 @@ int main() {
     }
 
     if (max_step < THRESHOLD) break;
+    iter++;
   }
 
+  printf("After %d iteration\n", iter);
   printf("f_min = %f at:\n", ptr[objective_offset]);
   for (i = 0; i < NUM_VARIABLES; i++) {
     printf("var[%d] = [", i);
