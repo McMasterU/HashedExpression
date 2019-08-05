@@ -91,7 +91,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
     hiddenDerivative' = hiddenDerivative vars
     exteriorDerivative' = exteriorDerivative vars
     (shape, node) = retrieveInternal n mp
-    one = one :: Expression D_ R
+    one = constWithShape shape 1 :: Expression D_ R
     dOne nId = unwrap . hiddenDerivative' $ Expression nId mp
         -- For cases g = ImagPart, RealPart, FFT, ... that take 1 input
         -- d(g(x)) = g(d(x))
@@ -131,7 +131,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                 -- multiplication rule
             Mul R args ->
                 let mkSub nId = (mp, nId)
-                    dEach (one, rest) = mulMany (map mkSub rest ++ [dOne one])
+                    dEach (each, rest) = mulMany (map mkSub rest ++ [dOne each])
                  in wrap . sumMany . map dEach . removeEach $ args
                 -- d(f ^ a) = df * a * f ^ (a - 1)
             Power x arg ->
@@ -194,7 +194,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
              ->
                 let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative' f
-                 in one / f |*| df
+                 in (one / f) |*| df
             Sinh arg
                 -- d(sinh(f)) = cosh(f) * d(f)
              ->

@@ -4,11 +4,11 @@
 
 
 const int NUM_VARIABLES = 1;
-const int MEM_SIZE = 703;
+const int MEM_SIZE = 713;
 const int var_size[NUM_VARIABLES] = {100};
 const int var_offset[NUM_VARIABLES] = {100};
-const int partial_derivative_offset[NUM_VARIABLES] = {302};
-const int objective_offset = 702;
+const int partial_derivative_offset[NUM_VARIABLES] = {301};
+const int objective_offset = 706;
 double ptr[MEM_SIZE];
 
 
@@ -120,41 +120,79 @@ void evaluate_partial_derivatives_and_objective() {
   {
     int i;
     for (i = 0; i < 100; i++) {
-      (ptr[402 + i]) = -(ptr[0 + i]);
+      (ptr[406 + i]) = -(ptr[0 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 100; i++) {
-      (ptr[202 + i]) = (ptr[100 + i]) + (ptr[402 + i]);
+      (ptr[201 + i]) = (ptr[100 + i]) + (ptr[406 + i]);
     }
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 100; i++) {
-      acc += (ptr[202 + i]) * (ptr[202 + i]);
+      acc += (ptr[201 + i]) * (ptr[201 + i]);
     }
-    (ptr[702]) = acc;
+    (ptr[709]) = acc;
   }
-  (ptr[200]) = -2.0;
+  (ptr[706]) = sqrt(ptr[709]);
+  (ptr[200]) = -1.0;
+  {
+    double acc = 0;
+    int i;
+    for (i = 0; i < 100; i++) {
+      acc += (ptr[0 + i]) * (ptr[100 + i]);
+    }
+    (ptr[710]) = acc;
+  }
+  (ptr[402]) = (ptr[200]) * (ptr[710]);
+  {
+    double acc = 0;
+    int i;
+    for (i = 0; i < 100; i++) {
+      acc += (ptr[100 + i]) * (ptr[0 + i]);
+    }
+    (ptr[708]) = acc;
+  }
+  (ptr[404]) = (ptr[200]) * (ptr[708]);
+  {
+    double acc = 0;
+    int i;
+    for (i = 0; i < 100; i++) {
+      acc += (ptr[100 + i]) * (ptr[100 + i]);
+    }
+    (ptr[711]) = acc;
+  }
+  {
+    double acc = 0;
+    int i;
+    for (i = 0; i < 100; i++) {
+      acc += (ptr[0 + i]) * (ptr[0 + i]);
+    }
+    (ptr[712]) = acc;
+  }
+  (ptr[401]) = (ptr[402]) + (ptr[404]) + (ptr[711]) + (ptr[712]);
+  (ptr[707]) = sqrt(ptr[401]);
+  (ptr[405]) = pow((ptr[707]),-1);
   {
     int i;
     for (i = 0; i < 100; i++) {
-      (ptr[502 + i]) = (ptr[200])*(ptr[0 + i]);
+      (ptr[506 + i]) = (ptr[405])*(ptr[100 + i]);
     }
   }
-  (ptr[201]) = 2.0;
+  (ptr[403]) = (ptr[200]) * (ptr[405]);
   {
     int i;
     for (i = 0; i < 100; i++) {
-      (ptr[602 + i]) = (ptr[201])*(ptr[100 + i]);
+      (ptr[606 + i]) = (ptr[403])*(ptr[0 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 100; i++) {
-      (ptr[302 + i]) = (ptr[502 + i]) + (ptr[602 + i]);
+      (ptr[301 + i]) = (ptr[506 + i]) + (ptr[606 + i]);
     }
   }
 }
