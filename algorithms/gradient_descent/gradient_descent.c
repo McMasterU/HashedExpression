@@ -14,22 +14,44 @@ extern double ptr[MEM_SIZE];
 extern void assign_values();
 extern void evaluate_partial_derivatives_and_objective();
 
+
+const double ALPHA = 0.01;
+const int MAX_ITER = 100;
+const double THRESHOLD = 1e-6;
+
 int main() {
-  // assign values to predefined variables (scalar, 1D, 2D, 3D)
+  int i, j, k;
+  // assign values to predefined variables
   assign_values();
-  printf("%d", NUM_VARIABLES);
-  {
-    int i;
-    for (i = 0; i < var_size[0]; i++) {
-      ptr[var_offset[0] + i] = 1;
+  // initial for optimizing variables
+  for (i = 0; i < NUM_VARIABLES; i++) {
+    for (j = 0; j < var_size[i]; j++) {
+      ptr[var_offset[i] + j] = 0;
     }
   }
-  evaluate_partial_derivatives_and_objective();
-  printf("%f\n", ptr[objective_offset]);
-  {
-    int i;
-    for (i = 0; i < var_size[0]; i++) {
-      printf("%f, ", ptr[partial_derivative_offset[0] + i]);
+
+  int iter = 0;
+  while (iter < MAX_ITER) {
+    evaluate_partial_derivatives_and_objective();
+    printf("f = %f\n", ptr[objective_offset]);
+    double max_step = 0;
+    for (i = 0; i < NUM_VARIABLES; i++) {
+      for (j = 0; j < var_size[i]; j++) {
+        double step = (-ALPHA) * ptr[partial_derivative_offset[i] + j];
+        ptr[var_offset[i] + j] += step;
+        max_step = fmax(max_step, fabs(step));
+      }
+    }
+
+    if (max_step < THRESHOLD) break;
+  }
+
+  printf("f_min = %f at:\n", ptr[objective_offset]);
+  for (i = 0; i < NUM_VARIABLES; i++) {
+    printf("var[%d] = [", i);
+    for (j = 0; j < var_size[i]; j++) {
+      printf("%f", ptr[var_offset[i] + j]);
+      printf(j == var_size[i] - 1 ? "]\n" : ", ");
     }
   }
 }
