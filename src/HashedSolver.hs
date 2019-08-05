@@ -115,7 +115,7 @@ constructProblem f@(Expression fId fMp) vars =
 -- |
 --
 generateProblemCode :: ValMaps -> Problem -> [String]
-generateProblemCode valMaps Problem {..} = undefined
+generateProblemCode valMaps Problem {..} = defineStuffs ++ assignVals ++ evaluatingCodes
   where
     entries = entryMap memMap
     variableSizes =
@@ -129,8 +129,14 @@ generateProblemCode valMaps Problem {..} = undefined
             (fst3 . fromJust . flip IM.lookup entries . partialDerivativeId)
             variables
     objectiveOffset = fst3 . fromJust . flip IM.lookup entries $ objectiveId
+    evaluatingIds = objectiveId : map partialDerivativeId variables
     defineStuffs =
-        [ "const int NUM_VARIABLES = " ++ show (length variables) ++ ";"
+        [ "#include <math.h>"
+        , "#include <stdio.h>"
+        , "#include <stdlib.h>"
+        , ""
+        , ""
+        , "const int NUM_VARIABLES = " ++ show (length variables) ++ ";"
         , "const int MEM_SIZE = " ++ show (totalDoubles memMap) ++ ";"
         , "const int var_size[NUM_VARIABLES] = {" ++
           (intercalate "," . map show $ variableSizes) ++ "};"
@@ -139,9 +145,15 @@ generateProblemCode valMaps Problem {..} = undefined
         , "const int partial_derivative_offset[NUM_VARIABLES] = {" ++
           (intercalate "," . map show $ partialDerivativeOffsets) ++ "};"
         , "const int objective_offset = " ++ show objectiveOffset ++ ";"
-        , "const double ptr[MEM_SIZE];"
+        , "double ptr[MEM_SIZE];"
+        , ""
+        , ""
         ]
     assignVals =
         ["void assign_values() {"] ++
-        space 2 (assignValCodes valMaps memMap expressionMap) ++ --
+        space 2 (generateAssignValueCodes valMaps memMap expressionMap) ++ --
+        ["}", "", ""]
+    evaluatingCodes =
+        ["void evaluate_partial_derivatives_and_objective() {"] ++
+        space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]

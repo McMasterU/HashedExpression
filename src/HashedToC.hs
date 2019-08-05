@@ -133,13 +133,13 @@ accessPtr memMap lookupPart mp nId offsetVal =
             | null shape = ""
             | offsetVal == "0" = ""
             | otherwise = " + " ++ offsetVal
-     in "(*(ptr + " ++
-        show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "))"
+     in "(ptr[" ++
+        show (memOffset memMap nId lookupPart) ++ updatedOffsetVal ++ "])"
 
 -- | Generate evaluation code (usually an expression and its partial derivatives) given an ExpressionMap and indices of nodes to be computed
 --
-evaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> [String]
-evaluatingCodes memMap (mp, rootIds) =
+generateEvaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> [String]
+generateEvaluatingCodes memMap (mp, rootIds) =
     concatMap genCode $ topologicalSortManyRoots (mp, rootIds)
   where
     getShape :: Int -> Shape
@@ -249,8 +249,8 @@ evaluatingCodes memMap (mp, rootIds) =
 
 -- | Code to assign values to those in val maps
 --
-assignValCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
-assignValCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp = concatMap codesForVar vars
+generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
+generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp = concatMap codesForVar vars
   where
     at = accessPtr memMap LookupR mp
     vars :: [(Int, String)]
@@ -317,9 +317,9 @@ singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
     initMemory =
         ["double *ptr" <<- "malloc(sizeof(double) * " ++ show sz ++ ")"]
     -- assign value to variables
-    assignVals = assignValCodes valMaps memMap mp
+    assignVals = generateAssignValueCodes valMaps memMap mp
     -- codes to compute
-    codes = evaluatingCodes memMap (exMap expr, [exIndex expr])
+    codes = generateEvaluatingCodes memMap (exMap expr, [exIndex expr])
     -- print the value of expression
     printValue
         | et == R = for i n ["printf(\"%f \"," ++ n `at` i ++ ");"]
