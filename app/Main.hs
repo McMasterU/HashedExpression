@@ -65,8 +65,9 @@ prod1 = fromJust . HashedOperation.sum
 --        let exp2 = ((k +: u) + (p +: j))
 --        showExp $ simplify $ exp1 * exp2
 main = do
-    let exp = (x2 - y2) <.> (x2 - y2)
+    let exp = sqrt ((x2 - y2) <.> (x2 - y2))
     let vars = Set.fromList ["x2"]
+    showExp $ collectDifferentials . exteriorDerivative vars $ exp
     let valMaps =
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])

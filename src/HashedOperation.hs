@@ -221,6 +221,11 @@ huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
     lessThan = sqrt (e * e)
     largerThan = const 0.5 *. (e * e + deltaVector)
 
+-- | Norm 2
+--
+norm2 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm2 expr = sqrt (expr <.> expr)
+
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
