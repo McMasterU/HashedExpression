@@ -46,6 +46,7 @@ int main() {
 
   int iter = 0;
   while (iter < MAX_ITER) {
+    bool find_t = true;
 
     // save the state of all variables
     cnt = 0;
@@ -112,11 +113,15 @@ int main() {
       }
 
 
+
       if (alpha >= beta) {
-        printf("Iteration %d: couldn't find step that satisfies 2 Wolf conditions \n", iter);
-        return 0;
+        printf("Iteration %d: couldn't find step that satisfies 2 Wolf conditions, end searching here!\n", iter);
+        find_t = false;
+        break;
       }
     }
+
+    if (!find_t) break;
 
     double max_step = 0;
     // OK now we have a good t, let's update
