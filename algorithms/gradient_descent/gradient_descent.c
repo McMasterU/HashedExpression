@@ -6,8 +6,6 @@
 
 #define oo 10000000
 
-extern const int NUM_VARIABLES;
-extern const int MEM_SIZE;
 extern const int var_size[NUM_VARIABLES];
 extern const int var_offset[NUM_VARIABLES];
 extern const int partial_derivative_offset[NUM_VARIABLES];
