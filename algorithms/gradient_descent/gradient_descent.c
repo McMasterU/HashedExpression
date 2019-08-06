@@ -31,7 +31,7 @@ bool any_partial_derivative_NaN() {
   int i, j;
   for (i = 0; i < NUM_VARIABLES; i++) {
     for (j = 0; j < var_size[i]; j++) {
-      if isnan(ptr[partial_derivative_offset[i] + j]) {
+      if (isnan(ptr[partial_derivative_offset[i] + j])) {
         return true;
       }
     }
