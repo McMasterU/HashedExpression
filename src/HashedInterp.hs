@@ -65,7 +65,9 @@ chooseBranch marks val branches
 
 -- | Approximable class
 --
-class Approximable a where
+class Show a =>
+      Approximable a
+    where
     (~=) :: a -> a -> Bool
 
 infix 4 ~=

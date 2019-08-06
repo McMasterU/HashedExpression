@@ -90,6 +90,7 @@ data PatternPower
 data PatternRotateAmount
     = PRotateAmountHole RotateAmountCapture
     | PRotateAmountSum PatternRotateAmount PatternRotateAmount
+    | PRotateAmountNegate PatternRotateAmount
     deriving (Show)
 
 -- |
@@ -219,6 +220,9 @@ instance MultiplyOp PatternPower where
 --
 instance AddableOp PatternRotateAmount where
     (+) = PRotateAmountSum
+
+instance NegateOp PatternRotateAmount where
+    negate = PRotateAmountNegate
 
 -- | Guarded patterns for simplification
 --
@@ -607,6 +611,8 @@ buildFromPatternRotateAmount match pra =
                 (+)
                 (buildFromPatternRotateAmount match pra1)
                 (buildFromPatternRotateAmount match pra2)
+        PRotateAmountNegate pra ->
+            map negate (buildFromPatternRotateAmount match pra)
 
 -- |
 --

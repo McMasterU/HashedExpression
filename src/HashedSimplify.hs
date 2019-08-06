@@ -86,6 +86,7 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification flattenSumProdRules
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
+        , toRecursiveSimplification normalizeRotateRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -246,6 +247,7 @@ rotateRules =
     , rotate amount x |. zeroAmount amount ~~~~~~> x
     , rotate amount (sum xs) |.~~~~~~> sum (mapL (rotate amount) xs)
     , rotate amount (product xs) |.~~~~~~> product (mapL (rotate amount) xs)
+    , rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y
     ]
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands
@@ -487,3 +489,11 @@ evaluateIfPossibleRules exp@(mp, n) =
         | otherwise = Nothing
     pulledVals = mapM getVal . nodeArgs $ node
     res = diffConst shape
+
+-- | rotateAmount in each direction always lie within (0, dim - 1)
+--
+normalizeRotateRules :: Modification
+normalizeRotateRules exp@(mp, n)
+    | (shape, Rotate amount arg) <- retrieveInternal n mp =
+        applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
+    | otherwise = noChange n

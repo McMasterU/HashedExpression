@@ -65,6 +65,9 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             , removeUnreachable
             ]
 
+inspect :: Transformation
+inspect exp = traceShow (debugPrint exp) exp
+
 -- |
 --
 toRecursiveCollecting :: Modification -> Transformation
@@ -75,7 +78,7 @@ toRecursiveCollecting = toTransformation . makeRecursive False
 --
 restructure :: Transformation
 restructure =
-    multipleTimes 100 $
+    multipleTimes 1000 $
     chain [toMultiplyIfPossible, toRecursiveCollecting flattenSumProdRules]
 
 -- | x * y * covector * z --> (x * y * z) * covector
@@ -94,11 +97,15 @@ splitCovectorProdRules exp@(mp, n) =
 --
 separateDVarAlone :: Transformation
 separateDVarAlone =
-    chain . map (toRecursiveCollecting . fromSubstitution) $
-    [ x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y
+    multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
+    [ x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~>
+      ((restOfProduct ~* x) <.> y)
+    , x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y
     , x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y
     , s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y
     , s * (x * y) |. isDVar y ~~~~~~> (s * x) * y
+    -- Dealing with rotate
+    , x <.> rotate amount y |. isDVar y ~~~~~~> rotate (negate amount) x <.> y
     ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
