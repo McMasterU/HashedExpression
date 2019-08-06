@@ -226,6 +226,19 @@ huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
 norm2 :: (DimensionType d) => Expression d R -> Expression Zero R
 norm2 expr = sqrt (expr <.> expr)
 
+-- | Sum across
+--
+sumElements :: forall d. (DimensionType d) => Expression d R -> Expression Zero R
+sumElements expr = expr <.> one
+  where 
+    one = constWithShape (expressionShape expr) 1 :: Expression d R
+
+-- | Norm 1
+--
+norm1 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm1 expr = sumElements (sqrt (expr * expr))
+
+
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
