@@ -56,10 +56,82 @@ evaluateCodeC exp valMaps = do
 readR :: String -> [Double]
 readR = map read . filter (not . null) . splitOn " "
 
+-- |
+--
 readC :: String -> ([Double], [Double])
 readC str = (readR rePart, readR imPart)
   where
     [rePart, imPart] = splitOn "\n" str
+
+-- |
+--
+prop_CEqualInterpZeroR :: SuiteZeroR -> Expectation
+prop_CEqualInterpZeroR (SuiteZeroR exp valMaps) = do
+    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
+    let resultSimplify = read . head . splitOn " " $ outputSimple
+    let resultInterpSimplify = eval valMaps (simplify exp)
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpZeroC :: SuiteZeroC -> Expectation
+prop_CEqualInterpZeroC (SuiteZeroC exp valMaps) = do
+    let simplifiedExp = simplify exp
+    writeFile "C/main.c" $
+        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+    let ([im], [re]) = readC outputCodeC
+    let resultSimplify = im :+ re
+    let resultInterpSimplify = eval valMaps simplifiedExp
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpOneR :: SuiteOneR -> Expectation
+prop_CEqualInterpOneR (SuiteOneR exp valMaps) = do
+    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
+    let resultSimplify = listArray (0, vectorSize - 1) $ readR outputSimple
+    let resultInterpSimplify = eval valMaps (simplify exp)
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpOneC :: SuiteOneC -> Expectation
+prop_CEqualInterpOneC (SuiteOneC exp valMaps) = do
+    let simplifiedExp = simplify exp
+    writeFile "C/main.c" $
+        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+    let (re, im) = readC outputCodeC
+    let resultSimplify = listArray (0, vectorSize - 1) $ zipWith (:+) re im
+    let resultInterpSimplify = eval valMaps simplifiedExp
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
+prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) = do
+    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
+    let resultSimplify =
+            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+            readR outputSimple
+    let resultInterpSimplify = eval valMaps (simplify exp)
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
+prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) = do
+    let simplifiedExp = simplify exp
+    writeFile "C/main.c" $
+        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+    let (re, im) = readC outputCodeC
+    let resultSimplify =
+            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+            zipWith (:+) re im
+    let resultInterpSimplify = eval valMaps simplifiedExp
+    resultSimplify `shouldApprox` resultInterpSimplify
 
 -- | Spec
 --
@@ -72,70 +144,19 @@ spec =
             localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
-            replicateM_ 10 $ do
-                SuiteZeroR exp valMaps <- generate arbitrary
-                putStrLn "------------------------"
-                -- Evaluate by C code simplified version should equal to HashedInterp
-                (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-                let resultSimplify = read . head . splitOn " " $ outputSimple
-                let resultInterpSimplify = eval valMaps (simplify exp)
-                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $
-                    "Result Interp (Simplified): " ++ show resultInterpSimplify
-                resultSimplify `shouldApprox` resultInterpSimplify
-                putStrLn "OK!"
+            property prop_CEqualInterpZeroR
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
-            replicateM_ 10 $ do
-                SuiteZeroC exp valMaps <- generate arbitrary
-                putStrLn "------------------------"
-                -- Evaluate by C code simplified version should equal to HashedInterp
-                let simplifiedExp = simplify exp
-                writeFile "C/main.c" $
-                    intercalate "\n" . singleExpressionCProgram valMaps $
-                    simplifiedExp
-                (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
-                let ([im], [re]) = readC outputCodeC
-                let resultSimplify = im :+ re
-                let resultInterpSimplify = eval valMaps simplifiedExp
-                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $
-                    "Result Interp (Simplified): " ++ show resultInterpSimplify
-                resultSimplify `shouldApprox` resultInterpSimplify
-                putStrLn "OK!"
+            property prop_CEqualInterpZeroC
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression One R)" $
-            replicateM_ 10 $ do
-                SuiteOneR exp valMaps <- generate arbitrary
-                putStrLn "------------------------"
-                -- Evaluate by C code simplified version should equal to HashedInterp
-                (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-                let resultSimplify =
-                        listArray (0, vectorSize - 1) $ readR outputSimple
-                let resultInterpSimplify = eval valMaps (simplify exp)
-                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $
-                    "Result Interp (Simplified): " ++ show resultInterpSimplify
-                resultSimplify `shouldApprox` resultInterpSimplify
-                putStrLn "OK!"
+            property prop_CEqualInterpOneR
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression One C)" $
-            replicateM_ 1 $ do
-                SuiteOneC exp valMaps <- generate arbitrary
-                putStrLn "------------------------"
-                -- Evaluate by C code simplified version should equal to HashedInterp
-                let simplifiedExp = simplify exp
-                writeFile "C/main.c" $
-                    intercalate "\n" . singleExpressionCProgram valMaps $
-                    simplifiedExp
-                (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
-                putStrLn outputCodeC
-                let (re, im) = readC outputCodeC
-                let resultSimplify =
-                        listArray (0, vectorSize - 1) $ zipWith (:+) re im
-                let resultInterpSimplify = eval valMaps simplifiedExp
-                putStrLn $ "Result C Code (Simplified): " ++ show resultSimplify
-                putStrLn $
-                    "Result Interp (Simplified): " ++ show resultInterpSimplify
-                resultSimplify `shouldApprox` resultInterpSimplify
-                putStrLn "OK!"
+            property prop_CEqualInterpOneC
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Two R)" $
+            property prop_CEqualInterpTwoR
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Two C)" $
+            property prop_CEqualInterpTwoC

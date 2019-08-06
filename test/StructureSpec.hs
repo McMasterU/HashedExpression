@@ -114,19 +114,19 @@ spec =
             property prop_StructureZeroC
         specify "Simplify a One C would give the form x +: y" $
             property prop_StructureOneC
-        specify "Check size" $
-            replicateM_ 35 $ do
-                let sz = IM.size . exMap
-                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
-                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
-                measureTime $ do
-                    putStrLn "----------------------------"
-                    putStrLn $
-                        "Generate exp1 -> " ++
-                        show (sz exp1) ++ " subexpressions"
-                    putStrLn $
-                        "Generate exp2 -> " ++
-                        show (sz exp2) ++ " subexpressions"
-                    putStrLn $
-                        "Simplifing (exp1 * exp2) -> " ++
-                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
+--        specify "Check size" $
+--            replicateM_ 35 $ do
+--                let sz = IM.size . exMap
+--                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
+--                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
+--                measureTime $ do
+--                    putStrLn "----------------------------"
+--                    putStrLn $
+--                        "Generate exp1 -> " ++
+--                        show (sz exp1) ++ " subexpressions"
+--                    putStrLn $
+--                        "Generate exp2 -> " ++
+--                        show (sz exp2) ++ " subexpressions"
+--                    putStrLn $
+--                        "Simplifing (exp1 * exp2) -> " ++
+--                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"

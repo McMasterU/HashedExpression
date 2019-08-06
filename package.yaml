@@ -36,7 +36,8 @@ dependencies:
 
 
 library:
-  source-dirs: src
+  source-dirs:
+  - src
 
 executables:
   HashedExpression-exe:

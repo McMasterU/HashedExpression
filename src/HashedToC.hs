@@ -122,6 +122,17 @@ forWith iter shape (initCodes, codes, afterCodes)
         ["}"]
     | otherwise = initCodes ++ codes ++ afterCodes
 
+forRange :: String -> Int -> [String] -> [String]
+forRange iter range codes =
+    ["{"] ++
+    [ "  int " ++ iter ++ ";"
+    , "  for (" ++
+      iter ++ " = 0; " ++ iter ++ " < " ++ show range ++ "; " ++ iter ++ "++) {"
+    ] ++
+    space 4 codes ++
+    ["  }"] ++ --
+    ["}"]
+
 -- | Access pointer
 -- TODO 1: the function signature is too long?
 -- TODO 2: constant should be written directly? then we have to separate left-hand side and right-hand side access?
@@ -245,6 +256,76 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                                 i
                                 (getShape arg1)
                                 (initCodes, codes, afterCodes)
+                Rotate [amount] arg ->
+                    let [size] = shape
+                     in forRange i size $
+                        [ "int ai" <<-
+                          "(" ++
+                          i ++
+                          " - " ++
+                          show amount ++
+                          " + " ++ show size ++ " ) % " ++ show size
+                        , n `at` i <<- arg `at` "ai"
+                        ]
+                Rotate [amount1, amount2] arg ->
+                    let [size1, size2] = shape
+                        toIndex i j = i ++ " * " ++ show size1 ++ " + " ++ j
+                     in forRange i size1 $
+                        forRange j size2 $
+                        [ "int ai" <<-
+                          "(" ++
+                          i ++
+                          " - " ++
+                          show amount1 ++
+                          " + " ++ show size1 ++ " ) % " ++ show size1
+                        , "int aj" <<-
+                          "(" ++
+                          j ++
+                          " - " ++
+                          show amount2 ++
+                          " + " ++ show size2 ++ " ) % " ++ show size2
+                        , n `at` toIndex i j <<- arg `at` toIndex "ai" "aj"
+                        ]
+                Rotate [amount1, amount2, amount3] arg ->
+                    let [size1, size2, size3] = shape
+                        toIndex i j k =
+                            concat
+                                [ i
+                                , " * "
+                                , show size1
+                                , " * "
+                                , show size2
+                                , " + "
+                                , j
+                                , " * "
+                                , show size2
+                                , " + "
+                                , k
+                                ]
+                     in forRange i size1 $
+                        forRange j size2 $
+                        forRange k size3 $
+                        [ "int ai" <<-
+                          "(" ++
+                          i ++
+                          " - " ++
+                          show amount1 ++
+                          " + " ++ show size1 ++ " ) % " ++ show size1
+                        , "int aj" <<-
+                          "(" ++
+                          j ++
+                          " - " ++
+                          show amount2 ++
+                          " + " ++ show size2 ++ " ) % " ++ show size2
+                        , "int ak" <<-
+                          "(" ++
+                          k ++
+                          " - " ++
+                          show amount3 ++
+                          " + " ++ show size3 ++ " ) % " ++ show size3
+                        , n `at` toIndex i j k <<-
+                          arg `at` toIndex "ai" "aj" "ak"
+                        ]
                 _ -> error "Not support yet "
 
 -- | Code to assign values to those in val maps

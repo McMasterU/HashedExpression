@@ -86,7 +86,7 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification flattenSumProdRules
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
-        , toRecursiveSimplification combineRotateRules
+        , toRecursiveSimplification normalizeRotateRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -137,6 +137,7 @@ rulesFromPattern =
     , distributiveRules
     , piecewiseRules
     , exponentRules
+    , rotateRules
     , otherRules
     ]
 
@@ -235,6 +236,18 @@ otherRules :: [Substitution]
 otherRules =
     [ negate x |.~~~~~~> scalar (-1) *. x --
     , (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
+    ]
+
+-- |
+--
+rotateRules :: [Substitution]
+rotateRules =
+    [ rotate amount (s *. x) |.~~~~~~> s *. rotate amount x
+    , rotate amount1 (rotate amount2 x) |.~~~~~~> rotate (amount1 + amount2) x
+    , rotate amount x |. zeroAmount amount ~~~~~~> x
+    , rotate amount (sum xs) |.~~~~~~> sum (mapL (rotate amount) xs)
+    , rotate amount (product xs) |.~~~~~~> product (mapL (rotate amount) xs)
+    , rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y
     ]
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands
@@ -477,12 +490,10 @@ evaluateIfPossibleRules exp@(mp, n) =
     pulledVals = mapM getVal . nodeArgs $ node
     res = diffConst shape
 
--- | Combining the Rotate
--- rotate [2] (rotate [1] arg) -> rotate [3] arg
-combineRotateRules :: Modification
-combineRotateRules exp@(mp, n)
-    | Rotate outerVal outerN <- retrieveNode n mp
-    , Rotate innerVal innerN <- retrieveNode outerN mp =
-        let totalAmount = zipWith (+) outerVal innerVal
-         in applyDiff mp (unary (Rotate totalAmount)) [noChange innerN]
+-- | rotateAmount in each direction always lie within (0, dim - 1)
+--
+normalizeRotateRules :: Modification
+normalizeRotateRules exp@(mp, n)
+    | (shape, Rotate amount arg) <- retrieveInternal n mp =
+        applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
     | otherwise = noChange n

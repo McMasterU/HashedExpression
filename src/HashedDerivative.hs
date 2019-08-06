@@ -275,6 +275,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
                             df =
                                 hiddenDerivative' f :: Expression Three Covector
                          in coerce $ rotate (x, y, z) df
+            _ -> error $ show node
             -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here?
             -- d(xRe(f)) = xRe(d(f))
 
