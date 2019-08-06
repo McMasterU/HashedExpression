@@ -59,7 +59,7 @@ main = do
     let exp =
             sqrt
                 ((rotate (9, 9) x2 - y2) <.> (rotate (9, 9) x2 - y2) +
-                 const 0.01)
+                 const 1)
     let vars = Set.fromList ["x2"]
     showExp $ collectDifferentials . exteriorDerivative vars $ exp
     let valMaps =
