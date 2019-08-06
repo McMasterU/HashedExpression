@@ -315,6 +315,8 @@ combineChildrenDiffs sortSumMul contextMp n childrenDiffs
     , sortSumMul = sortAndCombine (naryET Sum (ElementSpecific et))
     | Mul et _ <- oldNode
     , sortSumMul = sortAndCombine (naryET Mul (ElementSpecific et))
+    | InnerProd R arg1 arg2 <- oldNode
+    , sortSumMul = sortAndCombine (binaryET InnerProd (ElementSpecific R))
     | oldChildren == newChildren &&
           all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =
