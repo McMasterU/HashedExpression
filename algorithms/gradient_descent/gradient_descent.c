@@ -51,10 +51,8 @@ int main() {
     cnt = 0;
     for (i = 0; i < NUM_VARIABLES; i++) {
       for (j = 0; j < var_size[i]; j++) {
-        printf("var_offset[i] + j = %f\n", ptr[var_offset[i] + j]);
         var_temp[cnt] = ptr[var_offset[i] + j];
         grad_temp[cnt] = ptr[partial_derivative_offset[i] + j];
-        printf("var_temp[cnt] = %f\n", var_temp[cnt]);
         cnt++;
       }
     }
@@ -70,7 +68,7 @@ int main() {
     // find the step t that satisfy 2 wolf conditions
     double alpha = 0; // lower bound
     double beta = oo;
-    double t = 1.2;
+    double t = 1;
     while (true) {
 
       // write updated variables
