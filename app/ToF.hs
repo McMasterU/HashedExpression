@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TupleSections #-}
 
-module Main where
+module ToF where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM
@@ -109,13 +109,3 @@ tof2DUp1 size@(sx, sy) =
         problem = constructProblem (vMatchesT + tZeroOnBottom) vars
      in generateProblemCode valMaps problem
 
---
---main = do
---    measureTime $ do
---        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
---        let exp2 = ((k +: u) + (p +: j))
---        showExp $ simplify $ exp1 * exp2
-main = do
-    let codes = tof2DUp1 (5, 5)
-    writeFile "algorithms/gradient_descent/problem.c" $ intercalate "\n" codes
-    print "hello world"

@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE TupleSections #-}
+
+
 
 module Main where
 
@@ -58,12 +58,6 @@ sum1 = fromJust . HashedOperation.sum
 prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
---
---main = do
---    measureTime $ do
---        let exp1 = (((((n +: l)) ^ 3)) ^ 3)
---        let exp2 = ((k +: u) + (p +: j))
---        showExp $ simplify $ exp1 * exp2
 main = do
     let exp = sqrt ((x2 - y2) <.> (x2 - y2))
     let vars = Set.fromList ["x2"]
