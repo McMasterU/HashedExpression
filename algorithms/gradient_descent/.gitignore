@@ -2,3 +2,4 @@
 !*.c
 !Makefile
 !.gitignore
+problem.c

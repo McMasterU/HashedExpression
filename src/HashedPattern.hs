@@ -367,7 +367,6 @@ sameAmount pra1 pra2 exp match =
         rotateAmount2 = buildFromPatternRotateAmount match pra2
      in rotateAmount1 == rotateAmount2
 
-
 -- |
 --
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
