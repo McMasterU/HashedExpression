@@ -56,10 +56,7 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
-    let exp =
-            sqrt
-                ((rotate (9, 9) x2 - y2) <.> (rotate (9, 9) x2 - y2) +
-                 const 1)
+    let exp = sumElements (x2 * log x2)
     let vars = Set.fromList ["x2"]
     showExp $ collectDifferentials . exteriorDerivative vars $ exp
     let valMaps =

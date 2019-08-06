@@ -131,6 +131,7 @@ groupByDVar exp@(mp, n) =
         , DVar name <- retrieveNode cId mp = name
         | InnerProd Covector _ cId <- retrieveNode nId mp
         , DVar name <- retrieveNode cId mp = name
+        | otherwise = error $ "Collect D " ++ show (retrieveNode nId mp)
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId

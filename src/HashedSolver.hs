@@ -137,8 +137,8 @@ generateProblemCode valMaps Problem {..} =
         , "#include <stdlib.h>"
         , ""
         , ""
-        , "const int NUM_VARIABLES = " ++ show (length variables) ++ ";"
-        , "const int MEM_SIZE = " ++ show (totalDoubles memMap) ++ ";"
+        , "#define NUM_VARIABLES " ++ show (length variables)
+        , "#define MEM_SIZE " ++ show (totalDoubles memMap)
         , "const int var_size[NUM_VARIABLES] = {" ++
           (intercalate "," . map show $ variableSizes) ++ "};"
         , "const int var_offset[NUM_VARIABLES] = {" ++

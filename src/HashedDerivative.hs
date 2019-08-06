@@ -162,7 +162,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
              ->
                 let f = Expression arg mp :: Expression D_ R
                     df = exteriorDerivative' f
-                    recipSqrtF = c shape 0.5 / sqrt f
+                    recipSqrtF = const 0.5 *. (one / sqrt f)
                  in recipSqrtF |*| df
             Sin arg
                 -- d(sin(f)) = cos(f) * d(f)
