@@ -70,7 +70,6 @@ int main() {
     double beta = oo;
     double t = 1;
     while (true) {
-
       // write updated variables
       for (i = 0; i < NUM_VARIABLES; i++) {
         for (j = 0; j < var_size[i]; j++) {
@@ -110,6 +109,11 @@ int main() {
         } else {
           break;
         }
+      }
+
+      if (alpha >= beta) {
+        printf("Iteration %d: couldn't find step that satisfies 2 Wolf conditions \n", iter);
+        return 0;
       }
     }
 
