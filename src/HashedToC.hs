@@ -269,7 +269,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                         ]
                 Rotate [amount1, amount2] arg ->
                     let [size1, size2] = shape
-                        toIndex i j = "i * " ++ show size2 ++ " + j"
+                        toIndex i j = i ++ " * " ++ show size1 ++ " + " ++ j
                      in forRange i size1 $
                         forRange j size2 $
                         [ "int ai" <<-
@@ -298,7 +298,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                                 , " + "
                                 , j
                                 , " * "
-                                , show size3
+                                , show size2
                                 , " + "
                                 , k
                                 ]

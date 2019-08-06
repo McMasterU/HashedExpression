@@ -608,8 +608,15 @@ genTwoR =
     , (1, fromUnaryTwoR (^ 2))
     , (1, fromScaleTwoR)
     , (1, fromTwoCTwoR)
+    , (2, fromRotateTwoR)
     ]
   where
+    fromRotateTwoR :: Gen (Expression Two R, Vars)
+    fromRotateTwoR = do
+        on <- operandTwoR
+        amount1 <- elements [-9 .. 9]
+        amount2 <- elements [-9 .. 9]
+        return (rotate (amount1, amount2) $ fst on, snd on)
     fromNaryTwoR ::
            ([Expression Two R] -> Expression Two R)
         -> Gen (Expression Two R, Vars)
@@ -720,8 +727,15 @@ genTwoC =
     , (3, fromUnaryTwoC negate)
     , (1, fromUnaryTwoC (^ 2))
     , (2, fromScaleTwoC)
+    , (2, fromRotateTwoC)
     ]
   where
+    fromRotateTwoC :: Gen (Expression Two C, Vars)
+    fromRotateTwoC = do
+        on <- operandTwoC
+        amount1 <- elements [-9 .. 9]
+        amount2 <- elements [-9 .. 9]
+        return (rotate (amount1, amount2) $ fst on, snd on)
     fromNaryTwoC ::
            ([Expression Two C] -> Expression Two C)
         -> Gen (Expression Two C, Vars)

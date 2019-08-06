@@ -107,6 +107,32 @@ prop_CEqualInterpOneC (SuiteOneC exp valMaps) = do
     let resultInterpSimplify = eval valMaps simplifiedExp
     resultSimplify `shouldApprox` resultInterpSimplify
 
+-- |
+--
+prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
+prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) = do
+    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
+    let resultSimplify =
+            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+            readR outputSimple
+    let resultInterpSimplify = eval valMaps (simplify exp)
+    resultSimplify `shouldApprox` resultInterpSimplify
+
+-- |
+--
+prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
+prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) = do
+    let simplifiedExp = simplify exp
+    writeFile "C/main.c" $
+        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+    let (re, im) = readC outputCodeC
+    let resultSimplify =
+            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+            zipWith (:+) re im
+    let resultInterpSimplify = eval valMaps simplifiedExp
+    resultSimplify `shouldApprox` resultInterpSimplify
+
 -- | Spec
 --
 spec :: Spec
@@ -128,3 +154,9 @@ spec =
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression One C)" $
             property prop_CEqualInterpOneC
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Two R)" $
+            property prop_CEqualInterpTwoR
+        specify
+            "Evaluate hash interp should equal to C code evaluation (Expression Two C)" $
+            property prop_CEqualInterpTwoC
