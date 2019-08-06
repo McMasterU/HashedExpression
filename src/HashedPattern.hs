@@ -65,6 +65,8 @@ type ListCapture = Int
 
 type PowerCapture = Int
 
+type RotateAmountCapture = Int
+
 -- | List holes to captures many elements
 --
 data PatternList =
@@ -83,6 +85,13 @@ data PatternPower
     | PPowerSum PatternPower PatternPower
     deriving (Show)
 
+-- | PatternRotateAmount to capture the amount in (rotate amount x)
+--
+data PatternRotateAmount
+    = PRotateAmountHole RotateAmountCapture
+    | PRotateAmountSum PatternRotateAmount PatternRotateAmount
+    deriving (Show)
+
 -- |
 --
 data Pattern
@@ -91,9 +100,8 @@ data Pattern
     | PRef Int
     -- Ref to head of the list captures:
     | PHead PatternList
-    -- MARK: For list capture
     | PSumList PatternList
-    -- MARK: Reflex Node in HashedExpression
+    | PMulList PatternList
     | PConst Double
     | PScalarConst Double -- Pattern for scalar const used in RHS
     | PSum [Pattern]
@@ -124,7 +132,7 @@ data Pattern
     | PMulRest ListCapture [Pattern]
     | PSumRest ListCapture [Pattern]
     | PPower Pattern PatternPower
-    | PRotate [Pattern] Pattern
+    | PRotate PatternRotateAmount Pattern
     deriving (Show)
 
 -- |
@@ -191,6 +199,9 @@ instance InnerProductSpaceOp Pattern Pattern Pattern where
 instance PowerOp Pattern PatternPower where
     (^) = PPower
 
+instance RotateOp PatternRotateAmount Pattern where
+    rotate = PRotate
+
 -- | Pattern List
 --
 mapL :: (Pattern -> Pattern) -> PatternList -> PatternList
@@ -203,6 +214,11 @@ instance AddableOp PatternPower where
 
 instance MultiplyOp PatternPower where
     (*) = PPowerMul
+
+-- | Pattern Rotate Amount
+--
+instance AddableOp PatternRotateAmount where
+    (+) = PRotateAmountSum
 
 -- | Guarded patterns for simplification
 --
@@ -334,6 +350,13 @@ isDVar p exp match =
 
 -- |
 --
+zeroAmount :: PatternRotateAmount -> Condition
+zeroAmount pra exp match =
+    let rotateAmount = buildFromPatternRotateAmount match pra
+     in all (== 0) rotateAmount
+
+-- |
+--
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
 one :: Pattern
@@ -362,6 +385,8 @@ scalar = PScalarConst
 num :: Double -> Pattern
 num = PConst
 
+-- |
+--
 ys :: PatternList
 ys = PListHole id 1
 
@@ -370,6 +395,9 @@ xs = PListHole id 2
 
 sum :: PatternList -> Pattern
 sum = PSumList
+
+product :: PatternList -> Pattern
+product = PMulList
 
 -- |
 --
@@ -390,6 +418,10 @@ restOfProduct = PMulRest 239 []
 restOfSum :: Pattern
 restOfSum = PSumRest 2391 []
 
+-- |
+--
+[amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
+
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
 -- the inner actual nodes
 -- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
@@ -404,10 +436,8 @@ matchList mp ns (PListHole fs listCapture)
     , allEqual $ map otherCaptures subMatches =
         Just $
         unionMatch unionSubMatches $
-        Match
-            Map.empty
-            (Map.fromList [(listCapture, nIds subMatches)])
-            Map.empty
+        emptyMatch
+            {listCapturesMap = Map.fromList [(listCapture, nIds subMatches)]}
     | otherwise = Nothing
   where
     uniqueCapture = minBound :: Int
@@ -430,11 +460,12 @@ data Match =
         { capturesMap :: Map Capture NodeId -- A given capture corresponds to a node id
         , listCapturesMap :: Map ListCapture [NodeId] -- A given list capture corresponds to a list of node ids
         , powerCapturesMap :: Map PowerCapture PowerValue -- A given power capture corresponds to a power value
+        , rotateAmountCapturesMap :: Map RotateAmountCapture RotateAmount -- A given rotate amount capture corresponds to a rotate amount
         }
     deriving (Show)
 
 emptyMatch :: Match
-emptyMatch = Match Map.empty Map.empty Map.empty
+emptyMatch = Match Map.empty Map.empty Map.empty Map.empty
 
 unionMatch :: Match -> Match -> Match
 unionMatch match1 match2 =
@@ -442,6 +473,7 @@ unionMatch match1 match2 =
         (capturesMap match1 `union` capturesMap match2)
         (listCapturesMap match1 `union` listCapturesMap match2)
         (powerCapturesMap match1 `union` powerCapturesMap match2)
+        (rotateAmountCapturesMap match1 `union` rotateAmountCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
@@ -449,7 +481,7 @@ unionMatch match1 match2 =
 match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
     let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
-        catMatch = foldl unionMatch (Match Map.empty Map.empty Map.empty)
+        catMatch = foldl unionMatch emptyMatch
         recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
         recursiveAndCombine args whs
             | length args == length whs
@@ -458,7 +490,7 @@ match (mp, n) outerWH =
             | otherwise = Nothing
      in case (retrieveNode n mp, outerWH) of
             (_, PHole capture) ->
-                Just $ Match (Map.fromList [(capture, n)]) Map.empty Map.empty
+                Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
             (Const c, PConst whc)
                 | c == whc -> Just emptyMatch
             (Sum _ args, PSum whs) -> recursiveAndCombine args whs
@@ -471,12 +503,14 @@ match (mp, n) outerWH =
                 , length normalParts == length ps
                 , Just matchNormalParts <- recursiveAndCombine normalParts ps
                 , let matchListPart =
-                          Match
-                              Map.empty
-                              (Map.fromList [(listCapture, rest)])
-                              Map.empty ->
+                          emptyMatch
+                              { listCapturesMap =
+                                    Map.fromList [(listCapture, rest)]
+                              } ->
                     Just $ unionMatch matchNormalParts matchListPart
             (Mul _ args, PMul whs) -> recursiveAndCombine args whs
+            (Mul _ args, PMulList pl@(PListHole _ listCapture)) ->
+                matchList mp args pl
             (Mul _ args, PMulRest listCapture ps)
                 | length args > (length ps)
                 , let (rest, normalParts) =
@@ -484,10 +518,10 @@ match (mp, n) outerWH =
                 , length normalParts == length ps
                 , Just matchNormalParts <- recursiveAndCombine normalParts ps
                 , let matchListPart =
-                          Match
-                              Map.empty
-                              (Map.fromList [(listCapture, rest)])
-                              Map.empty ->
+                          emptyMatch
+                              { listCapturesMap =
+                                    Map.fromList [(listCapture, rest)]
+                              } ->
                     Just $ unionMatch matchNormalParts matchListPart
             (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
             (Scale _ arg1 arg2, PScale wh1 wh2) ->
@@ -524,11 +558,18 @@ match (mp, n) outerWH =
             (Power x arg, PPower sp (PPowerHole powerCapture))
                 | Just matchInner <- recursiveAndCombine [arg] [sp]
                 , let matchPower =
-                          Match
-                              Map.empty
-                              Map.empty
-                              (Map.fromList [(powerCapture, x)]) ->
-                    Just $ unionMatch matchInner matchPower
+                          emptyMatch
+                              { powerCapturesMap =
+                                    Map.fromList [(powerCapture, x)]
+                              } -> Just $ unionMatch matchInner matchPower
+            (Rotate ra arg, PRotate (PRotateAmountHole rotateAmountCapture) sp)
+                | Just matchInner <- recursiveAndCombine [arg] [sp]
+                , let matchRotateAmount =
+                          emptyMatch
+                              { rotateAmountCapturesMap =
+                                    Map.fromList [(rotateAmountCapture, ra)]
+                              } ->
+                    Just $ unionMatch matchInner matchRotateAmount
             _ -> Nothing
 
 -- |
@@ -536,6 +577,8 @@ match (mp, n) outerWH =
 turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
+-- |
+--
 buildFromPatternPower :: Match -> PatternPower -> PowerValue
 buildFromPatternPower match pp =
     case pp of
@@ -549,6 +592,21 @@ buildFromPatternPower match pp =
         PPowerSum pp1 pp2 ->
             (buildFromPatternPower match pp1) +
             (buildFromPatternPower match pp2)
+
+-- |
+--
+buildFromPatternRotateAmount :: Match -> PatternRotateAmount -> RotateAmount
+buildFromPatternRotateAmount match pra =
+    case pra of
+        PRotateAmountHole rotateAmountCapture
+            | Just am <-
+                 Map.lookup rotateAmountCapture (rotateAmountCapturesMap match) ->
+                am
+        PRotateAmountSum pra1 pra2 ->
+            zipWith
+                (+)
+                (buildFromPatternRotateAmount match pra1)
+                (buildFromPatternRotateAmount match pra2)
 
 -- |
 --
@@ -582,6 +640,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PScalarConst val -> diffConst [] val
             PSumList ptl ->
                 sumManyDiff originalMp . buildFromPatternList exp match $ ptl
+            PMulList ptl ->
+                mulManyDiff originalMp . buildFromPatternList exp match $ ptl
             PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
             PMul sps -> mulManyDiff originalMp . map buildFromPattern' $ sps
             PNeg sp ->
@@ -627,6 +687,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
             PPower sp pp ->
                 let val = buildFromPatternPower match pp
                  in applyDiff' (unary (Power val)) [buildFromPattern' sp]
+            PRotate pra sp ->
+                let rotateAmount = buildFromPatternRotateAmount match pra
+                 in applyDiff'
+                        (unary (Rotate rotateAmount))
+                        [buildFromPattern' sp]
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

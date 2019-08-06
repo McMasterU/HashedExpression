@@ -158,3 +158,16 @@ spec = do
             exp (log x1) `shouldSimplifyTo` x1
             log (exp x2) `shouldSimplifyTo` x2
             exp (log x2) `shouldSimplifyTo` x2
+        specify "rotate rules" $ do
+            rotate 1 (rotate 2 x1) `shouldSimplifyTo` rotate 3 x1
+            rotate 2 (rotate 3 x1) `shouldSimplifyTo` rotate 5 x1
+            rotate (1, 1) (rotate (2, 3) x2) `shouldSimplifyTo` rotate (3, 4) x2
+            rotate (0, 1) (rotate (2, -3) x2) `shouldSimplifyTo`
+                rotate (2, -2) x2
+            rotate (0, 0, 0) x3 `shouldSimplifyTo` x3
+            rotate (2, 3, 4) (s *. y3) `shouldSimplifyTo` s *.
+                rotate (2, 3, 4) y3
+            rotate (2, 3) (sum [x2, y2, z2]) `shouldSimplifyTo`
+                sum (map (rotate (2, 3)) [x2, y2, z2])
+            rotate (2, 3) (product [x2, y2, z2]) `shouldSimplifyTo`
+                product (map (rotate (2, 3)) [x2, y2, z2])

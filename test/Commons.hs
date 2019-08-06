@@ -378,8 +378,14 @@ genOneR =
     , (1, fromUnaryOneR (^ 2))
     , (1, fromScaleOneR)
     , (1, fromOneCOneR)
+    , (2, fromRotateOneR)
     ]
   where
+    fromRotateOneR :: Gen (Expression One R, Vars)
+    fromRotateOneR = do
+        on <- operandOneR
+        amount <- elements [-9 .. 9]
+        return (rotate amount $ fst on, snd on)
     fromNaryOneR ::
            ([Expression One R] -> Expression One R)
         -> Gen (Expression One R, Vars)

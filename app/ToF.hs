@@ -108,4 +108,3 @@ tof2DUp1 size@(sx, sy) =
         tZeroOnBottom = mask <.> (t * t)
         problem = constructProblem (vMatchesT + tZeroOnBottom) vars
      in generateProblemCode valMaps problem
-
