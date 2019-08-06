@@ -248,6 +248,8 @@ rotateRules =
     , rotate amount (sum xs) |.~~~~~~> sum (mapL (rotate amount) xs)
     , rotate amount (product xs) |.~~~~~~> product (mapL (rotate amount) xs)
     , rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y
+    , rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~>
+      (x <.> y)
     ]
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands

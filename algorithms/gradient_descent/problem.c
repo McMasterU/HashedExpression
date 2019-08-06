@@ -8,7 +8,7 @@ const int MEM_SIZE = 914;
 const int var_size[NUM_VARIABLES] = {100};
 const int var_offset[NUM_VARIABLES] = {100};
 const int partial_derivative_offset[NUM_VARIABLES] = {304};
-const int objective_offset = 708;
+const int objective_offset = 709;
 double ptr[MEM_SIZE];
 
 
@@ -152,7 +152,7 @@ void evaluate_partial_derivatives_and_objective() {
   }
   (ptr[202]) = 1.0;
   (ptr[404]) = (ptr[712]) + (ptr[202]);
-  (ptr[708]) = sqrt(ptr[404]);
+  (ptr[709]) = sqrt(ptr[404]);
   (ptr[200]) = -1.0;
   (ptr[201]) = -2.0;
   {
@@ -168,7 +168,7 @@ void evaluate_partial_derivatives_and_objective() {
     double acc = 0;
     int i;
     for (i = 0; i < 100; i++) {
-      acc += (ptr[814 + i]) * (ptr[814 + i]);
+      acc += (ptr[100 + i]) * (ptr[100 + i]);
     }
     (ptr[711]) = acc;
   }
@@ -181,8 +181,8 @@ void evaluate_partial_derivatives_and_objective() {
     (ptr[713]) = acc;
   }
   (ptr[203]) = (ptr[202]) + (ptr[405]) + (ptr[711]) + (ptr[713]);
-  (ptr[709]) = sqrt(ptr[203]);
-  (ptr[407]) = pow((ptr[709]),-1);
+  (ptr[708]) = sqrt(ptr[203]);
+  (ptr[407]) = pow((ptr[708]),-1);
   (ptr[406]) = (ptr[200]) * (ptr[407]);
   {
     int i;
