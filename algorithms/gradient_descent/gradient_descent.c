@@ -111,6 +111,7 @@ int main() {
         }
       }
 
+
       if (alpha >= beta) {
         printf("Iteration %d: couldn't find step that satisfies 2 Wolf conditions \n", iter);
         return 0;
