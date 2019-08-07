@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module HashedSolver where
 
@@ -9,6 +10,8 @@ import Data.Map (Map)
 import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Set as Set
 import Data.Set (Set)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import HashedCollect
 import HashedDerivative
@@ -27,6 +30,7 @@ import HashedInner
 import HashedNode
 import HashedToC
 import HashedUtils
+import System.Process (readProcess, readProcessWithExitCode)
 
 -- |
 --
@@ -114,7 +118,7 @@ constructProblem f@(Expression fId fMp) vars =
 
 -- |
 --
-generateProblemCode :: ValMaps -> Problem -> [String]
+generateProblemCode :: ValMaps -> Problem -> Code
 generateProblemCode valMaps Problem {..} =
     defineStuffs ++ assignVals ++ evaluatingCodes
   where
@@ -158,3 +162,21 @@ generateProblemCode valMaps Problem {..} =
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]
+
+-- | 
+--
+getMinimumGradientDescent :: Code -> IO ()
+getMinimumGradientDescent codes = do
+    let filePath = "algorithms/gradient_descent/problem.c"
+    TIO.writeFile filePath $ T.intercalate "\n" $ map T.pack codes
+    (exitCode, stdout, stderr) <-
+        readProcessWithExitCode "make" ["-C", "algorithms/gradient_descent"] ""
+    putStrLn stdout
+    putStrLn stderr
+    (exitCode, stdout, stderr) <-
+        readProcessWithExitCode
+            "algorithms/gradient_descent/gradient_descent"
+            []
+            ""
+    putStrLn stdout
+    putStrLn stderr

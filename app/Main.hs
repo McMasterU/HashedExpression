@@ -58,11 +58,9 @@ prod1 = fromJust . HashedOperation.sum
 main = do
     let exp = sumElements (x2 * log x2)
     let vars = Set.fromList ["x2"]
-    showExp $ collectDifferentials . exteriorDerivative vars $ exp
+    let problem = constructProblem exp vars
     let valMaps =
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
-    let problem = constructProblem exp vars
     let codes = generateProblemCode valMaps problem
-    writeFile "algorithms/gradient_descent/problem.c" $ intercalate "\n" codes
-    print "hello world"
+    getMinimumGradientDescent codes

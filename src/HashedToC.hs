@@ -48,6 +48,12 @@ data LookupPart
     | LookupImC
     deriving (Show, Eq, Ord)
 
+-- |
+--
+type CodeLine = String
+
+type Code = [CodeLine]
+
 -- | Make a memory map from an expression
 --
 makeMemMap :: ExpressionMap -> MemMap
@@ -89,23 +95,23 @@ localOffset shape indices
 --
 infixl 1 <<-, +=
 
-(<<-) :: String -> String -> String
+(<<-) :: String -> String -> CodeLine
 (<<-) a b = a ++ " = " ++ b ++ ";"
 
-(+=) :: String -> String -> String
+(+=) :: String -> String -> CodeLine
 (+=) a b = a ++ " += " ++ b ++ ";"
 
-space :: Int -> [String] -> [String]
+space :: Int -> Code -> Code
 space n = map (replicate n ' ' ++)
 
-scoped :: [String] -> [String]
+scoped :: Code -> Code
 scoped codes = ["{"] ++ space 2 codes ++ ["}"]
 
 [i, j, k, noOffset] = ["i", "j", "k", "0"]
 
 -- | Helper functions to generate codes
 --
-forWith :: String -> Shape -> ([String], [String], [String]) -> [String]
+forWith :: String -> Shape -> (Code, Code, Code) -> Code
 forWith iter shape (initCodes, codes, afterCodes)
     | not $ null shape =
         ["{"] ++
@@ -122,7 +128,7 @@ forWith iter shape (initCodes, codes, afterCodes)
         ["}"]
     | otherwise = initCodes ++ codes ++ afterCodes
 
-forRange :: String -> Int -> [String] -> [String]
+forRange :: String -> Int -> Code -> Code
 forRange iter range codes =
     ["{"] ++
     [ "  int " ++ iter ++ ";"
@@ -149,14 +155,14 @@ accessPtr memMap lookupPart mp nId offsetVal =
 
 -- | Generate evaluation code (usually an expression and its partial derivatives) given an ExpressionMap and indices of nodes to be computed
 --
-generateEvaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> [String]
+generateEvaluatingCodes :: MemMap -> (ExpressionMap, [Int]) -> Code
 generateEvaluatingCodes memMap (mp, rootIds) =
     concatMap genCode $ topologicalSortManyRoots (mp, rootIds)
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
     -- for with only body
-    for :: String -> Int -> [String] -> [String]
+    for :: String -> Int -> Code -> Code
     for iter nId scopeCodes = forWith iter (getShape nId) ([], scopeCodes, [])
     -- Real node
     at :: Int -> String -> String
@@ -168,7 +174,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
     imAt :: Int -> String -> String
     imAt = accessPtr memMap LookupImC mp
     infix 9 `at`, `imAt`, `reAt`
-    genCode :: Int -> [String] -- From node id to codes
+    genCode :: Int -> Code -- From node id to codes
     genCode n =
         let (shape, node) = retrieveInternal n mp
             elementType nId = retrieveElementType nId mp
@@ -330,7 +336,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
 
 -- | Code to assign values to those in val maps
 --
-generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> [String]
+generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> Code
 generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
     concatMap codesForVar vars
   where
@@ -341,7 +347,7 @@ generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
                 | Var varName <- retrieveNode nId mp = Just (nId, varName)
                 | otherwise = Nothing
          in mapMaybe toVar . IM.keys $ mp
-    codesForVar :: (Int, String) -> [String]
+    codesForVar :: (Int, String) -> Code
     codesForVar (n, varName)
         | Just val <- Map.lookup varName vm0 = [n `at` noOffset <<- show val]
         | Just array1d <- Map.lookup varName vm1 =
@@ -366,7 +372,7 @@ generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
 -- | Generate a fully working C program that compute the expression and print out the result
 --
 singleExpressionCProgram ::
-       (DimensionType d, NumType et) => ValMaps -> Expression d et -> [String]
+       (DimensionType d, NumType et) => ValMaps -> Expression d et -> Code
 singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
     [ "#include <math.h>" --
     , "#include <stdio.h>"
@@ -379,7 +385,7 @@ singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
   where
     infix 9 `at`
     -- for with only body
-    for :: String -> Int -> [String] -> [String]
+    for :: String -> Int -> Code -> Code
     for iter nId scopeCodes =
         forWith iter (retrieveShape nId mp) ([], scopeCodes, [])
     -- Real node
