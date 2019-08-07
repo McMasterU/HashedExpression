@@ -37,6 +37,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import ToF
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
@@ -58,9 +59,11 @@ prod1 = fromJust . HashedOperation.sum
 main = do
     let exp = sumElements (x2 * log x2)
     let vars = Set.fromList ["x2"]
-    let problem = constructProblem exp vars
+    showExp $ collectDifferentials . exteriorDerivative vars $ exp
     let valMaps =
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
-    let codes = generateProblemCode valMaps problem
-    getMinimumGradientDescent codes
+    let problem = constructProblem exp vars
+    let (problem, valMaps) = tof2DUp (10, 10)
+    let code = generateProblemCode valMaps problem
+    getMinimumGradientDescent code

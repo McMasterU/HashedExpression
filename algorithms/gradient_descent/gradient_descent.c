@@ -67,7 +67,6 @@ int main() {
 
     int iter = 0;
     while (iter < MAX_ITER) {
-      printf("iter = %d\n", iter);
       bool find_t = true;
 
       // save the state of all variables
@@ -140,14 +139,13 @@ int main() {
 
 
 
-        if (alpha >= beta) {
-          printf("Iteration %d: couldn't find step that satisfies 2 Wolf conditions, end searching here!\n", iter);
+        if (fabs(alpha - beta) < 1e-7) {
+//          printf("Iteration %d: couldn't find step that satisfies 2 wolf conditions, end bisection here and use the current t!\n", iter);
           find_t = false;
           break;
         }
       }
 
-      if (!find_t) break;
 
       if (any_partial_derivative_NaN()) {
         do {
@@ -177,6 +175,9 @@ int main() {
           }
         } while (t > 0 && any_partial_derivative_NaN());
       }
+
+      if (!find_t && t == 0) break;
+
 
       double max_step = 0;
       // OK now we have a good t, let's update

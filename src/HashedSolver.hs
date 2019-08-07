@@ -28,6 +28,8 @@ import HashedExpression
     )
 import HashedInner
 import HashedNode
+import HashedPrettify
+import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
@@ -51,7 +53,21 @@ data Problem =
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
         }
-    deriving (Show)
+
+instance Show Problem where
+    show Problem {..} =
+        intercalate "\n" $
+        [ "-------------- Objective Function --------------"
+        , debugPrint (expressionMap, objectiveId)
+        ] ++
+        map showPartial variables
+      where
+        showPartial var =
+            intercalate
+                "\n"
+                [ "----------------∂f/∂(" ++ varName var ++ ")-------------"
+                , debugPrint (expressionMap, partialDerivativeId var)
+                ]
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Zero Covector should be collected before passing to this function
@@ -73,8 +89,9 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 -- | Construct a Problem from given objective function
 --
 constructProblem :: Expression Zero R -> Set String -> Problem
-constructProblem f@(Expression fId fMp) vars =
-    let df@(Expression dfId dfMp) =
+constructProblem notSimplifedF vars =
+    let f@(Expression fId fMp) = simplify notSimplifedF
+        df@(Expression dfId dfMp) =
             collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
         name2Id :: Map String Int
