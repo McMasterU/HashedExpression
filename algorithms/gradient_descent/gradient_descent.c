@@ -18,7 +18,7 @@ extern void evaluate_partial_derivatives_and_objective();
 
 const double c1 = 1e-4;
 const double c2 = 0.9;
-const int MAX_ITER = 1000;
+const int MAX_ITER = 10000;
 const double PRECISION = 1e-6;
 
 double random_in(double min, double max) {
@@ -88,7 +88,6 @@ int main() {
         }
       }
 
-//      printf("minus_dot_grad = %f\n", minus_dot_grad);
       // find the step t that satisfy 2 wolf conditions
       double alpha = 0; // lower bound
       double beta = oo;
@@ -140,43 +139,43 @@ int main() {
 
 
         if (fabs(alpha - beta) < 1e-7) {
-//          printf("Iteration %d: couldn't find step that satisfies 2 wolf conditions, end bisection here and use the current t!\n", iter);
           find_t = false;
           break;
         }
       }
 
 
-      if (any_partial_derivative_NaN()) {
-        do {
-          t = t / 2;
-          cnt = 0;
-          for (i = 0; i < NUM_VARIABLES; i++) {
-            for (j = 0; j < var_size[i]; j++) {
-              var_temp[cnt] = ptr[var_offset[i] + j];
-              cnt++;
-            }
+      while (t > 0 && any_partial_derivative_NaN()) {
+        t = t / 2;
+        cnt = 0;
+        for (i = 0; i < NUM_VARIABLES; i++) {
+          for (j = 0; j < var_size[i]; j++) {
+            var_temp[cnt] = ptr[var_offset[i] + j];
+            cnt++;
           }
+        }
 
-          cnt = 0;
-          for (i = 0; i < NUM_VARIABLES; i++) {
-            for (j = 0; j < var_size[i]; j++) {
-              ptr[var_offset[i] + j] -= t * grad_temp[cnt];
-              cnt++;
-            }
+        cnt = 0;
+        for (i = 0; i < NUM_VARIABLES; i++) {
+          for (j = 0; j < var_size[i]; j++) {
+            ptr[var_offset[i] + j] -= t * grad_temp[cnt];
+            cnt++;
           }
-          evaluate_partial_derivatives_and_objective();
-          cnt = 0;
-          for (i = 0; i < NUM_VARIABLES; i++) {
-            for (j = 0; j < var_size[i]; j++) {
-              ptr[var_offset[i] + j] = var_temp[cnt];
-              cnt++;
-            }
+        }
+        evaluate_partial_derivatives_and_objective();
+        cnt = 0;
+        for (i = 0; i < NUM_VARIABLES; i++) {
+          for (j = 0; j < var_size[i]; j++) {
+            ptr[var_offset[i] + j] = var_temp[cnt];
+            cnt++;
           }
-        } while (t > 0 && any_partial_derivative_NaN());
+        }
       }
 
-      if (!find_t && t == 0) break;
+      if (!find_t && t == 0) {
+        printf("Couldn't move further, stop gradient descent here. \n");
+        break;
+      }
 
 
       double max_step = 0;
@@ -191,7 +190,6 @@ int main() {
         }
       }
       evaluate_partial_derivatives_and_objective();
-//      printf("ptr[objective_offset] = %f\n", ptr[objective_offset]);
       iter++;
       if (max_step < PRECISION) break;
 

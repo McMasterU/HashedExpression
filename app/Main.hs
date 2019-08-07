@@ -57,13 +57,13 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
-    let exp = sumElements (x2 * log x2)
+    let exp = norm2 (x2 - y2) + norm1 (x2 - y2) -- + (x2 <.> log x2)
     let vars = Set.fromList ["x2"]
     showExp $ collectDifferentials . exteriorDerivative vars $ exp
     let valMaps =
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
     let problem = constructProblem exp vars
-    let (problem, valMaps) = tof2DUp (10, 10)
+--    let (problem, valMaps) = tof2DUp (10, 10)
     let code = generateProblemCode valMaps problem
     getMinimumGradientDescent code
