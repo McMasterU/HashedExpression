@@ -43,68 +43,107 @@ import Prelude hiding
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
-import Data.STRef.Strict
 import HashedCollect
 import HashedSolver
-import HashedToC (singleExpressionCProgram)
+import HashedToC (Code, singleExpressionCProgram)
 import HashedUtils
-import HashedVar
-import Test.Hspec
-import Test.QuickCheck hiding (scale)
 
-sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum1 = fromJust . HashedOperation.sum
+vxName :: String
+vxName = "vx"
 
-prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-prod1 = fromJust . HashedOperation.sum
+vyName :: String
+vyName = "vy"
 
-tof2DTimeVelocityConstraint ::
-       (Int, Int)
-    -> (Expression Zero R, Expression Two R, Expression Two R, Expression Two R)
-tof2DTimeVelocityConstraint size
-        -- velocity n-dim array of vectors of the same dimension
-        -- 2d means it is a physics experiment
-        -- 3d is real flow
-        -- we don't have vector variables, so we need multiple variables
- =
-    let vx = var2d size "vx"
-        vy = var2d size "vy"
-        t = var2d size "t"
-        -- up/down neighbours
-        tup = rotate (0, -1) t
-        vyup = rotate (0, -1) vy
-        vxup = rotate (0, -1) vx
-        vyuphalf = const 0.5 *. (vy + vyup)
-        vxuphalf = const 0.5 *. (vx + vxup)
-        vMatchesTud =
-            (tup - t) * (vxuphalf * vxuphalf + vyuphalf * vyuphalf) - vxuphalf
-        -- left/right neighbours
-        tright = rotate (-1, 0) t
-        vxright = rotate (-1, 0) vx
-        vyright = rotate (-1, 0) vy
-        vxrighthalf = const 0.5 *. (vx + vxright)
-        vyrighthalf = const 0.5 *. (vy + vyright)
-        vMatchesTrl =
-            (tright - t) *
-            (vxrighthalf * vxrighthalf + vyrighthalf * vyrighthalf) -
-            vyrighthalf
-     in (vMatchesTud <.> vMatchesTud + vMatchesTrl <.> vMatchesTrl, vx, vy, t)
+maskName :: String
+maskName = "mask"
 
-tof2DUp1 :: (Int, Int) -> [String]
-tof2DUp1 size@(sx, sy) =
-    let mask = var2d size "mask"
-        (vMatchesT, vx, vy, t) = tof2DTimeVelocityConstraint size
-        vars = Set.fromList ["t"]
+tUpMaskName = "tUpMaskName"
+
+tRightMaskName = "tRightMaskName"
+
+tName :: String
+tName = "t"
+
+tof2DTimeVelocityConstraint :: (Int, Int) -> (Expression Zero R, ValMaps)
+tof2DTimeVelocityConstraint size@(size1, size2) =
+    let up, right :: Expression Two R -> Expression Two R
+        up = rotate (-1, 0)
+        right = rotate (0, 1)
+        --
+        vx = var2d size vxName
+        vy = var2d size vyName
+        t = var2d size tName
+        -- t
+        tUpMask = var2d size tUpMaskName
+        tRightMask = var2d size tRightMaskName
+        tUp = up t
+        tRight = right t
+        -- vx
+        vxUp = up vx
+        vxUpBorder = const 0.5 *. (vx + vxUp)
+        vxRight = right vx
+        vxRightBorder = const 0.5 *. (vx + vxRight)
+        -- vy
+        vyUp = up vy
+        vyUpBorder = const 0.5 *. (vy + vyUp)
+        vyRight = right vy
+        vyRightBorder = const 0.5 *. (vy + vyRight)
+        -- match up
+        matchUp =
+            (tUp - t) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+            vyUpBorder
+        -- match right
+        matchRight =
+            (tRight - t) *
+            (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
+            vxRightBorder
+        -- match objective 
+        matchObjective =
+            tUpMask <.> (matchUp * matchUp) +
+            tRightMask <.> (matchRight * matchRight)
+        -- necessary values
         valMaps =
-            emptyVms |>
-            withVm2
-                (fromList
-                     [ ("vx", listArray ((0, 0), (sx - 1, sy - 1)) $ repeat 0)
-                     , ("vy", listArray ((0, 0), (sx - 1, sy - 1)) $ repeat 1)
-                     , ( "mask"
-                       , listArray ((0, 0), (sx - 1, sy - 1)) $
-                         (replicate sy 1) ++ repeat 0)
-                     ])
+            emptyVms
+                { vm2 =
+                      fromList
+                          [ ( tUpMaskName
+                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                              replicate (size1 * size2 - size2) 1 ++
+                              replicate size2 0)
+                          , ( tRightMaskName
+                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                              concat $
+                              replicate size1 (0 : replicate (size2 - 1) 1))
+                          ]
+                }
+     in (matchObjective, valMaps)
+
+tof2DUp :: (Int, Int) -> (Problem, ValMaps)
+tof2DUp size@(size1, size2) =
+    let vx = var2d size vxName
+        vy = var2d size vyName
+        t = var2d size tName
+        mask = var2d size maskName
+        (matchObjective, predefinedValMaps) = tof2DTimeVelocityConstraint size
+        vars = Set.fromList [tName]
         tZeroOnBottom = mask <.> (t * t)
-        problem = constructProblem (vMatchesT + tZeroOnBottom) vars
-     in generateProblemCode valMaps problem
+        objectiveFn = matchObjective + tZeroOnBottom
+        valMaps =
+            emptyVms
+                { vm2 =
+                      fromList
+                          [ ( vxName
+                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                              repeat 0)
+                          , ( vyName
+                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                              repeat (-1))
+                          , ( maskName
+                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                              replicate (size1 * size2 - size2) 0 ++
+                              replicate size2 1)
+                          ]
+                }
+        finalValMaps = mergeValMaps valMaps predefinedValMaps
+        problem = constructProblem objectiveFn vars
+     in (problem, finalValMaps)

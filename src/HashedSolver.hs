@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module HashedSolver where
 
@@ -9,6 +10,8 @@ import Data.Map (Map)
 import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Set as Set
 import Data.Set (Set)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import HashedCollect
 import HashedDerivative
@@ -25,8 +28,11 @@ import HashedExpression
     )
 import HashedInner
 import HashedNode
+import HashedPrettify
+import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
+import System.Process (readProcess, readProcessWithExitCode)
 
 -- |
 --
@@ -47,7 +53,21 @@ data Problem =
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
         }
-    deriving (Show)
+
+instance Show Problem where
+    show Problem {..} =
+        intercalate "\n" $
+        [ "-------------- Objective Function --------------"
+        , debugPrint (expressionMap, objectiveId)
+        ] ++
+        map showPartial variables
+      where
+        showPartial var =
+            intercalate
+                "\n"
+                [ "----------------∂f/∂(" ++ varName var ++ ")-------------"
+                , debugPrint (expressionMap, partialDerivativeId var)
+                ]
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Zero Covector should be collected before passing to this function
@@ -69,8 +89,9 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 -- | Construct a Problem from given objective function
 --
 constructProblem :: Expression Zero R -> Set String -> Problem
-constructProblem f@(Expression fId fMp) vars =
-    let df@(Expression dfId dfMp) =
+constructProblem notSimplifedF vars =
+    let f@(Expression fId fMp) = simplify notSimplifedF
+        df@(Expression dfId dfMp) =
             collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
         name2Id :: Map String Int
@@ -114,7 +135,7 @@ constructProblem f@(Expression fId fMp) vars =
 
 -- |
 --
-generateProblemCode :: ValMaps -> Problem -> [String]
+generateProblemCode :: ValMaps -> Problem -> Code
 generateProblemCode valMaps Problem {..} =
     defineStuffs ++ assignVals ++ evaluatingCodes
   where
@@ -158,3 +179,21 @@ generateProblemCode valMaps Problem {..} =
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]
+
+-- | 
+--
+getMinimumGradientDescent :: Code -> IO ()
+getMinimumGradientDescent codes = do
+    let filePath = "algorithms/gradient_descent/problem.c"
+    TIO.writeFile filePath $ T.intercalate "\n" $ map T.pack codes
+    (exitCode, stdout, stderr) <-
+        readProcessWithExitCode "make" ["-C", "algorithms/gradient_descent"] ""
+    putStrLn stdout
+    putStrLn stderr
+    (exitCode, stdout, stderr) <-
+        readProcessWithExitCode
+            "algorithms/gradient_descent/gradient_descent"
+            []
+            ""
+    putStrLn stdout
+    putStrLn stderr

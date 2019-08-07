@@ -37,6 +37,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import ToF
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
@@ -63,6 +64,6 @@ main = do
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
     let problem = constructProblem exp vars
-    let codes = generateProblemCode valMaps problem
-    writeFile "algorithms/gradient_descent/problem.c" $ intercalate "\n" codes
-    print "hello world"
+    let (problem, valMaps) = tof2DUp (10, 10)
+    let code = generateProblemCode valMaps problem
+    getMinimumGradientDescent code
