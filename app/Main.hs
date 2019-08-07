@@ -64,6 +64,6 @@ main = do
             emptyVms |>
             withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
     let problem = constructProblem exp vars
---    let (problem, valMaps) = tof2DUp (10, 10)
+    let (problem, valMaps) = tof2DUp (10, 10)
     let code = generateProblemCode valMaps problem
     getMinimumGradientDescent code
