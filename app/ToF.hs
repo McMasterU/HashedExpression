@@ -65,7 +65,7 @@ tName :: String
 tName = "t"
 
 tof2DTimeVelocityConstraint :: (Int, Int) -> (Expression Zero R, ValMaps)
-tof2DTimeVelocityConstraint size@(size1, size2) =
+tof2DTimeVelocityConstraint size@(row, column) =
     let up, right :: Expression Two R -> Expression Two R
         up = rotate (-1, 0)
         right = rotate (0, 1)
@@ -90,11 +90,11 @@ tof2DTimeVelocityConstraint size@(size1, size2) =
         vyRightBorder = const 0.5 *. (vy + vyRight)
         -- match up
         matchUp =
-            (tUp - t) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+            (t - tUp) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
             vyUpBorder
         -- match right
         matchRight =
-            (tRight - t) *
+            (t - tRight) *
             (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
             vxRightBorder
         -- match objective 
@@ -107,19 +107,19 @@ tof2DTimeVelocityConstraint size@(size1, size2) =
                 { vm2 =
                       fromList
                           [ ( tUpMaskName
-                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                              replicate (size1 * size2 - size2) 1 ++
-                              replicate size2 0)
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              replicate ((row - 1) * column) 1 ++
+                              replicate column 0)
                           , ( tRightMaskName
-                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                            , listArray ((0, 0), (row - 1, column - 1)) $
                               concat $
-                              replicate size1 (0 : replicate (size2 - 1) 1))
+                              replicate row (0 : replicate (column - 1) 1))
                           ]
                 }
      in (matchObjective, valMaps)
 
 tof2DUp :: (Int, Int) -> (Problem, ValMaps)
-tof2DUp size@(size1, size2) =
+tof2DUp size@(row, column) =
     let vx = var2d size vxName
         vy = var2d size vyName
         t = var2d size tName
@@ -133,15 +133,15 @@ tof2DUp size@(size1, size2) =
                 { vm2 =
                       fromList
                           [ ( vxName
-                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                            , listArray ((0, 0), (row - 1, column - 1)) $
                               repeat 0)
                           , ( vyName
-                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                              repeat (-1))
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              repeat 1)
                           , ( maskName
-                            , listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                              replicate (size1 * size2 - size2) 0 ++
-                              replicate size2 1)
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              replicate ((row - 1) * column) 0 ++
+                              replicate column 1)
                           ]
                 }
         finalValMaps = mergeValMaps valMaps predefinedValMaps

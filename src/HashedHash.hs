@@ -14,7 +14,7 @@ import HashedExpression hiding ((*), (+), (-))
 -- See https://cp-algorithms.com/string/string-hashing.html
 --
 modulo :: Int
-modulo = 1000000007
+modulo = 253931039382791
 
 -- | Hash string consists of alphabet and numeric
 --
