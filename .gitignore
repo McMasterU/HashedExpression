@@ -6,3 +6,4 @@ dist-newstyle
 *.iml
 C/**
 out/
+*.txt
