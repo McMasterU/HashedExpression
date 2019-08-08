@@ -40,6 +40,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import ToF.VelocityGenerator
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
@@ -99,8 +100,7 @@ tof2DTimeVelocityConstraint size@(row, column) =
              (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
              vxRightBorder) *
             vxRightBorder
-        -- match objective 
-        otherObjective = (tUpMask <.> matchUp + tRightMask <.> matchRight) ^ 2
+        -- match objective
         matchObjective =
             tUpMask <.> (matchUp * matchUp) +
             tRightMask <.> (matchRight * matchRight)
@@ -144,6 +144,38 @@ tof2DUp size@(row, column) =
                           , ( vyName
                             , listArray ((0, 0), (row - 1, column - 1)) $
                               repeat 1)
+                          , ( maskName
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              replicate ((row - 1) * column) 0 ++
+                              replicate column 1)
+                          ]
+                }
+        finalValMaps = mergeValMaps valMaps predefinedValMaps
+        problem = constructProblem objectiveFn vars
+     in (problem, finalValMaps)
+
+-- |
+--
+tof2DStraight :: (Problem, ValMaps)
+tof2DStraight =
+    let size = (10, 10)
+        row = 10
+        column = 10
+        vx = var2d size vxName
+        vy = var2d size vyName
+        t = var2d size tName
+        mask = var2d size maskName
+        (vxVal, vyVal) = straightFlow (10, 10) 3 4 0.2
+        (matchObjective, predefinedValMaps) = tof2DTimeVelocityConstraint size
+        vars = Set.fromList [tName]
+        tZeroOnBottom = mask <.> (t * t)
+        objectiveFn = matchObjective + tZeroOnBottom
+        valMaps =
+            emptyVms
+                { vm2 =
+                      fromList
+                          [ ( vxName, vxVal)
+                          , ( vyName, vyVal)
                           , ( maskName
                             , listArray ((0, 0), (row - 1, column - 1)) $
                               replicate ((row - 1) * column) 0 ++
