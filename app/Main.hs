@@ -71,6 +71,6 @@ main = do
     
 
 --main = do
---    let (vX, vY) = straightFlow (10, 10) 3 4 0.2
+--    let (vX, vY) = quarterCircleFlow (10, 10) 3 4 0.2
 --    putStrLn $ unwords . map show . elems $ vX
 --    putStrLn $ unwords . map show . elems $ vY

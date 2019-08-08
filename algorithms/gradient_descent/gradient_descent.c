@@ -211,6 +211,7 @@ int main() {
           printf(j == var_size[i] - 1 ? "]\n" : ", ");
         }
       }
+      printf("\n");
       break;
     }
   }
