@@ -66,8 +66,9 @@ main = do
 --    let problem = constructProblem exp vars
     let (problem, valMaps) = tof2DStraight
     let code = generateProblemCode valMaps problem
-    print valMaps
-    getMinimumGradientDescent code
+    let filePath = "algorithms/gradient_descent/problem.c"
+    writeFile filePath $ intercalate "\n" code
+    
 
 --main = do
 --    let (vX, vY) = straightFlow (10, 10) 3 4 0.2
