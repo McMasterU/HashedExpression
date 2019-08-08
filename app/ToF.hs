@@ -90,17 +90,21 @@ tof2DTimeVelocityConstraint size@(row, column) =
         vyRightBorder = const 0.5 *. (vy + vyRight)
         -- match up
         matchUp =
-            (t - tUp) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+            ((t - tUp) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+             vyUpBorder) *
             vyUpBorder
         -- match right
         matchRight =
-            (t - tRight) *
-            (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
+            ((t - tRight) *
+             (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
+             vxRightBorder) *
             vxRightBorder
         -- match objective 
+        otherObjective = (tUpMask <.> matchUp + tRightMask <.> matchRight) ^ 2
         matchObjective =
             tUpMask <.> (matchUp * matchUp) +
             tRightMask <.> (matchRight * matchRight)
+                    -- + regulizer
         -- necessary values
         valMaps =
             emptyVms
@@ -118,6 +122,8 @@ tof2DTimeVelocityConstraint size@(row, column) =
                 }
      in (matchObjective, valMaps)
 
+--        regulizer = ((const2d size 1 / (const2d size 1 + const2d size 100 * (vx * vx + vy * vy)))
+--                    * ((t - const2d size 10) * (t - const2d size 10))) <.> const2d size 1
 tof2DUp :: (Int, Int) -> (Problem, ValMaps)
 tof2DUp size@(row, column) =
     let vx = var2d size vxName

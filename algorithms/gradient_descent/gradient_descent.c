@@ -18,7 +18,7 @@ extern void evaluate_partial_derivatives_and_objective();
 
 const double c1 = 1e-4;
 const double c2 = 0.9;
-const int MAX_ITER = 10000;
+const int MAX_ITER = 4000;
 const double PRECISION = 1e-6;
 
 double random_in(double min, double max) {
