@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TupleSections #-}
 
-module ToF where
+module ToF.ToF where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM
@@ -104,7 +104,6 @@ tof2DTimeVelocityConstraint size@(row, column) =
         matchObjective =
             tUpMask <.> (matchUp * matchUp) +
             tRightMask <.> (matchRight * matchRight)
-
         -- necessary values
         valMaps =
             emptyVms
@@ -156,7 +155,8 @@ tof2DUp size@(row, column) =
 
 -- |
 --
-tof2DStraight :: (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
+tof2DStraight ::
+       (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
 tof2DStraight size@(row, column) start width scalingFactor =
     let vx = var2d size vxName
         vy = var2d size vyName
@@ -171,8 +171,8 @@ tof2DStraight size@(row, column) start width scalingFactor =
             emptyVms
                 { vm2 =
                       fromList
-                          [ ( vxName, vxVal)
-                          , ( vyName, vyVal)
+                          [ (vxName, vxVal)
+                          , (vyName, vyVal)
                           , ( maskName
                             , listArray ((0, 0), (row - 1, column - 1)) $
                               replicate ((row - 1) * column) 0 ++
@@ -185,7 +185,8 @@ tof2DStraight size@(row, column) start width scalingFactor =
 
 -- |
 --
-tof2DQuarterCircle :: (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
+tof2DQuarterCircle ::
+       (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
 tof2DQuarterCircle size@(row, column) start width scalingFactor =
     let vx = var2d size vxName
         vy = var2d size vyName
@@ -200,8 +201,8 @@ tof2DQuarterCircle size@(row, column) start width scalingFactor =
             emptyVms
                 { vm2 =
                       fromList
-                          [ ( vxName, vxVal)
-                          , ( vyName, vyVal)
+                          [ (vxName, vxVal)
+                          , (vyName, vyVal)
                           , ( maskName
                             , listArray ((0, 0), (row - 1, column - 1)) $
                               replicate ((row - 1) * column) 0 ++

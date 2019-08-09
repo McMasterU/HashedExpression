@@ -1,6 +1,6 @@
 module Main where
 
-import Data.Array 
+import Data.Array
 import qualified Data.IntMap.Strict as IM
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
@@ -37,7 +37,7 @@ import Prelude hiding
     , tan
     , tanh
     )
-import ToF
+import ToF.ToF
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
@@ -63,7 +63,5 @@ main = do
     let code = generateProblemCode valMaps problem
     let filePath = "algorithms/gradient_descent/problem.c"
     writeFile filePath $ intercalate "\n" code
-    
-
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
