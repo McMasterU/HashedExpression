@@ -57,8 +57,7 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
-    let (problem, valMaps, (vX, vY)) = tof2DStraight (15, 15) 5 5 0.15
-    print problem
+    let (problem, valMaps, (vX, vY)) = tof2DQuarterCircle (20, 20) 7 6 0.15
     putStrLn $ unwords . map show . elems $ vX
     putStrLn $ unwords . map show . elems $ vY
     let code = generateProblemCode valMaps problem
