@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TupleSections #-}
 
-module ToF where
+module ToF.ToF where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM
@@ -40,6 +40,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import ToF.VelocityGenerator
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
@@ -90,14 +91,16 @@ tof2DTimeVelocityConstraint size@(row, column) =
         vyRightBorder = const 0.5 *. (vy + vyRight)
         -- match up
         matchUp =
-            (t - tUp) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+            ((t - tUp) * (vxUpBorder * vxUpBorder + vyUpBorder * vyUpBorder) -
+             vyUpBorder) *
             vyUpBorder
         -- match right
         matchRight =
-            (t - tRight) *
-            (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
+            ((t - tRight) *
+             (vxRightBorder * vxRightBorder + vyRightBorder * vyRightBorder) -
+             vxRightBorder) *
             vxRightBorder
-        -- match objective 
+        -- match objective
         matchObjective =
             tUpMask <.> (matchUp * matchUp) +
             tRightMask <.> (matchRight * matchRight)
@@ -118,6 +121,8 @@ tof2DTimeVelocityConstraint size@(row, column) =
                 }
      in (matchObjective, valMaps)
 
+--        regulizer = ((const2d size 1 / (const2d size 1 + const2d size 100 * (vx * vx + vy * vy)))
+--                    * ((t - const2d size 10) * (t - const2d size 10))) <.> const2d size 1
 tof2DUp :: (Int, Int) -> (Problem, ValMaps)
 tof2DUp size@(row, column) =
     let vx = var2d size vxName
@@ -147,3 +152,63 @@ tof2DUp size@(row, column) =
         finalValMaps = mergeValMaps valMaps predefinedValMaps
         problem = constructProblem objectiveFn vars
      in (problem, finalValMaps)
+
+-- |
+--
+tof2DStraight ::
+       (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
+tof2DStraight size@(row, column) start width scalingFactor =
+    let vx = var2d size vxName
+        vy = var2d size vyName
+        t = var2d size tName
+        mask = var2d size maskName
+        (vxVal, vyVal) = straightFlow size start width scalingFactor
+        (matchObjective, predefinedValMaps) = tof2DTimeVelocityConstraint size
+        vars = Set.fromList [tName]
+        tZeroOnBottom = mask <.> (t * t)
+        objectiveFn = matchObjective + tZeroOnBottom
+        valMaps =
+            emptyVms
+                { vm2 =
+                      fromList
+                          [ (vxName, vxVal)
+                          , (vyName, vyVal)
+                          , ( maskName
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              replicate ((row - 1) * column) 0 ++
+                              replicate column 1)
+                          ]
+                }
+        finalValMaps = mergeValMaps valMaps predefinedValMaps
+        problem = constructProblem objectiveFn vars
+     in (problem, finalValMaps, (vxVal, vyVal))
+
+-- |
+--
+tof2DQuarterCircle ::
+       (Int, Int) -> Int -> Int -> Double -> (Problem, ValMaps, ToFVelocity)
+tof2DQuarterCircle size@(row, column) start width scalingFactor =
+    let vx = var2d size vxName
+        vy = var2d size vyName
+        t = var2d size tName
+        mask = var2d size maskName
+        (vxVal, vyVal) = quarterCircleFlow size start width scalingFactor
+        (matchObjective, predefinedValMaps) = tof2DTimeVelocityConstraint size
+        vars = Set.fromList [tName]
+        tZeroOnBottom = mask <.> (t * t)
+        objectiveFn = matchObjective + tZeroOnBottom
+        valMaps =
+            emptyVms
+                { vm2 =
+                      fromList
+                          [ (vxName, vxVal)
+                          , (vyName, vyVal)
+                          , ( maskName
+                            , listArray ((0, 0), (row - 1, column - 1)) $
+                              replicate ((row - 1) * column) 0 ++
+                              replicate column 1)
+                          ]
+                }
+        finalValMaps = mergeValMaps valMaps predefinedValMaps
+        problem = constructProblem objectiveFn vars
+     in (problem, finalValMaps, (vxVal, vyVal))
