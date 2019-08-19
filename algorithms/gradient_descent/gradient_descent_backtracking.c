@@ -1,5 +1,6 @@
 #include "problem.c"
 #include <math.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -40,6 +41,7 @@ bool any_partial_derivative_NaN() {
 }
 
 int main() {
+  srand(time(NULL));
   int i, j, cnt;
   int total_variable_size = 0;
   for (i = 0; i < NUM_VARIABLES; i++) {
