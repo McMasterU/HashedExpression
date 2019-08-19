@@ -57,11 +57,23 @@ prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
 main = do
-    let (problem, valMaps, (vX, vY)) = tof2DQuarterCircle (20, 20) 7 6 0.15
+    let (problem, valMaps, (vX, vY)) = tof2DQuarterCircle (50, 50) 30 10 0.15
     putStrLn $ unwords . map show . elems $ vX
     putStrLn $ unwords . map show . elems $ vY
     let code = generateProblemCode valMaps problem
-    let filePath = "algorithms/gradient_descent/problem.c"
+    let filePath = "algorithms/lbfgs/problem.c"
     writeFile filePath $ intercalate "\n" code
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
+
+--main = do
+--    let exp = (x2 - y2) <.> (x2 - y2)
+--    let vars = Set.fromList ["x2"]
+--    showExp $ collectDifferentials . exteriorDerivative vars $ exp
+--    let valMaps =
+--            emptyVms |>
+--            withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
+--    let problem = constructProblem exp vars
+--    print problem
+--    let codes = generateProblemCode valMaps problem
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
