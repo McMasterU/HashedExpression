@@ -56,6 +56,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x,
 
   return ptr[objective_offset];
 }
+
 static int progress(void *instance, const lbfgsfloatval_t *x,
     const lbfgsfloatval_t *g,
     const lbfgsfloatval_t fx,
@@ -67,6 +68,7 @@ static int progress(void *instance, const lbfgsfloatval_t *x,
   }
   return 0;
 }
+
 
 int main() {
   srand(time(NULL));
@@ -90,22 +92,26 @@ int main() {
     return 1;
   }
 
+  // assigning initial variables
   for (i = 0; i < N; i++) {
     x[i] = random_in(0.1, 1);
   }
 
+  // solve L-BFGS
   lbfgs_parameter_init(&param);
   ret = lbfgs(N, x, &fx, evaluate, progress, NULL, &param);
 
-  printf("f_min = %f at:\n", fx);
-  for (i = 0; i < NUM_VARIABLES; i++) {
-    printf("var[%d] = [", i);
-    for (j = 0; j < var_size[i]; j++) {
-      printf("%f", ptr[var_offset[i] + j]);
-      printf(j == var_size[i] - 1 ? "]\n" : ", ");
+
+  printf("Writing result to output.txt...\n");
+  FILE *fp = fopen("output.txt", "w");
+  if (fp) {
+    for (i = 0; i < NUM_VARIABLES; i++) {
+      for (j = 0; j < var_size[i]; j++) {
+        fprintf(fp, "%f ", ptr[var_offset[i] + j]);
+      }
     }
   }
-  printf("\n");
+  printf("Done\n");
 
   lbfgs_free(x);
   return 0;

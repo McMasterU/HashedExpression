@@ -193,7 +193,7 @@ int main() {
       }
       evaluate_partial_derivatives_and_objective();
       iter++;
-      if (iter / 100 > (iter - 1) / 100) {
+      if (iter / 1000 > (iter - 1) / 1000) {
         printf("iter = %d\n", iter);
         printf("ptr[objective_offset] = %f\n", ptr[objective_offset]);
       }
@@ -204,16 +204,16 @@ int main() {
     }
 
     if (!isnan(ptr[objective_offset])) {
-      printf("After %d iteration\n", iter);
-      printf("f_min = %f at:\n", ptr[objective_offset]);
-      for (i = 0; i < NUM_VARIABLES; i++) {
-        printf("var[%d] = [", i);
-        for (j = 0; j < var_size[i]; j++) {
-          printf("%f", ptr[var_offset[i] + j]);
-          printf(j == var_size[i] - 1 ? "]\n" : ", ");
+      printf("Writing result to output.txt...\n");
+      FILE *fp = fopen("output.txt", "w");
+      if (fp) {
+        for (i = 0; i < NUM_VARIABLES; i++) {
+          for (j = 0; j < var_size[i]; j++) {
+            fprintf(fp, "%f ", ptr[var_offset[i] + j]);
+          }
         }
       }
-      printf("\n");
+      printf("Done\n");
       break;
     }
   }
