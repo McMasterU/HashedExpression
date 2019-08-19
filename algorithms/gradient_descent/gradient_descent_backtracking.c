@@ -166,7 +166,7 @@ int main() {
       }
       evaluate_partial_derivatives_and_objective();
       iter++;
-      if (iter / 100 > (iter - 1) / 100) {
+      if (iter / 1000 > (iter - 1) / 1000) {
         printf("iter = %d\n", iter);
         printf("ptr[objective_offset] = %f\n", ptr[objective_offset]);
       }
@@ -181,6 +181,7 @@ int main() {
     }
 
     if (!isnan(ptr[objective_offset])) {
+      printf("f_min = %f\n", ptr[objective_offset]);
       printf("Writing result to output.txt...\n");
       FILE *fp = fopen("output.txt", "w");
       if (fp) {

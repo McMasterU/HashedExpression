@@ -204,6 +204,7 @@ int main() {
     }
 
     if (!isnan(ptr[objective_offset])) {
+      printf("f_min = %f\n", ptr[objective_offset]);
       printf("Writing result to output.txt...\n");
       FILE *fp = fopen("output.txt", "w");
       if (fp) {

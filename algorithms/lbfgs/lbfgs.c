@@ -101,7 +101,7 @@ int main() {
   lbfgs_parameter_init(&param);
   ret = lbfgs(N, x, &fx, evaluate, progress, NULL, &param);
 
-
+  printf("f_min = %f\n", fx);
   printf("Writing result to output.txt...\n");
   FILE *fp = fopen("output.txt", "w");
   if (fp) {
