@@ -91,7 +91,7 @@ int main() {
   }
 
   for (i = 0; i < N; i++) {
-    x[i] = i;
+    x[i] = random_in(0.1, 1);
   }
 
   lbfgs_parameter_init(&param);
