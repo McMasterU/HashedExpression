@@ -188,6 +188,7 @@ int main() {
           for (j = 0; j < var_size[i]; j++) {
             fprintf(fp, "%f ", ptr[var_offset[i] + j]);
           }
+          fprintf(fp, "\n");
         }
       }
       printf("Done\n");
