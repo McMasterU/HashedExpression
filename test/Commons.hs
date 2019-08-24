@@ -102,16 +102,15 @@ mergeVars = foldl f [[], [], [], []]
 
 -- |
 --
-genValMaps :: Vars -> Gen ValMaps
-genValMaps vars = do
+genValMap :: Vars -> Gen ValMaps
+genValMap vars = do
     let [names0d, names1d, names2d, names3d] = vars
-        -- vm0
     list0d <- vectorOf (length names0d) arbitrary
-    let vm0 = Map.fromList $ zip names0d list0d
-        -- vm1
+    let vm0 = Map.fromList . zip names0d $ map VScalar list0d
     list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
     let vm1 =
-            Map.fromList . zip names1d . map (listArray (0, vectorSize - 1)) $
+            Map.fromList .
+            zip names1d . map (V1D . listArray (0, vectorSize - 1)) $
             list1d
     list2d <-
         vectorOf (length names2d) . vectorOf (vectorSize * vectorSize) $
@@ -119,7 +118,7 @@ genValMaps vars = do
     let vm2 =
             Map.fromList .
             zip names2d .
-            map (listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
+            map (V2D . listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
             list2d
     list3d <-
         vectorOf (length names3d) .
@@ -129,11 +128,12 @@ genValMaps vars = do
             Map.fromList .
             zip names3d .
             map
-                (listArray
+                (V3D .
+                 listArray
                      ( (0, 0, 0)
                      , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
             list3d
-    return (ValMaps vm0 vm1 vm2 vm3)
+    return $ Map.unions [vm0, vm1, vm2, vm3]
 
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
 shouldApprox x y =
@@ -252,7 +252,7 @@ instance Show SuiteZeroR where
 instance Arbitrary SuiteZeroR where
     arbitrary = do
         (exp, vars) <- genZeroR
-        valMaps <- genValMaps vars
+        valMaps <- genValMap vars
         return $ SuiteZeroR exp valMaps
 
 -------------------------------------------------------------------------------
@@ -352,7 +352,7 @@ instance Show SuiteZeroC where
 instance Arbitrary SuiteZeroC where
     arbitrary = do
         (exp, names) <- genZeroC
-        valMaps <- genValMaps names
+        valMaps <- genValMap names
         return $ SuiteZeroC exp valMaps
 
 -------------------------------------------------------------------------------
@@ -463,7 +463,7 @@ instance Show SuiteOneR where
 instance Arbitrary SuiteOneR where
     arbitrary = do
         (exp, vars) <- genOneR
-        valMaps <- genValMaps vars
+        valMaps <- genValMap vars
         return $ SuiteOneR exp valMaps
 
 -------------------------------------------------------------------------------
@@ -576,7 +576,7 @@ instance Show SuiteOneC where
 instance Arbitrary SuiteOneC where
     arbitrary = do
         (exp, vars) <- genOneC
-        valMaps <- genValMaps vars
+        valMaps <- genValMap vars
         return $ SuiteOneC exp valMaps
 
 -------------------------------------------------------------------------------
@@ -688,7 +688,7 @@ instance Show SuiteTwoR where
 instance Arbitrary SuiteTwoR where
     arbitrary = do
         (exp, vars) <- genTwoR
-        valMaps <- genValMaps vars
+        valMaps <- genValMap vars
         return $ SuiteTwoR exp valMaps
 
 -------------------------------------------------------------------------------
@@ -804,7 +804,7 @@ instance Show SuiteTwoC where
 instance Arbitrary SuiteTwoC where
     arbitrary = do
         (exp, vars) <- genTwoC
-        valMaps <- genValMaps vars
+        valMaps <- genValMap vars
         return $ SuiteTwoC exp valMaps
 
 -------------------------------------------------------------------------------

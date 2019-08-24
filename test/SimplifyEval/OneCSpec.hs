@@ -50,7 +50,7 @@ prop_Add :: SuiteOneC -> SuiteOneC -> (Bool, Bool, Bool) -> Bool
 prop_Add (SuiteOneC exp1 valMaps1) (SuiteOneC exp2 valMaps2) (simplify1, simplify2, simplifySum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = union valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1
         | otherwise = exp1
@@ -70,7 +70,7 @@ prop_Multiply (SuiteOneC exp1 valMaps1) (SuiteOneC exp2 valMaps2) (simplify1, si
                   " * " ++
                   prettify exp2' ++ " not ~= " ++ prettify expMul' ++ " ----- " ++ show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = union valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1
         | otherwise = exp1

@@ -337,8 +337,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
 -- | Code to assign values to those in val maps
 --
 generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> Code
-generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
-    concatMap codesForVar vars
+generateAssignValueCodes valMaps memMap mp = concatMap codesForVar vars
   where
     at = accessPtr memMap LookupR mp
     vars :: [(Int, String)]
@@ -348,32 +347,33 @@ generateAssignValueCodes (ValMaps vm0 vm1 vm2 vm3) memMap mp =
                 | otherwise = Nothing
          in mapMaybe toVar . IM.keys $ mp
     codesForVar :: (Int, String) -> Code
-    codesForVar (n, varName)
-        | Just val <- Map.lookup varName vm0 = [n `at` noOffset <<- show val]
-        | Just array1d <- Map.lookup varName vm1 =
-            let assignIndex id = [n `at` show id <<- show (array1d ! id)]
-             in concatMap assignIndex $ indices array1d
-        | Just array2d <- Map.lookup varName vm2 =
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2) =
-                    [ n `at` show (localOffset shape [id1, id2]) <<-
-                      show (array2d ! (id1, id2))
-                    ]
-             in concatMap assignIndex $ indices array2d
-        | Just array3d <- Map.lookup varName vm3 =
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2, id3) =
-                    [ n `at` show (localOffset shape [id1, id2, id3]) <<-
-                      show (array3d ! (id1, id2, id2))
-                    ]
-             in concatMap assignIndex $ indices array3d
-        | otherwise = []
+    codesForVar (n, varName) =
+        case Map.lookup varName valMaps of
+            Just (VScalar val) -> [n `at` noOffset <<- show val]
+            Just (V1D array1d) ->
+                let assignIndex id = [n `at` show id <<- show (array1d ! id)]
+                 in concatMap assignIndex $ indices array1d
+            Just (V2D array2d) ->
+                let shape = retrieveShape n mp
+                    assignIndex (id1, id2) =
+                        [ n `at` show (localOffset shape [id1, id2]) <<-
+                          show (array2d ! (id1, id2))
+                        ]
+                 in concatMap assignIndex $ indices array2d
+            Just (V3D array3d) ->
+                let shape = retrieveShape n mp
+                    assignIndex (id1, id2, id3) =
+                        [ n `at` show (localOffset shape [id1, id2, id3]) <<-
+                          show (array3d ! (id1, id2, id2))
+                        ]
+                 in concatMap assignIndex $ indices array3d
+            _ -> []
 
 -- | Generate a fully working C program that compute the expression and print out the result
 --
 singleExpressionCProgram ::
        (DimensionType d, NumType et) => ValMaps -> Expression d et -> Code
-singleExpressionCProgram valMaps@(ValMaps vm0 vm1 vm2 vm3) expr =
+singleExpressionCProgram valMaps expr =
     [ "#include <math.h>" --
     , "#include <stdio.h>"
     , "#include <stdlib.h>"

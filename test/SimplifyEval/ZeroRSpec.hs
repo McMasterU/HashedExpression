@@ -51,7 +51,7 @@ prop_Add :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
 prop_Add (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifySum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = union valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1
         | otherwise = exp1
@@ -71,7 +71,7 @@ prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, 
                   " * " ++
                   prettify exp2' ++ " not ~= " ++ prettify expMul' ++ " ----- " ++ show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = union valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1
         | otherwise = exp1

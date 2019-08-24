@@ -65,7 +65,6 @@ main = do
     writeFile filePath $ intercalate "\n" code
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
-
 --main = do
 --    let exp = (x2 - y2) <.> (x2 - y2)
 --    let vars = Set.fromList ["x2"]
