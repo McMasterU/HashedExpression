@@ -131,8 +131,8 @@ instance Evaluable Zero R Double where
         | [] <- retrieveShape n mp =
             case retrieveNode n mp of
                 Var name ->
-                    case Map.lookup name $ vm0 valMap of
-                        Just val -> val
+                    case Map.lookup name valMap of
+                        Just (VScalar val) -> val
                         _ -> error "no value associated with the variable"
                 Const val -> val
                 Sum R args -> sum . map (eval valMap . expZeroR mp) $ args
@@ -295,8 +295,8 @@ instance Evaluable One R (Array Int Double) where
                 foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
              in case retrieveNode n mp of
                     Var name ->
-                        case Map.lookup name $ vm1 valMap of
-                            Just val -> val
+                        case Map.lookup name valMap of
+                            Just (V1D val) -> val
                             _ -> error "no value associated with the variable"
                     Const val -> listArray (0, size - 1) $ replicate size val
                     Sum R args ->
@@ -447,8 +447,8 @@ instance Evaluable Two R (Array (Int, Int) Double) where
                 foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
              in case retrieveNode n mp of
                     Var name ->
-                        case Map.lookup name $ vm2 valMap of
-                            Just val -> val
+                        case Map.lookup name valMap of
+                            Just (V2D val) -> val
                             _ ->
                                 error $
                                 "no value associated with the variable" ++ name
@@ -626,8 +626,8 @@ instance Evaluable Three R (Array (Int, Int, Int) Double) where
                 foldl1' f (x:xs) = zipWith f x (foldl1' f xs)
              in case retrieveNode n mp of
                     Var name ->
-                        case Map.lookup name $ vm3 valMap of
-                            Just val -> val
+                        case Map.lookup name valMap of
+                            Just (V3D val) -> val
                             _ -> error "no value associated with the variable"
                     Const val ->
                         listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $

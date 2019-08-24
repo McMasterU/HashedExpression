@@ -2,6 +2,7 @@ module HashedInterpSpec where
 
 import Commons
 import Data.Complex (Complex(..))
+import Data.Map.Strict (union)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
 import HashedExpression
@@ -48,7 +49,7 @@ prop_AddZeroR :: SuiteZeroR -> SuiteZeroR -> Bool
 prop_AddZeroR (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) =
     eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
@@ -56,7 +57,7 @@ prop_MultiplyZeroR :: SuiteZeroR -> SuiteZeroR -> Bool
 prop_MultiplyZeroR (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) =
     eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
@@ -64,7 +65,7 @@ prop_AddZeroC :: SuiteZeroC -> SuiteZeroC -> Bool
 prop_AddZeroC (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) =
     eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
@@ -72,7 +73,7 @@ prop_MultiplyZeroC :: SuiteZeroC -> SuiteZeroC -> Bool
 prop_MultiplyZeroC (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) =
     eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
   where
-    valMaps = mergeValMaps valMaps1 valMaps2
+    valMaps = valMaps1 `union` valMaps2
 
 -- |
 --

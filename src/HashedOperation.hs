@@ -201,20 +201,7 @@ huber ::
     => Double
     -> Expression d R
     -> Expression d R
-huber delta e = piecewise [-delta, delta] e [lessThan, inRange, largerThan]
-  where
-    deltaVector =
-        constWithShape (expressionShape e) (delta * delta) :: Expression d R
-    inRange = const 0.5 *. (e * e)
-    lessThan = negate (e * deltaVector) - const 0.5 *. deltaVector
-    largerThan = e * deltaVector - const 0.5 *. deltaVector
-
-huber2 ::
-       forall d. (DimensionType d)
-    => Double
-    -> Expression d R
-    -> Expression d R
-huber2 delta e = piecewise [delta] (e * e) [lessThan, largerThan]
+huber delta e = piecewise [delta] (e * e) [lessThan, largerThan]
   where
     deltaVector =
         constWithShape (expressionShape e) (delta * delta) :: Expression d R
