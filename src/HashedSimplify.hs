@@ -108,7 +108,7 @@ simplifyingTransformation = secondPass . firstPass
 -- | Turn a modification to a recursive transformation
 --
 toRecursiveSimplification :: Modification -> Transformation
-toRecursiveSimplification = toTransformation . makeRecursive True
+toRecursiveSimplification = toTransformation . makeRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)

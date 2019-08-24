@@ -266,17 +266,25 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
+-- | Operand order in the operation
+--
+data OperandOrder
+    = Reorder
+    | LeaveUnchanged
+    deriving (Eq)
+
 -- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
 --
-makeRecursive :: Bool -> Modification -> Modification
-makeRecursive sortSumMul smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+makeRecursive :: OperandOrder -> Modification -> Modification
+makeRecursive operandOrder smp exp@(mp, headN) =
+    fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
     f diffs nId =
         let children = nodeArgs $ retrieveNode nId mp
             childrenDiffs = map (fromJust . flip IM.lookup diffs) children
-            nodeDiff = combineChildrenDiffs sortSumMul mp nId childrenDiffs
+            nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
             newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
             ExpressionDiff exEntries newId = smp newExp
             diff =
@@ -309,14 +317,19 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 -- and return the combined difference
 --
 combineChildrenDiffs ::
-       Bool -> ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs sortSumMul contextMp n childrenDiffs
+       OperandOrder
+    -> ExpressionMap
+    -> Int
+    -> [ExpressionDiff]
+    -> ExpressionDiff
+combineChildrenDiffs operandOrder contextMp n childrenDiffs
     | Sum et _ <- oldNode
-    , sortSumMul = sortAndCombine (naryET Sum (ElementSpecific et))
+    , operandOrder == Reorder = sortAndCombine (naryET Sum (ElementSpecific et))
     | Mul et _ <- oldNode
-    , sortSumMul = sortAndCombine (naryET Mul (ElementSpecific et))
+    , operandOrder == Reorder = sortAndCombine (naryET Mul (ElementSpecific et))
     | InnerProd R arg1 arg2 <- oldNode
-    , sortSumMul = sortAndCombine (binaryET InnerProd (ElementSpecific R))
+    , operandOrder == Reorder =
+        sortAndCombine (binaryET InnerProd (ElementSpecific R))
     | oldChildren == newChildren &&
           all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =

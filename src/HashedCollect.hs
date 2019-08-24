@@ -65,13 +65,31 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             , removeUnreachable
             ]
 
+-- | Precondition: 
+-- • No complex in the input (:+, xRe, xIm) (satisfied by first applying simplification)
+-- • Scale is pushed to the outer most layer and real scalars 
+--   are group together in a product (satisfied by first applying simplification)
+-- • No covector expression in piecewise form
+--
+hiddenCollectDifferentialsPrimitive :: Transformation
+hiddenCollectDifferentialsPrimitive =
+    chain
+        [ restructure
+        , toRecursiveCollecting splitCovectorProdRules
+        , separateDVarAlone
+        , toTransformation groupByDVar
+        , aggregateByDVar
+        , simplifyEachPartialDerivative
+        , removeUnreachable
+        ]
+
 inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
 -- |
 --
 toRecursiveCollecting :: Modification -> Transformation
-toRecursiveCollecting = toTransformation . makeRecursive False
+toRecursiveCollecting = toTransformation . makeRecursive LeaveUnchanged
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
 -- Also move covector to the right hand side of dot product
@@ -91,7 +109,7 @@ splitCovectorProdRules exp@(mp, n) =
                     partition ((== Covector) . flip retrieveElementType mp) ns
                 prodRealPart = mulManyDiff mp . map noChange $ realPart
              in mulManyDiff mp $ prodRealPart : map noChange covectorPart
-        x -> noChange n
+        _ -> noChange n
 
 -- |
 --

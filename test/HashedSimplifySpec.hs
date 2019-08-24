@@ -129,6 +129,20 @@ spec = do
             negate (negate x) `shouldSimplifyTo` simplify x
             negate (negate (x + y)) `shouldSimplifyTo` (x + y)
             negate zero `shouldSimplifyTo` zero
+        specify "piecewise sum combined" $ do
+            piecewise [1, 2] t [a, b, c] +
+                piecewise [1, 2] t [m, n, p] `shouldSimplifyTo`
+                piecewise [1, 2] t [a + m, b + n, c + p]
+            piecewise [1, 2] t [a, b, c] + piecewise [1, 2] t [m, n, p] +
+                y `shouldSimplifyTo` piecewise [1, 2] t [a + m, b + n, c + p] +
+                y
+            piecewise [1, 2] t [a, b, c] *
+                piecewise [1, 2] t [m, n, p] `shouldSimplifyTo`
+                piecewise [1, 2] t [a * m, b * n, c * p]
+            piecewise [1, 2] t [a, b, c] * y *
+                piecewise [1, 2] t [m, n, p] `shouldSimplifyTo`
+                piecewise [1, 2] t [a * m, b * n, c * p] *
+                y
     describe "Simplify spec higher dimension" $ do
         specify "simplify one d one zero" $ do
             x1 * one1 `shouldSimplifyTo` x1

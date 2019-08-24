@@ -56,13 +56,13 @@ sum1 = fromJust . HashedOperation.sum
 prod1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.sum
 
-main = do
-    let (problem, valMaps, (vX, vY)) = tof2DQuarterCircle (50, 50) 30 10 0.15
-    putStrLn $ unwords . map show . elems $ vX
-    putStrLn $ unwords . map show . elems $ vY
-    let code = generateProblemCode valMaps problem
-    let filePath = "algorithms/lbfgs/problem.c"
-    writeFile filePath $ intercalate "\n" code
+--main = do
+--    let (problem, valMaps, (vX, vY)) = tof2DQuarterCircle (50, 50) 30 10 0.15
+--    putStrLn $ unwords . map show . elems $ vX
+--    putStrLn $ unwords . map show . elems $ vY
+--    let code = generateProblemCode valMaps problem
+--    let filePath = "algorithms/lbfgs/problem.c"
+--    writeFile filePath $ intercalate "\n" code
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
 --main = do
@@ -76,3 +76,6 @@ main = do
 --    print problem
 --    let codes = generateProblemCode valMaps problem
 --    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+main = do
+    let exp = x + y
+    showExp $ collectDifferentials . exteriorDerivative allVars $ exp
