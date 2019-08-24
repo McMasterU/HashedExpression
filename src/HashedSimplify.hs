@@ -6,13 +6,25 @@
 
 module HashedSimplify where
 
+import Data.Eq.HT (equating)
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (foldl', group, groupBy, intercalate, sort)
+import Data.List
+    ( foldl'
+    , group
+    , groupBy
+    , intercalate
+    , partition
+    , sort
+    , sortBy
+    , sortOn
+    , transpose
+    )
+import Data.List.Extra (groupSort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, isJust)
+import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
@@ -87,6 +99,7 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
         , toRecursiveSimplification normalizeRotateRules
+        , toRecursiveSimplification groupSumProdPiecewiseRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -499,3 +512,42 @@ normalizeRotateRules exp@(mp, n)
     | (shape, Rotate amount arg) <- retrieveInternal n mp =
         applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
     | otherwise = noChange n
+
+-- | In a sum or a product, if there are many piecewise with same conditions and marks, group them
+-- (if (a > 2) then x else y) + (if (a > 2) then m else n) + t --> (if (a > 2) then x + m else y + n) + t
+-- (if (a > 2) then x else y) * (if (a > 2) then m else n) * t --> (if (a > 2) then x * m else y * n) * t
+--
+groupSumProdPiecewiseRules :: Modification
+groupSumProdPiecewiseRules exp@(mp, n)
+    | Sum _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises sumManyDiff) . groupSort $ pws
+         in sumManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | Mul _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises mulManyDiff) . groupSort $ pws
+         in mulManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | otherwise = noChange n
+  where
+    extractPiecewiseInfo :: Int -> Maybe (([Double], ConditionArg), [BranchArg])
+    extractPiecewiseInfo nId
+        | Piecewise marks condition branches <- retrieveNode nId mp =
+            Just ((marks, condition), branches)
+        | otherwise = Nothing
+    -- merge piecewises expression having the same marks and condition
+    mergePiecewises mergeOperation ((marks, condition), groupedBranches) =
+        let combinedBranches
+                | length groupedBranches > 1 =
+                    map (mergeOperation mp . map noChange) . transpose $
+                    groupedBranches
+                | otherwise = map noChange . head $ groupedBranches
+         in applyDiff
+                mp
+                (conditionAry (Piecewise marks))
+                (noChange condition : combinedBranches)
