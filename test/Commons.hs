@@ -109,7 +109,8 @@ genValMap vars = do
     let vm0 = Map.fromList . zip names0d $ map VScalar list0d
     list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
     let vm1 =
-            Map.fromList . zip names1d . map (V1D . listArray (0, vectorSize - 1)) $
+            Map.fromList .
+            zip names1d . map (V1D . listArray (0, vectorSize - 1)) $
             list1d
     list2d <-
         vectorOf (length names2d) . vectorOf (vectorSize * vectorSize) $
@@ -127,7 +128,8 @@ genValMap vars = do
             Map.fromList .
             zip names3d .
             map
-                (V3D . listArray
+                (V3D .
+                 listArray
                      ( (0, 0, 0)
                      , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
             list3d

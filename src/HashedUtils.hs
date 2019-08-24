@@ -186,7 +186,6 @@ data Val
 
 type ValMaps = Map String Val
 
-
 -- | Prelude version of * and +
 --
 times :: (Num a) => a -> a -> a
