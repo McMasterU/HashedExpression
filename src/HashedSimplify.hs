@@ -99,7 +99,6 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
         , toRecursiveSimplification normalizeRotateRules
-        , toRecursiveSimplification groupSumProdPiecewiseRules
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -108,7 +107,7 @@ simplifyingTransformation = secondPass . firstPass
 -- | Turn a modification to a recursive transformation
 --
 toRecursiveSimplification :: Modification -> Transformation
-toRecursiveSimplification = toTransformation . makeRecursive Reorder
+toRecursiveSimplification = toTransformation . toRecursiveModification Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
@@ -513,41 +512,3 @@ normalizeRotateRules exp@(mp, n)
         applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
     | otherwise = noChange n
 
--- | In a sum or a product, if there are many piecewise with same conditions and marks, group them
--- (if (a > 2) then x else y) + (if (a > 2) then m else n) + t --> (if (a > 2) then x + m else y + n) + t
--- (if (a > 2) then x else y) * (if (a > 2) then m else n) * t --> (if (a > 2) then x * m else y * n) * t
---
-groupSumProdPiecewiseRules :: Modification
-groupSumProdPiecewiseRules exp@(mp, n)
-    | Sum _ args <- retrieveNode n mp
-    , let pws = mapMaybe extractPiecewiseInfo args
-    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
-    , not (null pws) =
-        let groupedPiecewises =
-                map (mergePiecewises sumManyDiff) . groupSort $ pws
-         in sumManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
-    | Mul _ args <- retrieveNode n mp
-    , let pws = mapMaybe extractPiecewiseInfo args
-    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
-    , not (null pws) =
-        let groupedPiecewises =
-                map (mergePiecewises mulManyDiff) . groupSort $ pws
-         in mulManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
-    | otherwise = noChange n
-  where
-    extractPiecewiseInfo :: Int -> Maybe (([Double], ConditionArg), [BranchArg])
-    extractPiecewiseInfo nId
-        | Piecewise marks condition branches <- retrieveNode nId mp =
-            Just ((marks, condition), branches)
-        | otherwise = Nothing
-    -- merge piecewises expression having the same marks and condition
-    mergePiecewises mergeOperation ((marks, condition), groupedBranches) =
-        let combinedBranches
-                | length groupedBranches > 1 =
-                    map (mergeOperation mp . map noChange) . transpose $
-                    groupedBranches
-                | otherwise = map noChange . head $ groupedBranches
-         in applyDiff
-                mp
-                (conditionAry (Piecewise marks))
-                (noChange condition : combinedBranches)
