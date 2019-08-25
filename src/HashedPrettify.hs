@@ -190,23 +190,16 @@ hiddenPrettify pastable (mp, n) =
             InnerProd et arg1 arg2 ->
                 T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
             Piecewise marks conditionArg branches ->
-                let appendedMarks = ("-inf" : map show marks) ++ ["+inf"]
-                    intervals = zip appendedMarks (tail appendedMarks)
-                    cases = zip intervals branches
-                    printCase ((left, right), val) =
-                        T.concat
-                            [ "  ("
-                            , T.pack left
-                            , ", "
-                            , T.pack right
-                            , ") -> "
-                            , innerPrettify val
-                            ]
+                let printBranches =
+                        T.intercalate ", " . map innerPrettify $ branches
                  in T.concat
-                        [ "case "
+                        [ "piecewise "
                         , innerPrettify conditionArg
-                        , " in "
-                        , T.intercalate "" $ map printCase cases
+                        , " "
+                        , T.pack . show $ marks
+                        , " ["
+                        , printBranches
+                        , "]"
                         ]
             Rotate amount arg ->
                 T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]

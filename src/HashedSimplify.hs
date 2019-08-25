@@ -99,6 +99,8 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification zeroOneSumProdRules
         , toRecursiveSimplification collapseSumProdRules
         , toRecursiveSimplification normalizeRotateRules
+        , toRecursiveSimplification splitPiecewiseRules
+        , toRecursiveSimplification expandPiecewiseSum
         , rulesFromPattern
         , removeUnreachable
         ]
@@ -512,3 +514,40 @@ normalizeRotateRules exp@(mp, n)
         applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
     | otherwise = noChange n
 
+-- | Split piecewise function to sum of many piecewises that have only one non-zero branch and the rest zero
+-- (if a > 2 then x + y else m + n) = (if a > 2 then x + y else 0) + (if a > 2 then 0 else m + n)
+--
+splitPiecewiseRules :: Modification
+splitPiecewiseRules exp@(mp, n)
+    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    , let nonZeroBranches = filter (not . isZero mp . fst) $ zip branches [0 ..]
+    , length nonZeroBranches > 1 =
+        let numBranches = length branches
+            zero = diffConst shape 0
+            each (nId, k) =
+                let branchesWithZero =
+                        replicate k zero ++
+                        [noChange nId] ++ replicate (numBranches - k - 1) zero
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : branchesWithZero
+         in sumManyDiff mp . map each $ nonZeroBranches
+    | otherwise = noChange n
+
+-- | Piecewise of sum --> sum of piecewise
+--
+expandPiecewiseSum :: Modification
+expandPiecewiseSum exp@(mp, n)
+    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    , (notSumPrefix, firstSum:notSumSuffix) <- break isSum branches =
+        let sumOperands = nodeArgs $ retrieveNode firstSum mp
+            each nId =
+                let eachBranches =
+                        map noChange $ notSumPrefix ++ [nId] ++ notSumSuffix
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : eachBranches
+         in sumManyDiff mp . map each $ sumOperands
+    | otherwise = noChange n
+  where
+    isSum nId
+        | Sum _ _ <- retrieveNode nId mp = True
+        | otherwise = False
