@@ -59,12 +59,13 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             [ restructure
             , toRecursiveCollecting splitCovectorProdRules
             , separateDVarAlone
+--            , toRecursiveCollecting separateDVarAlonePiecewise
+            , toTransformation groupByDVar
+            , aggregateByDVar
+            , simplifyEachPartialDerivative
+            , removeUnreachable
             ]
 
---            , toTransformation groupByDVar
---            , aggregateByDVar
---            , simplifyEachPartialDerivative
---            , removeUnreachable
 inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
@@ -95,6 +96,14 @@ splitCovectorProdRules exp@(mp, n) =
                 prodRealPart = mulManyDiff mp . map noChange $ realPart
              in mulManyDiff mp $ prodRealPart : map noChange covectorPart
         _ -> noChange n
+        
+        
+        -- TODO 
+--separateDVarAlonePiecewise :: Modification
+--separateDVarAlonePiecewise (mp, n) = 
+--    | Piecewise marks condition branches <- retrieveNode n mp
+--    , retrieveElementType n mp == Covector
+
 -- |
 --
 separateDVarAlone :: Transformation
@@ -172,3 +181,4 @@ simplifyEachPartialDerivative exp@(mp, n)
                 [ simplifyingTransformation CombinePiecewise (mp, partialDeriv)
                 , (mp, dVar)
                 ]
+        

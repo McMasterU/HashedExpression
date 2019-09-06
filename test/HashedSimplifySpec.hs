@@ -183,3 +183,5 @@ spec = do
                 piecewise [1, 2] c [zero, y, zero]
             piecewise [4, 5] x1 [zero1, x1 * (s *. y1), zero1] `shouldSimplifyTo`
                 s *. piecewise [4, 5] x1 [zero1, x1 * y1, zero1]
+            piecewise [1] c1 [c1 +: y1, z1 +: t1] `shouldSimplifyTo`
+                piecewise [1] c1 [c1, z1] +: piecewise [1] c1 [y1, t1]

@@ -94,27 +94,32 @@ simplifyingTransformation piecewiseMode = secondPass . firstPass
   where
     piecewiseTransformations
         | piecewiseMode == SplitPiecewise =
-            [ toRecursiveSimplification expandPiecewiseSum
-            , toRecursiveSimplification splitPiecewiseRules
-            ]
+            map
+                toRecursiveSimplification
+                [ expandPiecewiseSum
+                , splitPiecewiseRules
+                , expandPiecewiseRealImag
+                ]
         | otherwise = []
     firstPass =
         multipleTimes 100 . chain $
-        [ toRecursiveSimplification evaluateIfPossibleRules
-        , toRecursiveSimplification groupConstantsRules
-        , toRecursiveSimplification combineTermsRules
-        , toRecursiveSimplification combineTermsRulesProd
-        , toRecursiveSimplification powerProdRules
-        , toRecursiveSimplification powerScaleRules
-        , toRecursiveSimplification combinePowerRules
-        , toRecursiveSimplification powerSumRealImagRules
-        , toRecursiveSimplification combineRealScalarRules
-        , toRecursiveSimplification flattenSumProdRules
-        , toRecursiveSimplification zeroOneSumProdRules
-        , toRecursiveSimplification collapseSumProdRules
-        , toRecursiveSimplification normalizeRotateRules
-        , toRecursiveSimplification pullScalarPiecewiseRules
-        ] ++
+        map
+            toRecursiveSimplification
+            [ evaluateIfPossibleRules
+            , groupConstantsRules
+            , combineTermsRules
+            , combineTermsRulesProd
+            , powerProdRules
+            , powerScaleRules
+            , combinePowerRules
+            , powerSumRealImagRules
+            , combineRealScalarRules
+            , flattenSumProdRules
+            , zeroOneSumProdRules
+            , collapseSumProdRules
+            , normalizeRotateRules
+            , pullScalarPiecewiseRules
+            ] ++
         piecewiseTransformations ++ --
         [ rulesFromPattern --
         , removeUnreachable
@@ -559,7 +564,14 @@ splitPiecewiseRules exp@(mp, n)
     , let nonZeroBranches = filter (not . isZero mp . fst) $ zip branches [0 ..]
     , length nonZeroBranches > 1 =
         let numBranches = length branches
-            zero = diffConst shape 0
+            et = retrieveElementType n mp
+            zero
+                | et == C =
+                    applyDiff
+                        mp
+                        (binary RealImag)
+                        [diffConst shape 0, diffConst shape 0]
+                | otherwise = diffConst shape 0
             each (nId, k) =
                 let branchesWithZero =
                         replicate k zero ++
@@ -573,7 +585,7 @@ splitPiecewiseRules exp@(mp, n)
 --
 expandPiecewiseSum :: Modification
 expandPiecewiseSum exp@(mp, n)
-    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    | Piecewise marks condition branches <- retrieveNode n mp
     , (notSumPrefix, firstSum:notSumSuffix) <- break isSum branches
     , all (isZero mp) notSumPrefix && all (isZero mp) notSumSuffix =
         let sumOperands = nodeArgs $ retrieveNode firstSum mp
@@ -588,3 +600,24 @@ expandPiecewiseSum exp@(mp, n)
     isSum nId
         | Sum _ _ <- retrieveNode nId mp = True
         | otherwise = False
+
+-- | Piecewise of RealImag -> RealImag of piecewises
+-- if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
+--
+expandPiecewiseRealImag :: Modification
+expandPiecewiseRealImag exp@(mp, n)
+    | Piecewise marks condition branches <- retrieveNode n mp
+    , Just reIms <- mapM extract branches =
+        let (res, ims) = unzip reIms
+            rePart =
+                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
+                condition : res
+            imPart =
+                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
+                condition : ims
+         in applyDiff mp (binary RealImag) [rePart, imPart]
+    | otherwise = noChange n
+  where
+    extract nId
+        | RealImag re im <- retrieveNode nId mp = Just (re, im)
+        | otherwise = Nothing
