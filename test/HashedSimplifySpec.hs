@@ -171,3 +171,9 @@ spec = do
                 sum (map (rotate (2, 3)) [x2, y2, z2])
             rotate (2, 3) (product [x2, y2, z2]) `shouldSimplifyTo`
                 product (map (rotate (2, 3)) [x2, y2, z2])
+    describe "Simplify piecewise" $
+        specify "some piecewise rules" $ do
+            piecewise [1] c [x *. y, zero] `shouldSimplifyTo` x *.
+                piecewise [1] c [y, zero]
+            piecewise [1, 2] c [zero, x *. y, zero] `shouldSimplifyTo` x *.
+                piecewise [1, 2] c [zero, y, zero]
