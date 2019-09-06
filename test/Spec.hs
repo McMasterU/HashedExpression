@@ -54,7 +54,7 @@ import Test.Hspec
 import Test.Hspec.Runner
 
 main :: IO ()
-main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} spec
+main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
 spec :: Spec
 spec = do

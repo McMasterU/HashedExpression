@@ -100,7 +100,7 @@ simplifyingTransformation piecewiseMode = secondPass . firstPass
                 , splitPiecewiseRules
                 , expandPiecewiseRealImag
                 ]
-        | otherwise = []
+        | otherwise = [toRecursiveSimplification groupSumProdPiecewiseRules]
     firstPass =
         multipleTimes 100 . chain $
         map
@@ -621,3 +621,43 @@ expandPiecewiseRealImag exp@(mp, n)
     extract nId
         | RealImag re im <- retrieveNode nId mp = Just (re, im)
         | otherwise = Nothing
+
+-- | In a sum or a product, if there are many piecewise with same conditions and marks, group them
+-- (if (a > 2) then x else y) + (if (a > 2) then m else n) + t --> (if (a > 2) then x + m else y + n) + t
+-- (if (a > 2) then x else y) * (if (a > 2) then m else n) * t --> (if (a > 2) then x * m else y * n) * t
+-- This is for simplifying each partial differential
+--
+groupSumProdPiecewiseRules :: Modification
+groupSumProdPiecewiseRules exp@(mp, n)
+    | Sum _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises sumManyDiff) . groupSort $ pws
+         in sumManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | Mul _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises mulManyDiff) . groupSort $ pws
+         in mulManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | otherwise = noChange n
+  where
+    extractPiecewiseInfo :: Int -> Maybe (([Double], ConditionArg), [BranchArg])
+    extractPiecewiseInfo nId
+        | Piecewise marks condition branches <- retrieveNode nId mp =
+            Just ((marks, condition), branches)
+        | otherwise = Nothing
+    -- merge piecewises expression having the same marks and condition
+    mergePiecewises mergeOperation ((marks, condition), groupedBranches) =
+        let combinedBranches
+                | length groupedBranches > 1 =
+                    map (mergeOperation mp . map noChange) . transpose $
+                    groupedBranches
+                | otherwise = map noChange . head $ groupedBranches
+         in applyDiff
+                mp
+                (conditionAry (Piecewise marks))
+                (noChange condition : combinedBranches)
