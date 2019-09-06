@@ -77,5 +77,5 @@ prod1 = fromJust . HashedOperation.sum
 --    let codes = generateProblemCode valMaps problem
 --    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
 main = do
-    let exp = (huber 1 x1) <.> const1d 10 1
+    let exp = x1 <.> piecewise [1] c1 [x *. x1, y1]
     showExp . collectDifferentials . exteriorDerivative allVars $ exp

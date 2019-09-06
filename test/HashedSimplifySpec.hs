@@ -173,7 +173,13 @@ spec = do
                 product (map (rotate (2, 3)) [x2, y2, z2])
     describe "Simplify piecewise" $
         specify "some piecewise rules" $ do
+            piecewise [1] c [x, y] `shouldSimplifyTo`
+                piecewise [1] c [x, zero] + piecewise [1] c [zero, y]
+            piecewise [1] c [x + z, y] `shouldSimplifyTo`
+                piecewise [1] c [x, zero] + piecewise [1] c [z, zero] + piecewise [1] c [zero, y] 
             piecewise [1] c [x *. y, zero] `shouldSimplifyTo` x *.
                 piecewise [1] c [y, zero]
             piecewise [1, 2] c [zero, x *. y, zero] `shouldSimplifyTo` x *.
                 piecewise [1, 2] c [zero, y, zero]
+            piecewise [4, 5] x1 [zero1, x1 * (s *. y1), zero1] `shouldSimplifyTo`
+                s *. piecewise [4, 5] x1 [zero1, x1 * y1, zero1]

@@ -77,13 +77,27 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . simplifyingTransformation . unwrap
+simplify = wrap . simplifyingTransformation SplitPiecewise . unwrap
+
+-- | What to do with piecewise in simplification, we split piecewises so we can collect differentials, but after 
+-- we need to combine them
+--
+data PiecewiseMode
+    = SplitPiecewise
+    | CombinePiecewise
+    deriving (Eq)
 
 -- | Combine all the transformations
 --
-simplifyingTransformation :: Transformation
-simplifyingTransformation = secondPass . firstPass
+simplifyingTransformation :: PiecewiseMode -> Transformation
+simplifyingTransformation piecewiseMode = secondPass . firstPass
   where
+    piecewiseTransformations
+        | piecewiseMode == SplitPiecewise =
+            [ toRecursiveSimplification expandPiecewiseSum
+            , toRecursiveSimplification splitPiecewiseRules
+            ]
+        | otherwise = []
     firstPass =
         multipleTimes 100 . chain $
         [ toRecursiveSimplification evaluateIfPossibleRules
@@ -100,7 +114,9 @@ simplifyingTransformation = secondPass . firstPass
         , toRecursiveSimplification collapseSumProdRules
         , toRecursiveSimplification normalizeRotateRules
         , toRecursiveSimplification pullScalarPiecewiseRules
-        , rulesFromPattern
+        ] ++
+        piecewiseTransformations ++ --
+        [ rulesFromPattern --
         , removeUnreachable
         ]
     secondPass = toMultiplyIfPossible
@@ -209,6 +225,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
     , x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y)
+    , x <.> (s *. y) |. isCovector s ~~~~~~> s *. (x <.> y)
     , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y) -- Conjugate if the scalar is complex
     , x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~>
       (x * y)
@@ -532,3 +549,42 @@ pullScalarPiecewiseRules exp@(mp, n)
                 (binaryET Scale ElementDefault)
                 [noChange scalar, newPiecewise]
     | otherwise = noChange n
+
+-- | Split piecewise function to sum of many piecewises that have only one non-zero branch and the rest zero
+-- (if a > 2 then x + y else m + n) = (if a > 2 then x + y else 0) + (if a > 2 then 0 else m + n)
+--
+splitPiecewiseRules :: Modification
+splitPiecewiseRules exp@(mp, n)
+    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    , let nonZeroBranches = filter (not . isZero mp . fst) $ zip branches [0 ..]
+    , length nonZeroBranches > 1 =
+        let numBranches = length branches
+            zero = diffConst shape 0
+            each (nId, k) =
+                let branchesWithZero =
+                        replicate k zero ++
+                        [noChange nId] ++ replicate (numBranches - k - 1) zero
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : branchesWithZero
+         in sumManyDiff mp . map each $ nonZeroBranches
+    | otherwise = noChange n
+
+-- | Piecewise of sum --> sum of piecewise
+--
+expandPiecewiseSum :: Modification
+expandPiecewiseSum exp@(mp, n)
+    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    , (notSumPrefix, firstSum:notSumSuffix) <- break isSum branches
+    , all (isZero mp) notSumPrefix && all (isZero mp) notSumSuffix =
+        let sumOperands = nodeArgs $ retrieveNode firstSum mp
+            each nId =
+                let eachBranches =
+                        map noChange $ notSumPrefix ++ [nId] ++ notSumSuffix
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : eachBranches
+         in sumManyDiff mp . map each $ sumOperands
+    | otherwise = noChange n
+  where
+    isSum nId
+        | Sum _ _ <- retrieveNode nId mp = True
+        | otherwise = False
