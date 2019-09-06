@@ -15,3 +15,6 @@ all: lbfgs.c problem.c
 fast: lbfgs.c problem.c
 	$(CC) $(FAST_FLAGS) lbfgs.c -o lbfgs.o -c
 	$(LIBTOOL) --tag=CC --mode=link $(CC) $(FAST_FLAGS) -o lbfgs lbfgs.o /usr/local/lib/liblbfgs.la -lm
+
+clean:
+	git clean -dfX

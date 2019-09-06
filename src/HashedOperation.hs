@@ -11,6 +11,9 @@ module HashedOperation where
 
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
+import Data.List (sort)
+import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -49,20 +52,26 @@ var name = Expression h (fromList [(h, node)])
     node = ([], Var name)
     h = hash node
 
-var1d :: Int -> String -> Expression One R
-var1d size name = Expression h (fromList [(h, node)])
+var1d :: HasCallStack => Int -> String -> Expression One R
+var1d size name
+    | size > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size], Var name)
     h = hash node
 
-var2d :: (Int, Int) -> String -> Expression Two R
-var2d (size1, size2) name = Expression h (fromList [(h, node)])
+var2d :: HasCallStack => (Int, Int) -> String -> Expression Two R
+var2d (size1, size2) name
+    | size1 > 0 && size2 > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size1, size2], Var name)
     h = hash node
 
-var3d :: (Int, Int, Int) -> String -> Expression Three R
-var3d (size1, size2, size3) name = Expression h (fromList [(h, node)])
+var3d :: HasCallStack => (Int, Int, Int) -> String -> Expression Three R
+var3d (size1, size2, size3) name
+    | size1 > 0 && size2 > 0 && size3 > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size1, size2, size3], Var name)
     h = hash node
@@ -75,20 +84,26 @@ const val = Expression h (fromList [(h, node)])
     node = ([], Const val)
     h = hash node
 
-const1d :: Int -> Double -> Expression One R
-const1d size val = Expression h (fromList [(h, node)])
+const1d :: HasCallStack => Int -> Double -> Expression One R
+const1d size val
+    | size > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size], Const val)
     h = hash node
 
-const2d :: (Int, Int) -> Double -> Expression Two R
-const2d (size1, size2) val = Expression h (fromList [(h, node)])
+const2d :: HasCallStack => (Int, Int) -> Double -> Expression Two R
+const2d (size1, size2) val
+    | size1 > 0 && size2 > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size1, size2], Const val)
     h = hash node
 
-const3d :: (Int, Int, Int) -> Double -> Expression Three R
-const3d (size1, size2, size3) val = Expression h (fromList [(h, node)])
+const3d :: HasCallStack => (Int, Int, Int) -> Double -> Expression Three R
+const3d (size1, size2, size3) val
+    | size1 > 0 && size2 > 0 && size3 > 0 = Expression h (fromList [(h, node)])
+    | otherwise = error "All dimentions should be positive integer"
   where
     node = ([size1, size2, size3], Const val)
     h = hash node
@@ -232,14 +247,23 @@ norm1 expr = sumElements (sqrt (expr * expr))
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
 piecewise ::
-       (DimensionType d)
+       (DimensionType d, HasCallStack)
     => [Double]
     -> Expression d R
     -> [Expression d et]
     -> Expression d et
-piecewise marks conditionExp branchExps =
-    guard $
-    applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
+piecewise marks conditionExp branchExps
+    | not (null marks)
+    , (Set.toList . Set.fromList $ marks) == marks
+    , length marks + 1 == length branchExps =
+        guard $
+        applyConditionAry
+            (conditionAry (Piecewise marks))
+            conditionExp
+            branchExps
+    | otherwise =
+        error
+            "Must satisfy number of marks = number of branches - 1, and marks are increasing"
   where
     guard =
         ensureSameShapeList branchExps .

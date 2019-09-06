@@ -40,31 +40,37 @@ offsetHash offset hash =
 rehash :: Int -> [Int]
 rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 
+-- | Any string used as a separator between node ids (which are numbers)
+--
+separator :: String
+separator = "a"
+
 -- | HasHash instances
 --
 hash :: Internal -> Int
 hash (shape, node) =
     let hashString' s =
-            hashString $ (intercalate "a" . map show $ shape) ++ "a" ++ s
+            hashString $
+            (intercalate separator . map show $ shape) ++ separator ++ s
      in case node of
             Var name -> offsetHash 0 . hashString' $ name
             DVar name -> offsetHash 1 . hashString' $ show name
             Const num -> offsetHash 2 . hashString' $ show num
             Sum et args ->
                 offsetHash 3 . hashString' $
-                show et ++ (intercalate "a" . map show $ args)
+                show et ++ (intercalate separator . map show $ args)
             Mul et args ->
                 offsetHash 4 . hashString' $
-                show et ++ (intercalate "a" . map show $ args)
+                show et ++ (intercalate separator . map show $ args)
             Power x arg ->
                 offsetHash 5 . hashString' $ show x ++ "of" ++ show arg
             Neg et arg -> offsetHash 6 . hashString' $ show et ++ show arg
             Scale et arg1 arg2 ->
                 offsetHash 7 . hashString' $
-                show et ++ show arg1 ++ "a" ++ show arg2
+                show et ++ show arg1 ++ separator ++ show arg2
         -- MARK: only apply to R
             Div arg1 arg2 ->
-                offsetHash 8 . hashString' $ show arg1 ++ "a" ++ show arg2
+                offsetHash 8 . hashString' $ show arg1 ++ separator ++ show arg2
             Sqrt arg -> offsetHash 9 . hashString' $ show arg
             Sin arg -> offsetHash 10 . hashString' $ show arg
             Cos arg -> offsetHash 11 . hashString' $ show arg
@@ -84,20 +90,23 @@ hash (shape, node) =
             RealPart arg -> offsetHash 24 . hashString' $ show arg
             ImagPart arg -> offsetHash 25 . hashString' $ show arg
             RealImag arg1 arg2 ->
-                offsetHash 26 . hashString' $ show arg1 ++ "a" ++ show arg2
+                offsetHash 26 . hashString' $
+                show arg1 ++ separator ++ show arg2
             InnerProd et arg1 arg2 ->
                 offsetHash 27 . hashString' $
-                show et ++ show arg1 ++ "a" ++ show arg2
+                show et ++ show arg1 ++ separator ++ show arg2
         -- MARK: Piecewise
             Piecewise marks arg branches ->
                 offsetHash 28 . hashString' $
-                (intercalate "a" . map show $ marks) ++
-                "a" ++
-                show arg ++ "a" ++ (intercalate "a" . map show $ branches)
+                (intercalate separator . map show $ marks) ++
+                separator ++
+                show arg ++
+                separator ++ (intercalate separator . map show $ branches)
         -- MARK: Rotate
             Rotate amount arg ->
                 offsetHash 29 . hashString' $
-                (intercalate "a" . map show $ amount) ++ "a" ++ show arg
+                (intercalate separator . map show $ amount) ++
+                separator ++ show arg
 
 -- |
 --

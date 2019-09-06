@@ -134,8 +134,8 @@ addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
                     op (elementType elm) arg1 arg2
                 (OpMany op, args) -> op args
                 (OpManyElement op elm, args) -> op (elementType elm) args
-                _ -> error "HashedInner.applySameScope"
      in addInternal mp (shape, node)
+--                _ -> error "HashedInner.applySameScope"
 addEntryWithContext contextMp mp (Condition op) ns@(conditionN:branchesNs) =
     let headBranchN = head branchesNs
         shape = retrieveShape headBranchN contextMp
@@ -266,26 +266,6 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
--- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
---
-makeRecursive :: Bool -> Modification -> Modification
-makeRecursive sortSumMul smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
-  where
-    topoOrder = topologicalSort exp
-    f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
-    f diffs nId =
-        let children = nodeArgs $ retrieveNode nId mp
-            childrenDiffs = map (fromJust . flip IM.lookup diffs) children
-            nodeDiff = combineChildrenDiffs sortSumMul mp nId childrenDiffs
-            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-            ExpressionDiff exEntries newId = smp newExp
-            diff =
-                ExpressionDiff
-                    (IM.union exEntries (extraEntries nodeDiff))
-                    newId
-         in IM.insert nId diff diffs
-    diffs = foldl' f IM.empty topoOrder
-
 -- |
 --
 toTransformation :: Modification -> Transformation
@@ -305,18 +285,51 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
         | snd lastExp == snd curExp = curExp
         | otherwise = go (k - 1) curExp (smp curExp)
 
+-- | Operand order in the operation
+--
+data OperandOrder
+    = Reorder
+    | NoReorder
+    deriving (Eq)
+
+-- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
+--
+toRecursiveModification :: OperandOrder -> Modification -> Modification
+toRecursiveModification operandOrder smp exp@(mp, headN) =
+    fromJust $ IM.lookup headN diffs
+  where
+    topoOrder = topologicalSort exp
+    f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
+    f diffs nId =
+        let children = nodeArgs $ retrieveNode nId mp
+            childrenDiffs = map (fromJust . flip IM.lookup diffs) children
+            nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
+            newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
+            ExpressionDiff exEntries newId = smp newExp
+            diff =
+                ExpressionDiff
+                    (IM.union exEntries (extraEntries nodeDiff))
+                    newId
+         in IM.insert nId diff diffs
+    diffs = foldl' f IM.empty topoOrder
+
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
 -- and return the combined difference
 --
 combineChildrenDiffs ::
-       Bool -> ExpressionMap -> Int -> [ExpressionDiff] -> ExpressionDiff
-combineChildrenDiffs sortSumMul contextMp n childrenDiffs
+       OperandOrder
+    -> ExpressionMap
+    -> Int
+    -> [ExpressionDiff]
+    -> ExpressionDiff
+combineChildrenDiffs operandOrder contextMp n childrenDiffs
     | Sum et _ <- oldNode
-    , sortSumMul = sortAndCombine (naryET Sum (ElementSpecific et))
+    , operandOrder == Reorder = sortAndCombine (naryET Sum (ElementSpecific et))
     | Mul et _ <- oldNode
-    , sortSumMul = sortAndCombine (naryET Mul (ElementSpecific et))
+    , operandOrder == Reorder = sortAndCombine (naryET Mul (ElementSpecific et))
     | InnerProd R arg1 arg2 <- oldNode
-    , sortSumMul = sortAndCombine (binaryET InnerProd (ElementSpecific R))
+    , operandOrder == Reorder =
+        sortAndCombine (binaryET InnerProd (ElementSpecific R))
     | oldChildren == newChildren &&
           all (== IM.empty) (map extraEntries childrenDiffs) = noChange n
     | otherwise =

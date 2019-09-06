@@ -6,13 +6,25 @@
 
 module HashedSimplify where
 
+import Data.Eq.HT (equating)
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (foldl', group, groupBy, intercalate, sort)
+import Data.List
+    ( foldl'
+    , group
+    , groupBy
+    , intercalate
+    , partition
+    , sort
+    , sortBy
+    , sortOn
+    , transpose
+    )
+import Data.List.Extra (groupSort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, isJust)
+import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression
@@ -65,29 +77,51 @@ makeTrans smp = wrap . smp . unwrap
 --
 simplify ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . simplifyingTransformation . unwrap
+simplify = wrap . simplifyingTransformation SplitPiecewise . unwrap
+
+-- | What to do with piecewise in simplification, we split piecewises so we can collect differentials, but after 
+-- we need to combine them
+--
+data PiecewiseMode
+    = SplitPiecewise
+    | CombinePiecewise
+    deriving (Eq)
 
 -- | Combine all the transformations
 --
-simplifyingTransformation :: Transformation
-simplifyingTransformation = secondPass . firstPass
+simplifyingTransformation :: PiecewiseMode -> Transformation
+simplifyingTransformation piecewiseMode = secondPass . firstPass
   where
+    piecewiseTransformations
+        | piecewiseMode == SplitPiecewise =
+            map
+                toRecursiveSimplification
+                [ expandPiecewiseSum
+                , splitPiecewiseRules
+                , expandPiecewiseRealImag
+                ]
+        | otherwise = [toRecursiveSimplification groupSumProdPiecewiseRules]
     firstPass =
         multipleTimes 100 . chain $
-        [ toRecursiveSimplification evaluateIfPossibleRules
-        , toRecursiveSimplification groupConstantsRules
-        , toRecursiveSimplification combineTermsRules
-        , toRecursiveSimplification combineTermsRulesProd
-        , toRecursiveSimplification powerProdRules
-        , toRecursiveSimplification powerScaleRules
-        , toRecursiveSimplification combinePowerRules
-        , toRecursiveSimplification powerSumRealImagRules
-        , toRecursiveSimplification combineRealScalarRules
-        , toRecursiveSimplification flattenSumProdRules
-        , toRecursiveSimplification zeroOneSumProdRules
-        , toRecursiveSimplification collapseSumProdRules
-        , toRecursiveSimplification normalizeRotateRules
-        , rulesFromPattern
+        map
+            toRecursiveSimplification
+            [ evaluateIfPossibleRules
+            , groupConstantsRules
+            , combineTermsRules
+            , combineTermsRulesProd
+            , powerProdRules
+            , powerScaleRules
+            , combinePowerRules
+            , powerSumRealImagRules
+            , combineRealScalarRules
+            , flattenSumProdRules
+            , zeroOneSumProdRules
+            , collapseSumProdRules
+            , normalizeRotateRules
+            , pullScalarPiecewiseRules
+            ] ++
+        piecewiseTransformations ++ --
+        [ rulesFromPattern --
         , removeUnreachable
         ]
     secondPass = toMultiplyIfPossible
@@ -95,7 +129,7 @@ simplifyingTransformation = secondPass . firstPass
 -- | Turn a modification to a recursive transformation
 --
 toRecursiveSimplification :: Modification -> Transformation
-toRecursiveSimplification = toTransformation . makeRecursive True
+toRecursiveSimplification = toTransformation . toRecursiveModification Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
@@ -196,6 +230,7 @@ dotProductRules :: [Substitution]
 dotProductRules =
     [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y) --
     , x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y)
+    , x <.> (s *. y) |. isCovector s ~~~~~~> s *. (x <.> y)
     , x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y) -- Conjugate if the scalar is complex
     , x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~>
       (x * y)
@@ -499,3 +534,130 @@ normalizeRotateRules exp@(mp, n)
     | (shape, Rotate amount arg) <- retrieveInternal n mp =
         applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
     | otherwise = noChange n
+
+-- | Pull scale out of piecewise when there is only one non-zero branch
+--
+pullScalarPiecewiseRules :: Modification
+pullScalarPiecewiseRules exp@(mp, n)
+    | Piecewise marks condition branches <- retrieveNode n mp
+    , [mainBranch] <- filter (not . isZero mp) branches
+    , Scale et scalar scalee <- retrieveNode mainBranch mp =
+        let toNewBranch b
+                | not . isZero mp $ b = noChange scalee
+                | otherwise = noChange b
+            newBranches = map toNewBranch branches
+            newPiecewise =
+                applyDiff mp (conditionAry (Piecewise marks)) $
+                noChange condition : newBranches
+         in applyDiff
+                mp
+                (binaryET Scale ElementDefault)
+                [noChange scalar, newPiecewise]
+    | otherwise = noChange n
+
+-- | Split piecewise function to sum of many piecewises that have only one non-zero branch and the rest zero
+-- (if a > 2 then x + y else m + n) = (if a > 2 then x + y else 0) + (if a > 2 then 0 else m + n)
+--
+splitPiecewiseRules :: Modification
+splitPiecewiseRules exp@(mp, n)
+    | (shape, Piecewise marks condition branches) <- retrieveInternal n mp
+    , let nonZeroBranches = filter (not . isZero mp . fst) $ zip branches [0 ..]
+    , length nonZeroBranches > 1 =
+        let numBranches = length branches
+            et = retrieveElementType n mp
+            zero
+                | et == C =
+                    applyDiff
+                        mp
+                        (binary RealImag)
+                        [diffConst shape 0, diffConst shape 0]
+                | otherwise = diffConst shape 0
+            each (nId, k) =
+                let branchesWithZero =
+                        replicate k zero ++
+                        [noChange nId] ++ replicate (numBranches - k - 1) zero
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : branchesWithZero
+         in sumManyDiff mp . map each $ nonZeroBranches
+    | otherwise = noChange n
+
+-- | Piecewise of sum --> sum of piecewise
+--
+expandPiecewiseSum :: Modification
+expandPiecewiseSum exp@(mp, n)
+    | Piecewise marks condition branches <- retrieveNode n mp
+    , (notSumPrefix, firstSum:notSumSuffix) <- break isSum branches
+    , all (isZero mp) notSumPrefix && all (isZero mp) notSumSuffix =
+        let sumOperands = nodeArgs $ retrieveNode firstSum mp
+            each nId =
+                let eachBranches =
+                        map noChange $ notSumPrefix ++ [nId] ++ notSumSuffix
+                 in applyDiff mp (conditionAry (Piecewise marks)) $
+                    noChange condition : eachBranches
+         in sumManyDiff mp . map each $ sumOperands
+    | otherwise = noChange n
+  where
+    isSum nId
+        | Sum _ _ <- retrieveNode nId mp = True
+        | otherwise = False
+
+-- | Piecewise of RealImag -> RealImag of piecewises
+-- if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
+--
+expandPiecewiseRealImag :: Modification
+expandPiecewiseRealImag exp@(mp, n)
+    | Piecewise marks condition branches <- retrieveNode n mp
+    , Just reIms <- mapM extract branches =
+        let (res, ims) = unzip reIms
+            rePart =
+                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
+                condition : res
+            imPart =
+                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
+                condition : ims
+         in applyDiff mp (binary RealImag) [rePart, imPart]
+    | otherwise = noChange n
+  where
+    extract nId
+        | RealImag re im <- retrieveNode nId mp = Just (re, im)
+        | otherwise = Nothing
+
+-- | In a sum or a product, if there are many piecewise with same conditions and marks, group them
+-- (if (a > 2) then x else y) + (if (a > 2) then m else n) + t --> (if (a > 2) then x + m else y + n) + t
+-- (if (a > 2) then x else y) * (if (a > 2) then m else n) * t --> (if (a > 2) then x * m else y * n) * t
+-- This is for simplifying each partial differential
+--
+groupSumProdPiecewiseRules :: Modification
+groupSumProdPiecewiseRules exp@(mp, n)
+    | Sum _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises sumManyDiff) . groupSort $ pws
+         in sumManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | Mul _ args <- retrieveNode n mp
+    , let pws = mapMaybe extractPiecewiseInfo args
+    , let nonPwsArgs = filter (isNothing . extractPiecewiseInfo) args
+    , not (null pws) =
+        let groupedPiecewises =
+                map (mergePiecewises mulManyDiff) . groupSort $ pws
+         in mulManyDiff mp $ map noChange nonPwsArgs ++ groupedPiecewises
+    | otherwise = noChange n
+  where
+    extractPiecewiseInfo :: Int -> Maybe (([Double], ConditionArg), [BranchArg])
+    extractPiecewiseInfo nId
+        | Piecewise marks condition branches <- retrieveNode nId mp =
+            Just ((marks, condition), branches)
+        | otherwise = Nothing
+    -- merge piecewises expression having the same marks and condition
+    mergePiecewises mergeOperation ((marks, condition), groupedBranches) =
+        let combinedBranches
+                | length groupedBranches > 1 =
+                    map (mergeOperation mp . map noChange) . transpose $
+                    groupedBranches
+                | otherwise = map noChange . head $ groupedBranches
+         in applyDiff
+                mp
+                (conditionAry (Piecewise marks))
+                (noChange condition : combinedBranches)

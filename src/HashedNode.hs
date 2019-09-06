@@ -1,6 +1,7 @@
 module HashedNode where
 
-import Data.IntMap.Strict as IM
+import qualified Data.IntMap.Strict as IM
+import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression
 
@@ -37,7 +38,8 @@ nodeElementType node mp =
         RealPart _ -> R -- extract real part
         ImagPart _ -> R -- extract imaginary part
         InnerProd et _ _ -> et
-        Piecewise _ _ branches -> retrieveElementType (head branches) mp
+        Piecewise _ _ branches ->
+            maximum . map (`retrieveElementType` mp) $ branches
         Rotate _ arg -> retrieveElementType arg mp
 
 -- | For ordering things inside Sum or Product so we can write rules like
