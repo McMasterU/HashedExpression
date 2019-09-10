@@ -10,7 +10,7 @@ import Data.Array
 import Data.Complex
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate)
+import Data.List (intercalate, sort)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
@@ -180,9 +180,19 @@ genZeroR =
     , (1, fromUnaryZeroR (^ 2))
     , (1, fromInnerProdHigherZeroR)
     , (2, fromZeroCZeroR)
+    , (1, fromPiecewiseZeroR)
     ]
     --    replicate 8 primitiveZeroR ++ replicate 2 genZeroR
   where
+    fromPiecewiseZeroR :: Gen (Expression Zero R, Vars)
+    fromPiecewiseZeroR = do
+        numBranches <- elements [2 .. 4]
+        branches <- vectorOf numBranches operandZeroR
+        condition <- operandZeroR
+        marks <- sort <$> vectorOf (numBranches - 1) arbitrary
+        let vars = mergeVars $ map snd branches ++ [snd condition]
+            exp = piecewise marks (fst condition) $ map fst branches
+        return (exp, vars)
     fromNaryZeroR ::
            ([Expression Zero R] -> Expression Zero R)
         -> Gen (Expression Zero R, Vars)

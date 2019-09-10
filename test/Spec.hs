@@ -58,14 +58,14 @@ main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
 spec :: Spec
 spec = do
-    describe "SimplifySpec" HashedSimplifySpec.spec
-    describe "Test1" Test1.spec
-    describe "Test2" Test2.spec
-    describe "HashedInterpSpec" HashedInterpSpec.spec
-    describe "HashedCollectSpec" HashedCollectSpec.spec
-    describe "HashedToCSpec" HashedToCSpec.spec
-    describe "StructureSpec" StructureSpec.spec
+--    describe "SimplifySpec" HashedSimplifySpec.spec
+--    describe "Test1" Test1.spec
+--    describe "Test2" Test2.spec
+--    describe "HashedInterpSpec" HashedInterpSpec.spec
+--    describe "HashedCollectSpec" HashedCollectSpec.spec
+--    describe "HashedToCSpec" HashedToCSpec.spec
+--    describe "StructureSpec" StructureSpec.spec
     describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
-    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
-    describe "SimplifyEval.OneRSpec" OneRSpec.spec
-    describe "SimplifyEval.OneCSpec" OneCSpec.spec
+--    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
+--    describe "SimplifyEval.OneRSpec" OneRSpec.spec
+--    describe "SimplifyEval.OneCSpec" OneCSpec.spec
