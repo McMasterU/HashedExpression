@@ -77,6 +77,16 @@ prod1 = fromJust . HashedOperation.sum
 --    let codes = generateProblemCode valMaps problem
 --    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
 main = do
-    let exp =
-            piecewise [1] c [const 2 * x, y] + piecewise [1] c [const 4 * x, y]
-    showExp . collectDifferentials . exteriorDerivative allVars $ exp
+    let exp = piecewise [1, 2, 3] x [y, z, t, x]
+    let valMaps =
+            fromList
+                [ ("x", VScalar 1)
+                , ("y", VScalar 1)
+                , ("z", VScalar 2)
+                , ("t", VScalar 3)
+                ]
+    let program = singleExpressionCProgram valMaps exp
+    let fileName = "haha"
+    let fullFileName = "C/" ++ fileName ++ ".c"
+    let program = singleExpressionCProgram valMaps exp
+    writeFile fullFileName (intercalate "\n" program)

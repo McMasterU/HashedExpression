@@ -154,6 +154,7 @@ separateDVarAlonePiecewise (mp, n)
                             mp
                             (binaryET InnerProd ElementDefault)
                             [partDiff, noChange dVarPart]
+                _ -> error $ debugPrint (mp, mainBranch)
     | otherwise = noChange n
 
 -- |
@@ -170,8 +171,8 @@ separateDVarAlone =
         , s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y
         , s * (x * y) |. isDVar y ~~~~~~> (s * x) * y
         -- Dealing with rotate
-        , x <.> rotate amount y |. isDVar y ~~~~~~> rotate (negate amount) x <.>
-          y
+        , x <.> rotate amount y |. isCovector y ~~~~~~>
+          (rotate (negate amount) x <.> y)
         ] ++
     [toRecursiveCollecting separateDVarAlonePiecewise]
 
@@ -198,7 +199,7 @@ groupByDVar exp@(mp, n) =
         , DVar name <- retrieveNode cId mp = name
         | InnerProd Covector _ cId <- retrieveNode nId mp
         , DVar name <- retrieveNode cId mp = name
-        | otherwise = error $ "Collect D " ++ show (retrieveNode nId mp)
+        | otherwise = error $ "Collect D: " ++ debugPrint (mp, nId)
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId

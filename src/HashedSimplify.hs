@@ -119,6 +119,7 @@ simplifyingTransformation piecewiseMode = secondPass . firstPass
             , collapseSumProdRules
             , normalizeRotateRules
             , pullScalarPiecewiseRules
+            , pullRotatePiecewiseRules
             ] ++
         piecewiseTransformations ++ --
         [ rulesFromPattern --
@@ -553,6 +554,23 @@ pullScalarPiecewiseRules exp@(mp, n)
                 mp
                 (binaryET Scale ElementDefault)
                 [noChange scalar, newPiecewise]
+    | otherwise = noChange n
+
+-- | Pull rotate out of piecewise when there is only one non-zero branch
+--
+pullRotatePiecewiseRules :: Modification
+pullRotatePiecewiseRules exp@(mp, n)
+    | Piecewise marks condition branches <- retrieveNode n mp
+    , [mainBranch] <- filter (not . isZero mp) branches
+    , Rotate rotateAmount nId <- retrieveNode mainBranch mp =
+        let toNewBranch b
+                | not . isZero mp $ b = noChange nId
+                | otherwise = noChange b
+            newBranches = map toNewBranch branches
+            newPiecewise =
+                applyDiff mp (conditionAry (Piecewise marks)) $
+                noChange condition : newBranches
+         in applyDiff mp (unary (Rotate rotateAmount)) [newPiecewise]
     | otherwise = noChange n
 
 -- | Split piecewise function to sum of many piecewises that have only one non-zero branch and the rest zero
