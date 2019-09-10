@@ -262,8 +262,8 @@ piecewise marks conditionExp branchExps
             conditionExp
             branchExps
     | otherwise =
-        error
-            "Must satisfy number of marks = number of branches - 1, and marks are increasing"
+        error $
+            "Must satisfy number of marks = number of branches - 1, and marks are increasing " ++ show marks
   where
     guard =
         ensureSameShapeList branchExps .

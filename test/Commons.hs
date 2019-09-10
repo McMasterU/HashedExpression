@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Commons where
 
 import Control.Applicative (liftA2)
-import Control.Monad (forM)
+import Control.Monad (foldM, forM)
 import Data.Array
 import Data.Complex
 import Data.Function.HT (nest)
@@ -62,6 +63,13 @@ import Test.QuickCheck
 --
 removeDuplicate :: (Ord a) => [a] -> [a]
 removeDuplicate = toList . fromList
+
+-- | 
+--
+vectorOfDifferent :: Eq a => Int -> Gen a -> Gen [a]
+vectorOfDifferent sz gen = foldM f [] [1 .. sz]
+  where
+    f acc _ = (: acc) <$> gen `suchThat` (not . flip elem acc)
 
 -- | Format
 --
@@ -189,7 +197,7 @@ genZeroR =
         numBranches <- elements [2 .. 4]
         branches <- vectorOf numBranches operandZeroR
         condition <- operandZeroR
-        marks <- sort <$> vectorOf (numBranches - 1) arbitrary
+        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
         let vars = mergeVars $ map snd branches ++ [snd condition]
             exp = piecewise marks (fst condition) $ map fst branches
         return (exp, vars)
@@ -297,8 +305,18 @@ genZeroC =
     , (1, fromUnaryZeroC (^ 2))
     , (1, fromInnerProdHigherZeroC)
     , (2, fromRealImagZeroC)
+    , (1, fromPiecewiseZeroC)
     ]
   where
+    fromPiecewiseZeroC :: Gen (Expression Zero C, Vars)
+    fromPiecewiseZeroC = do
+        numBranches <- elements [2 .. 4]
+        branches <- vectorOf numBranches operandZeroC
+        condition <- operandZeroR
+        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+        let vars = mergeVars $ map snd branches ++ [snd condition]
+            exp = piecewise marks (fst condition) $ map fst branches
+        return (exp, vars)
     fromNaryZeroC ::
            ([Expression Zero C] -> Expression Zero C)
         -> Gen (Expression Zero C, Vars)
@@ -395,8 +413,18 @@ genOneR =
     , (1, fromScaleOneR)
     , (1, fromOneCOneR)
     , (3, fromRotateOneR)
+    , (1, fromPiecewiseOneR)
     ]
   where
+    fromPiecewiseOneR :: Gen (Expression One R, Vars)
+    fromPiecewiseOneR = do
+        numBranches <- elements [2 .. 4]
+        branches <- vectorOf numBranches operandOneR
+        condition <- operandOneR
+        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+        let vars = mergeVars $ map snd branches ++ [snd condition]
+            exp = piecewise marks (fst condition) $ map fst branches
+        return (exp, vars)
     fromRotateOneR :: Gen (Expression One R, Vars)
     fromRotateOneR = do
         on <- operandOneR
@@ -511,8 +539,18 @@ genOneC =
     , (1, fromUnaryOneC (^ 2))
     , (2, fromScaleOneC)
     , (3, fromRotateOneC)
+    , (1, fromPiecewiseOneC)
     ]
   where
+    fromPiecewiseOneC :: Gen (Expression One C, Vars)
+    fromPiecewiseOneC = do
+        numBranches <- elements [2 .. 4]
+        branches <- vectorOf numBranches operandOneC
+        condition <- operandOneR
+        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+        let vars = mergeVars $ map snd branches ++ [snd condition]
+            exp = piecewise marks (fst condition) $ map fst branches
+        return (exp, vars)
     fromRotateOneC :: Gen (Expression One C, Vars)
     fromRotateOneC = do
         on <- operandOneC
