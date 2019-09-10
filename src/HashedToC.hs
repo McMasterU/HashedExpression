@@ -7,6 +7,7 @@ import Data.Graph (buildG, topSort)
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl', intercalate, intersperse, tails)
+import Data.List.HT (splitLast)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
@@ -139,6 +140,24 @@ forRange iter range codes =
     ["  }"] ++ --
     ["}"]
 
+if_ :: String -> Code -> Code
+if_ condition codes =
+    ["if (" ++ condition ++ ") {"] ++ --
+    space 2 codes ++ --
+    ["}"]
+
+elseif :: String -> Code -> Code
+elseif condition codes =
+    ["else if (" ++ condition ++ ") {"] ++ --
+    space 2 codes ++ --
+    ["}"]
+
+else_ :: Code -> Code
+else_ codes =
+    ["else {"] ++ --
+    space 2 codes ++ --
+    ["}"]
+
 -- | Access pointer
 -- TODO 1: the function signature is too long?
 -- TODO 2: constant should be written directly? then we have to separate left-hand side and right-hand side access?
@@ -262,6 +281,20 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                                 i
                                 (getShape arg1)
                                 (initCodes, codes, afterCodes)
+                Piecewise marks condition branches ->
+                    let m:ms = map show marks
+                        (b:bs, lst) = splitLast branches
+                        eachMiddle (m, b) =
+                            elseif
+                                (condition `at` i ++ " <= " ++ m)
+                                [n `at` i <<- b `at` i]
+                     in for i n $
+                        if_
+                            (condition `at` i ++ " <= " ++ m)
+                            [n `at` i <<- b `at` i] ++ -- 
+                        concatMap eachMiddle (zip ms bs) ++
+                        else_ --
+                            [n `at` i <<- lst `at` i]
                 Rotate [amount] arg ->
                     let [size] = shape
                      in forRange i size $

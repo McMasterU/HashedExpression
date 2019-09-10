@@ -570,12 +570,8 @@ pullRotatePiecewiseRules exp@(mp, n)
             newPiecewise =
                 applyDiff mp (conditionAry (Piecewise marks)) $
                 noChange condition : newBranches
-        in applyDiff
-                mp
-                (unary (Rotate rotateAmount))
-                [newPiecewise]
+         in applyDiff mp (unary (Rotate rotateAmount)) [newPiecewise]
     | otherwise = noChange n
-
 
 -- | Split piecewise function to sum of many piecewises that have only one non-zero branch and the rest zero
 -- (if a > 2 then x + y else m + n) = (if a > 2 then x + y else 0) + (if a > 2 then 0 else m + n)

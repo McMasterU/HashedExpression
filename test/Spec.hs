@@ -63,7 +63,7 @@ spec = do
     describe "Test2" Test2.spec
     describe "HashedInterpSpec" HashedInterpSpec.spec
     describe "HashedCollectSpec" HashedCollectSpec.spec
---    describe "HashedToCSpec" HashedToCSpec.spec
+    describe "HashedToCSpec" HashedToCSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
     describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
