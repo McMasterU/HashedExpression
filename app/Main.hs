@@ -65,28 +65,24 @@ prod1 = fromJust . HashedOperation.sum
 --    writeFile filePath $ intercalate "\n" code
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
---main = do
---    let exp = (x2 - y2) <.> (x2 - y2)
---    let vars = Set.fromList ["x2"]
---    showExp $ collectDifferentials . exteriorDerivative vars $ exp
---    let valMaps =
---            emptyVms |>
---            withVm2 (fromList [("y2", listArray ((0, 0), (9, 9)) [1 .. 100])])
---    let problem = constructProblem exp vars
---    print problem
---    let codes = generateProblemCode valMaps problem
---    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
 main = do
-    let exp = piecewise [1, 2, 3] x [y, z, t, x]
-    let valMaps =
-            fromList
-                [ ("x", VScalar 1)
-                , ("y", VScalar 1)
-                , ("z", VScalar 2)
-                , ("t", VScalar 3)
-                ]
-    let program = singleExpressionCProgram valMaps exp
-    let fileName = "haha"
-    let fullFileName = "C/" ++ fileName ++ ".c"
-    let program = singleExpressionCProgram valMaps exp
-    writeFile fullFileName (intercalate "\n" program)
+    let exp = huber 1 x2 <.> one2
+    let vars = Set.fromList ["x2"]
+    showExp $ collectDifferentials . exteriorDerivative vars $ exp
+    let valMaps = fromList []
+    let problem = constructProblem exp vars
+    let codes = generateProblemCode valMaps problem
+    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes--main = do
+--    let exp = piecewise [1, 2, 3] x [y, z, t, x]
+--    let valMaps =
+--            fromList
+--                [ ("x", VScalar 1)
+--                , ("y", VScalar 1)
+--                , ("z", VScalar 2)
+--                , ("t", VScalar 3)
+--                ]
+--    let program = singleExpressionCProgram valMaps exp
+--    let fileName = "haha"
+--    let fullFileName = "C/" ++ fileName ++ ".c"
+--    let program = singleExpressionCProgram valMaps exp
+--    writeFile fullFileName (intercalate "\n" program)
