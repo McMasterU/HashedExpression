@@ -120,6 +120,7 @@ simplifyingTransformation piecewiseMode = secondPass . firstPass
             , normalizeRotateRules
             , pullScalarPiecewiseRules
             , pullRotatePiecewiseRules
+            , negativeZeroRules
             ] ++
         piecewiseTransformations ++ --
         [ rulesFromPattern --
@@ -568,8 +569,10 @@ pullRotatePiecewiseRules exp@(mp, n)
                 | otherwise = noChange b
             newBranches = map toNewBranch branches
             newCondition =
-                applyDiff mp (unary (Rotate $ map negate rotateAmount))
-                [noChange condition]
+                applyDiff
+                    mp
+                    (unary (Rotate $ map negate rotateAmount))
+                    [noChange condition]
             newPiecewise =
                 applyDiff mp (conditionAry (Piecewise marks)) $
                 newCondition : newBranches
@@ -682,3 +685,12 @@ groupSumProdPiecewiseRules exp@(mp, n)
                 mp
                 (conditionAry (Piecewise marks))
                 (noChange condition : combinedBranches)
+
+-- | Because sometimes we got both Const (-0.0) and Const (0.0) which are different, so we turn them
+-- to Const (0.0)
+--
+negativeZeroRules :: Modification
+negativeZeroRules exp@(mp, n)
+    | (shape, Const val) <- retrieveInternal n mp
+    , val == 0.0 || val == (-0.0) = diffConst shape 0
+    | otherwise = noChange n

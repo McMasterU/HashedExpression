@@ -194,9 +194,9 @@ hiddenPrettify pastable (mp, n) =
                         T.intercalate ", " . map innerPrettify $ branches
                  in T.concat
                         [ "piecewise "
-                        , innerPrettify conditionArg
-                        , " "
                         , T.pack . show $ marks
+                        , " "
+                        , innerPrettify conditionArg
                         , " ["
                         , printBranches
                         , "]"
