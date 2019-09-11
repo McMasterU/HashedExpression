@@ -567,9 +567,12 @@ pullRotatePiecewiseRules exp@(mp, n)
                 | not . isZero mp $ b = noChange nId
                 | otherwise = noChange b
             newBranches = map toNewBranch branches
+            newCondition =
+                applyDiff mp (unary (Rotate $ map negate rotateAmount))
+                [noChange condition]
             newPiecewise =
                 applyDiff mp (conditionAry (Piecewise marks)) $
-                noChange condition : newBranches
+                newCondition : newBranches
          in applyDiff mp (unary (Rotate rotateAmount)) [newPiecewise]
     | otherwise = noChange n
 

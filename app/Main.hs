@@ -65,14 +65,14 @@ prod1 = fromJust . HashedOperation.sum
 --    writeFile filePath $ intercalate "\n" code
 --main = do
 --    let (vX, vY) = quarterCircleFlow (20, 20) 7 6 0.15
-main = do
-    let exp = huber 1 x2 <.> one2
-    let vars = Set.fromList ["x2"]
-    showExp $ collectDifferentials . exteriorDerivative vars $ exp
-    let valMaps = fromList []
-    let problem = constructProblem exp vars
-    let codes = generateProblemCode valMaps problem
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes--main = do
+--main = do
+--    let exp = huber 1 x2 <.> one2
+--    let vars = Set.fromList ["x2"]
+--    showExp $ collectDifferentials . exteriorDerivative vars $ exp
+--    let valMaps = fromList []
+--    let problem = constructProblem exp vars
+--    let codes = generateProblemCode valMaps problem
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes--main = do
 --    let exp = piecewise [1, 2, 3] x [y, z, t, x]
 --    let valMaps =
 --            fromList
@@ -86,3 +86,43 @@ main = do
 --    let fullFileName = "C/" ++ fileName ++ ".c"
 --    let program = singleExpressionCProgram valMaps exp
 --    writeFile fullFileName (intercalate "\n" program)
+main = do
+    let exp =
+            piecewise
+                [-15.631805560907928, 44.77502422279068]
+                i1
+                [rotate 8 w1, zero1, zero1]
+    let valMaps =
+            fromList
+                [ ( "i1"
+                  , V1D (array
+                             (0, 9)
+                             [ (0, -40.195765019319865)
+                             , (1, 32.73024460317578)
+                             , (2, 5.014279519082707)
+                             , (3, 8.643093253538066)
+                             , (4, -16.615436918501835)
+                             , (5, 6.857383705589953)
+                             , (6, 12.150806150687048)
+                             , (7, -56.97237186263389)
+                             , (8, 10.378510423996962)
+                             , (9, 25.698093462354326)
+                             ]))
+                , ( "w1"
+                  , V1D (array
+                             (0, 9)
+                             [ (0, 33.524568575004395)
+                             , (1, 16.643983584957276)
+                             , (2, -58.027930192704986)
+                             , (3, -5.232075657334483)
+                             , (4, 61.38815812695504)
+                             , (5, 6.0722571973491375)
+                             , (6, 69.6439523981028)
+                             , (7, 59.76791027804917)
+                             , (8, 30.51421673957095)
+                             , (9, -16.009449781895622)
+                             ]))
+                ]
+    showExp $ simplify exp
+    print $ eval valMaps exp
+    print $ eval valMaps $ simplify exp
