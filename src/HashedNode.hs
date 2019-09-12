@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 module HashedNode where
 
 import qualified Data.IntMap.Strict as IM

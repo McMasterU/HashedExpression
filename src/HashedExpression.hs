@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,7 +20,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
-import GHC.TypeLits (Nat)
+import GHC.TypeLits (Nat, KnownNat)
 import Prelude hiding
     ( (*)
     , (+)
@@ -66,6 +67,10 @@ data Two
 
 data Three
     deriving (DimensionType, Typeable)
+
+-- | 
+--
+instance (KnownNat a) => DimensionType a
 
 -- | Classes as constraints
 --

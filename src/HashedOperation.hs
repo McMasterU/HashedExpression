@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -43,6 +44,17 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude
+import GHC.TypeLits (KnownNat, natVal)
+import Data.Proxy 
+
+-- | 
+--
+var1dDT :: forall n. (KnownNat n) => String -> Expression n R
+var1dDT name = Expression h (fromList [(h, node)])
+  where
+    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size], Var name)
+    h = hash node
 
 -- | Create primitive expressions
 --

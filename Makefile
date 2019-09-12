@@ -7,3 +7,4 @@ check_exhaustive:
 
 clear_c:
 	rm C/*
+	rm *.dat

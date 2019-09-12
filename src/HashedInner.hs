@@ -5,6 +5,7 @@
 --
 -------------------------------------------------------------------------------
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveAnyClass #-}
 

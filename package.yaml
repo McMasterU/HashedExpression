@@ -33,6 +33,7 @@ dependencies:
 - time
 - split
 - extra
+- easyplot
 
 
 
