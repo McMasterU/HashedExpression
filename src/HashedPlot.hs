@@ -37,8 +37,7 @@ plot1VariableFunction :: Function -> FileName -> IO ()
 plot1VariableFunction fn@(Function exp values) imageName
     | [var] <- scalarVariables fn =
         let f x = eval (Map.insert var (VScalar x) values) exp
-         in do readProcessWithExitCode "mkdir" ["plots"] ""
-               plot (PDF $ "plots/" ++ imageName ++ ".pdf") $
+         in do plot (PDF $ "plots/" ++ imageName ++ ".pdf") $
                    Function2D [Title "Function"] [] f
                readProcessWithExitCode "rm" ["plot1.dat"] ""
                putStrLn "Done plotting !"
