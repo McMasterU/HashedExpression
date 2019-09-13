@@ -13,8 +13,10 @@ module HashedOperation where
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
 import Data.List (sort)
+import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import GHC.TypeLits (KnownNat, natVal)
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -44,16 +46,75 @@ import Prelude hiding
     , tanh
     )
 import qualified Prelude
-import GHC.TypeLits (KnownNat, natVal)
-import Data.Proxy 
 
--- | 
+-- | Create primitive expressions using Nat kind
 --
-var1dDT :: forall n. (KnownNat n) => String -> Expression n R
-var1dDT name = Expression h (fromList [(h, node)])
+variable1D ::
+       forall n. (KnownNat n)
+    => String
+    -> Expression n R
+variable1D name = Expression h (fromList [(h, node)])
   where
     size = fromIntegral $ natVal (Proxy :: Proxy n)
     node = ([size], Var name)
+    h = hash node
+
+variable2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => String
+    -> Expression '( m, n) R
+variable2D name = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size1, size2], Var name)
+    h = hash node
+
+variable3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => String
+    -> Expression '( m, n, p) R
+variable3D name = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    node = ([size1, size3], Var name)
+    h = hash node
+
+-- | 
+--
+constant1D ::
+       forall n. (KnownNat n)
+    => Double
+    -> Expression n R
+constant1D val = Expression h (fromList [(h, node)])
+  where
+    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size], Const val)
+    h = hash node
+
+constant2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => Double
+    -> Expression '( m, n) R
+constant2D val = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size1, size2], Const val)
+    h = hash node
+
+constant3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => Double
+    -> Expression '( m, n, p) R
+constant3D val = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    node = ([size1, size3], Const val)
     h = hash node
 
 -- | Create primitive expressions

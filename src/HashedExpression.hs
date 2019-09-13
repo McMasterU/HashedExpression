@@ -20,7 +20,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
-import GHC.TypeLits (Nat, KnownNat)
+import GHC.TypeLits (KnownNat, Nat)
 import Prelude hiding
     ( (*)
     , (+)
@@ -70,7 +70,11 @@ data Three
 
 -- | 
 --
-instance (KnownNat a) => DimensionType a
+instance (KnownNat n) => DimensionType n
+
+instance (KnownNat m, KnownNat n) => DimensionType '( m, n)
+
+instance (KnownNat m, KnownNat n, KnownNat p) => DimensionType '( m, n, p)
 
 -- | Classes as constraints
 --
