@@ -59,7 +59,7 @@ import qualified Prelude
 -- - No complex in the input (:+, xRe, xIm)
 -- - Scale is pushed to the outer most layer and real scalars are group together in a product
 --
-collectDifferentials :: Expression Zero Covector -> Expression Zero Covector
+collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
 collectDifferentials = wrap . applyRules . unwrap . simplify
   where
     applyRules =

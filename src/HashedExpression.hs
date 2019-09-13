@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,7 +20,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy)
 import Data.Typeable (Typeable, typeRep)
-import GHC.TypeLits (Nat)
+import GHC.TypeLits (KnownNat, Nat)
 import Prelude hiding
     ( (*)
     , (+)
@@ -55,7 +56,7 @@ data Covector
 
 -- | Type representation of vector dimension
 --
-data Zero
+data Scalar
     deriving (DimensionType, Typeable)
 
 data One
@@ -66,6 +67,14 @@ data Two
 
 data Three
     deriving (DimensionType, Typeable)
+
+-- | 
+--
+instance (KnownNat n) => DimensionType n
+
+instance (KnownNat m, KnownNat n) => DimensionType '( m, n)
+
+instance (KnownNat m, KnownNat n, KnownNat p) => DimensionType '( m, n, p)
 
 -- | Classes as constraints
 --

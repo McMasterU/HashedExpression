@@ -20,9 +20,9 @@ import HashedExpression
     , Node(..)
     , One
     , R
+    , Scalar
     , Three
     , Two
-    , Zero
     )
 import HashedNode
 import HashedPrettify (prettify, showExp)
@@ -31,7 +31,7 @@ import HashedUtils
 -- | This operation emulates the mathematical operation
 -- | Turn expression to the right type
 --
-expZeroR :: ExpressionMap -> Int -> Expression Zero R
+expZeroR :: ExpressionMap -> Int -> Expression Scalar R
 expZeroR = flip Expression
 
 expOneR :: ExpressionMap -> Int -> Expression One R
@@ -43,7 +43,7 @@ expTwoR = flip Expression
 expThreeR :: ExpressionMap -> Int -> Expression Three R
 expThreeR = flip Expression
 
-expZeroC :: ExpressionMap -> Int -> Expression Zero C
+expZeroC :: ExpressionMap -> Int -> Expression Scalar C
 expZeroC = flip Expression
 
 expOneC :: ExpressionMap -> Int -> Expression One C
@@ -125,8 +125,8 @@ class Evaluable d rc output | d rc -> output where
 
 -- |
 --
-instance Evaluable Zero R Double where
-    eval :: ValMaps -> Expression Zero R -> Double
+instance Evaluable Scalar R Double where
+    eval :: ValMaps -> Expression Scalar R -> Double
     eval valMap e@(Expression n mp)
         | [] <- retrieveShape n mp =
             case retrieveNode n mp of
@@ -204,8 +204,8 @@ instance Evaluable Zero R Double where
                         ("expression structure Scalar R is wrong " ++ prettify e)
         | otherwise = error "one r but shape is not [] ??"
 
-instance Evaluable Zero C (Complex Double) where
-    eval :: ValMaps -> Expression Zero C -> Complex Double
+instance Evaluable Scalar C (Complex Double) where
+    eval :: ValMaps -> Expression Scalar C -> Complex Double
     eval valMap e@(Expression n mp)
         | [] <- retrieveShape n mp =
             case retrieveNode n mp of

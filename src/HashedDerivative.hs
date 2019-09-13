@@ -142,9 +142,9 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  -- d(-f) = -d(f)
             Neg R arg -> d1Input (Neg R) arg
             Scale R arg1 arg2 ->
-                let s = Expression arg1 mp :: Expression Zero R
+                let s = Expression arg1 mp :: Expression Scalar R
                     f = Expression arg2 mp :: Expression D_ R
-                    ds = hiddenDerivative' s :: Expression Zero Covector
+                    ds = hiddenDerivative' s :: Expression Scalar Covector
                     df = hiddenDerivative' f :: Expression D_ Covector
                  in ds |*.| f + s *. df
             Div arg1 arg2
@@ -306,7 +306,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
        (DimensionType d)
     => Expression d R
     -> Expression d Covector
-    -> Expression Zero Covector
+    -> Expression Scalar Covector
 (|<.>|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
     let op = binaryET InnerProd (ElementSpecific Covector) `hasShape` []
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
@@ -315,7 +315,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
 --
 (|*.|) ::
        (DimensionType d)
-    => Expression Zero Covector
+    => Expression Scalar Covector
     -> Expression d R
     -> Expression d Covector
 (|*.|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =

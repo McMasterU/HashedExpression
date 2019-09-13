@@ -65,7 +65,7 @@ tRightMaskName = "tRightMask"
 tName :: String
 tName = "t"
 
-tof2DTimeVelocityConstraint :: (Int, Int) -> (Expression Zero R, ValMaps)
+tof2DTimeVelocityConstraint :: (Int, Int) -> (Expression Scalar R, ValMaps)
 tof2DTimeVelocityConstraint size@(row, column) =
     let up, right :: Expression Two R -> Expression Two R
         up = rotate (-1, 0)

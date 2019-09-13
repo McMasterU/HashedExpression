@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,8 +13,10 @@ module HashedOperation where
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
 import Data.List (sort)
+import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import GHC.TypeLits (KnownNat, natVal)
 import HashedExpression
 import HashedHash
 import HashedInner
@@ -44,9 +47,79 @@ import Prelude hiding
     )
 import qualified Prelude
 
+-- | Create primitive expressions using Nat kind
+--
+variable1D ::
+       forall n. (KnownNat n)
+    => String
+    -> Expression n R
+variable1D name = Expression h (fromList [(h, node)])
+  where
+    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size], Var name)
+    h = hash node
+
+variable2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => String
+    -> Expression '( m, n) R
+variable2D name = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size1, size2], Var name)
+    h = hash node
+
+variable3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => String
+    -> Expression '( m, n, p) R
+variable3D name = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    node = ([size1, size3], Var name)
+    h = hash node
+
+-- |
+--
+constant1D ::
+       forall n. (KnownNat n)
+    => Double
+    -> Expression n R
+constant1D val = Expression h (fromList [(h, node)])
+  where
+    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size], Const val)
+    h = hash node
+
+constant2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => Double
+    -> Expression '( m, n) R
+constant2D val = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    node = ([size1, size2], Const val)
+    h = hash node
+
+constant3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => Double
+    -> Expression '( m, n, p) R
+constant3D val = Expression h (fromList [(h, node)])
+  where
+    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
+    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    node = ([size1, size3], Const val)
+    h = hash node
+
 -- | Create primitive expressions
 --
-var :: String -> Expression Zero R
+var :: String -> Expression Scalar R
 var name = Expression h (fromList [(h, node)])
   where
     node = ([], Var name)
@@ -78,7 +151,7 @@ var3d (size1, size2, size3) name
 
 -- |
 --
-const :: Double -> Expression Zero R
+const :: Double -> Expression Scalar R
 const val = Expression h (fromList [(h, node)])
   where
     node = ([], Const val)
@@ -152,8 +225,8 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
-         VectorSpaceOp (Expression Zero s) (Expression d et) where
-    scale :: Expression Zero s -> Expression d et -> Expression d et
+         VectorSpaceOp (Expression Scalar s) (Expression d et) where
+    scale :: Expression Scalar s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =
                 binaryET Scale (ElementSpecific $ expressionElementType e2) `hasShape`
@@ -200,8 +273,8 @@ instance (DimensionType d) => NumOp (Expression d R) where
 -- | inner product
 --
 instance (InnerProductSpace d s) =>
-         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Zero s) where
-    (<.>) :: Expression d s -> Expression d s -> Expression Zero s
+         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Scalar s) where
+    (<.>) :: Expression d s -> Expression d s -> Expression Scalar s
     (<.>) e1 e2 =
         let scalarShape = []
             op =
@@ -216,16 +289,16 @@ huber ::
     => Double
     -> Expression d R
     -> Expression d R
-huber delta e = piecewise [delta] (e * e) [lessThan, largerThan]
+huber delta e = piecewise [delta * delta] (e * e) [lessThan, largerThan]
   where
     deltaVector =
-        constWithShape (expressionShape e) (delta * delta) :: Expression d R
-    lessThan = sqrt (e * e)
-    largerThan = const 0.5 *. (e * e + deltaVector)
+        constWithShape (expressionShape e) (delta / 2) :: Expression d R
+    lessThan = const 0.5 *. (e * e)
+    largerThan = const delta *. (sqrt (e * e) - deltaVector)
 
 -- | Norm 2
 --
-norm2 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 -- | Sum across
@@ -233,14 +306,14 @@ norm2 expr = sqrt (expr <.> expr)
 sumElements ::
        forall d. (DimensionType d)
     => Expression d R
-    -> Expression Zero R
+    -> Expression Scalar R
 sumElements expr = expr <.> one
   where
     one = constWithShape (expressionShape expr) 1 :: Expression d R
 
 -- | Norm 1
 --
-norm1 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Piecewise, with a condition expression and branch expressions

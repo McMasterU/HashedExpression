@@ -40,8 +40,8 @@ import Prelude hiding
     )
 import qualified SimplifyEval.OneCSpec as OneCSpec
 import qualified SimplifyEval.OneRSpec as OneRSpec
-import qualified SimplifyEval.ZeroCSpec as ZeroCSpec
-import qualified SimplifyEval.ZeroRSpec as ZeroRSpec
+import qualified SimplifyEval.ScalarCSpec as ScalarCSpec
+import qualified SimplifyEval.ScalarRSpec as ScalarRSpec
 import qualified StructureSpec
 import qualified Test1
 import qualified Test2
@@ -65,7 +65,7 @@ spec = do
     describe "HashedCollectSpec" HashedCollectSpec.spec
     describe "HashedToCSpec" HashedToCSpec.spec
     describe "StructureSpec" StructureSpec.spec
-    describe "SimplifyEval.ZeroRSpec" ZeroRSpec.spec
-    describe "SimplifyEval.ZeroCSpec" ZeroCSpec.spec
+    describe "SimplifyEval.ScalarRSpec" ScalarRSpec.spec
+    describe "SimplifyEval.ScalarCSpec" ScalarCSpec.spec
     describe "SimplifyEval.OneRSpec" OneRSpec.spec
     describe "SimplifyEval.OneCSpec" OneCSpec.spec

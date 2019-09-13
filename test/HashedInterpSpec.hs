@@ -45,32 +45,32 @@ import Test.QuickCheck (property)
 
 -- |
 --
-prop_AddZeroR :: SuiteZeroR -> SuiteZeroR -> Bool
-prop_AddZeroR (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) =
+prop_AddScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
+prop_AddScalarR (SuiteScalarR exp1 valMaps1) (SuiteScalarR exp2 valMaps2) =
     eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
   where
     valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
-prop_MultiplyZeroR :: SuiteZeroR -> SuiteZeroR -> Bool
-prop_MultiplyZeroR (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) =
+prop_MultiplyScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
+prop_MultiplyScalarR (SuiteScalarR exp1 valMaps1) (SuiteScalarR exp2 valMaps2) =
     eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
   where
     valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
-prop_AddZeroC :: SuiteZeroC -> SuiteZeroC -> Bool
-prop_AddZeroC (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) =
+prop_AddScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
+prop_AddScalarC (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) =
     eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
   where
     valMaps = valMaps1 `union` valMaps2
 
 -- |
 --
-prop_MultiplyZeroC :: SuiteZeroC -> SuiteZeroC -> Bool
-prop_MultiplyZeroC (SuiteZeroC exp1 valMaps1) (SuiteZeroC exp2 valMaps2) =
+prop_MultiplyScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
+prop_MultiplyScalarC (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) =
     eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
   where
     valMaps = valMaps1 `union` valMaps2
@@ -124,10 +124,10 @@ prop_RotateTwoR3 (SuiteTwoR exp valMaps) amount1 amount2 =
 spec :: Spec
 spec =
     describe "Interp spec" $ do
-        specify "prop_Add Zero R" $ property prop_AddZeroR
-        specify "prop_Multiply Zero R" $ property prop_MultiplyZeroR
-        specify "prop_Add Zero C" $ property prop_AddZeroC
-        specify "prop_Multiply Zero C" $ property prop_MultiplyZeroC
+        specify "prop_Add Scalar R" $ property prop_AddScalarR
+        specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
+        specify "prop_Add Scalar C" $ property prop_AddScalarC
+        specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
         specify "prop_Rotate One R rotate 0 should stay the same" $
             property prop_RotateOneR1
         specify "prop_Rotate One R rotate a and -a should stay the same" $

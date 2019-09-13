@@ -1,8 +1,13 @@
-module SimplifyEval.ZeroRSpec where
+module SimplifyEval.ScalarCSpec where
 
 import Commons
+import Control.Monad (replicateM_)
+import qualified Data.IntMap.Strict as IM
 import Data.Map.Strict
 import Data.Maybe (fromJust)
+import Data.Typeable (Typeable)
+import Debug.Trace (traceShow, traceShowId)
+import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedOperation hiding (product, sum)
@@ -41,19 +46,19 @@ import Test.QuickCheck
 
 -- |
 --
-prop_SimplifyThenEval :: SuiteZeroR -> Bool
-prop_SimplifyThenEval (SuiteZeroR exp valMaps) =
+prop_SimplifyThenEval :: SuiteScalarC -> Bool
+prop_SimplifyThenEval (SuiteScalarC exp valMaps) =
     eval valMaps exp ~= eval valMaps (simplify exp)
 
 -- |
 --
-prop_Add :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifySum) =
+prop_Add :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
+prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (simplify1, simplify2, simplifySum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = union valMaps1 valMaps2
     exp1'
-        | simplify1 = simplify exp1
+        |simplify1 = simplify exp1
         | otherwise = exp1
     exp2'
         | simplify2 = simplify exp2
@@ -62,15 +67,15 @@ prop_Add (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simpl
         | simplifySum = simplify (exp1 + exp2)
         | otherwise = exp1 + exp2
 
-prop_Multiply :: SuiteZeroR -> SuiteZeroR -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
-    if lhs ~= rhs
+prop_Multiply :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
+prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(simplify1, simplify2, simplifyMul) =
+    if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
-        else error
-                 (prettify exp1' ++
-                  " * " ++
-                  prettify exp2' ++ " not ~= " ++ prettify expMul' ++ " ----- " ++ show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
+        else error $ prettifyDebug exp1' ++ "\n-----------\n" ++ prettifyDebug exp2' ++ "\n-----------\n" ++ show valMaps ++ "\n-----------n"
+            ++ show lhs ++ " not equals " ++ show rhs
   where
+    lhs = eval valMaps exp1' * eval valMaps exp2'
+    rhs = eval valMaps expMul'
     valMaps = union valMaps1 valMaps2
     exp1'
         | simplify1 = simplify exp1
@@ -81,19 +86,16 @@ prop_Multiply (SuiteZeroR exp1 valMaps1) (SuiteZeroR exp2 valMaps2) (simplify1, 
     expMul'
         | simplifyMul = simplify (exp1 * exp2)
         | otherwise = exp1 * exp2
-    lhs = eval valMaps exp1' * eval valMaps exp2'
-    rhs = eval valMaps expMul'
 
-prop_AddMultiply :: SuiteZeroR -> Bool
-prop_AddMultiply (SuiteZeroR exp valMaps) =
+prop_AddMultiply :: SuiteScalarC -> Bool
+prop_AddMultiply (SuiteScalarC exp valMaps) =
     eval valMaps (simplify (exp + exp)) ~=
-    eval valMaps (simplify (exp * const 2))
+    eval valMaps (simplify (const 2 *. exp))
 
 spec :: Spec
 spec =
-    describe "simplify & eval property for Zero R" $ do
-        specify "evaluate must equals simplify then evaluate " $
-            property prop_SimplifyThenEval
+    describe "simplify & eval property for Scalar C" $ do
+        specify "evaluate must equals simplify then evaluate " $ property prop_SimplifyThenEval
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply
