@@ -18,9 +18,9 @@ import HashedExpression
     , Expression(..)
     , ExpressionMap
     , Node(..)
-    , Scalar
     , One
     , R
+    , Scalar
     , Three
     , Two
     )
