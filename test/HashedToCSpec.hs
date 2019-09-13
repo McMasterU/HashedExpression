@@ -19,7 +19,7 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression (C, DimensionType, Expression(..), NumType, R, Zero)
+import HashedExpression (C, DimensionType, Expression(..), NumType, R, Scalar)
 import HashedInner
 import HashedInterp
 import HashedNode
@@ -65,8 +65,8 @@ readC str = (readR rePart, readR imPart)
 
 -- |
 --
-prop_CEqualInterpZeroR :: SuiteZeroR -> Expectation
-prop_CEqualInterpZeroR (SuiteZeroR exp valMaps) = do
+prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
+prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) = do
     (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
     let resultSimplify = read . head . splitOn " " $ outputSimple
     let resultInterpSimplify = eval valMaps (simplify exp)
@@ -74,8 +74,8 @@ prop_CEqualInterpZeroR (SuiteZeroR exp valMaps) = do
 
 -- |
 --
-prop_CEqualInterpZeroC :: SuiteZeroC -> Expectation
-prop_CEqualInterpZeroC (SuiteZeroC exp valMaps) = do
+prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
+prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) = do
     let simplifiedExp = simplify exp
     writeFile "C/main.c" $
         intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
@@ -143,11 +143,11 @@ spec =
             localOffset [5] [3] `shouldBe` 3
             localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
         specify
-            "Evaluate hash interp should equal to C code evaluation (Expression Zero R)" $
-            property prop_CEqualInterpZeroR
+            "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)" $
+            property prop_CEqualInterpScalarR
         specify
-            "Evaluate hash interp should equal to C code evaluation (Expression Zero C)" $
-            property prop_CEqualInterpZeroC
+            "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)" $
+            property prop_CEqualInterpScalarC
         specify
             "Evaluate hash interp should equal to C code evaluation (Expression One R)" $
             property prop_CEqualInterpOneR

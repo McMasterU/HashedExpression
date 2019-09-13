@@ -158,12 +158,12 @@ withRatio :: [(Int, a)] -> [a]
 withRatio = concatMap (uncurry replicate)
 
 -------------------------------------------------------------------------------
--- | MARK: Gen functions Zero R
+-- | MARK: Gen functions Scalar R
 --
 --
 -------------------------------------------------------------------------------
-primitiveZeroR :: Gen (Expression Zero R, Vars)
-primitiveZeroR = do
+primitiveScalarR :: Gen (Expression Scalar R, Vars)
+primitiveScalarR = do
     name <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
     elements . withRatio $
@@ -171,89 +171,89 @@ primitiveZeroR = do
         , (4, (const dbl, [[], [], [], []]))
         ]
 
-operandZeroR :: Gen (Expression Zero R, Vars)
-operandZeroR = oneof . withRatio $ [(8, primitiveZeroR), (2, genZeroR)]
+operandScalarR :: Gen (Expression Scalar R, Vars)
+operandScalarR = oneof . withRatio $ [(8, primitiveScalarR), (2, genScalarR)]
 
-genZeroR :: Gen (Expression Zero R, Vars)
-genZeroR =
+genScalarR :: Gen (Expression Scalar R, Vars)
+genScalarR =
     oneof . withRatio $
-    [ (4, fromNaryZeroR sum)
-    , (4, fromNaryZeroR product)
-    , (4, fromBinaryZeroR (*.))
-    , (4, fromBinaryZeroR (+))
-    , (4, fromBinaryZeroR (*))
-    , (4, fromBinaryZeroR (-))
-    , (4, fromBinaryZeroR (<.>))
-    , (2, fromUnaryZeroR negate)
-    , (1, fromUnaryZeroR (^ 2))
-    , (1, fromInnerProdHigherZeroR)
-    , (2, fromZeroCZeroR)
-    , (1, fromPiecewiseZeroR)
+    [ (4, fromNaryScalarR sum)
+    , (4, fromNaryScalarR product)
+    , (4, fromBinaryScalarR (*.))
+    , (4, fromBinaryScalarR (+))
+    , (4, fromBinaryScalarR (*))
+    , (4, fromBinaryScalarR (-))
+    , (4, fromBinaryScalarR (<.>))
+    , (2, fromUnaryScalarR negate)
+    , (1, fromUnaryScalarR (^ 2))
+    , (1, fromInnerProdHigherScalarR)
+    , (2, fromScalarCScalarR)
+    , (1, fromPiecewiseScalarR)
     ]
-    --    replicate 8 primitiveZeroR ++ replicate 2 genZeroR
+    --    replicate 8 primitiveScalarR ++ replicate 2 genScalarR
   where
-    fromPiecewiseZeroR :: Gen (Expression Zero R, Vars)
-    fromPiecewiseZeroR = do
+    fromPiecewiseScalarR :: Gen (Expression Scalar R, Vars)
+    fromPiecewiseScalarR = do
         numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandZeroR
-        condition <- operandZeroR
+        branches <- vectorOf numBranches operandScalarR
+        condition <- operandScalarR
         marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
         let vars = mergeVars $ map snd branches ++ [snd condition]
             exp = piecewise marks (fst condition) $ map fst branches
         return (exp, vars)
-    fromNaryZeroR ::
-           ([Expression Zero R] -> Expression Zero R)
-        -> Gen (Expression Zero R, Vars)
-    fromNaryZeroR f = do
+    fromNaryScalarR ::
+           ([Expression Scalar R] -> Expression Scalar R)
+        -> Gen (Expression Scalar R, Vars)
+    fromNaryScalarR f = do
         numOperands <- elements [3 .. 4]
-        ons <- vectorOf numOperands operandZeroR
+        ons <- vectorOf numOperands operandScalarR
         let exp = f . map fst $ ons
             vars = mergeVars . map snd $ ons
         return (exp, vars)
-    fromInnerProdHigherZeroR :: Gen (Expression Zero R, Vars)
-    fromInnerProdHigherZeroR = do
+    fromInnerProdHigherScalarR :: Gen (Expression Scalar R, Vars)
+    fromInnerProdHigherScalarR = do
         operand1 <- genOneR
         operand2 <- genOneR
         let exp = fst operand1 <.> fst operand2
             vars = mergeVars [snd operand1, snd operand2]
         return (exp, vars)
-    fromUnaryZeroR ::
-           (Expression Zero R -> Expression Zero R)
-        -> Gen (Expression Zero R, Vars)
-    fromUnaryZeroR f = do
-        on <- operandZeroR
+    fromUnaryScalarR ::
+           (Expression Scalar R -> Expression Scalar R)
+        -> Gen (Expression Scalar R, Vars)
+    fromUnaryScalarR f = do
+        on <- operandScalarR
         let exp = f . fst $ on
             names = snd on
         return (exp, names)
-    fromBinaryZeroR ::
-           (Expression Zero R -> Expression Zero R -> Expression Zero R)
-        -> Gen (Expression Zero R, Vars)
-    fromBinaryZeroR f = do
-        on1 <- operandZeroR
-        on2 <- operandZeroR
+    fromBinaryScalarR ::
+           (Expression Scalar R -> Expression Scalar R -> Expression Scalar R)
+        -> Gen (Expression Scalar R, Vars)
+    fromBinaryScalarR f = do
+        on1 <- operandScalarR
+        on2 <- operandScalarR
         let exp = f (fst on1) (fst on2)
             vars = mergeVars [snd on1, snd on2]
         return (exp, vars)
-    fromZeroCZeroR :: Gen (Expression Zero R, Vars)
-    fromZeroCZeroR = do
+    fromScalarCScalarR :: Gen (Expression Scalar R, Vars)
+    fromScalarCScalarR = do
         rand <- elements [True, False]
-        (zeroC, vars) <- genZeroC
+        (zeroC, vars) <- genScalarC
         let exp =
                 if rand
                     then xRe zeroC
                     else xIm zeroC
         return (exp, vars)
 
-instance Arbitrary (Expression Zero R) where
-    arbitrary = fmap fst genZeroR
+instance Arbitrary (Expression Scalar R) where
+    arbitrary = fmap fst genScalarR
 
 -- |
 --
-data SuiteZeroR =
-    SuiteZeroR (Expression Zero R) ValMaps
+data SuiteScalarR =
+    SuiteScalarR (Expression Scalar R) ValMaps
 
-instance Show SuiteZeroR where
-    show (SuiteZeroR e valMaps) =
+instance Show SuiteScalarR where
+    show (SuiteScalarR e valMaps) =
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
@@ -267,19 +267,19 @@ instance Show SuiteZeroR where
 
 -- |
 --
-instance Arbitrary SuiteZeroR where
+instance Arbitrary SuiteScalarR where
     arbitrary = do
-        (exp, vars) <- genZeroR
+        (exp, vars) <- genScalarR
         valMaps <- genValMap vars
-        return $ SuiteZeroR exp valMaps
+        return $ SuiteScalarR exp valMaps
 
 -------------------------------------------------------------------------------
--- | MARK: Gen functions Zero C
+-- | MARK: Gen functions Scalar C
 --
 --
 -------------------------------------------------------------------------------
-primitiveZeroC :: Gen (Expression Zero C, Vars)
-primitiveZeroC = do
+primitiveScalarC :: Gen (Expression Scalar C, Vars)
+primitiveScalarC = do
     name1 <- elements . map pure $ ['a' .. 'z']
     name2 <- elements . map pure $ ['a' .. 'z']
     dbl <- arbitrary
@@ -288,84 +288,84 @@ primitiveZeroC = do
         , (1, (const dbl +: const 0, [[], [], [], []]))
         ]
 
-operandZeroC :: Gen (Expression Zero C, Vars)
-operandZeroC = oneof . withRatio $ [(9, primitiveZeroC), (1, genZeroC)]
+operandScalarC :: Gen (Expression Scalar C, Vars)
+operandScalarC = oneof . withRatio $ [(9, primitiveScalarC), (1, genScalarC)]
 
-genZeroC :: Gen (Expression Zero C, Vars)
-genZeroC =
+genScalarC :: Gen (Expression Scalar C, Vars)
+genScalarC =
     oneof . withRatio $
-    [ (6, fromNaryZeroC sum)
-    , (3, fromNaryZeroC product)
-    , (6, fromBinaryZeroC (*.))
-    , (6, fromBinaryZeroC (+))
-    , (3, fromBinaryZeroC (*))
-    , (6, fromBinaryZeroC (-))
-    , (3, fromBinaryZeroC (<.>))
-    , (3, fromUnaryZeroC negate)
-    , (1, fromUnaryZeroC (^ 2))
-    , (1, fromInnerProdHigherZeroC)
-    , (2, fromRealImagZeroC)
-    , (1, fromPiecewiseZeroC)
+    [ (6, fromNaryScalarC sum)
+    , (3, fromNaryScalarC product)
+    , (6, fromBinaryScalarC (*.))
+    , (6, fromBinaryScalarC (+))
+    , (3, fromBinaryScalarC (*))
+    , (6, fromBinaryScalarC (-))
+    , (3, fromBinaryScalarC (<.>))
+    , (3, fromUnaryScalarC negate)
+    , (1, fromUnaryScalarC (^ 2))
+    , (1, fromInnerProdHigherScalarC)
+    , (2, fromRealImagScalarC)
+    , (1, fromPiecewiseScalarC)
     ]
   where
-    fromPiecewiseZeroC :: Gen (Expression Zero C, Vars)
-    fromPiecewiseZeroC = do
+    fromPiecewiseScalarC :: Gen (Expression Scalar C, Vars)
+    fromPiecewiseScalarC = do
         numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandZeroC
-        condition <- operandZeroR
+        branches <- vectorOf numBranches operandScalarC
+        condition <- operandScalarR
         marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
         let vars = mergeVars $ map snd branches ++ [snd condition]
             exp = piecewise marks (fst condition) $ map fst branches
         return (exp, vars)
-    fromNaryZeroC ::
-           ([Expression Zero C] -> Expression Zero C)
-        -> Gen (Expression Zero C, Vars)
-    fromNaryZeroC f = do
+    fromNaryScalarC ::
+           ([Expression Scalar C] -> Expression Scalar C)
+        -> Gen (Expression Scalar C, Vars)
+    fromNaryScalarC f = do
         numOperands <- elements [3]
-        ons <- vectorOf numOperands operandZeroC
+        ons <- vectorOf numOperands operandScalarC
         let exp = f . map fst $ ons
             vars = mergeVars . map snd $ ons
         return (exp, vars)
-    fromUnaryZeroC ::
-           (Expression Zero C -> Expression Zero C)
-        -> Gen (Expression Zero C, Vars)
-    fromUnaryZeroC f = do
-        on <- operandZeroC
+    fromUnaryScalarC ::
+           (Expression Scalar C -> Expression Scalar C)
+        -> Gen (Expression Scalar C, Vars)
+    fromUnaryScalarC f = do
+        on <- operandScalarC
         let exp = f . fst $ on
             vars = snd on
         return (exp, vars)
-    fromInnerProdHigherZeroC :: Gen (Expression Zero C, Vars)
-    fromInnerProdHigherZeroC = do
+    fromInnerProdHigherScalarC :: Gen (Expression Scalar C, Vars)
+    fromInnerProdHigherScalarC = do
         operand1 <- genOneC
         operand2 <- genOneC
         let exp = fst operand1 <.> fst operand2
             vars = mergeVars [snd operand1, snd operand2]
         return (exp, vars)
-    fromBinaryZeroC ::
-           (Expression Zero C -> Expression Zero C -> Expression Zero C)
-        -> Gen (Expression Zero C, Vars)
-    fromBinaryZeroC f = do
-        on1 <- operandZeroC
-        on2 <- operandZeroC
+    fromBinaryScalarC ::
+           (Expression Scalar C -> Expression Scalar C -> Expression Scalar C)
+        -> Gen (Expression Scalar C, Vars)
+    fromBinaryScalarC f = do
+        on1 <- operandScalarC
+        on2 <- operandScalarC
         let exp = f (fst on1) (fst on2)
             vars = mergeVars [snd on1, snd on2]
         return (exp, vars)
-    fromRealImagZeroC :: Gen (Expression Zero C, Vars)
-    fromRealImagZeroC = do
-        on1 <- genZeroR
-        on2 <- genZeroR
+    fromRealImagScalarC :: Gen (Expression Scalar C, Vars)
+    fromRealImagScalarC = do
+        on1 <- genScalarR
+        on2 <- genScalarR
         let exp = fst on1 +: fst on2
             vars = mergeVars [snd on1, snd on2]
         return (exp, vars)
 
-instance Arbitrary (Expression Zero C) where
-    arbitrary = fmap fst genZeroC
+instance Arbitrary (Expression Scalar C) where
+    arbitrary = fmap fst genScalarC
 
-data SuiteZeroC =
-    SuiteZeroC (Expression Zero C) ValMaps
+data SuiteScalarC =
+    SuiteScalarC (Expression Scalar C) ValMaps
 
-instance Show SuiteZeroC where
-    show (SuiteZeroC e valMaps) =
+instance Show SuiteScalarC where
+    show (SuiteScalarC e valMaps) =
         format
             [ ("Expr", exp)
             , ("Simplified", simplifiedExp)
@@ -377,11 +377,11 @@ instance Show SuiteZeroC where
         evalExp = eval valMaps e
         evalSimplified = eval valMaps $ simplify e
 
-instance Arbitrary SuiteZeroC where
+instance Arbitrary SuiteScalarC where
     arbitrary = do
-        (exp, names) <- genZeroC
+        (exp, names) <- genScalarC
         valMaps <- genValMap names
-        return $ SuiteZeroC exp valMaps
+        return $ SuiteScalarC exp valMaps
 
 -------------------------------------------------------------------------------
 -- | MARK: Gen functions One R
@@ -458,7 +458,7 @@ genOneR =
         return (exp, vars)
     fromScaleOneR :: Gen (Expression One R, Vars)
     fromScaleOneR = do
-        scalar <- operandZeroR
+        scalar <- operandScalarR
         scalee <- operandOneR
         let exp = fst scalar *. fst scalee
             vars = mergeVars [snd scalar, snd scalee]
@@ -584,8 +584,8 @@ genOneC =
         return (exp, vars)
     fromScaleOneC :: Gen (Expression One C, Vars)
     fromScaleOneC = do
-        scalarR <- operandZeroR
-        scalarC <- operandZeroC
+        scalarR <- operandScalarR
+        scalarC <- operandScalarC
         scalee <- operandOneC
         rand <- elements [True, False]
         let (exp, vars) =
@@ -693,7 +693,7 @@ genTwoR =
         return (exp, vars)
     fromScaleTwoR :: Gen (Expression Two R, Vars)
     fromScaleTwoR = do
-        scalar <- operandZeroR
+        scalar <- operandScalarR
         scalee <- operandTwoR
         let exp = fst scalar *. fst scalee
             vars = mergeVars [snd scalar, snd scalee]
@@ -812,8 +812,8 @@ genTwoC =
         return (exp, vars)
     fromScaleTwoC :: Gen (Expression Two C, Vars)
     fromScaleTwoC = do
-        scalarR <- operandZeroR
-        scalarC <- operandZeroC
+        scalarR <- operandScalarR
+        scalarC <- operandScalarC
         scalee <- operandTwoC
         rand <- elements [True, False]
         let (exp, vars) =
@@ -870,9 +870,9 @@ instance Show ArbitraryExpresion where
 instance Arbitrary ArbitraryExpresion where
     arbitrary =
         let option1 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero R))
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Scalar R))
             option2 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Zero C))
+                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Scalar C))
             option3 =
                 fmap ArbitraryExpresion (arbitrary :: Gen (Expression One R))
             option4 =

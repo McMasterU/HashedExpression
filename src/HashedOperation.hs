@@ -119,7 +119,7 @@ constant3D val = Expression h (fromList [(h, node)])
 
 -- | Create primitive expressions
 --
-var :: String -> Expression Zero R
+var :: String -> Expression Scalar R
 var name = Expression h (fromList [(h, node)])
   where
     node = ([], Var name)
@@ -151,7 +151,7 @@ var3d (size1, size2, size3) name
 
 -- |
 --
-const :: Double -> Expression Zero R
+const :: Double -> Expression Scalar R
 const val = Expression h (fromList [(h, node)])
   where
     node = ([], Const val)
@@ -225,8 +225,8 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 -- | Scale in vector space
 --
 instance (VectorSpace d et s) =>
-         VectorSpaceOp (Expression Zero s) (Expression d et) where
-    scale :: Expression Zero s -> Expression d et -> Expression d et
+         VectorSpaceOp (Expression Scalar s) (Expression d et) where
+    scale :: Expression Scalar s -> Expression d et -> Expression d et
     scale e1 e2 =
         let op =
                 binaryET Scale (ElementSpecific $ expressionElementType e2) `hasShape`
@@ -273,8 +273,8 @@ instance (DimensionType d) => NumOp (Expression d R) where
 -- | inner product
 --
 instance (InnerProductSpace d s) =>
-         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Zero s) where
-    (<.>) :: Expression d s -> Expression d s -> Expression Zero s
+         InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Scalar s) where
+    (<.>) :: Expression d s -> Expression d s -> Expression Scalar s
     (<.>) e1 e2 =
         let scalarShape = []
             op =
@@ -298,7 +298,7 @@ huber delta e = piecewise [delta] (e * e) [lessThan, largerThan]
 
 -- | Norm 2
 --
-norm2 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 -- | Sum across
@@ -306,14 +306,14 @@ norm2 expr = sqrt (expr <.> expr)
 sumElements ::
        forall d. (DimensionType d)
     => Expression d R
-    -> Expression Zero R
+    -> Expression Scalar R
 sumElements expr = expr <.> one
   where
     one = constWithShape (expressionShape expr) 1 :: Expression d R
 
 -- | Norm 1
 --
-norm1 :: (DimensionType d) => Expression d R -> Expression Zero R
+norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Piecewise, with a condition expression and branch expressions

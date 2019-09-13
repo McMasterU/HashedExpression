@@ -22,7 +22,7 @@ import HashedExpression
     , ExpressionMap
     , Node(..)
     , R
-    , Zero
+    , Scalar
     , exIndex
     , exMap
     )
@@ -70,9 +70,9 @@ instance Show Problem where
                 ]
 
 -- | Return a map from variable name to the corresponding partial derivative node id
---   Partial derivatives in Expression Zero Covector should be collected before passing to this function
+--   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
 --
-partialDerivativeMaps :: Expression Zero Covector -> Map String Int
+partialDerivativeMaps :: Expression Scalar Covector -> Map String Int
 partialDerivativeMaps df@(Expression dfId dfMp) =
     case retrieveNode dfId dfMp of
         Sum Covector ns -> Map.fromList $ mapMaybe getPartial ns
@@ -88,7 +88,7 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Zero R -> Set String -> Problem
+constructProblem :: Expression Scalar R -> Set String -> Problem
 constructProblem notSimplifedF vars =
     let f@(Expression fId fMp) = simplify notSimplifedF
         df@(Expression dfId dfMp) =

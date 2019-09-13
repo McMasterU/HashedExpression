@@ -56,7 +56,7 @@ data Covector
 
 -- | Type representation of vector dimension
 --
-data Zero
+data Scalar
     deriving (DimensionType, Typeable)
 
 data One

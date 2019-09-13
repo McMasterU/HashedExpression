@@ -50,7 +50,7 @@ import Prelude hiding
 import Test.Hspec
 import Test.QuickCheck
 
-prop_DVarStayAlone :: Expression Zero R -> Bool
+prop_DVarStayAlone :: Expression Scalar R -> Bool
 prop_DVarStayAlone exp = property
   where
     collectedExp@(Expression rootId mp) =
@@ -68,7 +68,7 @@ prop_DVarStayAlone exp = property
             _ -> isDVarAlone rootId
 
 --        | DVar _ <- retrieveNode nId mp = True
-prop_DVarAppearOnce :: Expression Zero R -> Bool
+prop_DVarAppearOnce :: Expression Scalar R -> Bool
 prop_DVarAppearOnce exp = property
   where
     collectedExp@(Expression rootId mp) =

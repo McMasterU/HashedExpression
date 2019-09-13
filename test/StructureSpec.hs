@@ -88,8 +88,8 @@ prop_TopologicalSortManyRoots xs
 
 -- |
 --
-prop_StructureZeroC :: Expression Zero C -> Bool
-prop_StructureZeroC exp
+prop_StructureScalarC :: Expression Scalar C -> Bool
+prop_StructureScalarC exp
     | RealImag _ _ <- retrieveNode n mp = True
     | otherwise = False
   where
@@ -110,15 +110,15 @@ spec =
         specify "Topological sort" $ property prop_TopologicalSort
         specify "Topological sort many roots" $
             property prop_TopologicalSortManyRoots
-        specify "Simplify a Zero C would give the form x +: y" $
-            property prop_StructureZeroC
+        specify "Simplify a Scalar C would give the form x +: y" $
+            property prop_StructureScalarC
         specify "Simplify a One C would give the form x +: y" $
             property prop_StructureOneC
 --        specify "Check size" $
 --            replicateM_ 35 $ do
 --                let sz = IM.size . exMap
---                exp1 <- generate (arbitrary :: Gen (Expression Zero C))
---                exp2 <- generate (arbitrary :: Gen (Expression Zero C))
+--                exp1 <- generate (arbitrary :: Gen (Expression Scalar C))
+--                exp2 <- generate (arbitrary :: Gen (Expression Scalar C))
 --                measureTime $ do
 --                    putStrLn "----------------------------"
 --                    putStrLn $
