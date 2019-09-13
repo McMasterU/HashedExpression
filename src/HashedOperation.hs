@@ -82,7 +82,7 @@ variable3D name = Expression h (fromList [(h, node)])
     node = ([size1, size3], Var name)
     h = hash node
 
--- | 
+-- |
 --
 constant1D ::
        forall n. (KnownNat n)
@@ -289,12 +289,12 @@ huber ::
     => Double
     -> Expression d R
     -> Expression d R
-huber delta e = piecewise [delta] (e * e) [lessThan, largerThan]
+huber delta e = piecewise [delta * delta] (e * e) [lessThan, largerThan]
   where
     deltaVector =
-        constWithShape (expressionShape e) (delta * delta) :: Expression d R
-    lessThan = sqrt (e * e)
-    largerThan = const 0.5 *. (e * e + deltaVector)
+        constWithShape (expressionShape e) (delta / 2) :: Expression d R
+    lessThan = const 0.5 *. (e * e)
+    largerThan = const delta *. (sqrt (e * e) - deltaVector)
 
 -- | Norm 2
 --
