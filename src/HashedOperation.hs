@@ -6,7 +6,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE UndecidableInstances #-} --
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-} --
 
 module HashedOperation where
 
@@ -47,6 +49,11 @@ import Prelude hiding
     )
 import qualified Prelude
 
+valueFromNat ::
+       forall n. (KnownNat n)
+    => Int
+valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
+
 -- | Create primitive expressions using Nat kind
 --
 variable1D ::
@@ -55,7 +62,7 @@ variable1D ::
     -> Expression n R
 variable1D name = Expression h (fromList [(h, node)])
   where
-    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    size = valueFromNat @n
     node = ([size], Var name)
     h = hash node
 
@@ -65,8 +72,8 @@ variable2D ::
     -> Expression '( m, n) R
 variable2D name = Expression h (fromList [(h, node)])
   where
-    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
-    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
     node = ([size1, size2], Var name)
     h = hash node
 
@@ -76,9 +83,9 @@ variable3D ::
     -> Expression '( m, n, p) R
 variable3D name = Expression h (fromList [(h, node)])
   where
-    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
-    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
-    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    size3 = valueFromNat @p
     node = ([size1, size3], Var name)
     h = hash node
 
@@ -90,7 +97,7 @@ constant1D ::
     -> Expression n R
 constant1D val = Expression h (fromList [(h, node)])
   where
-    size = fromIntegral $ natVal (Proxy :: Proxy n)
+    size = valueFromNat @n
     node = ([size], Const val)
     h = hash node
 
@@ -100,8 +107,8 @@ constant2D ::
     -> Expression '( m, n) R
 constant2D val = Expression h (fromList [(h, node)])
   where
-    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
-    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
     node = ([size1, size2], Const val)
     h = hash node
 
@@ -111,9 +118,9 @@ constant3D ::
     -> Expression '( m, n, p) R
 constant3D val = Expression h (fromList [(h, node)])
   where
-    size1 = fromIntegral $ natVal (Proxy :: Proxy m)
-    size2 = fromIntegral $ natVal (Proxy :: Proxy n)
-    size3 = fromIntegral $ natVal (Proxy :: Proxy p)
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    size3 = valueFromNat @p
     node = ([size1, size3], Const val)
     h = hash node
 
