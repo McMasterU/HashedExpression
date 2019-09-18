@@ -252,6 +252,22 @@ distributiveRules =
     , sum ys *. x |.~~~~~~> sum (mapL (*. x) ys)
     ]
 
+-- | Fourier transform rules
+--
+fourierTransformRules :: [Substitution]
+fourierTransformRules =
+    [ reDFT (x +: y) |.~~~~~~> reDFT x - imDFT y
+    , imDFT (x +: y) |.~~~~~~> imDFT x - reDFT y
+    , reDFT zero |.~~~~~~> zero
+    , imDFT zero |.~~~~~~> zero
+    , reDFT (sum xs) |.~~~~~~> sum (mapL reDFT xs)
+    , imDFT (sum xs) |.~~~~~~> sum (mapL imDFT xs)
+    , reDFT (s *. x) |. isReal s ~~~~~~> s *. reDFT x
+    , reDFT (s *. x) |. isCovector s ~~~~~~> s *. reDFT x
+    , imDFT (s *. x) |. isReal s ~~~~~~> s *. imDFT x
+    , imDFT (s *. x) |. isCovector s ~~~~~~> s *. imDFT x
+    ]
+
 -- | Rules of piecewise
 --
 piecewiseRules :: [Substitution]

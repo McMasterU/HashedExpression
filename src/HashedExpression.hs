@@ -164,6 +164,9 @@ class InnerProductSpaceOp a b c | a b -> c where
 class RotateOp k a | a -> k where
     rotate :: k -> a -> a
 
+class DFTOp a b where
+    dft :: a -> b
+
 infixl 6 +, -
 
 infixl 7 *, /
