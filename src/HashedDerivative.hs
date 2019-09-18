@@ -260,8 +260,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
                  in piecewise marks conditionExp $
                     map hiddenDerivative' branchExps
             Rotate amount arg -> d1Input (Rotate amount) arg
-            ReDFT arg -> d1Input ReDFT arg
-            ImDFT arg -> d1Input ImDFT arg
+            ReFT arg -> d1Input ReFT arg
+            ImFT arg -> d1Input ImFT arg
             _ -> error $ show node
             -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here? Probably no !!
             -- d(xRe(f)) = xRe(d(f))

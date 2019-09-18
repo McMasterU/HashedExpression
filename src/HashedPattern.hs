@@ -134,8 +134,8 @@ data Pattern
     | PSumRest ListCapture [Pattern]
     | PPower Pattern PatternPower
     | PRotate PatternRotateAmount Pattern
-    | PReDFT Pattern
-    | PImDFT Pattern
+    | PReFT Pattern
+    | PImFT Pattern
     deriving (Show)
 
 -- |
@@ -228,11 +228,11 @@ instance NegateOp PatternRotateAmount where
 
 -- | Discrete fourier transform
 --
-reDFT :: Pattern -> Pattern
-reDFT = PReDFT
+reFT :: Pattern -> Pattern
+reFT = PReFT
 
-imDFT :: Pattern -> Pattern
-imDFT = PImDFT
+imFT :: Pattern -> Pattern
+imFT = PImFT
 
 -- | Guarded patterns for simplification
 --
@@ -592,8 +592,8 @@ match (mp, n) outerWH =
                                     Map.fromList [(rotateAmountCapture, ra)]
                               } ->
                     Just $ unionMatch matchInner matchRotateAmount
-            (ReDFT arg, PReDFT sp) -> recursiveAndCombine [arg] [sp]
-            (ImDFT arg, PImDFT sp) -> recursiveAndCombine [arg] [sp]
+            (ReFT arg, PReFT sp) -> recursiveAndCombine [arg] [sp]
+            (ImFT arg, PImFT sp) -> recursiveAndCombine [arg] [sp]
             _ -> Nothing
 
 -- |
@@ -718,8 +718,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                  in applyDiff'
                         (unary (Rotate rotateAmount))
                         [buildFromPattern' sp]
-            PReDFT sp -> applyDiff' (unary ReDFT) [buildFromPattern' sp]
-            PImDFT sp -> applyDiff' (unary ImDFT) [buildFromPattern' sp]
+            PReFT sp -> applyDiff' (unary ReFT) [buildFromPattern' sp]
+            PImFT sp -> applyDiff' (unary ImFT) [buildFromPattern' sp]
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

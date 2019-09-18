@@ -164,8 +164,8 @@ class InnerProductSpaceOp a b c | a b -> c where
 class RotateOp k a | a -> k where
     rotate :: k -> a -> a
 
-class DFTOp a b where
-    dft :: a -> b
+class FTOp a b | a -> b where
+    ft :: a -> b
 
 infixl 6 +, -
 
@@ -264,6 +264,6 @@ data Node
     | Piecewise [Double] ConditionArg [BranchArg]
     | Rotate RotateAmount Arg
     -- MARK: Discrete Fourier Transform
-    | ReDFT Arg
-    | ImDFT Arg
+    | ReFT Arg
+    | ImFT Arg
     deriving (Show, Eq, Ord)

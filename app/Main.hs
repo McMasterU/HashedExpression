@@ -64,16 +64,6 @@ prod1 = fromJust . HashedOperation.product
 --
 main = do
     let x = variable2D @10 @10 "x"
-        y = variable2D @10 @10 "y"
         allOne = constant2D @10 @10 1
-        exp = huber 2 (x - y) <.> allOne
-        vars = Set.fromList ["x"]
-        valMaps = fromList [("y", V2D $ listArray ((0, 0), (9, 9)) [1 ..])]
-        problem = constructProblem exp vars
-        codes = generateProblemCode valMaps problem
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes --main = do
---    let x = var "x"
---    let exp = huber 2 x
---    let values = empty
---    let fn = Function exp values
---    plot1VariableFunction fn "huber2"
+        reFT = xRe (ft x) <.> allOne
+    showExp $ exteriorDerivative allVars reFT

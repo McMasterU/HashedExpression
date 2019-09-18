@@ -277,18 +277,18 @@ piecewise marks conditionExp branchExps
         ensureSameShapeList branchExps .
         ensureSameShape conditionExp (head branchExps)
 
-instance (DimensionType d) => DFTOp (Expression d C) (Expression d C) where
-    dft :: Expression d C -> Expression d C
-    dft e
+instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
+    ft :: Expression d C -> Expression d C
+    ft e
         | isScalarShape $ expressionShape e = e
         | otherwise =
-            let reDFT = applyUnary (unary ReDFT) e
-                imDFT = applyUnary (unary ImDFT) e
-             in reDFT +: imDFT
+            let reFT = applyUnary (unary ReFT) e
+                imFT = applyUnary (unary ImFT) e
+             in reFT +: imFT
 
-instance (DimensionType d) => DFTOp (Expression d R) (Expression d C) where
-    dft :: Expression d R -> Expression d C
-    dft e = dft (e +: constWithShape (expressionShape e) 0)
+instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
+    ft :: Expression d R -> Expression d C
+    ft e = ft (e +: constWithShape (expressionShape e) 0)
 
 -- | 
 --

@@ -44,9 +44,12 @@ prettify ::
 prettify e@(Expression n mp) =
     let shape = expressionShape e
         node = expressionNode e
+        dimensionStr
+            | null shape = ""
+            | otherwise = "(" ++ intercalate ", " (map show shape) ++ ")"
         typeName =
             " :: " ++
-            (show . typeRep $ (Proxy :: Proxy d)) ++
+            dimensionStr ++
             " " ++ (show . typeRep $ (Proxy :: Proxy rc))
      in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
@@ -205,3 +208,5 @@ hiddenPrettify pastable (mp, n) =
             Rotate amount arg ->
                 T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]
             Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
+            ReFT arg -> T.concat ["reFT", innerPrettify arg]
+            ImFT arg -> T.concat ["imFT", innerPrettify arg]

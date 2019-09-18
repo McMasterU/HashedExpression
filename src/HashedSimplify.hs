@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 -------------------------------------------------------------------------------
 -- | For simplifying expressions
 --
@@ -174,6 +175,7 @@ rulesFromPattern =
     , piecewiseRules
     , exponentRules
     , rotateRules
+    , fourierTransformRules
     , otherRules
     ]
 
@@ -256,16 +258,16 @@ distributiveRules =
 --
 fourierTransformRules :: [Substitution]
 fourierTransformRules =
-    [ reDFT (x +: y) |.~~~~~~> reDFT x - imDFT y
-    , imDFT (x +: y) |.~~~~~~> imDFT x - reDFT y
-    , reDFT zero |.~~~~~~> zero
-    , imDFT zero |.~~~~~~> zero
-    , reDFT (sum xs) |.~~~~~~> sum (mapL reDFT xs)
-    , imDFT (sum xs) |.~~~~~~> sum (mapL imDFT xs)
-    , reDFT (s *. x) |. isReal s ~~~~~~> s *. reDFT x
-    , reDFT (s *. x) |. isCovector s ~~~~~~> s *. reDFT x
-    , imDFT (s *. x) |. isReal s ~~~~~~> s *. imDFT x
-    , imDFT (s *. x) |. isCovector s ~~~~~~> s *. imDFT x
+    [ reFT (x +: y) |.~~~~~~> reFT x - imFT y
+    , imFT (x +: y) |.~~~~~~> imFT x + reFT y
+    , reFT zero |.~~~~~~> zero
+    , imFT zero |.~~~~~~> zero
+    , reFT (sum xs) |.~~~~~~> sum (mapL reFT xs)
+    , imFT (sum xs) |.~~~~~~> sum (mapL imFT xs)
+    , reFT (s *. x) |. isReal s ~~~~~~> s *. reFT x
+    , reFT (s *. x) |. isCovector s ~~~~~~> s *. reFT x
+    , imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x
+    , imFT (s *. x) |. isCovector s ~~~~~~> s *. imFT x
     ]
 
 -- | Rules of piecewise

@@ -27,6 +27,7 @@ import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
+import GHC.Stack (HasCallStack)
 import HashedExpression
 import HashedHash
 import HashedNode
@@ -159,16 +160,22 @@ hasShape (Normal nodeOutcome _) specificShape =
 hasShape option _ = option
 
 applyBinary ::
-       OperationOption
+       HasCallStack
+    => OperationOption
     -> Expression d1 et1
     -> Expression d2 et2
     -> Expression d3 et3
 applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 
-applyUnary :: OperationOption -> Expression d1 et1 -> Expression d2 et2
+applyUnary ::
+       HasCallStack => OperationOption -> Expression d1 et1 -> Expression d2 et2
 applyUnary option e1 = wrap . apply option $ [unwrap e1]
 
-applyNary :: OperationOption -> [Expression d1 et1] -> Expression d2 et2
+applyNary ::
+       HasCallStack
+    => OperationOption
+    -> [Expression d1 et1]
+    -> Expression d2 et2
 applyNary option = wrap . apply option . map unwrap
 
 applyConditionAry ::
@@ -366,6 +373,8 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
                 combine (binaryET InnerProd (ElementSpecific et))
             Piecewise marks _ _ -> combine (conditionAry (Piecewise marks))
             Rotate amount _ -> combine (unary (Rotate amount))
+            ReFT _ -> combine (unary ReFT)
+            ImFT _ -> combine (unary ImFT)
   where
     (oldShape, oldNode) = retrieveInternal n contextMp
     oldChildren = nodeArgs oldNode
