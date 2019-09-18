@@ -260,4 +260,7 @@ data Node
     -- MARK: Piecewise
     | Piecewise [Double] ConditionArg [BranchArg]
     | Rotate RotateAmount Arg
+    -- MARK: Discrete Fourier Transform
+    | ReDFT Arg
+    | ImDFT Arg
     deriving (Show, Eq, Ord)
