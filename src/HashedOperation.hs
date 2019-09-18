@@ -285,7 +285,7 @@ instance (DimensionType d) => DFTOp (Expression d C) (Expression d C) where
             let reDFT = applyUnary (unary ReDFT) e
                 imDFT = applyUnary (unary ImDFT) e
              in reDFT +: imDFT
-             
+
 instance (DimensionType d) => DFTOp (Expression d R) (Expression d C) where
     dft :: Expression d R -> Expression d C
     dft e = dft (e +: constWithShape (expressionShape e) 0)

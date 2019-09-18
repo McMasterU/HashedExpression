@@ -107,10 +107,8 @@ hash (shape, node) =
                 offsetHash 29 . hashString' $
                 (intercalate separator . map show $ amount) ++
                 separator ++ show arg
-            ReDFT arg -> 
-                offsetHash 30 . hashString' $ show arg
-            ImDFT arg -> 
-                offsetHash 31 . hashString' $ show arg
+            ReDFT arg -> offsetHash 30 . hashString' $ show arg
+            ImDFT arg -> offsetHash 31 . hashString' $ show arg
 
 -- |
 --
