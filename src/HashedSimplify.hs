@@ -246,6 +246,8 @@ fourierTransformRules =
     , imFT zero |.~~~~~~> zero
     , reFT (sum xs) |.~~~~~~> sum (mapL reFT xs)
     , imFT (sum xs) |.~~~~~~> sum (mapL imFT xs)
+    , imFT (reFT x) |. isReal x ~~~~~~> zero
+    , reFT (imFT x) |. isReal x ~~~~~~> zero
     , reFT (s *. x) |. isReal s ~~~~~~> s *. reFT x
     , reFT (s *. x) |. isCovector s ~~~~~~> s *. reFT x
     , imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x
