@@ -63,7 +63,12 @@ prod1 = fromJust . HashedOperation.product
 
 --
 main = do
-    let x = variable2D @10 @10 "x"
-        allOne = constant2D @10 @10 1
-        reFT = xRe (ft x) <.> allOne
-    showExp $ exteriorDerivative allVars reFT
+    let x = variable1D @10 "x"
+        y = variable1D @10 "y"
+        z = variable1D @10 "z"
+        t = variable1D @10 "t"
+        exp =
+            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
+            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
+        vars = Set.fromList ["x", "y"]
+    showExp . collectDifferentials . exteriorDerivative vars $ exp
