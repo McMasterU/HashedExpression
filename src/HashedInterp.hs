@@ -733,7 +733,11 @@ fourierTransform1D size arr =
     computeX k = sum $ zipWithA (*) arr (fourierBasis k)
     fourierBasis k =
         let frequency n = 2 * pi * fromIntegral (k * n) / fromIntegral size
-         in listArray (0, size - 1) [cos (frequency n) :+ (-sin (frequency n)) | n <- [0 .. size - 1]]
+         in listArray
+                (0, size - 1)
+                [ cos (frequency n) :+ (-sin (frequency n))
+                | n <- [0 .. size - 1]
+                ]
 
 -- | 
 --

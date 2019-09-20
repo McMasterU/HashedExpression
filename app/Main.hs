@@ -63,18 +63,11 @@ prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.product
 
 --
-main
---    let vals = [1, 2, 3]
---    let arr = listArray (0, length vals) vals
---    let ff = fourierTransform1D (length vals)
---    print . elems . ff . ff $ arr
- = do
+main = do
     let x = variable1D @10 "x"
         y = variable1D @10 "y"
         z = variable1D @10 "z"
         t = variable1D @10 "t"
-    let exp = (xIm . ft . xRe . ft) $ x +: y
-    showExp . simplify $ exp
     let exp =
             (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
             (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
