@@ -55,7 +55,6 @@ exteriorDerivative ::
     => Set String
     -> Expression d R
     -> Expression d Covector
---exteriorDerivative = hiddenDerivative
 exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
 
 -- | Take derivative with all vars
@@ -260,23 +259,11 @@ hiddenDerivative vars (Expression n mp) = coerce res
                     branchExps = map (flip Expression mp) branches
                  in piecewise marks conditionExp $
                     map hiddenDerivative' branchExps
-            Rotate amount arg ->
-                case (amount, retrieveShape arg mp) of
-                    ([x], [size]) ->
-                        let f = Expression arg mp :: Expression One R
-                            df = hiddenDerivative' f :: Expression One Covector
-                         in coerce $ rotate x df
-                    ([x, y], [size1, size2]) ->
-                        let f = Expression arg mp :: Expression Two R
-                            df = hiddenDerivative' f :: Expression Two Covector
-                         in coerce $ rotate (x, y) df
-                    ([x, y, z], [size1, size2, size3]) ->
-                        let f = Expression arg mp :: Expression Three R
-                            df =
-                                hiddenDerivative' f :: Expression Three Covector
-                         in coerce $ rotate (x, y, z) df
+            Rotate amount arg -> d1Input (Rotate amount) arg
+            ReFT arg -> d1Input ReFT arg
+            ImFT arg -> d1Input ImFT arg
             _ -> error $ show node
-            -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here?
+            -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here? Probably no !!
             -- d(xRe(f)) = xRe(d(f))
 
 --            RealPart arg -> d1Input RealPart arg

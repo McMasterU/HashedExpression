@@ -134,6 +134,8 @@ data Pattern
     | PSumRest ListCapture [Pattern]
     | PPower Pattern PatternPower
     | PRotate PatternRotateAmount Pattern
+    | PReFT Pattern
+    | PImFT Pattern
     deriving (Show)
 
 -- |
@@ -223,6 +225,14 @@ instance AddableOp PatternRotateAmount where
 
 instance NegateOp PatternRotateAmount where
     negate = PRotateAmountNegate
+
+-- | Discrete fourier transform
+--
+reFT :: Pattern -> Pattern
+reFT = PReFT
+
+imFT :: Pattern -> Pattern
+imFT = PImFT
 
 -- | Guarded patterns for simplification
 --
@@ -535,35 +545,35 @@ match (mp, n) outerWH =
                                     Map.fromList [(listCapture, rest)]
                               } ->
                     Just $ unionMatch matchNormalParts matchListPart
-            (Neg _ arg, PNeg wh) -> recursiveAndCombine [arg] [wh]
-            (Scale _ arg1 arg2, PScale wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (Div arg1 arg2, PDiv wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (Sqrt arg, PSqrt wh) -> recursiveAndCombine [arg] [wh]
-            (Sin arg, PSin wh) -> recursiveAndCombine [arg] [wh]
-            (Cos arg, PCos wh) -> recursiveAndCombine [arg] [wh]
-            (Tan arg, PTan wh) -> recursiveAndCombine [arg] [wh]
-            (Exp arg, PExp wh) -> recursiveAndCombine [arg] [wh]
-            (Log arg, PLog wh) -> recursiveAndCombine [arg] [wh]
-            (Sinh arg, PSinh wh) -> recursiveAndCombine [arg] [wh]
-            (Cosh arg, PCosh wh) -> recursiveAndCombine [arg] [wh]
-            (Tanh arg, PTanh wh) -> recursiveAndCombine [arg] [wh]
-            (Asin arg, PAsin wh) -> recursiveAndCombine [arg] [wh]
-            (Acos arg, PAcos wh) -> recursiveAndCombine [arg] [wh]
-            (Atan arg, PAtan wh) -> recursiveAndCombine [arg] [wh]
-            (Asinh arg, PAsinh wh) -> recursiveAndCombine [arg] [wh]
-            (Acosh arg, PAcosh wh) -> recursiveAndCombine [arg] [wh]
-            (Atanh arg, PAtanh wh) -> recursiveAndCombine [arg] [wh]
-            (RealImag arg1 arg2, PRealImag wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (RealPart arg, PRealPart wh) -> recursiveAndCombine [arg] [wh]
-            (ImagPart arg, PImagPart wh) -> recursiveAndCombine [arg] [wh]
-            (InnerProd _ arg1 arg2, PInnerProd wh1 wh2) ->
-                recursiveAndCombine [arg1, arg2] [wh1, wh2]
-            (Piecewise _ conditionArg branchArgs, PPiecewise wh pl@(PListHole _ listCapture))
+            (Neg _ arg, PNeg sp) -> recursiveAndCombine [arg] [sp]
+            (Scale _ arg1 arg2, PScale sp1 sp2) ->
+                recursiveAndCombine [arg1, arg2] [sp1, sp2]
+            (Div arg1 arg2, PDiv sp1 sp2) ->
+                recursiveAndCombine [arg1, arg2] [sp1, sp2]
+            (Sqrt arg, PSqrt sp) -> recursiveAndCombine [arg] [sp]
+            (Sin arg, PSin sp) -> recursiveAndCombine [arg] [sp]
+            (Cos arg, PCos sp) -> recursiveAndCombine [arg] [sp]
+            (Tan arg, PTan sp) -> recursiveAndCombine [arg] [sp]
+            (Exp arg, PExp sp) -> recursiveAndCombine [arg] [sp]
+            (Log arg, PLog sp) -> recursiveAndCombine [arg] [sp]
+            (Sinh arg, PSinh sp) -> recursiveAndCombine [arg] [sp]
+            (Cosh arg, PCosh sp) -> recursiveAndCombine [arg] [sp]
+            (Tanh arg, PTanh sp) -> recursiveAndCombine [arg] [sp]
+            (Asin arg, PAsin sp) -> recursiveAndCombine [arg] [sp]
+            (Acos arg, PAcos sp) -> recursiveAndCombine [arg] [sp]
+            (Atan arg, PAtan sp) -> recursiveAndCombine [arg] [sp]
+            (Asinh arg, PAsinh sp) -> recursiveAndCombine [arg] [sp]
+            (Acosh arg, PAcosh sp) -> recursiveAndCombine [arg] [sp]
+            (Atanh arg, PAtanh sp) -> recursiveAndCombine [arg] [sp]
+            (RealImag arg1 arg2, PRealImag sp1 sp2) ->
+                recursiveAndCombine [arg1, arg2] [sp1, sp2]
+            (RealPart arg, PRealPart sp) -> recursiveAndCombine [arg] [sp]
+            (ImagPart arg, PImagPart sp) -> recursiveAndCombine [arg] [sp]
+            (InnerProd _ arg1 arg2, PInnerProd sp1 sp2) ->
+                recursiveAndCombine [arg1, arg2] [sp1, sp2]
+            (Piecewise _ conditionArg branchArgs, PPiecewise sp pl@(PListHole _ listCapture))
                 | Just matchBranches <- matchList mp branchArgs pl
-                , Just matchCondition <- recursiveAndCombine [conditionArg] [wh] ->
+                , Just matchCondition <- recursiveAndCombine [conditionArg] [sp] ->
                     Just $ unionMatch matchCondition matchBranches
             (Power x arg, PPower sp (PPowerConst val))
                 | fromIntegral x == val -> recursiveAndCombine [arg] [sp]
@@ -582,6 +592,8 @@ match (mp, n) outerWH =
                                     Map.fromList [(rotateAmountCapture, ra)]
                               } ->
                     Just $ unionMatch matchInner matchRotateAmount
+            (ReFT arg, PReFT sp) -> recursiveAndCombine [arg] [sp]
+            (ImFT arg, PImFT sp) -> recursiveAndCombine [arg] [sp]
             _ -> Nothing
 
 -- |
@@ -706,6 +718,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                  in applyDiff'
                         (unary (Rotate rotateAmount))
                         [buildFromPattern' sp]
+            PReFT sp -> applyDiff' (unary ReFT) [buildFromPattern' sp]
+            PImFT sp -> applyDiff' (unary ImFT) [buildFromPattern' sp]
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

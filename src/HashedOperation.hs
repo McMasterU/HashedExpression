@@ -49,81 +49,6 @@ import Prelude hiding
     )
 import qualified Prelude
 
-valueFromNat ::
-       forall n. (KnownNat n)
-    => Int
-valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
-
--- | Create primitive expressions using Nat kind
---
-variable1D ::
-       forall n. (KnownNat n)
-    => String
-    -> Expression n R
-variable1D name = Expression h (fromList [(h, node)])
-  where
-    size = valueFromNat @n
-    node = ([size], Var name)
-    h = hash node
-
-variable2D ::
-       forall m n. (KnownNat m, KnownNat n)
-    => String
-    -> Expression '( m, n) R
-variable2D name = Expression h (fromList [(h, node)])
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    node = ([size1, size2], Var name)
-    h = hash node
-
-variable3D ::
-       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
-    => String
-    -> Expression '( m, n, p) R
-variable3D name = Expression h (fromList [(h, node)])
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    size3 = valueFromNat @p
-    node = ([size1, size3], Var name)
-    h = hash node
-
--- |
---
-constant1D ::
-       forall n. (KnownNat n)
-    => Double
-    -> Expression n R
-constant1D val = Expression h (fromList [(h, node)])
-  where
-    size = valueFromNat @n
-    node = ([size], Const val)
-    h = hash node
-
-constant2D ::
-       forall m n. (KnownNat m, KnownNat n)
-    => Double
-    -> Expression '( m, n) R
-constant2D val = Expression h (fromList [(h, node)])
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    node = ([size1, size2], Const val)
-    h = hash node
-
-constant3D ::
-       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
-    => Double
-    -> Expression '( m, n, p) R
-constant3D val = Expression h (fromList [(h, node)])
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    size3 = valueFromNat @p
-    node = ([size1, size3], Const val)
-    h = hash node
-
 -- | Create primitive expressions
 --
 var :: String -> Expression Scalar R
@@ -308,6 +233,8 @@ huber delta e = piecewise [delta * delta] (e * e) [lessThan, largerThan]
 norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
+-- | Discrete fourier transform
+--
 -- | Sum across
 --
 sumElements ::
@@ -350,6 +277,21 @@ piecewise marks conditionExp branchExps
         ensureSameShapeList branchExps .
         ensureSameShape conditionExp (head branchExps)
 
+instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
+    ft :: Expression d C -> Expression d C
+    ft e
+        | isScalarShape $ expressionShape e = e
+        | otherwise =
+            let reFT = applyUnary (unary ReFT) e
+                imFT = applyUnary (unary ImFT) e
+             in reFT +: imFT
+
+instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
+    ft :: Expression d R -> Expression d C
+    ft e = ft (e +: constWithShape (expressionShape e) 0)
+
+-- | 
+--
 instance (ElementType et) => RotateOp Int (Expression One et) where
     rotate :: Int -> Expression One et -> Expression One et
     rotate x = applyUnary . unary $ Rotate [x]
@@ -362,3 +304,99 @@ instance (ElementType et) =>
          RotateOp (Int, Int, Int) (Expression Three et) where
     rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
     rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
+
+-- | 
+--
+instance (ElementType et, KnownNat n) => RotateOp Int (Expression n et) where
+    rotate :: Int -> Expression n et -> Expression n et
+    rotate x = applyUnary . unary $ Rotate [x]
+
+instance (ElementType et, KnownNat m, KnownNat n) =>
+         RotateOp (Int, Int) (Expression '( m, n) et) where
+    rotate :: (Int, Int) -> Expression '( m, n) et -> Expression '( m, n) et
+    rotate (x, y) = applyUnary . unary $ Rotate [x, y]
+
+instance (ElementType et, KnownNat m, KnownNat n, KnownNat p) =>
+         RotateOp (Int, Int, Int) (Expression '( m, n, p) et) where
+    rotate ::
+           (Int, Int, Int)
+        -> Expression '( m, n, p) et
+        -> Expression '( m, n, p) et
+    rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
+
+-- | 
+--
+valueFromNat ::
+       forall n. (KnownNat n)
+    => Int
+valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
+
+-- | Create primitive expressions using Nat kind
+--
+variable1D ::
+       forall n. (KnownNat n)
+    => String
+    -> Expression n R
+variable1D name = Expression h (fromList [(h, node)])
+  where
+    size = valueFromNat @n
+    node = ([size], Var name)
+    h = hash node
+
+variable2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => String
+    -> Expression '( m, n) R
+variable2D name = Expression h (fromList [(h, node)])
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    node = ([size1, size2], Var name)
+    h = hash node
+
+variable3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => String
+    -> Expression '( m, n, p) R
+variable3D name = Expression h (fromList [(h, node)])
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    size3 = valueFromNat @p
+    node = ([size1, size3], Var name)
+    h = hash node
+
+-- |
+--
+constant1D ::
+       forall n. (KnownNat n)
+    => Double
+    -> Expression n R
+constant1D val = Expression h (fromList [(h, node)])
+  where
+    size = valueFromNat @n
+    node = ([size], Const val)
+    h = hash node
+
+constant2D ::
+       forall m n. (KnownNat m, KnownNat n)
+    => Double
+    -> Expression '( m, n) R
+constant2D val = Expression h (fromList [(h, node)])
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    node = ([size1, size2], Const val)
+    h = hash node
+
+constant3D ::
+       forall m n p. (KnownNat m, KnownNat n, KnownNat p)
+    => Double
+    -> Expression '( m, n, p) R
+constant3D val = Expression h (fromList [(h, node)])
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    size3 = valueFromNat @p
+    node = ([size1, size3], Const val)
+    h = hash node

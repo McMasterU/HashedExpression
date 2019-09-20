@@ -43,6 +43,8 @@ nodeElementType node mp =
         Piecewise _ _ branches ->
             maximum . map (`retrieveElementType` mp) $ branches
         Rotate _ arg -> retrieveElementType arg mp
+        ReFT _ -> R
+        ImFT _ -> R
 
 -- | For ordering things inside Sum or Product so we can write rules like
 --   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
@@ -82,6 +84,8 @@ nodeTypeWeight node =
         InnerProd {} -> 25
         Piecewise {} -> 26
         Rotate {} -> 27
+        ReFT {} -> 28
+        ImFT {} -> 29
 
 -- |
 --
@@ -123,6 +127,8 @@ nodeArgs node =
         InnerProd _ arg1 arg2 -> [arg1, arg2]
         Piecewise _ conditionArg branches -> conditionArg : branches
         Rotate _ arg -> [arg]
+        ReFT arg -> [arg]
+        ImFT arg -> [arg]
 
 -- | Auxiliary functions for operations
 --
