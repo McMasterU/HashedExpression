@@ -23,8 +23,8 @@ import HashedExpression (C, DimensionType, Expression(..), NumType, R, Scalar)
 import HashedInner
 import HashedInterp
 import HashedNode
+import HashedNormalize (normalize)
 import HashedPrettify (showExp, showExpDebug)
-import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
@@ -67,71 +67,71 @@ readC str = (readR rePart, readR imPart)
 --
 prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
 prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify = read . head . splitOn " " $ outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+    (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+    let resultNormalize = read . head . splitOn " " $ outputSimple
+    let resultInterpNormalize = eval valMaps (normalize exp)
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
 prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) = do
-    let simplifiedExp = simplify exp
+    let normalizedExp = normalize exp
     writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+        intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
     let ([im], [re]) = readC outputCodeC
-    let resultSimplify = im :+ re
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+    let resultNormalize = im :+ re
+    let resultInterpNormalize = eval valMaps normalizedExp
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpOneR :: SuiteOneR -> Expectation
 prop_CEqualInterpOneR (SuiteOneR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify = listArray (0, vectorSize - 1) $ readR outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+    (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+    let resultNormalize = listArray (0, vectorSize - 1) $ readR outputSimple
+    let resultInterpNormalize = eval valMaps (normalize exp)
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpOneC :: SuiteOneC -> Expectation
 prop_CEqualInterpOneC (SuiteOneC exp valMaps) = do
-    let simplifiedExp = simplify exp
+    let normalizedExp = normalize exp
     writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+        intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
     let (re, im) = readC outputCodeC
-    let resultSimplify = listArray (0, vectorSize - 1) $ zipWith (:+) re im
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+    let resultNormalize = listArray (0, vectorSize - 1) $ zipWith (:+) re im
+    let resultInterpNormalize = eval valMaps normalizedExp
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
 prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify =
+    (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+    let resultNormalize =
             listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
             readR outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+    let resultInterpNormalize = eval valMaps (normalize exp)
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
 prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) = do
-    let simplifiedExp = simplify exp
+    let normalizedExp = normalize exp
     writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
+        intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+    (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
     let (re, im) = readC outputCodeC
-    let resultSimplify =
+    let resultNormalize =
             listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
             zipWith (:+) re im
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+    let resultInterpNormalize = eval valMaps normalizedExp
+    resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec
 --

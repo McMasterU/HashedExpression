@@ -19,8 +19,8 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
+import HashedNormalize
 import HashedOperation
-import HashedSimplify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -55,7 +55,7 @@ exteriorDerivative ::
     => Set String
     -> Expression d R
     -> Expression d Covector
-exteriorDerivative vars = simplify . hiddenDerivative vars . simplify
+exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 
 -- | Take derivative with all vars
 --
@@ -263,7 +263,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
             ReFT arg -> d1Input ReFT arg
             ImFT arg -> d1Input ImFT arg
             _ -> error $ show node
-            -- TODO: If we simplify before computing the derivative? Should RealPart, ImagPart or RealImag here? Probably no !!
+            -- TODO: If we normalize before computing the derivative? Should RealPart, ImagPart or RealImag here? Probably no !!
             -- d(xRe(f)) = xRe(d(f))
 
 --            RealPart arg -> d1Input RealPart arg

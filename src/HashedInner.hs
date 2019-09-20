@@ -277,8 +277,8 @@ type Modification = (ExpressionMap, Int) -> ExpressionDiff
 -- |
 --
 toTransformation :: Modification -> Transformation
-toTransformation simp exp@(mp, n) =
-    let diff = simp exp
+toTransformation normalizer exp@(mp, n) =
+    let diff = normalizer exp
         newMp = IM.union mp (extraEntries diff)
         newN = newRootId diff
      in (newMp, newN)

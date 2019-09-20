@@ -13,10 +13,10 @@ import HashedExpression
 import HashedInner (D_, ET_, topologicalSort, topologicalSortManyRoots, unwrap)
 import HashedInterp
 import HashedNode
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import HashedUtils
 import qualified Prelude
 import Prelude hiding
@@ -62,7 +62,7 @@ isAfter xs x y = filter (liftA2 (||) (== x) (== y)) xs == [y, x]
 --
 prop_TopologicalSort :: ArbitraryExpresion -> Bool
 prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
-    ok exp && ok (simplify exp)
+    ok exp && ok (normalize exp)
   where
     exp = Expression n mp :: Expression D_ ET_
     ok exp =
@@ -93,7 +93,7 @@ prop_StructureScalarC exp
     | RealImag _ _ <- retrieveNode n mp = True
     | otherwise = False
   where
-    (Expression n mp) = simplify exp
+    (Expression n mp) = normalize exp
 
 -- |
 --
@@ -102,7 +102,7 @@ prop_StructureOneC exp
     | RealImag _ _ <- retrieveNode n mp = True
     | otherwise = False
   where
-    (Expression n mp) = simplify exp
+    (Expression n mp) = normalize exp
 
 spec :: Spec
 spec =
@@ -110,9 +110,9 @@ spec =
         specify "Topological sort" $ property prop_TopologicalSort
         specify "Topological sort many roots" $
             property prop_TopologicalSortManyRoots
-        specify "Simplify a Scalar C would give the form x +: y" $
+        specify "Normalize a Scalar C would give the form x +: y" $
             property prop_StructureScalarC
-        specify "Simplify a One C would give the form x +: y" $
+        specify "Normalize a One C would give the form x +: y" $
             property prop_StructureOneC
 --        specify "Check size" $
 --            replicateM_ 35 $ do
@@ -129,4 +129,4 @@ spec =
 --                        show (sz exp2) ++ " subexpressions"
 --                    putStrLn $
 --                        "Simplifing (exp1 * exp2) -> " ++
---                        show (sz $ simplify (exp1 * exp2)) ++ " subexpressions"
+--                        show (sz $ normalize (exp1 * exp2)) ++ " subexpressions"

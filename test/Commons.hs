@@ -22,10 +22,10 @@ import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import HashedUtils
 import HashedVar
 import Prelude hiding
@@ -256,14 +256,14 @@ instance Show SuiteScalarR where
     show (SuiteScalarR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -368,14 +368,14 @@ instance Show SuiteScalarC where
     show (SuiteScalarC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 instance Arbitrary SuiteScalarC where
     arbitrary = do
@@ -485,16 +485,16 @@ instance Show SuiteOneR where
     show (SuiteOneR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -608,16 +608,16 @@ instance Show SuiteOneC where
     show (SuiteOneC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -720,16 +720,16 @@ instance Show SuiteTwoR where
     show (SuiteTwoR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -836,16 +836,16 @@ instance Show SuiteTwoC where
     show (SuiteTwoC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -893,13 +893,13 @@ getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 sz :: Expression d et -> Int
 sz = IM.size . exMap
 
-infix 1 `shouldSimplifyTo`
+infix 1 `shouldNormalizeTo`
 
-shouldSimplifyTo ::
+shouldNormalizeTo ::
        (HasCallStack, DimensionType d, ElementType et, Typeable et, Typeable d)
     => Expression d et
     -> Expression d et
     -> IO ()
-shouldSimplifyTo exp1 exp2 = do
-    prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
-    simplify exp1 `shouldBe` simplify exp2
+shouldNormalizeTo exp1 exp2 = do
+    prettify (normalize exp1) `shouldBe` prettify (normalize exp2)
+    normalize exp1 `shouldBe` normalize exp2

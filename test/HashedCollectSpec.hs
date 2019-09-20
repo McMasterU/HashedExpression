@@ -14,10 +14,10 @@ import HashedExpression
 import HashedInner (D_, ET_, topologicalSort, unwrap)
 import HashedInterp
 import HashedNode
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import HashedUtils
 import HashedVar
 import qualified Prelude

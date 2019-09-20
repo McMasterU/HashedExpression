@@ -1,4 +1,4 @@
-module SimplifyEval.ScalarCSpec where
+module NormalizeEval.ScalarCSpec where
 
 import Commons
 import Control.Monad (replicateM_)
@@ -13,7 +13,7 @@ import HashedInterp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
+import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -46,29 +46,29 @@ import Test.QuickCheck
 
 -- |
 --
-prop_SimplifyThenEval :: SuiteScalarC -> Bool
-prop_SimplifyThenEval (SuiteScalarC exp valMaps) =
-    eval valMaps exp ~= eval valMaps (simplify exp)
+prop_NormalizeThenEval :: SuiteScalarC -> Bool
+prop_NormalizeThenEval (SuiteScalarC exp valMaps) =
+    eval valMaps exp ~= eval valMaps (normalize exp)
 
 -- |
 --
 prop_Add :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (simplify1, simplify2, simplifySum) =
+prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = union valMaps1 valMaps2
     exp1'
-        |simplify1 = simplify exp1
+        |normalize1 = normalize exp1
         | otherwise = exp1
     exp2'
-        | simplify2 = simplify exp2
+        | normalize2 = normalize exp2
         | otherwise = exp2
     expSum'
-        | simplifySum = simplify (exp1 + exp2)
+        | normalizeSum = normalize (exp1 + exp2)
         | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(simplify1, simplify2, simplifyMul) =
+prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(normalize1, normalize2, normalizeMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
         else error $ prettifyDebug exp1' ++ "\n-----------\n" ++ prettifyDebug exp2' ++ "\n-----------\n" ++ show valMaps ++ "\n-----------n"
@@ -78,24 +78,24 @@ prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(simpl
     rhs = eval valMaps expMul'
     valMaps = union valMaps1 valMaps2
     exp1'
-        | simplify1 = simplify exp1
+        | normalize1 = normalize exp1
         | otherwise = exp1
     exp2'
-        | simplify2 = simplify exp2
+        | normalize2 = normalize exp2
         | otherwise = exp2
     expMul'
-        | simplifyMul = simplify (exp1 * exp2)
+        | normalizeMul = normalize (exp1 * exp2)
         | otherwise = exp1 * exp2
 
 prop_AddMultiply :: SuiteScalarC -> Bool
 prop_AddMultiply (SuiteScalarC exp valMaps) =
-    eval valMaps (simplify (exp + exp)) ~=
-    eval valMaps (simplify (const 2 *. exp))
+    eval valMaps (normalize (exp + exp)) ~=
+    eval valMaps (normalize (const 2 *. exp))
 
 spec :: Spec
 spec =
-    describe "simplify & eval property for Scalar C" $ do
-        specify "evaluate must equals simplify then evaluate " $ property prop_SimplifyThenEval
+    describe "normalize & eval property for Scalar C" $ do
+        specify "evaluate must equals normalize then evaluate " $ property prop_NormalizeThenEval
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply

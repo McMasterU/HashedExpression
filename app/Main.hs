@@ -11,10 +11,10 @@ import qualified Data.Set as Set
 import HashedDerivative
 import HashedExpression
 import HashedInterp
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import Prelude hiding
     ( (*)
     , (+)

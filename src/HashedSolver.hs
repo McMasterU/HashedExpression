@@ -28,8 +28,8 @@ import HashedExpression
     )
 import HashedInner
 import HashedNode
+import HashedNormalize (normalize)
 import HashedPrettify
-import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
@@ -90,7 +90,7 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 --
 constructProblem :: Expression Scalar R -> Set String -> Problem
 constructProblem notSimplifedF vars =
-    let f@(Expression fId fMp) = simplify notSimplifedF
+    let f@(Expression fId fMp) = normalize notSimplifedF
         df@(Expression dfId dfMp) =
             collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
