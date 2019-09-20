@@ -2,10 +2,10 @@
 {-# LANGUAGE GADTs #-}
 
 -------------------------------------------------------------------------------
--- | For simplifying expressions
+-- | For normalizeing expressions
 --
 -------------------------------------------------------------------------------
-module HashedSimplify where
+module HashedNormalize where
 
 import Data.Eq.HT (equating)
 import Data.Function.HT (nest)
@@ -65,7 +65,7 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | For debugging a single simplification rule
+-- | For debugging a single normalizier rule
 --
 makeTrans ::
        (DimensionType d, ElementType et)
@@ -74,16 +74,16 @@ makeTrans ::
     -> Expression d et
 makeTrans smp = wrap . smp . unwrap
 
--- | Simplify an expression
+-- | Normalize an expression
 --
-simplify ::
+normalize ::
        (DimensionType d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . simplifyingTransformation . unwrap
+normalize = wrap . normalizingTransformation . unwrap
 
 -- | Combine all the transformations
 --
-simplifyingTransformation :: Transformation
-simplifyingTransformation = secondPass . firstPass
+normalizingTransformation :: Transformation
+normalizingTransformation = secondPass . firstPass
   where
     firstPass =
         multipleTimes 100 . chain $

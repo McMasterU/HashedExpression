@@ -476,6 +476,26 @@ evaluate2DReal valMap (mp, n)
                     (size1, size2)
                     (amount1, amount2)
                     (eval valMap $ expTwoR mp arg)
+            ReFT arg ->
+                case retrieveElementType arg mp of
+                    R ->
+                        let inner = fmap (:+ 0) . eval valMap $ expTwoR mp arg
+                            ftResult = fourierTransform2D (size1, size2) inner
+                         in fmap realPart ftResult
+                    C ->
+                        let inner = eval valMap $ expTwoC mp arg
+                            ftResult = fourierTransform2D (size1, size2) inner
+                         in fmap realPart ftResult
+            ImFT arg ->
+                case retrieveElementType arg mp of
+                    R ->
+                        let inner = fmap (:+ 0) . eval valMap $ expTwoR mp arg
+                            ftResult = fourierTransform2D (size1, size2) inner
+                         in fmap imagPart ftResult
+                    C ->
+                        let inner = eval valMap $ expTwoC mp arg
+                            ftResult = fourierTransform2D (size1, size2) inner
+                         in fmap imagPart ftResult
             _ -> error "expression structure Two R is wrong"
     | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -603,6 +623,30 @@ evaluate3DReal valMap (mp, n)
                     (size1, size2, size3)
                     (amount1, amount2, amount3)
                     (eval valMap $ expThreeR mp arg)
+            ReFT arg ->
+                case retrieveElementType arg mp of
+                    R ->
+                        let inner = fmap (:+ 0) . eval valMap $ expThreeR mp arg
+                            ftResult =
+                                fourierTransform3D (size1, size2, size3) inner
+                         in fmap realPart ftResult
+                    C ->
+                        let inner = eval valMap $ expThreeC mp arg
+                            ftResult =
+                                fourierTransform3D (size1, size2, size3) inner
+                         in fmap realPart ftResult
+            ImFT arg ->
+                case retrieveElementType arg mp of
+                    R ->
+                        let inner = fmap (:+ 0) . eval valMap $ expThreeR mp arg
+                            ftResult =
+                                fourierTransform3D (size1, size2, size3) inner
+                         in fmap imagPart ftResult
+                    C ->
+                        let inner = eval valMap $ expThreeC mp arg
+                            ftResult =
+                                fourierTransform3D (size1, size2, size3) inner
+                         in fmap imagPart ftResult
             _ -> error "expression structure Three R is wrong"
     | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
@@ -728,11 +772,11 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
 fourierTransform1D ::
        Int -> Array Int (Complex Double) -> Array Int (Complex Double)
 fourierTransform1D size arr =
-    listArray (0, size - 1) [computeX k | k <- [0 .. size - 1]]
+    listArray (0, size - 1) [computeX i | i <- [0 .. size - 1]]
   where
-    computeX k = sum $ zipWithA (*) arr (fourierBasis k)
-    fourierBasis k =
-        let frequency n = 2 * pi * fromIntegral (k * n) / fromIntegral size
+    computeX i = sum $ zipWithA (*) arr (fourierBasis i)
+    fourierBasis i =
+        let frequency n = 2 * pi * fromIntegral (i * n) / fromIntegral size
          in listArray
                 (0, size - 1)
                 [ cos (frequency n) :+ (-sin (frequency n))
@@ -748,16 +792,45 @@ fourierTransform2D ::
 fourierTransform2D (size1, size2) arr =
     listArray
         ((0, 0), (size1 - 1, size2 - 1))
-        [computeX k l | k <- [0 .. size1 - 1], l <- [0 .. size2 - 1]]
+        [computeX i j | i <- [0 .. size1 - 1], j <- [0 .. size2 - 1]]
   where
-    computeX k l = sum $ zipWithA (*) arr (fourierBasis k l)
-    fourierBasis k l =
+    computeX i j = sum $ zipWithA (*) arr (fourierBasis i j)
+    fourierBasis i j =
         let frequency m n =
-                2 * pi * fromIntegral (k * m) / fromIntegral size1 +
-                2 * pi * fromIntegral (l * n) / fromIntegral size2
+                2 * pi * fromIntegral (i * m) / fromIntegral size1 +
+                2 * pi * fromIntegral (j * n) / fromIntegral size2
          in listArray
                 ((0, 0), (size1 - 1, size2 - 1))
                 [ cos (frequency m n) :+ (-sin (frequency m n))
                 | m <- [0 .. size1 - 1]
                 , n <- [0 .. size2 - 1]
+                ]
+
+-- |
+--
+fourierTransform3D ::
+       (Int, Int, Int)
+    -> Array (Int, Int, Int) (Complex Double)
+    -> Array (Int, Int, Int) (Complex Double)
+fourierTransform3D (size1, size2, size3) arr =
+    listArray
+        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+        [ computeX i j k
+        | i <- [0 .. size1 - 1]
+        , j <- [0 .. size2 - 1]
+        , k <- [0 .. size3 - 1]
+        ]
+  where
+    computeX i j k = sum $ zipWithA (*) arr (fourierBasis i j k)
+    fourierBasis i j k =
+        let frequency m n p =
+                2 * pi * fromIntegral (i * m) / fromIntegral size1 +
+                2 * pi * fromIntegral (j * n) / fromIntegral size2 +
+                2 * pi * fromIntegral (k * p) / fromIntegral size3
+         in listArray
+                ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                [ cos (frequency m n p) :+ (-sin (frequency m n p))
+                | m <- [0 .. size1 - 1]
+                , n <- [0 .. size2 - 1]
+                , p <- [0 .. size3 - 1]
                 ]

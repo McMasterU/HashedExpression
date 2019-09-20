@@ -1,4 +1,4 @@
-module SimplifyEval.OneRSpec where
+module NormalizeEval.OneRSpec where
 
 import Commons
 import Data.Map.Strict
@@ -8,7 +8,7 @@ import HashedInterp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
+import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -41,28 +41,28 @@ import Test.QuickCheck
 
 -- |
 --
-prop_SimplifyThenEval :: SuiteOneR -> Bool
-prop_SimplifyThenEval (SuiteOneR exp valMaps) =
-    eval valMaps exp ~= eval valMaps (simplify exp)
+prop_NormalizeThenEval :: SuiteOneR -> Bool
+prop_NormalizeThenEval (SuiteOneR exp valMaps) =
+    eval valMaps exp ~= eval valMaps (normalize exp)
 -- |
 --
 prop_Add :: SuiteOneR -> SuiteOneR -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (simplify1, simplify2, simplifySum) =
+prop_Add (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = union valMaps1 valMaps2
     exp1'
-        | simplify1 = simplify exp1
+        | normalize1 = normalize exp1
         | otherwise = exp1
     exp2'
-        | simplify2 = simplify exp2
+        | normalize2 = normalize exp2
         | otherwise = exp2
     expSum'
-        | simplifySum = simplify (exp1 + exp2)
+        | normalizeSum = normalize (exp1 + exp2)
         | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteOneR -> SuiteOneR -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (simplify1, simplify2, simplifyMul) =
+prop_Multiply (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, normalize2, normalizeMul) =
     if lhs ~= rhs
         then True
         else error
@@ -72,27 +72,27 @@ prop_Multiply (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (simplify1, si
   where
     valMaps = union valMaps1 valMaps2
     exp1'
-        | simplify1 = simplify exp1
+        | normalize1 = normalize exp1
         | otherwise = exp1
     exp2'
-        | simplify2 = simplify exp2
+        | normalize2 = normalize exp2
         | otherwise = exp2
     expMul'
-        | simplifyMul = simplify (exp1 * exp2)
+        | normalizeMul = normalize (exp1 * exp2)
         | otherwise = exp1 * exp2
     lhs = eval valMaps exp1' * eval valMaps exp2'
     rhs = eval valMaps expMul'
 
 prop_AddMultiply :: SuiteOneR -> Bool
 prop_AddMultiply (SuiteOneR exp valMaps) =
-    eval valMaps (simplify (exp + exp)) ~=
-    eval valMaps (simplify (const 2 *. exp))
+    eval valMaps (normalize (exp + exp)) ~=
+    eval valMaps (normalize (const 2 *. exp))
 
 spec :: Spec
 spec =
-    describe "simplify & eval property for One R" $ do
-        specify "evaluate must equals simplify then evaluate " $
-            property prop_SimplifyThenEval
+    describe "normalize & eval property for One R" $ do
+        specify "evaluate must equals normalize then evaluate " $
+            property prop_NormalizeThenEval
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply

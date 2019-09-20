@@ -22,10 +22,10 @@ import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import HashedUtils
 import HashedVar
 import Prelude hiding
@@ -256,14 +256,14 @@ instance Show SuiteScalarR where
     show (SuiteScalarR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -368,14 +368,14 @@ instance Show SuiteScalarC where
     show (SuiteScalarC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 instance Arbitrary SuiteScalarC where
     arbitrary = do
@@ -414,8 +414,14 @@ genOneR =
     , (1, fromOneCOneR)
     , (3, fromRotateOneR)
     , (1, fromPiecewiseOneR)
+    , (1, fromFourierTransformOneR)
     ]
   where
+    fromFourierTransformOneR :: Gen (Expression One R, Vars)
+    fromFourierTransformOneR = do
+        on <- operandOneR
+        reOrIm <- elements [xRe, xIm]
+        return (reOrIm . ft . fst $ on, snd on)
     fromPiecewiseOneR :: Gen (Expression One R, Vars)
     fromPiecewiseOneR = do
         numBranches <- elements [2 .. 4]
@@ -485,16 +491,16 @@ instance Show SuiteOneR where
     show (SuiteOneR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -540,8 +546,13 @@ genOneC =
     , (2, fromScaleOneC)
     , (3, fromRotateOneC)
     , (1, fromPiecewiseOneC)
+    , (1, fromFourierTransformOneC)
     ]
   where
+    fromFourierTransformOneC :: Gen (Expression One C, Vars)
+    fromFourierTransformOneC = do
+        on <- operandOneC
+        return (ft . fst $ on, snd on)
     fromPiecewiseOneC :: Gen (Expression One C, Vars)
     fromPiecewiseOneC = do
         numBranches <- elements [2 .. 4]
@@ -608,16 +619,16 @@ instance Show SuiteOneC where
     show (SuiteOneC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -657,8 +668,14 @@ genTwoR =
     , (1, fromScaleTwoR)
     , (1, fromTwoCTwoR)
     , (2, fromRotateTwoR)
+    , (1, fromFourierTransformTwoR)
     ]
   where
+    fromFourierTransformTwoR :: Gen (Expression Two R, Vars)
+    fromFourierTransformTwoR = do
+        on <- operandTwoR
+        reOrIm <- elements [xRe, xIm]
+        return (reOrIm . ft . fst $ on, snd on)
     fromRotateTwoR :: Gen (Expression Two R, Vars)
     fromRotateTwoR = do
         on <- operandTwoR
@@ -720,16 +737,16 @@ instance Show SuiteTwoR where
     show (SuiteTwoR e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -776,8 +793,13 @@ genTwoC =
     , (1, fromUnaryTwoC (^ 2))
     , (2, fromScaleTwoC)
     , (2, fromRotateTwoC)
+    , (1, fromFourierTransformTwoC)
     ]
   where
+    fromFourierTransformTwoC :: Gen (Expression Two C, Vars)
+    fromFourierTransformTwoC = do
+        on <- operandTwoC
+        return (ft . fst $ on, snd on)
     fromRotateTwoC :: Gen (Expression Two C, Vars)
     fromRotateTwoC = do
         on <- operandTwoC
@@ -836,16 +858,16 @@ instance Show SuiteTwoC where
     show (SuiteTwoC e valMaps) =
         format
             [ ("Expr", exp)
-            , ("Simplified", simplifiedExp)
+            , ("Normalized", normalizedExp)
             , ("ValMap", show valMaps)
             , ("EvalExp", show evalExp)
-            , ("EvalExpSimplify", show evalSimplified)
+            , ("EvalExpNormalize", show evalNormalized)
             ]
       where
         exp = prettifyDebug e
-        simplifiedExp = prettifyDebug . simplify $ e
+        normalizedExp = prettifyDebug . normalize $ e
         evalExp = eval valMaps e
-        evalSimplified = eval valMaps $ simplify e
+        evalNormalized = eval valMaps $ normalize e
 
 -- |
 --
@@ -893,13 +915,13 @@ getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 sz :: Expression d et -> Int
 sz = IM.size . exMap
 
-infix 1 `shouldSimplifyTo`
+infix 1 `shouldNormalizeTo`
 
-shouldSimplifyTo ::
+shouldNormalizeTo ::
        (HasCallStack, DimensionType d, ElementType et, Typeable et, Typeable d)
     => Expression d et
     -> Expression d et
     -> IO ()
-shouldSimplifyTo exp1 exp2 = do
-    prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
-    simplify exp1 `shouldBe` simplify exp2
+shouldNormalizeTo exp1 exp2 = do
+    prettify (normalize exp1) `shouldBe` prettify (normalize exp2)
+    normalize exp1 `shouldBe` normalize exp2

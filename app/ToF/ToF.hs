@@ -13,7 +13,7 @@ import HashedInterp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
+import HashedNormalize
 import Prelude hiding
     ( (*)
     , (+)

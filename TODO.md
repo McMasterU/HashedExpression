@@ -6,7 +6,7 @@ main = do
     measureTime $ do
         let exp1 = (((((n+:l))^3))^3)
         let exp2 = ((k+:u)+(p+:j))
-        showExp $ simplify $ exp1 * exp2
+        showExp $ normalize $ exp1 * exp2
 ```
 
 - 06/08/19: Can't collect differential of this

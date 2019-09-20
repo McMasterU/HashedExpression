@@ -3,10 +3,10 @@ module Test2 where
 import Commons
 import Data.Maybe (fromJust)
 import HashedExpression
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import HashedVar
 import Prelude hiding
     ( (*)
@@ -39,11 +39,11 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-    describe "More simplify spec" $
-    specify "Mixed simplified spec 1" $ do
-        negate x `shouldSimplifyTo` const (-1) *. x
-        negate x1 `shouldSimplifyTo` const (-1) *. x1
-        x ^ 2 ^ 3 `shouldSimplifyTo` x ^ 6
-        x ^ 3 / x ^ 2 `shouldSimplifyTo` x
+    describe "More normalize spec" $
+    specify "Mixed normalized spec 1" $ do
+        negate x `shouldNormalizeTo` const (-1) *. x
+        negate x1 `shouldNormalizeTo` const (-1) *. x1
+        x ^ 2 ^ 3 `shouldNormalizeTo` x ^ 6
+        x ^ 3 / x ^ 2 `shouldNormalizeTo` x
         (a *. x) * (b *. y) *
-            (c *. z) `shouldSimplifyTo` (a * b * c) *. (x * y * z)
+            (c *. z) `shouldNormalizeTo` (a * b * c) *. (x * y * z)

@@ -43,8 +43,12 @@ nodeElementType node mp =
         Piecewise _ _ branches ->
             maximum . map (`retrieveElementType` mp) $ branches
         Rotate _ arg -> retrieveElementType arg mp
-        ReFT _ -> R
-        ImFT _ -> R
+        ReFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
+        ImFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
 
 -- | For ordering things inside Sum or Product so we can write rules like
 --   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*

@@ -57,7 +57,7 @@ import Prelude hiding
 import Prelude (Bool)
 import Prelude (Bool)
 
--- | Pattern for simplification
+-- | Pattern for normalizier
 --
 type Capture = Int
 
@@ -234,14 +234,14 @@ reFT = PReFT
 imFT :: Pattern -> Pattern
 imFT = PImFT
 
--- | Guarded patterns for simplification
+-- | Guarded patterns for normalizier
 --
 data GuardedPattern =
     GP Pattern Condition
 
 type Substitution = (GuardedPattern, Pattern)
 
--- | Turn HashedPattern to a simplification
+-- | Turn HashedPattern to a normalizier
 --
 fromSubstitution :: Substitution -> Modification
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
@@ -701,7 +701,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                 map buildFromPattern' [sp1, sp2]
             PPiecewise _ _ ->
                 error
-                    "Pattern piecewise appear on the right side of simplification rules which we haven't had yet"
+                    "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
             PMulRest restCapture sps
                 | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
                     mulManyDiff originalMp $

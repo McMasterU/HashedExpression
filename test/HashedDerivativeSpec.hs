@@ -4,10 +4,10 @@ import Commons
 import Data.List
 import Data.Maybe (fromJust)
 import HashedExpression
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedSimplify
 import Prelude hiding
     ( (*)
     , (+)

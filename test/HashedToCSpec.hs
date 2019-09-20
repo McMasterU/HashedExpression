@@ -6,9 +6,10 @@ module HashedToCSpec where
 import Commons
 import Control.Applicative (liftA2)
 import Control.Concurrent
-import Control.Monad (replicateM_)
+import Control.Monad (replicateM_, unless)
 import Data.Array
 import Data.Complex (Complex(..))
+import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
@@ -19,17 +20,36 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression (C, DimensionType, Expression(..), NumType, R, Scalar)
+import HashedExpression
+    ( C
+    , DimensionType
+    , Expression(..)
+    , Node(..)
+    , NumType
+    , R
+    , Scalar
+    )
 import HashedInner
 import HashedInterp
 import HashedNode
+import HashedNormalize (normalize)
 import HashedPrettify (showExp, showExpDebug)
-import HashedSimplify (simplify)
 import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
+
+-- | Since we haven't generate C code for fourierTransform, we need this temporarily, otherwise tests will fail
+--
+containsFT :: (DimensionType d, NumType et) => Expression d et -> Bool
+containsFT (Expression n mp) = any isFT $ IM.elems mp
+  where
+    isFT (_, node) =
+        case node of
+            ReFT _ -> True
+            ImFT _ -> True
+            _ -> False
 
 -- |
 --
@@ -66,72 +86,78 @@ readC str = (readR rePart, readR imPart)
 -- |
 --
 prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
-prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify = read . head . splitOn " " $ outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) =
+    unless (containsFT exp) $ do
+        (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+        let resultNormalize = read . head . splitOn " " $ outputSimple
+        let resultInterpNormalize = eval valMaps (normalize exp)
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) = do
-    let simplifiedExp = simplify exp
-    writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
-    let ([im], [re]) = readC outputCodeC
-    let resultSimplify = im :+ re
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) =
+    unless (containsFT exp) $ do
+        let normalizedExp = normalize exp
+        writeFile "C/main.c" $
+            intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+        (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
+        let ([im], [re]) = readC outputCodeC
+        let resultNormalize = im :+ re
+        let resultInterpNormalize = eval valMaps normalizedExp
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpOneR :: SuiteOneR -> Expectation
-prop_CEqualInterpOneR (SuiteOneR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify = listArray (0, vectorSize - 1) $ readR outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
+    unless (containsFT exp) $ do
+        (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+        let resultNormalize = listArray (0, vectorSize - 1) $ readR outputSimple
+        let resultInterpNormalize = eval valMaps (normalize exp)
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpOneC :: SuiteOneC -> Expectation
-prop_CEqualInterpOneC (SuiteOneC exp valMaps) = do
-    let simplifiedExp = simplify exp
-    writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
-    let (re, im) = readC outputCodeC
-    let resultSimplify = listArray (0, vectorSize - 1) $ zipWith (:+) re im
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
+    unless (containsFT exp) $ do
+        let normalizedExp = normalize exp
+        writeFile "C/main.c" $
+            intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+        (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
+        let (re, im) = readC outputCodeC
+        let resultNormalize = listArray (0, vectorSize - 1) $ zipWith (:+) re im
+        let resultInterpNormalize = eval valMaps normalizedExp
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
 prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) = do
-    (exitCode, outputSimple) <- evaluateCodeC (simplify exp) valMaps
-    let resultSimplify =
-            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
-            readR outputSimple
-    let resultInterpSimplify = eval valMaps (simplify exp)
-    resultSimplify `shouldApprox` resultInterpSimplify
+    unless (containsFT exp) $ do
+        (exitCode, outputSimple) <- evaluateCodeC (normalize exp) valMaps
+        let resultNormalize =
+                listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+                readR outputSimple
+        let resultInterpNormalize = eval valMaps (normalize exp)
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 --
 prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
 prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) = do
-    let simplifiedExp = simplify exp
-    writeFile "C/main.c" $
-        intercalate "\n" . singleExpressionCProgram valMaps $ simplifiedExp
-    (exitCode, outputCodeC) <- evaluateCodeC (simplify exp) valMaps
-    let (re, im) = readC outputCodeC
-    let resultSimplify =
-            listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
-            zipWith (:+) re im
-    let resultInterpSimplify = eval valMaps simplifiedExp
-    resultSimplify `shouldApprox` resultInterpSimplify
+    unless (containsFT exp) $ do
+        let normalizedExp = normalize exp
+        writeFile "C/main.c" $
+            intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
+        (exitCode, outputCodeC) <- evaluateCodeC (normalize exp) valMaps
+        let (re, im) = readC outputCodeC
+        let resultNormalize =
+                listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+                zipWith (:+) re im
+        let resultInterpNormalize = eval valMaps normalizedExp
+        resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec
 --

@@ -21,10 +21,10 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
+import HashedNormalize
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedSimplify
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -55,12 +55,12 @@ import Prelude hiding
     )
 import qualified Prelude
 
--- | Precondition: (satisfied by first applying simplification)
+-- | Precondition: (satisfied by first applying normalizier)
 -- - No complex in the input (:+, xRe, xIm)
 -- - Scale is pushed to the outer most layer and real scalars are group together in a product
 --
 collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
-collectDifferentials = wrap . applyRules . unwrap . simplify
+collectDifferentials = wrap . applyRules . unwrap . normalize
   where
     applyRules =
         chain
@@ -69,7 +69,7 @@ collectDifferentials = wrap . applyRules . unwrap . simplify
             , separateDVarAlone
             , toTransformation groupByDVar
             , aggregateByDVar
-            , simplifyEachPartialDerivative
+            , normalizeEachPartialDerivative
             , removeUnreachable
             ]
 
@@ -166,18 +166,18 @@ aggregateByDVar =
     , sum (mapL (<.> y) xs) |. isDVar y ~~~~~~> sum xs <.> y
     ]
 
--- | Simplify each partial derivative
+-- | Normalize each partial derivative
 --
-simplifyEachPartialDerivative :: Transformation
-simplifyEachPartialDerivative exp@(mp, n)
-    | Sum Covector ns <- retrieveNode n mp = sumMany $ map simplifyEach ns
-    | InnerProd Covector _ _ <- retrieveNode n mp = simplifyEach n
+normalizeEachPartialDerivative :: Transformation
+normalizeEachPartialDerivative exp@(mp, n)
+    | Sum Covector ns <- retrieveNode n mp = sumMany $ map normalizeEach ns
+    | InnerProd Covector _ _ <- retrieveNode n mp = normalizeEach n
     | otherwise = (mp, n)
   where
-    simplifyEach nId
+    normalizeEach nId
         | Mul Covector [partialDeriv, dVar] <- retrieveNode nId mp =
-            mulMany [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]
+            mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         | InnerProd Covector partialDeriv dVar <- retrieveNode nId mp =
             apply
                 (binaryET InnerProd ElementDefault `hasShape` [])
-                [simplifyingTransformation (mp, partialDeriv), (mp, dVar)]
+                [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
