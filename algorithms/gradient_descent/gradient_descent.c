@@ -1,4 +1,5 @@
 #include "problem.c"
+#include "utils.h"
 #include <math.h>
 #include <stdio.h>
 #include <time.h>

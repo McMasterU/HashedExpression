@@ -54,18 +54,19 @@ import Test.Hspec
 import Test.Hspec.Runner
 
 main :: IO ()
-main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
+main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 1000} spec
 
 spec :: Spec
-spec = do
-    describe "NormalizeSpec" HashedNormalizeSpec.spec
-    describe "Test1" Test1.spec
-    describe "Test2" Test2.spec
-    describe "HashedInterpSpec" HashedInterpSpec.spec
-    describe "HashedCollectSpec" HashedCollectSpec.spec
-    describe "HashedToCSpec" HashedToCSpec.spec
-    describe "StructureSpec" StructureSpec.spec
-    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
-    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+spec
+--    describe "NormalizeSpec" HashedNormalizeSpec.spec
+--    describe "Test1" Test1.spec
+--    describe "Test2" Test2.spec
+--    describe "HashedInterpSpec" HashedInterpSpec.spec
+--    describe "HashedCollectSpec" HashedCollectSpec.spec
+--    describe "HashedToCSpec" HashedToCSpec.spec
+--    describe "StructureSpec" StructureSpec.spec
+--    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
+--    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+ = do
     describe "NormalizeEval.OneRSpec" OneRSpec.spec
-    describe "NormalizeEval.OneCSpec" OneCSpec.spec
+--    describe "NormalizeEval.OneCSpec" OneCSpec.spec
