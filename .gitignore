@@ -4,7 +4,6 @@ dist-newstyle
 .idea
 .DS_Store
 *.iml
-C/**
 out/
 *.txt
 
