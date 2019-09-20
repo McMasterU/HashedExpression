@@ -21,10 +21,10 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
+import HashedNormalize
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
-import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)

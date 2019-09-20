@@ -414,8 +414,14 @@ genOneR =
     , (1, fromOneCOneR)
     , (3, fromRotateOneR)
     , (1, fromPiecewiseOneR)
+    , (1, fromFourierTransformOneR)
     ]
   where
+    fromFourierTransformOneR :: Gen (Expression One R, Vars)
+    fromFourierTransformOneR = do
+        on <- operandOneR
+        reOrIm <- elements [xRe, xIm]
+        return (reOrIm . ft . fst $ on, snd on)
     fromPiecewiseOneR :: Gen (Expression One R, Vars)
     fromPiecewiseOneR = do
         numBranches <- elements [2 .. 4]
@@ -540,8 +546,13 @@ genOneC =
     , (2, fromScaleOneC)
     , (3, fromRotateOneC)
     , (1, fromPiecewiseOneC)
+    , (1, fromFourierTransformOneC)
     ]
   where
+    fromFourierTransformOneC :: Gen (Expression One C, Vars)
+    fromFourierTransformOneC = do
+        on <- operandOneC
+        return (ft . fst $ on, snd on)
     fromPiecewiseOneC :: Gen (Expression One C, Vars)
     fromPiecewiseOneC = do
         numBranches <- elements [2 .. 4]
@@ -657,8 +668,14 @@ genTwoR =
     , (1, fromScaleTwoR)
     , (1, fromTwoCTwoR)
     , (2, fromRotateTwoR)
+    , (1, fromFourierTransformTwoR)
     ]
   where
+    fromFourierTransformTwoR :: Gen (Expression Two R, Vars)
+    fromFourierTransformTwoR = do
+        on <- operandTwoR
+        reOrIm <- elements [xRe, xIm]
+        return (reOrIm . ft . fst $ on, snd on)
     fromRotateTwoR :: Gen (Expression Two R, Vars)
     fromRotateTwoR = do
         on <- operandTwoR
@@ -776,8 +793,13 @@ genTwoC =
     , (1, fromUnaryTwoC (^ 2))
     , (2, fromScaleTwoC)
     , (2, fromRotateTwoC)
+    , (1, fromFourierTransformTwoC)
     ]
   where
+    fromFourierTransformTwoC :: Gen (Expression Two C, Vars)
+    fromFourierTransformTwoC = do
+        on <- operandTwoC
+        return (ft . fst $ on, snd on)
     fromRotateTwoC :: Gen (Expression Two C, Vars)
     fromRotateTwoC = do
         on <- operandTwoC
