@@ -108,21 +108,26 @@ mergeVars = foldl f [[], [], [], []]
   where
     f x y = map removeDuplicate $ zipWith (++) x y
 
+genDouble :: Gen Double
+genDouble = arbitrary `suchThat` betweenZeroOne
+  where
+    betweenZeroOne x = x >= 0 && x <= 1
+
 -- |
 --
 genValMap :: Vars -> Gen ValMaps
 genValMap vars = do
     let [names0d, names1d, names2d, names3d] = vars
-    list0d <- vectorOf (length names0d) arbitrary
+    list0d <- vectorOf (length names0d) genDouble
     let vm0 = Map.fromList . zip names0d $ map VScalar list0d
-    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ arbitrary
+    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ genDouble
     let vm1 =
             Map.fromList .
             zip names1d . map (V1D . listArray (0, vectorSize - 1)) $
             list1d
     list2d <-
         vectorOf (length names2d) . vectorOf (vectorSize * vectorSize) $
-        arbitrary
+        genDouble
     let vm2 =
             Map.fromList .
             zip names2d .
@@ -131,7 +136,7 @@ genValMap vars = do
     list3d <-
         vectorOf (length names3d) .
         vectorOf (vectorSize * vectorSize * vectorSize) $
-        arbitrary
+        genDouble
     let vm3 =
             Map.fromList .
             zip names3d .
@@ -165,7 +170,7 @@ withRatio = concatMap (uncurry replicate)
 primitiveScalarR :: Gen (Expression Scalar R, Vars)
 primitiveScalarR = do
     name <- elements . map pure $ ['a' .. 'z']
-    dbl <- arbitrary
+    dbl <- genDouble
     elements . withRatio $
         [ (6, (var name, [[name], [], [], []]))
         , (4, (const dbl, [[], [], [], []]))
@@ -254,11 +259,7 @@ data SuiteScalarR =
 
 instance Show SuiteScalarR where
     show (SuiteScalarR e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
@@ -282,7 +283,7 @@ primitiveScalarC :: Gen (Expression Scalar C, Vars)
 primitiveScalarC = do
     name1 <- elements . map pure $ ['a' .. 'z']
     name2 <- elements . map pure $ ['a' .. 'z']
-    dbl <- arbitrary
+    dbl <- genDouble
     elements . withRatio $
         [ (1, (var name1 +: var name2, [[name1, name2], [], [], []]))
         , (1, (const dbl +: const 0, [[], [], [], []]))
@@ -366,11 +367,7 @@ data SuiteScalarC =
 
 instance Show SuiteScalarC where
     show (SuiteScalarC e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
@@ -391,7 +388,7 @@ instance Arbitrary SuiteScalarC where
 primitiveOneR :: Gen (Expression One R, Vars)
 primitiveOneR = do
     name <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    dbl <- arbitrary
+    dbl <- genDouble
     elements . withRatio $
         [ (6, (var1d vectorSize name, [[], [name], [], []]))
         , (4, (const1d vectorSize dbl, [[], [], [], []]))
@@ -489,13 +486,7 @@ data SuiteOneR =
 
 instance Show SuiteOneR where
     show (SuiteOneR e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            , ("EvalExp", show evalExp)
-            , ("EvalExpNormalize", show evalNormalized)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
@@ -519,8 +510,8 @@ primitiveOneC :: Gen (Expression One C, Vars)
 primitiveOneC = do
     name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
     name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    dbl1 <- arbitrary
-    dbl2 <- arbitrary
+    dbl1 <- genDouble
+    dbl2 <- genDouble
     elements . withRatio $
         [ ( 6
           , ( var1d vectorSize name1 +: var1d vectorSize name2
@@ -617,13 +608,7 @@ data SuiteOneC =
 
 instance Show SuiteOneC where
     show (SuiteOneC e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            , ("EvalExp", show evalExp)
-            , ("EvalExpNormalize", show evalNormalized)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
@@ -646,7 +631,7 @@ instance Arbitrary SuiteOneC where
 primitiveTwoR :: Gen (Expression Two R, Vars)
 primitiveTwoR = do
     name <- elements . map ((++ "2") . pure) $ ['a' .. 'z']
-    dbl <- arbitrary
+    dbl <- genDouble
     elements . withRatio $
         [ (6, (var2d (vectorSize, vectorSize) name, [[], [], [name], []]))
         , (4, (const2d (vectorSize, vectorSize) dbl, [[], [], [], []]))
@@ -735,13 +720,7 @@ data SuiteTwoR =
 
 instance Show SuiteTwoR where
     show (SuiteTwoR e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            , ("EvalExp", show evalExp)
-            , ("EvalExpNormalize", show evalNormalized)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
@@ -765,8 +744,8 @@ primitiveTwoC :: Gen (Expression Two C, Vars)
 primitiveTwoC = do
     name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
     name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    dbl1 <- arbitrary
-    dbl2 <- arbitrary
+    dbl1 <- genDouble
+    dbl2 <- genDouble
     elements . withRatio $
         [ ( 6
           , ( var2d (vectorSize, vectorSize) name1 +:
@@ -856,13 +835,7 @@ data SuiteTwoC =
 
 instance Show SuiteTwoC where
     show (SuiteTwoC e valMaps) =
-        format
-            [ ("Expr", exp)
-            , ("Normalized", normalizedExp)
-            , ("ValMap", show valMaps)
-            , ("EvalExp", show evalExp)
-            , ("EvalExpNormalize", show evalNormalized)
-            ]
+        format [("Expr", exp), ("ValMap", show valMaps)]
       where
         exp = prettifyDebug e
         normalizedExp = prettifyDebug . normalize $ e
