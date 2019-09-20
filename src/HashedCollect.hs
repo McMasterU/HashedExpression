@@ -21,10 +21,10 @@ import HashedExpression
 import HashedHash
 import HashedInner
 import HashedNode
-import HashedNormalize
 import HashedOperation (const, const1d, const2d, const3d)
 import HashedPattern
 import HashedPrettify
+import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -176,8 +176,8 @@ normalizeEachPartialDerivative exp@(mp, n)
   where
     normalizeEach nId
         | Mul Covector [partialDeriv, dVar] <- retrieveNode nId mp =
-            mulMany [normalizeingTransformation (mp, partialDeriv), (mp, dVar)]
+            mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         | InnerProd Covector partialDeriv dVar <- retrieveNode nId mp =
             apply
                 (binaryET InnerProd ElementDefault `hasShape` [])
-                [normalizeingTransformation (mp, partialDeriv), (mp, dVar)]
+                [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
