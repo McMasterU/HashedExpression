@@ -180,6 +180,10 @@ generateEvaluatingCodes memMap (mp, rootIds) =
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
+    -- | 
+    --
+    addressOf :: Int -> String
+    addressOf nId = "(ptr + " ++ show (memOffset memMap nId LookupR) ++ ")"
     -- for with only body
     for :: String -> Int -> Code -> Code
     for iter nId scopeCodes = forWith iter (getShape nId) ([], scopeCodes, [])
@@ -365,6 +369,42 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                         , n `at` toIndex i j k <<-
                           arg `at` toIndex "ai" "aj" "ak"
                         ]
+                ReFT arg
+                    | [size] <- shape ->
+                        let functionParameters =
+                                [show size, addressOf arg, addressOf n, "REAL"]
+                         in [ "dft_1d(" ++
+                              intercalate ", " functionParameters ++ ");"
+                            ]
+                    | [size1, size2] <- shape ->
+                        let functionParameters =
+                                [ show size1
+                                , show size2
+                                , addressOf arg
+                                , addressOf n
+                                , "REAL"
+                                ]
+                         in [ "dft_2d(" ++
+                              intercalate ", " functionParameters ++ ");"
+                            ]
+                ImFT arg
+                    | [size] <- shape ->
+                        let functionParameters =
+                                [show size, addressOf arg, addressOf n, "IMAG"]
+                         in [ "dft_1d(" ++
+                              intercalate ", " functionParameters ++ ");"
+                            ]
+                    | [size1, size2] <- shape ->
+                        let functionParameters =
+                                [ show size1
+                                , show size2
+                                , addressOf arg
+                                , addressOf n
+                                , "IMAG"
+                                ]
+                         in [ "dft_2d(" ++
+                              intercalate ", " functionParameters ++ ");"
+                            ]
                 _ -> error "Not support yet "
 
 -- | Code to assign values to those in val maps

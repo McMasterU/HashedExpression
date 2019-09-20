@@ -72,4 +72,11 @@ main = do
             (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
             (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
         vars = Set.fromList ["x", "y"]
-    showExp . collectDifferentials . exteriorDerivative vars $ exp
+        problem = constructProblem exp vars
+        values =
+            fromList
+                [ ("z", V1D $ listArray (0, 9) [1 ..])
+                , ("t", V1D $ listArray (0, 9) [5 ..])
+                ]
+    let codes = generateProblemCode values problem
+    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes

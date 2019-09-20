@@ -156,6 +156,7 @@ generateProblemCode valMaps Problem {..} =
         [ "#include <math.h>"
         , "#include <stdio.h>"
         , "#include <stdlib.h>"
+        , "#include \"utils.c\""
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)

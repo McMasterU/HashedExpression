@@ -8,13 +8,13 @@ else
 	LIBTOOL := libtool
 endif
 
-all: lbfgs.c problem.c
+all: lbfgs.c problem.c utils.c
 	$(CC) $(CFLAGS) lbfgs.c -o lbfgs.o -c
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) -o lbfgs lbfgs.o /usr/local/lib/liblbfgs.la -lm
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) -o lbfgs lbfgs.o /usr/local/lib/liblbfgs.la -lm -lfftw3
 
-fast: lbfgs.c problem.c
+fast: lbfgs.c problem.c utils.c
 	$(CC) $(FAST_FLAGS) lbfgs.c -o lbfgs.o -c
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(FAST_FLAGS) -o lbfgs lbfgs.o /usr/local/lib/liblbfgs.la -lm
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(FAST_FLAGS) -o lbfgs lbfgs.o /usr/local/lib/liblbfgs.la -lm -lfftw3
 
 clean:
 	git clean -dfX
