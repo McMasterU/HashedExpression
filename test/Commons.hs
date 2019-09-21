@@ -95,11 +95,6 @@ inspect x =
         showExp x
         return x
 
--- |
---
-vectorSize :: Int
-vectorSize = 10
-
 -- | Vars list
 --
 type Vars = [[String]] -- Vars 0D, 1D, 2D, 3D, ..
@@ -121,22 +116,24 @@ genValMap vars = do
     let [names0d, names1d, names2d, names3d] = vars
     list0d <- vectorOf (length names0d) genDouble
     let vm0 = Map.fromList . zip names0d $ map VScalar list0d
-    list1d <- vectorOf (length names1d) . vectorOf vectorSize $ genDouble
+    list1d <- vectorOf (length names1d) . vectorOf defaultDim1D $ genDouble
     let vm1 =
             Map.fromList .
-            zip names1d . map (V1D . listArray (0, vectorSize - 1)) $
+            zip names1d . map (V1D . listArray (0, defaultDim1D - 1)) $
             list1d
     list2d <-
-        vectorOf (length names2d) . vectorOf (vectorSize * vectorSize) $
+        vectorOf (length names2d) . vectorOf (default1stDim2D * default2ndDim2D) $
         genDouble
     let vm2 =
             Map.fromList .
             zip names2d .
-            map (V2D . listArray ((0, 0), (vectorSize - 1, vectorSize - 1))) $
+            map
+                (V2D .
+                 listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1))) $
             list2d
     list3d <-
         vectorOf (length names3d) .
-        vectorOf (vectorSize * vectorSize * vectorSize) $
+        vectorOf (default1stDim2D * default2ndDim2D * default3rdDim3D) $
         genDouble
     let vm3 =
             Map.fromList .
@@ -145,7 +142,9 @@ genValMap vars = do
                 (V3D .
                  listArray
                      ( (0, 0, 0)
-                     , (vectorSize - 1, vectorSize - 1, vectorSize - 1))) $
+                     , ( default1stDim3D - 1
+                       , default2ndDim3D - 1
+                       , default3rdDim3D - 1))) $
             list3d
     return $ Map.unions [vm0, vm1, vm2, vm3]
 
@@ -387,8 +386,8 @@ primitiveOneR = do
     name <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
     dbl <- genDouble
     elements . withRatio $
-        [ (6, (var1d vectorSize name, [[], [name], [], []]))
-        , (4, (const1d vectorSize dbl, [[], [], [], []]))
+        [ (6, (var1d defaultDim1D name, [[], [name], [], []]))
+        , (4, (const1d defaultDim1D dbl, [[], [], [], []]))
         ]
 
 operandOneR :: Gen (Expression One R, Vars)
@@ -511,10 +510,10 @@ primitiveOneC = do
     dbl2 <- genDouble
     elements . withRatio $
         [ ( 6
-          , ( var1d vectorSize name1 +: var1d vectorSize name2
+          , ( var1d defaultDim1D name1 +: var1d defaultDim1D name2
             , [[], [name1, name2], [], []]))
         , ( 4
-          , ( const1d vectorSize dbl1 +: const1d vectorSize dbl2
+          , ( const1d defaultDim1D dbl1 +: const1d defaultDim1D dbl2
             , [[], [], [], []]))
         ]
 
@@ -630,8 +629,11 @@ primitiveTwoR = do
     name <- elements . map ((++ "2") . pure) $ ['a' .. 'z']
     dbl <- genDouble
     elements . withRatio $
-        [ (6, (var2d (vectorSize, vectorSize) name, [[], [], [name], []]))
-        , (4, (const2d (vectorSize, vectorSize) dbl, [[], [], [], []]))
+        [ ( 6
+          , ( var2d (default1stDim2D, default2ndDim2D) name
+            , [[], [], [name], []]))
+        , ( 4
+          , (const2d (default1stDim2D, default2ndDim2D) dbl, [[], [], [], []]))
         ]
 
 operandTwoR :: Gen (Expression Two R, Vars)
@@ -745,12 +747,12 @@ primitiveTwoC = do
     dbl2 <- genDouble
     elements . withRatio $
         [ ( 6
-          , ( var2d (vectorSize, vectorSize) name1 +:
-              var2d (vectorSize, vectorSize) name2
+          , ( var2d (default1stDim2D, default2ndDim2D) name1 +:
+              var2d (default1stDim2D, default2ndDim2D) name2
             , [[], [], [name1, name2], []]))
         , ( 4
-          , ( const2d (vectorSize, vectorSize) dbl1 +:
-              const2d (vectorSize, vectorSize) dbl2
+          , ( const2d (default1stDim2D, default2ndDim2D) dbl1 +:
+              const2d (default1stDim2D, default2ndDim2D) dbl2
             , [[], [], [], []]))
         ]
 

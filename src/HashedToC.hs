@@ -370,6 +370,50 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                           arg `at` toIndex "ai" "aj" "ak"
                         ]
                 ReFT arg
+                    | ReFT innerArg <- retrieveNode arg mp
+                    , retrieveElementType innerArg mp == R ->
+                        case shape of
+                            [size] ->
+                                let functionParameters =
+                                        [show size, addressOf arg, addressOf n]
+                                 in [ "re_dft_twice_1d(" ++
+                                      intercalate ", " functionParameters ++
+                                      ");"
+                                    ]
+                            [size1, size2] ->
+                                let functionParameters =
+                                        [ show size1
+                                        , show size2
+                                        , addressOf arg
+                                        , addressOf n
+                                        ]
+                                 in [ "re_dft_twice_2d(" ++
+                                      intercalate ", " functionParameters ++
+                                      ");"
+                                    ]
+                ImFT arg
+                    | ImFT innerArg <- retrieveNode arg mp
+                    , retrieveElementType innerArg mp == R ->
+                        case shape of
+                            [size] ->
+                                let functionParameters =
+                                        [show size, addressOf arg, addressOf n]
+                                 in [ "im_dft_twice_1d(" ++
+                                      intercalate ", " functionParameters ++
+                                      ");"
+                                    ]
+                            [size1, size2] ->
+                                let functionParameters =
+                                        [ show size1
+                                        , show size2
+                                        , addressOf arg
+                                        , addressOf n
+                                        ]
+                                 in [ "im_dft_twice_2d(" ++
+                                      intercalate ", " functionParameters ++
+                                      ");"
+                                    ]
+                ReFT arg
                     | [size] <- shape
                     , retrieveElementType arg mp == R ->
                         let functionParameters =

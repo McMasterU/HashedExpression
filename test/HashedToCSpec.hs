@@ -36,6 +36,7 @@ import HashedNormalize (normalize)
 import HashedPrettify (showExp, showExpDebug)
 import HashedToC
 import HashedUtils
+import HashedVar
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
@@ -155,7 +156,8 @@ prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
   where
     proceed withFT = do
         (exitCode, outputSimple) <- evaluateCodeC withFT (normalize exp) valMaps
-        let resultNormalize = listArray (0, vectorSize - 1) $ readR outputSimple
+        let resultNormalize =
+                listArray (0, defaultDim1D - 1) $ readR outputSimple
         let resultInterpNormalize = eval valMaps (normalize exp)
         resultNormalize `shouldApprox` resultInterpNormalize
 
@@ -175,7 +177,8 @@ prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
             intercalate "\n" . singleExpressionCProgram valMaps $ normalizedExp
         (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
         let (re, im) = readC outputCodeC
-        let resultNormalize = listArray (0, vectorSize - 1) $ zipWith (:+) re im
+        let resultNormalize =
+                listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
         let resultInterpNormalize = eval valMaps normalizedExp
         resultNormalize `shouldApprox` resultInterpNormalize
 
@@ -192,7 +195,7 @@ prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) =
     proceed withFT = do
         (exitCode, outputSimple) <- evaluateCodeC withFT (normalize exp) valMaps
         let resultNormalize =
-                listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+                listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $
                 readR outputSimple
         let resultInterpNormalize = eval valMaps (normalize exp)
         resultNormalize `shouldApprox` resultInterpNormalize
@@ -214,7 +217,7 @@ prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) =
         (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
         let (re, im) = readC outputCodeC
         let resultNormalize =
-                listArray ((0, 0), (vectorSize - 1, vectorSize - 1)) $
+                listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $
                 zipWith (:+) re im
         let resultInterpNormalize = eval valMaps normalizedExp
         resultNormalize `shouldApprox` resultInterpNormalize
