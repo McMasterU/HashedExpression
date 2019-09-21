@@ -66,17 +66,7 @@ prod1 = fromJust . HashedOperation.product
 main = do
     let x = variable1D @10 "x"
         y = variable1D @10 "y"
-        z = variable1D @10 "z"
-        t = variable1D @10 "t"
-    let exp =
-            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
-            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
-        vars = Set.fromList ["x", "y"]
-        problem = constructProblem exp vars
-        values =
-            fromList
-                [ ("z", V1D $ listArray (0, 9) [1 ..])
-                , ("t", V1D $ listArray (0, 9) [5 ..])
-                ]
-    let codes = generateProblemCode values problem
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+    let reFT = xRe . ft
+        imFT = xIm . ft
+    let exp = reFT . imFT $ (x)
+    showExp $ normalize exp
