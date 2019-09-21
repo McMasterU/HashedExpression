@@ -62,7 +62,6 @@ sum1 = fromJust . HashedOperation.sum
 prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.product
 
---
 main = do
     let x = variable1D @10 "x"
         y = variable1D @10 "y"

@@ -370,13 +370,15 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                           arg `at` toIndex "ai" "aj" "ak"
                         ]
                 ReFT arg
-                    | [size] <- shape ->
+                    | [size] <- shape
+                    , retrieveElementType arg mp == R ->
                         let functionParameters =
                                 [show size, addressOf arg, addressOf n, "REAL"]
                          in [ "dft_1d(" ++
                               intercalate ", " functionParameters ++ ");"
                             ]
-                    | [size1, size2] <- shape ->
+                    | [size1, size2] <- shape
+                    , retrieveElementType arg mp == R ->
                         let functionParameters =
                                 [ show size1
                                 , show size2
@@ -388,13 +390,15 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                               intercalate ", " functionParameters ++ ");"
                             ]
                 ImFT arg
-                    | [size] <- shape ->
+                    | [size] <- shape
+                    , retrieveElementType arg mp == R ->
                         let functionParameters =
                                 [show size, addressOf arg, addressOf n, "IMAG"]
                          in [ "dft_1d(" ++
                               intercalate ", " functionParameters ++ ");"
                             ]
-                    | [size1, size2] <- shape ->
+                    | [size1, size2] <- shape
+                    , retrieveElementType arg mp == R ->
                         let functionParameters =
                                 [ show size1
                                 , show size2
