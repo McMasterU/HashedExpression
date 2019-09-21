@@ -6,6 +6,6 @@ check_exhaustive:
 	stack build --fast --ghc-options -Wincomplete-patterns
 
 clean:
-	-rm C/*
+	-git clean -f -x C/
 	-rm *.dat
-	-rm plots/*.pdf
+	-git clean -f -x plots/

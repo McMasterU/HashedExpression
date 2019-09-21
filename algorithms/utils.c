@@ -1,4 +1,5 @@
 #include <fftw3.h>
+#include <stdio.h>
 
 typedef enum complex_part {
   REAL = 0, IMAG
@@ -11,11 +12,11 @@ void dft_1d(int N, double *in, double *out, complex_part part) {
   fftw_plan p;
   int i;
   aux = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+  p = fftw_plan_dft_1d(N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
   for (i = 0; i < N; i++) {
     aux[i][0] = in[i];
     aux[i][1] = 0;
   }
-  p = fftw_plan_dft_1d(N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
   fftw_execute(p); /* repeat as needed */
 
 
@@ -34,13 +35,13 @@ void dft_2d(int M, int N, double *in, double *out, complex_part part) {
   fftw_plan p;
   int i, j;
   aux = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * M * N);
+  p = fftw_plan_dft_2d(M, N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
   for (i = 0; i < M; i++) {
     for (j = 0; j < N; j++) {
       aux[i * N + j][0] = in[i * N + j];
       aux[i * N + j][1] = 0;
     }
   }
-  p = fftw_plan_dft_2d(M, N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
   fftw_execute(p); /* repeat as needed */
 
   for (i = 0; i < M; i++) {

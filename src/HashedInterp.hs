@@ -11,6 +11,7 @@ module HashedInterp where
 import Data.Array
 import Data.Complex
 import qualified Data.IntMap.Strict as IM
+import Data.List (intercalate)
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
@@ -30,6 +31,7 @@ import HashedExpression
 import HashedNode
 import HashedPrettify (prettify, showExp)
 import HashedUtils
+import Text.Printf
 
 -- | This operation emulates the mathematical operation
 -- | Turn expression to the right type
@@ -72,6 +74,7 @@ class Show a =>
       Approximable a
     where
     (~=) :: a -> a -> Bool
+    prettifyShow :: a -> String
 
 infix 4 ~=
 
@@ -86,22 +89,33 @@ instance Approximable Double where
         | abs (a - b) < 1.0e-5 = True
         | a == b = True
         | otherwise = relativeError a b < 0.01
+    prettifyShow a
+        | abs a < 1e-10 = "0"
+        | otherwise = printf "%.2f" a
 
 instance Approximable (Complex Double) where
     (~=) :: Complex Double -> Complex Double -> Bool
     a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
+    prettifyShow a =
+        prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i"
 
 instance Approximable (Array Int Double) where
     (~=) :: Array Int Double -> Array Int Double -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 instance Approximable (Array Int (Complex Double)) where
     (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 instance Approximable (Array (Int, Int) Double) where
     (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 instance Approximable (Array (Int, Int) (Complex Double)) where
     (~=) ::
@@ -109,10 +123,14 @@ instance Approximable (Array (Int, Int) (Complex Double)) where
         -> Array (Int, Int) (Complex Double)
         -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 instance Approximable (Array (Int, Int, Int) Double) where
     (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
     (~=) ::
@@ -120,6 +138,8 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
         -> Array (Int, Int, Int) (Complex Double)
         -> Bool
     a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+    prettifyShow a =
+        "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
 
 -- | These should be commented properly.
 --

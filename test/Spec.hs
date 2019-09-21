@@ -48,7 +48,7 @@ import qualified Test2
 
 import Commons
 import Data.Maybe (fromJust)
-import HashedUtils ((|>))
+import HashedUtils
 import HashedVar
 import Test.Hspec
 import Test.Hspec.Runner
@@ -56,21 +56,16 @@ import Test.Hspec.Runner
 main :: IO ()
 main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
---main :: IO ()
---main = do
---    hasLibrary <- HashedToCSpec.hasFFTW
---    print hasLibrary
-
 spec :: Spec
 spec = do
---    describe "NormalizeSpec" HashedNormalizeSpec.spec
---    describe "Test1" Test1.spec
---    describe "Test2" Test2.spec
---    describe "HashedInterpSpec" HashedInterpSpec.spec
---    describe "HashedCollectSpec" HashedCollectSpec.spec
+    describe "NormalizeSpec" HashedNormalizeSpec.spec
+    describe "Test1" Test1.spec
+    describe "Test2" Test2.spec
+    describe "HashedInterpSpec" HashedInterpSpec.spec
+    describe "HashedCollectSpec" HashedCollectSpec.spec
     describe "HashedToCSpec" HashedToCSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
---    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
---    describe "NormalizeEval.OneRSpec" OneRSpec.spec
---    describe "NormalizeEval.OneCSpec" OneCSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
+    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+    describe "NormalizeEval.OneRSpec" OneRSpec.spec
+    describe "NormalizeEval.OneCSpec" OneCSpec.spec

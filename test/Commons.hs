@@ -54,6 +54,7 @@ import Prelude hiding
     , tan
     , tanh
     )
+import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
 
@@ -149,13 +150,9 @@ genValMap vars = do
     return $ Map.unions [vm0, vm1, vm2, vm3]
 
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
-shouldApprox x y =
-    if x ~= y
-        then x ~= y `shouldBe` True
-        else do
-            print x
-            print y
-            True `shouldBe` False
+shouldApprox x y = assertBool msg (x ~= y)
+  where
+    msg = "Expected: " ++ prettifyShow x ++ "\nGot: " ++ prettifyShow y
 
 infix 1 `shouldApprox`
 
