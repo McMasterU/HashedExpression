@@ -53,20 +53,30 @@ import HashedVar
 import Test.Hspec
 import Test.Hspec.Runner
 
+--main :: IO ()
+--main = do
+--    print ""
+----    let reFT = xRe . ft
+--    let imFT = xIm . ft
+--    let exp = normalize . imFT . imFT $ x1
+--        valMap = fromList [("x1", V1D $ listArray (0, 9) [1 .. ])]
+--    (_, vals) <- HashedToCSpec.evaluateCodeC True exp valMap
+--    print $ prettifyShow $ eval valMap exp
+--    print vals
+--    showExp exp
 main :: IO ()
 main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
 spec :: Spec
-spec
---    describe "NormalizeSpec" HashedNormalizeSpec.spec
---    describe "Test1" Test1.spec
---    describe "Test2" Test2.spec
---    describe "HashedInterpSpec" HashedInterpSpec.spec
---    describe "HashedCollectSpec" HashedCollectSpec.spec
- = do
+spec = do
+    describe "NormalizeSpec" HashedNormalizeSpec.spec
+    describe "Test1" Test1.spec
+    describe "Test2" Test2.spec
+    describe "HashedInterpSpec" HashedInterpSpec.spec
+    describe "HashedCollectSpec" HashedCollectSpec.spec
     describe "HashedToCSpec" HashedToCSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
---    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
---    describe "NormalizeEval.OneRSpec" OneRSpec.spec
---    describe "NormalizeEval.OneCSpec" OneCSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
+    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+    describe "NormalizeEval.OneRSpec" OneRSpec.spec
+    describe "NormalizeEval.OneCSpec" OneCSpec.spec

@@ -146,7 +146,6 @@ default3rdDim3D = 10
         , "z3"
         ]
 
-
 allVars :: Set String
 allVars =
     fromList $
