@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <lbfgs.h>
+#include <string.h>
 
 #define oo 10000000
 
@@ -75,7 +76,7 @@ static int progress(void *instance, const lbfgsfloatval_t *x,
 
 int main() {
   srand(time(NULL));
-  int i, j;
+  int i, j, k;
   int ret = 0;
 
   int N = 0;
@@ -105,15 +106,38 @@ int main() {
   ret = lbfgs(N, x, &fx, evaluate, progress, NULL, &param);
 
   printf("f_min = %f\n", fx);
-  printf("Writing result to output.txt...\n");
-  FILE *fp = fopen("output.txt", "w");
-  if (fp) {
-    for (i = 0; i < NUM_VARIABLES; i++) {
-      for (j = 0; j < var_size[i]; j++) {
-        fprintf(fp, "%f ", ptr[var_offset[i] + j]);
+
+  for (i = 0; i < NUM_VARIABLES; i++) {
+    char* var_file_name = malloc(strlen(var_name[i]) + 4);
+    strcpy(var_file_name, var_name[i]);
+    strcat(var_file_name, ".txt");
+    FILE *fp = fopen(var_file_name, "w");
+    printf("Writing %s to %s...\n", var_name[i], var_file_name);
+    if (fp) {
+      if (var_num_dim[i] == 0) {
+        fprintf(fp, "%f", ptr[var_offset[i]]);
+      } else if (var_num_dim[i] == 1) {
+        for (j = 0; j < var_shape[i][0]; j++) {
+          fprintf(fp, "%f ", ptr[var_offset[i] + j]);
+        }
+      } else if (var_num_dim[i] == 2) {
+        for (j = 0; j < var_shape[i][0]; j++) {
+          for (k = 0; k < var_shape[i][1]; k++) {
+            fprintf(fp, "%f", ptr[var_offset[i] + j * var_shape[i][1] + k]);
+            fprintf(fp, k == var_shape[i][1] - 1 ? "" : " ");
+          }
+          fprintf(fp, j == var_shape[i][0] - 1 ? "" : "\n");
+        }
+      } else {
+        printf("%s is 3D variable, so just write all the values consecutively", var_name[i]);
+        for (j = 0; j < var_size[i]; j++) {
+          fprintf(fp, "%f ", ptr[var_offset[i] + j]);
+        }
+        fprintf(fp, "\n");
       }
-      fprintf(fp, "\n");
     }
+    fclose(fp);
+    free(var_file_name);
   }
   printf("Done\n");
 
