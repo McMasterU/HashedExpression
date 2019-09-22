@@ -69,8 +69,8 @@ void re_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
   int i, j;
   for (i = 0; i < ROW; i++) {
     for (j = 0; j < COLUMN; j++) {
-      out[i * ROW + j] = in[i * ROW + j] + in[(i == 0 ? 0 : ROW - i) * COLUMN + (j == 0 ? 0 : COLUMN - j)];
-      out[i * ROW + j] *= ROW * COLUMN / 2;
+      out[i * COLUMN + j] = in[i * COLUMN + j] + in[(i == 0 ? 0 : (ROW - i)) * COLUMN + (j == 0 ? 0 : (COLUMN - j))];
+      out[i * COLUMN + j] *= ROW * COLUMN / 2;
     }
   }
 }
@@ -79,7 +79,7 @@ void re_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
 void im_dft_twice_1d(int N, double *in, double *out) {
   int i;
   for (i = 0; i < N; i++) {
-    out[i] = in[i] - in[i == 0 ? 0 : N - i];
+    out[i] = in[i] - in[i == 0 ? 0 : (N - i)];
     out[i] *= N / 2;
   }
 }
@@ -89,7 +89,7 @@ void im_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
   int i, j;
   for (i = 0; i < ROW; i++) {
     for (j = 0; j < COLUMN; j++) {
-      out[i * COLUMN + j] = in[i * COLUMN + j] + in[(i == 0 ? 0 : ROW - i) * COLUMN + (j == 0 ? 0 : COLUMN - j)];
+      out[i * COLUMN + j] = in[i * COLUMN + j] - in[(i == 0 ? 0 : ROW - i) * COLUMN + (j == 0 ? 0 : COLUMN - j)];
       out[i * COLUMN + j] *= ROW * COLUMN / 2;
     }
   }

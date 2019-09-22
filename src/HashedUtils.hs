@@ -57,6 +57,8 @@ infixl 1 |>
 chain :: [a -> a] -> a -> a
 chain = flip $ foldl (|>)
 
+-- | 
+--
 -- |
 --
 mapBoth :: (a -> b) -> (a, a) -> (b, b)

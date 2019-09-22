@@ -63,10 +63,10 @@ prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.product
 
 main = do
-    let x = variable1D @10 "x"
-        y = variable1D @10 "y"
-        z = variable1D @10 "z"
-        t = variable1D @10 "t"
+    let x = variable2D @10 @10 "x"
+        y = variable2D @10 @10 "y"
+        z = variable2D @10 @10 "z"
+        t = variable2D @10 @10 "t"
     let exp =
             (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
             (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
@@ -74,8 +74,8 @@ main = do
         problem = constructProblem exp vars
         values =
             fromList
-                [ ("z", V1D $ listArray (0, 9) [1 ..])
-                , ("t", V1D $ listArray (0, 9) [5 ..])
+                [ ("z", V2D $ listArray ((0, 0), (9, 9)) [1 ..])
+                , ("t", V2D $ listArray ((0, 0), (9, 9)) [5 ..])
                 ]
     let codes = generateProblemCode values problem
     writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes

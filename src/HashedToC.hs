@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE PolyKinds #-}
 
 module HashedToC where
 
