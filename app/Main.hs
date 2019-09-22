@@ -53,7 +53,7 @@ import HashedSolver
 import HashedToC (singleExpressionCProgram)
 import HashedUtils
 import HashedVar
-import SmilingFace.SmilingFace
+import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 

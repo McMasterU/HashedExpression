@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module SmilingFace.SmilingFace where
+module RecoverKSpace.RecoverKSpace where
 
 import Data.Array
 import Data.Complex
