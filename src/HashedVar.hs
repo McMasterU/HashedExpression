@@ -146,34 +146,6 @@ default3rdDim3D = 10
         , "z3"
         ]
 
-[ac, bc, cc, dc, ec, fc, gc, hc, ic, jc, kc, lc, mc, nc, oc, pc, qc, rc, sc, tc, uc, vc, wc, xc, yc, zc] =
-    [ var "ar" +: var "ai"
-    , var "br" +: var "bi"
-    , var "cr" +: var "ci"
-    , var "dr" +: var "di"
-    , var "er" +: var "ei"
-    , var "fr" +: var "fi"
-    , var "gr" +: var "gi"
-    , var "hr" +: var "hi"
-    , var "ir" +: var "ii"
-    , var "jr" +: var "ji"
-    , var "kr" +: var "ki"
-    , var "lr" +: var "li"
-    , var "mr" +: var "mi"
-    , var "nr" +: var "ni"
-    , var "or" +: var "oi"
-    , var "pr" +: var "pi"
-    , var "qr" +: var "qi"
-    , var "rr" +: var "ri"
-    , var "sr" +: var "si"
-    , var "tr" +: var "ti"
-    , var "ur" +: var "ui"
-    , var "vr" +: var "vi"
-    , var "wr" +: var "wi"
-    , var "xr" +: var "xi"
-    , var "yr" +: var "yi"
-    , var "zr" +: var "zi"
-    ]
 
 allVars :: Set String
 allVars =
