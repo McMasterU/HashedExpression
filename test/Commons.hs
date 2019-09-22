@@ -105,9 +105,9 @@ mergeVars = foldl f [[], [], [], []]
     f x y = map removeDuplicate $ zipWith (++) x y
 
 genDouble :: Gen Double
-genDouble = arbitrary `suchThat` betweenZeroOne
+genDouble = arbitrary `suchThat` inSmallRange
   where
-    betweenZeroOne x = x >= 0 && x <= 1
+    inSmallRange x = x >= 0 && x <= 10
 
 -- |
 --
