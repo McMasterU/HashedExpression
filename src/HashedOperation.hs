@@ -8,7 +8,8 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-} --
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FunctionalDependencies #-} --
 
 module HashedOperation where
 
@@ -233,6 +234,26 @@ huber delta e = piecewise [delta * delta] (e * e) [lessThan, largerThan]
 norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
+-- | Norm 1
+--
+norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
+norm1 expr = sumElements (sqrt (expr * expr))
+
+-- | Norm 2 square
+--
+class Norm2SquareOp a b | a -> b where
+    norm2square :: a -> b
+
+instance (DimensionType d) =>
+         Norm2SquareOp (Expression d R) (Expression Scalar R) where
+    norm2square :: Expression d R -> Expression Scalar R
+    norm2square exp = exp <.> exp
+
+instance (DimensionType d) =>
+         Norm2SquareOp (Expression d C) (Expression Scalar R) where
+    norm2square :: Expression d C -> Expression Scalar R
+    norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
+
 -- | Discrete fourier transform
 --
 -- | Sum across
@@ -244,11 +265,6 @@ sumElements ::
 sumElements expr = expr <.> one
   where
     one = constWithShape (expressionShape expr) 1 :: Expression d R
-
--- | Norm 1
---
-norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
-norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape

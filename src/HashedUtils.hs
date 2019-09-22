@@ -41,6 +41,7 @@ import Prelude hiding
 import qualified Prelude
 
 import Data.Complex
+import Data.List.Split (splitOn)
 import Data.Maybe
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
@@ -59,6 +60,16 @@ chain = flip $ foldl (|>)
 
 -- | 
 --
+read2DValues :: FilePath -> IO (Array (Int, Int) Double)
+read2DValues filePath = do
+    rows <- lines <$> readFile filePath
+    let doubleRows = map (map read . splitOn " ") rows
+    let numRow = length doubleRows
+        numCol = length . head $ doubleRows
+        allDoubles = concat doubleRows
+    return $ listArray ((0, 0), (numRow - 1, numCol - 1)) allDoubles
+
+--        allDoubles = map read . concat $ rows
 -- |
 --
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
