@@ -66,23 +66,23 @@ smilingFaceProblem = do
     imValue <- read2DValues (directory ++ "im.txt")
     headValue <- read2DValues (directory ++ "head.txt")
     let [x, y, mask, head, im, re] =
-            map (variable2D @32 @32) ["x", "y", "mask", "head", "im", "re"]
-        one = constant2D @32 @32 1
-        zero = constant2D @32 @32 0
-        p = x +: y
+            map (variable2D @128 @128) ["x", "y", "mask", "head", "im", "re"]
+        one = constant2D @128 @128 1
+        zero = constant2D @128 @128 0
     let objectiveFunction =
-            norm2square ((mask +: zero) * (ft p - (re +: im))) +
-            norm2square (p - rotate (0, 1) p) +
-            norm2square (p - rotate (1, 0) p) +
-            norm2square (((one - head) +: zero) * p)
+            norm2square ((mask +: zero) * (ft x - (re +: im))) +
+            norm2square (x - rotate (0, 1) x) +
+            norm2square (x - rotate (1, 0) x) +
+            norm2square ((one - head) * x)
+
     let valMap =
             fromList
                 [ ("mask", V2D maskValue)
                 , ("head", V2D headValue)
-                , ("im", V2D imValue)
                 , ("re", V2D reValue)
+                , ("im", V2D imValue)
                 ]
-        vars = Set.fromList ["x", "y"]
+        vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
         codes = generateProblemCode valMap problem
 
