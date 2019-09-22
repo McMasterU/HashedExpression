@@ -19,7 +19,7 @@ im = np.imag(img_fft)
 mask = np.ones((r, c))
 
 for i in range(1, r):
-  if (i % 2 == 0):
+  if (i % 5 == 0):
     re[i] = 0
     im[i] = 0
     mask[i] = 0

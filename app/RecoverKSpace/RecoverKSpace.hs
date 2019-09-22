@@ -57,7 +57,7 @@ import Test.Hspec
 import ToF.VelocityGenerator
 
 directory :: FilePath
-directory = "app/SmilingFace/data/"
+directory = "app/RecoverKSpace/data/"
 
 smilingFaceProblem :: IO ()
 smilingFaceProblem = do
