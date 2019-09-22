@@ -222,12 +222,13 @@ huber ::
     => Double
     -> Expression d R
     -> Expression d R
-huber delta e = piecewise [delta * delta] (e * e) [lessThan, largerThan]
+huber delta e =
+    piecewise [-delta, 0, delta] e [outerLeft, inner, inner, outerRight]
   where
-    deltaVector =
-        constWithShape (expressionShape e) (delta / 2) :: Expression d R
-    lessThan = const 0.5 *. (e * e)
-    largerThan = const delta *. (sqrt (e * e) - deltaVector)
+    one = constWithShape (expressionShape e) 1 :: Expression d R
+    inner = const 0.5 *. (e * e)
+    outerLeft = const (-delta) *. e - const (delta * delta / 2) *. one
+    outerRight = const delta *. e - const (delta * delta / 2) *. one
 
 -- | Norm 2
 --
@@ -253,6 +254,12 @@ instance (DimensionType d) =>
          Norm2SquareOp (Expression d C) (Expression Scalar R) where
     norm2square :: Expression d C -> Expression Scalar R
     norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
+
+-- |
+--
+huberNorm ::
+       (DimensionType d) => Double -> Expression d R -> Expression Scalar R
+huberNorm alpha = sumElements . huber alpha
 
 -- | Discrete fourier transform
 --
