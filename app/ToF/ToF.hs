@@ -118,8 +118,6 @@ tof2DTimeVelocityConstraint size@(row, column) =
                 ]
      in (matchObjective, valMaps)
 
---        regulizer = ((const2d size 1 / (const2d size 1 + const2d size 100 * (vx * vx + vy * vy)))
---                    * ((t - const2d size 10) * (t - const2d size 10))) <.> const2d size 1
 tof2DUp :: (Int, Int) -> (Problem, ValMaps)
 tof2DUp size@(row, column) =
     let vx = var2d size vxName

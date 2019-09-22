@@ -140,6 +140,14 @@ generateProblemCode valMaps Problem {..} =
     defineStuffs ++ assignVals ++ evaluatingCodes
   where
     entries = entryMap memMap
+    toShapeString shape
+        | length shape < 3 =
+            "{" ++
+            (intercalate ", " . map show $
+             shape ++ replicate (3 - length shape) 1) ++
+            "}"
+        | otherwise = "{" ++ (intercalate ", " . map show $ shape) ++ "}"
+    variableShapes = map (flip retrieveShape expressionMap . nodeId) variables
     variableSizes =
         map
             (product . thd3 . fromJust . flip IM.lookup entries . nodeId)
@@ -161,12 +169,18 @@ generateProblemCode valMaps Problem {..} =
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
+        , "const char* var_name[NUM_VARIABLES] = {" ++
+          (intercalate ", " . map (show . varName) $ variables) ++ "};"
+        , "const int var_num_dim[NUM_VARIABLES] = {" ++
+          (intercalate ", " . map (show . length) $ variableShapes) ++ "};"
+        , "const int var_shape[NUM_VARIABLES][3] = {" ++
+          (intercalate ", " . map toShapeString $ variableShapes) ++ "};"
         , "const int var_size[NUM_VARIABLES] = {" ++
-          (intercalate "," . map show $ variableSizes) ++ "};"
+          (intercalate ", " . map show $ variableSizes) ++ "};"
         , "const int var_offset[NUM_VARIABLES] = {" ++
-          (intercalate "," . map show $ variableOffsets) ++ "};"
+          (intercalate ", " . map show $ variableOffsets) ++ "};"
         , "const int partial_derivative_offset[NUM_VARIABLES] = {" ++
-          (intercalate "," . map show $ partialDerivativeOffsets) ++ "};"
+          (intercalate ", " . map show $ partialDerivativeOffsets) ++ "};"
         , "const int objective_offset = " ++ show objectiveOffset ++ ";"
         , "double ptr[MEM_SIZE];"
         , ""

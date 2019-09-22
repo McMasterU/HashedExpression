@@ -1,3 +1,6 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+
 import Data.Array.Unboxed as U
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
@@ -53,6 +56,17 @@ import HashedVar
 import Test.Hspec
 import Test.Hspec.Runner
 
+--main :: IO ()
+--main = do
+--    print ""
+--    let reFT = xRe . ft
+----    let imFT = xIm . ft
+--    let exp = normalize . reFT . reFT $ variable2D @6 @6 "x2"
+--        valMap = fromList [("x2", V2D $ listArray ((0, 0), (6 - 1, 6 - 1)) [1 .. ])]
+--    (_, vals) <- HashedToCSpec.evaluateCodeC True exp valMap
+--    print $ prettifyShow $ eval valMap exp
+--    print vals
+--    showExp exp
 main :: IO ()
 main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 

@@ -123,8 +123,6 @@ spec = do
             x - x `shouldNormalizeTo` zero
         specify "scale rules" $ do
             x *. (y *. v) `shouldNormalizeTo` (x * y) *. v
-            xRe (x *. xc) `shouldNormalizeTo` x *. xRe xc
-            xIm (x *. xc) `shouldNormalizeTo` x *. xIm xc
         specify "negate rules" $ do
             negate (negate x) `shouldNormalizeTo` normalize x
             negate (negate (x + y)) `shouldNormalizeTo` (x + y)
