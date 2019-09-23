@@ -223,7 +223,7 @@ huber ::
     -> Expression d R
     -> Expression d R
 huber delta e =
-    piecewise [-delta, 0, delta] e [outerLeft, inner, inner, outerRight]
+    piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
     one = constWithShape (expressionShape e) 1 :: Expression d R
     inner = const 0.5 *. (e * e)
