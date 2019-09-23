@@ -81,4 +81,9 @@ prod1 = fromJust . HashedOperation.product
 --                ]
 --    let codes = generateProblemCode values problem
 --    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+--main = do
+--    let x = var "x"
+--    let exp = huber 1 x
+--        fun = Function exp empty
+--    plot1VariableFunction fun "haha"
 main = smilingFaceProblem
