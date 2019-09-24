@@ -118,7 +118,8 @@ smilingFaceProblem = do
         vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
         codes = generateProblemCode valMap problem
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+    undefined
     return ()
 
 sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
@@ -182,4 +183,5 @@ easyFruit = do
         vars = Set.fromList ["x", "y"]
     let problem = constructProblem objectiveFunction vars
         codes = generateProblemCode valMap problem
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+    undefined    
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes

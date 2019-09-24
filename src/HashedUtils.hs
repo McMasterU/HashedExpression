@@ -197,8 +197,18 @@ data Val
     | V2D (Array (Int, Int) Double)
     | V3D (Array (Int, Int, Int) Double)
     deriving (Eq, Show, Ord)
-
+    
 type ValMaps = Map String Val
+
+-- | 
+--
+valElems :: Val -> [Double]
+valElems val = case val of 
+    VScalar v -> [v]
+    V1D vs -> elems vs
+    V2D vs -> elems vs
+    V3D vs -> elems vs
+    
 
 -- | Prelude version of * and +
 --

@@ -84,7 +84,8 @@ smilingFaceProblem = do
                 ]
         vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
-        codes = generateProblemCode valMap problem
-
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
-    return ()
+    case generateProblemCode valMap problem of 
+        Invalid str -> putStrLn str
+        _ -> putStrLn "Haha"
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+--    return ()
