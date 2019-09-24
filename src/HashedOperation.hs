@@ -222,23 +222,26 @@ huberC ::
     => Double
     -> Expression d C
     -> Expression d R
-huberC delta e =
-    piecewise [delta] square [inner, outer]
+huberC delta e = piecewise [delta] square [inner, outer]
   where
     one = constWithShape (expressionShape e) 1 :: Expression d R
     epsilon = 0.001
     epsilonC = const epsilon
     inner = square + epsilonC *. one
     square = (xRe e) * (xRe e) + (xIm e) * (xIm e)
-    outer = const delta *. (sqrt inner) - (const (delta * delta + epsilon - 2 * delta * sqrt (delta * delta + epsilon))) *. one
+    outer =
+        const delta *. (sqrt inner) -
+        (const
+             (delta * delta + epsilon -
+              2 * delta * sqrt (delta * delta + epsilon))) *.
+        one
 
 huber ::
-    forall d. (DimensionType d)
- => Double
- -> Expression d R
- -> Expression d R
-huber delta e =
-    piecewise [-delta, delta] e [outerLeft, inner, outerRight]
+       forall d. (DimensionType d)
+    => Double
+    -> Expression d R
+    -> Expression d R
+huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
     one = constWithShape (expressionShape e) 1 :: Expression d R
     inner = const 0.5 *. (e * e)

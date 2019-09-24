@@ -46,6 +46,7 @@ import ToF.ToF
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
+import Fruit.Fruit
 import Graphics.EasyPlot
 import HashedCollect
 import HashedPlot
@@ -56,7 +57,6 @@ import HashedVar
 import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
-import Fruit.Fruit
 
 sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 sum1 = fromJust . HashedOperation.sum
