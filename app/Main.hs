@@ -56,6 +56,7 @@ import HashedVar
 import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
+import Fruit.Fruit
 
 sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 sum1 = fromJust . HashedOperation.sum
@@ -86,4 +87,4 @@ prod1 = fromJust . HashedOperation.product
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = smilingFaceProblem
+main = easyFruit

@@ -57,26 +57,25 @@ import Test.Hspec
 import ToF.VelocityGenerator
 
 directory :: FilePath
-directory = "app/Fruite/data/"
+directory = "app/Fruit/data/"
 
-numCoils = 15
 
 smilingFaceProblem :: IO ()
 smilingFaceProblem = do
-    kspaceMaskValue <- read2DValues (directory ++ "kspaceMask.data")
+    kspaceMaskValue <- read2DValues (directory ++ "kspaceMask.dat")
     mReValues <-
         sequence
-            [ read2DValues (directory ++ "mRe" ++ show i ++ ".data")
+            [ read2DValues (directory ++ "mRe" ++ show i ++ ".dat")
             | i <- [0 .. numCoils]
             ]
     mImValues <-
         sequence
-            [ read2DValues (directory ++ "mIm" ++ show i ++ ".data")
+            [ read2DValues (directory ++ "mIm" ++ show i ++ ".dat")
             | i <- [0 .. numCoils]
             ]
-    --mReValues <- sequence $ [ read2DValues (directory ++ "sRe"++show i++".data") | i <- [0..numCoils]]
-    --mImValues <- sequence $ [ read2DValues (directory ++ "sIm"++show i++".data") | i <- [0..numCoils]]
-    imageMaskValue <- read2DValues (directory ++ "imageMask.data")
+    --mReValues <- sequence $ [ read2DValues (directory ++ "sRe"++show i++".dat") | i <- [0..numCoils]]
+    --mImValues <- sequence $ [ read2DValues (directory ++ "sIm"++show i++".dat") | i <- [0..numCoils]]
+    imageMaskValue <- read2DValues (directory ++ "imageMask.dat")
     let [x, y, kMask, imageMask] =
             map (variable2D @256 @256) ["x", "y", "kmask", "imageMask"]
         mIm i = variable2D @256 @256 $ "mIm" ++ show i
@@ -127,3 +126,60 @@ sum1 = fromJust . HashedOperation.sum
 
 prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.product
+
+numCoils :: Int
+numCoils = 2
+
+easyFruit :: IO ()
+easyFruit = do
+    mReValues <-
+        sequence
+            [ read2DValues (directory ++ "reCoil" ++ show i ++ ".dat")
+            | i <- [0 .. numCoils - 1]
+            ]
+    mImValues <-
+        sequence
+            [ read2DValues (directory ++ "imCoil" ++ show i ++ ".dat")
+            | i <- [0 .. numCoils - 1]
+            ]
+    putStrLn "Done reading data"
+    let [x, y] = map (variable2D @256 @256) ["x", "y"]
+        mIm i = variable2D @256 @256 $ "imCoil" ++ show i
+        mRe i = variable2D @256 @256 $ "reCoil" ++ show i
+        sIm i = variable2D @256 @256 $ "sIm" ++ show i
+        sRe i = variable2D @256 @256 $ "sRe" ++ show i
+        one = constant2D @256 @256 1
+        zero = constant2D @256 @256 0
+    let objectiveFunction =
+            sum1
+                [ norm2square
+                    (ft ((sRe i +: sIm i) * (x +: y)) - (mRe i +: mIm i))
+                | i <- [0 .. numCoils - 1]
+                ] +
+            huberNorm 2 (x - rotate (0, 1) x) +
+            huberNorm 2 (x - rotate (1, 0) x) +
+            huberNorm 2 (y - rotate (0, 1) y) +
+            huberNorm 2 (y - rotate (1, 0) y) +
+            sumElements (x * x + y * y) +
+            sum1
+                [ sumElements $
+                (sRe i - rotate (0, 1) (sRe i)) ^ 2 +
+                (sIm i - rotate (0, 1) (sIm i)) ^ 2 +
+                (sRe i - rotate (1, 0) (sRe i)) ^ 2 +
+                (sIm i - rotate (1, 0) (sIm i)) ^ 2
+                | i <- [0 .. numCoils]
+                ]
+    let valMap =
+            fromList $
+            zipWith
+                (\i vals -> ("reCoil" ++ show i, V2D vals))
+                [0 .. numCoils - 1]
+                mReValues ++
+            zipWith
+                (\i vals -> ("imCoil" ++ show i, V2D vals))
+                [0 .. numCoils - 1]
+                mImValues
+        vars = Set.fromList ["x", "y"]
+    let problem = constructProblem objectiveFunction vars
+        codes = generateProblemCode valMap problem
+    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
