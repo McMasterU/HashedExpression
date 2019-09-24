@@ -87,4 +87,4 @@ prod1 = fromJust . HashedOperation.product
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = easyFruit
+main = smilingFaceProblem

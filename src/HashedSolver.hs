@@ -257,7 +257,7 @@ generateProblemCode valMaps Problem {..}
         ]
     readVals =
         ["void read_values() {"] ++ --
-        concatMap readValCodeEach vs ++ --
+        space 2 (concatMap readValCodeEach vs) ++ --
         ["}"]
     evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective() {"] ++

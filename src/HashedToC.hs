@@ -469,12 +469,12 @@ generateEvaluatingCodes memMap (mp, rootIds) =
 generateReadValuesCode :: String -> Int -> Int -> Code
 generateReadValuesCode fileName offset numDoubles =
     scoped
-        [ "FILE *fp = fopen(" ++ fileName ++ ", \"r\");"
+        [ "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
         , "int i;"
-        , "for (i = 0; i < " ++ show numDoubles ++ "; i++} { "
-        , "  fscanf(fp, \"%f\", &ptr[" ++ show offset ++ " + i]"
+        , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
+        , "  fscanf(fp, \"%lf\", &ptr[" ++ show offset ++ " + i]);"
         , "}"
-        , "fclose(fp)"
+        , "fclose(fp);"
         ]
 
 -- | Code to assign values to those in val maps

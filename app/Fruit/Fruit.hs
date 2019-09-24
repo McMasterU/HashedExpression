@@ -60,8 +60,8 @@ directory :: FilePath
 directory = "app/Fruit/data/"
 
 
-smilingFaceProblem :: IO ()
-smilingFaceProblem = do
+hardOne :: IO ()
+hardOne = do
     kspaceMaskValue <- read2DValues (directory ++ "kspaceMask.dat")
     mReValues <-
         sequence
