@@ -59,7 +59,6 @@ import ToF.VelocityGenerator
 directory :: FilePath
 directory = "app/Fruit/data/"
 
-
 hardOne :: IO ()
 hardOne = do
     kspaceMaskValue <- read2DValues (directory ++ "kspaceMask.dat")
@@ -118,10 +117,10 @@ hardOne = do
         vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
         codes = generateProblemCode valMap problem
---    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
     undefined
     return ()
 
+--    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
 sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
 sum1 = fromJust . HashedOperation.sum
 
@@ -168,7 +167,7 @@ easyFruit = do
                 (sIm i - rotate (0, 1) (sIm i)) ^ 2 +
                 (sRe i - rotate (1, 0) (sRe i)) ^ 2 +
                 (sIm i - rotate (1, 0) (sIm i)) ^ 2
-                | i <- [0 .. numCoils]
+                | i <- [0 .. numCoils - 1]
                 ]
     let valMap =
             fromList $
@@ -179,9 +178,28 @@ easyFruit = do
             zipWith
                 (\i vals -> ("imCoil" ++ show i, V2D vals))
                 [0 .. numCoils - 1]
-                mImValues
-        vars = Set.fromList ["x", "y"]
+                mImValues ++
+            map
+                (\x ->
+                     (\i vals -> ("sIm" ++ show i, V2D vals))
+                         x
+                         (listArray ((0, 0), (255, 255)) $ repeat 0))
+                [0 .. numCoils - 1] ++
+            map
+                (\x ->
+                     (\i vals -> ("sRe" ++ show i, V2D vals))
+                         x
+                         (listArray ((0, 0), (255, 255)) $ repeat 0))
+                [0 .. numCoils - 1] ++
+            [ ("x", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
+            , ("y", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
+            ]
+        vars =
+            Set.fromList
+                (["x", "y"] ++
+                 ["sIm" ++ show i | i <- [0 .. numCoils - 1]] ++
+                 ["sRe" ++ show i | i <- [0 .. numCoils - 1]])
     let problem = constructProblem objectiveFunction vars
-        codes = generateProblemCode valMap problem
-    undefined    
---    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+    case generateProblemCode valMap problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs"
