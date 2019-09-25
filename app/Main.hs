@@ -46,6 +46,7 @@ import ToF.ToF
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
+import Fruit.Fruit
 import Graphics.EasyPlot
 import HashedCollect
 import HashedPlot
@@ -86,4 +87,4 @@ prod1 = fromJust . HashedOperation.product
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = smilingFaceProblem
+main = easyFruit

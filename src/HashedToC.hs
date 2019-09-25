@@ -464,6 +464,19 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                             ]
                 _ -> error "Not support yet "
 
+-- | Read $numDoubles$ doubles from $fileName$ to ptr[offset]
+--
+generateReadValuesCode :: String -> Int -> Int -> Code
+generateReadValuesCode fileName offset numDoubles =
+    scoped
+        [ "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
+        , "int i;"
+        , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
+        , "  fscanf(fp, \"%lf\", &ptr[" ++ show offset ++ " + i]);"
+        , "}"
+        , "fclose(fp);"
+        ]
+
 -- | Code to assign values to those in val maps
 --
 generateAssignValueCodes :: ValMaps -> MemMap -> ExpressionMap -> Code

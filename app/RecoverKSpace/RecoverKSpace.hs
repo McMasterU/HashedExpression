@@ -74,17 +74,16 @@ smilingFaceProblem = do
             huberNorm 2 (x - rotate (0, 1) x) +
             huberNorm 2 (x - rotate (1, 0) x) +
             const 10000 * norm2square ((one - head) * x)
-
     let valMap =
             fromList
                 [ ("mask", V2D maskValue)
                 , ("head", V2D headValue)
                 , ("re", V2D reValue)
                 , ("im", V2D imValue)
+                , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
         vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
-        codes = generateProblemCode valMap problem
-
-    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
-    return ()
+    case generateProblemCode valMap problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs"

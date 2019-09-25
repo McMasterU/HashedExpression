@@ -439,12 +439,19 @@ noChange = ExpressionDiff IM.empty
 
 -- | All variables in the Expression
 --
-varNodes ::
+expressionVarNodes ::
        (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
-varNodes (Expression n mp) = mapMaybe collect ns
+expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
     collect nId
         | Var varName <- retrieveNode nId mp = Just (varName, nId)
         | DVar varName <- retrieveNode nId mp = Just (varName, nId)
+        | otherwise = Nothing
+
+varsAndShape :: ExpressionMap -> [(String, Int)]
+varsAndShape mp = mapMaybe collect . IM.keys $ mp
+  where
+    collect nId
+        | Var varName <- retrieveNode nId mp = Just (varName, nId)
         | otherwise = Nothing

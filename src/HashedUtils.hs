@@ -200,6 +200,16 @@ data Val
 
 type ValMaps = Map String Val
 
+-- | 
+--
+valElems :: Val -> [Double]
+valElems val =
+    case val of
+        VScalar v -> [v]
+        V1D vs -> elems vs
+        V2D vs -> elems vs
+        V3D vs -> elems vs
+
 -- | Prelude version of * and +
 --
 times :: (Num a) => a -> a -> a

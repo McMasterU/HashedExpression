@@ -3,8 +3,9 @@
 
 module HashedSolver where
 
+import Data.Array (bounds)
 import qualified Data.IntMap as IM
-import Data.List (intercalate)
+import Data.List (find, intercalate)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromJust, mapMaybe)
@@ -96,7 +97,8 @@ constructProblem notSimplifedF vars =
         -- Map from a variable name to id in the problem's ExpressionMap
         name2Id :: Map String Int
         name2Id =
-            Map.fromList $ filter (flip Set.member vars . fst) $ varNodes f
+            Map.fromList $
+            filter (flip Set.member vars . fst) $ expressionVarNodes f
         -- Map from a variable name to partial derivative id in the problem's ExpressionMap
         name2PartialDerivativeId :: Map String Int
         name2PartialDerivativeId = partialDerivativeMaps df
@@ -133,12 +135,79 @@ constructProblem notSimplifedF vars =
             , expressionMap = problemExpressionMap
             }
 
+-- | 
+--
+data GenResult
+    = Invalid String
+    | Success (String -> IO ()) -- Give it the name of the folder of your solver, it will write all the files necessary
+
 -- |
 --
-generateProblemCode :: ValMaps -> Problem -> Code
-generateProblemCode valMaps Problem {..} =
-    defineStuffs ++ assignVals ++ evaluatingCodes
+generateProblemCode :: ValMaps -> Problem -> GenResult
+generateProblemCode valMaps Problem {..}
+    | Just errorMsg <- checkError = Invalid errorMsg
+    | otherwise =
+        Success $ \folder -> do
+            let codes = defineStuffs ++ readVals ++ evaluatingCodes
+            let writeVal (var, val)
+                    | var `elem` map varName variables = do
+                        let str = unwords . map show . valElems $ val
+                        writeFile
+                            (folder ++ "/" ++ "init_" ++ var ++ ".txt")
+                            str
+                    | otherwise = do
+                        let str = unwords . map show . valElems $ val
+                        writeFile
+                            (folder ++ "/" ++ "fixed_" ++ var ++ ".txt")
+                            str
+            mapM_ writeVal $ Map.toList valMaps
+            writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
   where
+    vs = varsAndShape expressionMap
+    compatible shape v =
+        case (shape, v) of
+            ([], VScalar val) -> True
+            ([x], V1D arr1d)
+                | bounds arr1d == (0, x - 1) -> True
+            ([x, y], V2D arr2d)
+                | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
+            ([x, y, z], V3D arr3d)
+                | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
+            _ -> False
+    isVariable v = v `elem` map varName variables
+    checkError
+        | Just var <-
+             find (not . (`Map.member` valMaps)) . map varName $ variables =
+            Just $ "No initial value for variable " ++ var
+        | Just var <- find (not . (`Map.member` valMaps)) . map fst $ vs =
+            Just $ "No value provided for fixed parameter " ++ var
+        | otherwise =
+            let isOk (var, nId) =
+                    compatible
+                        (retrieveShape nId expressionMap)
+                        (fromJust (var `Map.lookup` valMaps))
+             in case find (not . isOk) vs of
+                    Just (var, shape) ->
+                        Just $
+                        "variable " ++
+                        var ++
+                        "is of shape " ++
+                        show shape ++ " but the value provided is not"
+                    Nothing -> Nothing
+    readValCodeEach (var, nId)
+        | var `elem` map varName variables =
+            generateReadValuesCode
+                ("init_" ++ var ++ ".txt")
+                offset
+                (product shape)
+        | otherwise =
+            generateReadValuesCode
+                ("fixed_" ++ var ++ ".txt")
+                offset
+                (product shape)
+      where
+        offset = memOffset memMap nId LookupR
+        shape = retrieveShape nId expressionMap
     entries = entryMap memMap
     toShapeString shape
         | length shape < 3 =
@@ -186,17 +255,15 @@ generateProblemCode valMaps Problem {..} =
         , ""
         , ""
         ]
-    assignVals =
-        ["void assign_values() {"] ++
-        space 2 (generateAssignValueCodes valMaps memMap expressionMap) ++ --
-        ["}", "", ""]
+    readVals =
+        ["void read_values() {"] ++ --
+        space 2 (concatMap readValCodeEach vs) ++ --
+        ["}"]
     evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]
 
--- | 
---
 getMinimumGradientDescent :: Code -> IO ()
 getMinimumGradientDescent codes = do
     let filePath = "algorithms/gradient_descent/problem.c"

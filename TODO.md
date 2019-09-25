@@ -16,3 +16,7 @@ Would replace $S_i $ with $B_i$
 ** TODO finish integrating ipopt to new HashedToC (Curtis)
 ** TODO need constraint types (box, maybe conics?)
 ** TODO add initial values for optimziation problem
+** TODO add histogram to maximize information in rho/S problem
+** TODO add interior-point search directions to lBFGS
+** TODO add box and cone-box constraints 
+** TODO add latex output

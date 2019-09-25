@@ -84,8 +84,8 @@ int main() {
     N += var_size[i];
   }
 
-  // assign values to predefined variables
-  assign_values();
+  // read values from file
+  read_values();
 
   lbfgsfloatval_t fx;
   lbfgsfloatval_t *x = lbfgs_malloc(N);
@@ -96,9 +96,13 @@ int main() {
     return 1;
   }
 
-  // assigning initial variables
-  for (i = 0; i < N; i++) {
-    x[i] = random_in(0.1, 1);
+  // copying initial values
+  int cnt = 0;
+  for (i = 0; i < NUM_VARIABLES; i++) {
+    for (j = 0; j < var_size[i]; j++) {
+      x[cnt] = ptr[var_offset[i] + j];
+      cnt++;
+    }
   }
 
   // solve L-BFGS
