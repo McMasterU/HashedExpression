@@ -85,7 +85,6 @@ prod1 = fromJust . HashedOperation.product
 --    case generateProblemCode values problem of
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs"
-    
 --main = do
 --    let x = var "x"
 --    let exp = huber 1 x
