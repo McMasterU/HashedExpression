@@ -223,6 +223,7 @@ valElems val =
         V1D vs -> elems vs
         V2D vs -> elems vs
         V3D vs -> elems vs
+        _ -> []
 
 -- | Prelude version of * and +
 --
