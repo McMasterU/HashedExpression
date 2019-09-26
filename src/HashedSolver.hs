@@ -3,6 +3,7 @@
 
 module HashedSolver where
 
+import Control.Monad (unless)
 import Data.Array (bounds)
 import qualified Data.IntMap as IM
 import Data.List (find, intercalate)
@@ -135,7 +136,44 @@ constructProblem notSimplifedF vars =
             , expressionMap = problemExpressionMap
             }
 
--- | 
+-- | Read $numDoubles$ doubles from $fileName$ to ptr[offset]
+--
+generateReadValuesCode :: String -> Val -> Int -> Int -> Code
+generateReadValuesCode varName val offset numDoubles =
+    case val of
+        VScalar value -> scoped ["ptr[" ++ show offset ++ "]" <<- show value]
+        V1D _ -> readFileText (varName ++ ".txt")
+        V2D _ -> readFileText (varName ++ ".txt")
+        V3D _ -> readFileText (varName ++ ".txt")
+        V1DFile TXT fileName -> readFileText fileName
+        V2DFile TXT fileName -> readFileText fileName
+        V3DFile TXT fileName -> readFileText fileName
+        V1DFile HDF5 fileName -> readFileHD5 fileName
+        V2DFile HDF5 fileName -> readFileHD5 fileName
+        V3DFile HDF5 fileName -> readFileHD5 fileName
+  where
+    readFileText fileName =
+        scoped
+            [ "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
+            , "int i;"
+            , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
+            , "  fscanf(fp, \"%lf\", &ptr[" ++ show offset ++ " + i]);"
+            , "}"
+            , "fclose(fp);"
+            ]
+    readFileHD5 fileName =
+        scoped
+            [ "hid_t file, dset;"
+            , "file = H5Fopen (\"" ++
+              fileName ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
+            , "dset = H5Dopen (file, \"" ++ varName ++ "\", H5P_DEFAULT);"
+            , "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + " ++
+              show offset ++ ");"
+            , "H5Fclose (file);"
+            , "H5Dclose (dset);"
+            ]
+
+-- |
 --
 data GenResult
     = Invalid String
@@ -149,17 +187,10 @@ generateProblemCode valMaps Problem {..}
     | otherwise =
         Success $ \folder -> do
             let codes = defineStuffs ++ readVals ++ evaluatingCodes
-            let writeVal (var, val)
-                    | var `elem` map varName variables = do
+            let writeVal (var, val) =
+                    unless (null $ valElems val) $ do
                         let str = unwords . map show . valElems $ val
-                        writeFile
-                            (folder ++ "/" ++ "init_" ++ var ++ ".txt")
-                            str
-                    | otherwise = do
-                        let str = unwords . map show . valElems $ val
-                        writeFile
-                            (folder ++ "/" ++ "fixed_" ++ var ++ ".txt")
-                            str
+                        writeFile (folder ++ "/" ++ var ++ ".txt") str
             mapM_ writeVal $ Map.toList valMaps
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
   where
@@ -173,6 +204,9 @@ generateProblemCode valMaps Problem {..}
                 | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
             ([x, y, z], V3D arr3d)
                 | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
+            ([x], V1DFile {}) -> True
+            ([x, y], V2DFile {}) -> True
+            ([x, y, z], V3DFile {}) -> True
             _ -> False
     isVariable v = v `elem` map varName variables
     checkError
@@ -194,17 +228,12 @@ generateProblemCode valMaps Problem {..}
                         "is of shape " ++
                         show shape ++ " but the value provided is not"
                     Nothing -> Nothing
-    readValCodeEach (var, nId)
-        | var `elem` map varName variables =
-            generateReadValuesCode
-                ("init_" ++ var ++ ".txt")
-                offset
-                (product shape)
-        | otherwise =
-            generateReadValuesCode
-                ("fixed_" ++ var ++ ".txt")
-                offset
-                (product shape)
+    readValCodeEach (var, nId) =
+        generateReadValuesCode
+            var
+            (fromJust $ Map.lookup var valMaps)
+            offset
+            (product shape)
       where
         offset = memOffset memMap nId LookupR
         shape = retrieveShape nId expressionMap
@@ -234,6 +263,7 @@ generateProblemCode valMaps Problem {..}
         , "#include <stdio.h>"
         , "#include <stdlib.h>"
         , "#include \"utils.c\""
+        , "#include \"hdf5.h\""
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)

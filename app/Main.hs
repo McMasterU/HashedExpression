@@ -66,10 +66,10 @@ prod1 = fromJust . HashedOperation.product
 
 --
 --main = do
---    let x = variable2D @10 @10 "x"
---        y = variable2D @10 @10 "y"
---        z = variable2D @10 @10 "z"
---        t = variable2D @10 @10 "t"
+--    let x = variable1D @10 "x"
+--        y = variable1D @10 "y"
+--        z = variable1D @10 "z"
+--        t = variable1D @10 "t"
 --    let exp =
 --            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
 --            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
@@ -77,14 +77,17 @@ prod1 = fromJust . HashedOperation.product
 --        problem = constructProblem exp vars
 --        values =
 --            fromList
---                [ ("z", V2D $ listArray ((0, 0), (9, 9)) [1 ..])
---                , ("t", V2D $ listArray ((0, 0), (9, 9)) [5 ..])
+--                [ ("z", V1DFile HDF5 "z.h5")
+--                , ("t", V1DFile HDF5 "t.h5")
+--                , ("x", V1DFile HDF5 "x.h5")
+--                , ("y", V1DFile HDF5 "y.h5")
 --                ]
---    let codes = generateProblemCode values problem
---    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
+--    case generateProblemCode values problem of
+--        Invalid str -> putStrLn str
+--        Success proceed -> proceed "algorithms/lbfgs"
 --main = do
 --    let x = var "x"
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = easyFruit
+main = smilingFaceProblem

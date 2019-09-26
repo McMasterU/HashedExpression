@@ -61,10 +61,6 @@ directory = "app/RecoverKSpace/data/"
 
 smilingFaceProblem :: IO ()
 smilingFaceProblem = do
-    maskValue <- read2DValues (directory ++ "mask.txt")
-    reValue <- read2DValues (directory ++ "re.txt")
-    imValue <- read2DValues (directory ++ "im.txt")
-    headValue <- read2DValues (directory ++ "head.txt")
     let [x, y, mask, head, im, re] =
             map (variable2D @128 @128) ["x", "y", "mask", "head", "im", "re"]
         one = constant2D @128 @128 1
@@ -76,10 +72,10 @@ smilingFaceProblem = do
             const 10000 * norm2square ((one - head) * x)
     let valMap =
             fromList
-                [ ("mask", V2D maskValue)
-                , ("head", V2D headValue)
-                , ("re", V2D reValue)
-                , ("im", V2D imValue)
+                [ ("mask", V2DFile HDF5 "mask.h5")
+                , ("head", V2DFile HDF5 "head.h5" )
+                , ("re", V2DFile HDF5 "re.h5" )
+                , ("im", V2DFile HDF5 "im.h5" )
                 , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
         vars = Set.fromList ["x"]
