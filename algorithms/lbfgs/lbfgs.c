@@ -28,15 +28,31 @@ double random_in(double min, double max) {
 }
 
 void print_vars() {
-  int i, j;
+  int i;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    printf("var[%d] = [", i);
-    for (j = 0; j < var_size[i]; j++) {
-      printf("%f", ptr[var_offset[i] + j]);
-      printf(j == var_size[i] - 1 ? "]\n" : ", ");
+    char* var_file_name = malloc(strlen(var_name[i]) + 4);
+    strcpy(var_file_name, var_name[i]);
+    strcat(var_file_name, ".h5");
+    if (var_num_dim[i] == 0) {
+      printf("%s = %lf\n", var_name[i], ptr[var_offset[i]]);
+    } else {
+      printf("Writing %s to %s...\n", var_name[i], var_file_name);
+      hid_t file, space, dset;
+      hsize_t dims[3];
+      int d;
+      for (d = 0; d < 3; d++) {
+        dims[d] = var_shape[i][d];
+      }
+      file = H5Fcreate(var_file_name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+      space = H5Screate_simple (var_num_dim[i], dims, NULL);
+      dset = H5Dcreate (file, var_name[i], H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + var_offset[i]);
+      H5Dclose(dset);
+      H5Sclose(space);
+      H5Fclose(file);
     }
+    free(var_file_name);
   }
-  printf("\n");
 }
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x,
@@ -110,39 +126,7 @@ int main() {
   ret = lbfgs(N, x, &fx, evaluate, progress, NULL, &param);
 
   printf("f_min = %f\n", fx);
-
-  for (i = 0; i < NUM_VARIABLES; i++) {
-    char* var_file_name = malloc(strlen(var_name[i]) + 4);
-    strcpy(var_file_name, var_name[i]);
-    strcat(var_file_name, ".txt");
-    FILE *fp = fopen(var_file_name, "w");
-    printf("Writing %s to %s...\n", var_name[i], var_file_name);
-    if (fp) {
-      if (var_num_dim[i] == 0) {
-        fprintf(fp, "%f", ptr[var_offset[i]]);
-      } else if (var_num_dim[i] == 1) {
-        for (j = 0; j < var_shape[i][0]; j++) {
-          fprintf(fp, "%f ", ptr[var_offset[i] + j]);
-        }
-      } else if (var_num_dim[i] == 2) {
-        for (j = 0; j < var_shape[i][0]; j++) {
-          for (k = 0; k < var_shape[i][1]; k++) {
-            fprintf(fp, "%f", ptr[var_offset[i] + j * var_shape[i][1] + k]);
-            fprintf(fp, k == var_shape[i][1] - 1 ? "" : " ");
-          }
-          fprintf(fp, j == var_shape[i][0] - 1 ? "" : "\n");
-        }
-      } else {
-        printf("%s is 3D variable, so just write all the values consecutively", var_name[i]);
-        for (j = 0; j < var_size[i]; j++) {
-          fprintf(fp, "%f ", ptr[var_offset[i] + j]);
-        }
-        fprintf(fp, "\n");
-      }
-    }
-    fclose(fp);
-    free(var_file_name);
-  }
+  print_vars();
   printf("Done\n");
 
   lbfgs_free(x);

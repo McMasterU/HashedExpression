@@ -65,30 +65,30 @@ prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
 prod1 = fromJust . HashedOperation.product
 
 --
-main = do
-    let x = variable1D @10 "x"
-        y = variable1D @10 "y"
-        z = variable1D @10 "z"
-        t = variable1D @10 "t"
-    let exp =
-            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
-            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
-        vars = Set.fromList ["x", "y"]
-        problem = constructProblem exp vars
-        values =
-            fromList
-                [ ("z", V1DFile HDF5 "z.h5")
-                , ("t", V1DFile HDF5 "t.h5")
-                , ("x", V1DFile HDF5 "x.h5")
-                , ("y", V1DFile HDF5 "y.h5")
-                ]
-    case generateProblemCode values problem of 
-        Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs"
+--main = do
+--    let x = variable1D @10 "x"
+--        y = variable1D @10 "y"
+--        z = variable1D @10 "z"
+--        t = variable1D @10 "t"
+--    let exp =
+--            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
+--            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
+--        vars = Set.fromList ["x", "y"]
+--        problem = constructProblem exp vars
+--        values =
+--            fromList
+--                [ ("z", V1DFile HDF5 "z.h5")
+--                , ("t", V1DFile HDF5 "t.h5")
+--                , ("x", V1DFile HDF5 "x.h5")
+--                , ("y", V1DFile HDF5 "y.h5")
+--                ]
+--    case generateProblemCode values problem of
+--        Invalid str -> putStrLn str
+--        Success proceed -> proceed "algorithms/lbfgs"
     
 --main = do
 --    let x = var "x"
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
---main = easyFruit
+main = smilingFaceProblem
