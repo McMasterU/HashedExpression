@@ -9,3 +9,5 @@ out/
 *.h5
 
 *.dat
+*.npz
+*.npy
