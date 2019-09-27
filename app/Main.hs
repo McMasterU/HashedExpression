@@ -72,4 +72,4 @@ imFT = xIm . ft
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = smilingFaceProblem
+main = easyFruitProblem
