@@ -106,6 +106,7 @@ normalizingTransformation = secondPass . firstPass
             , negativeZeroRules
             , pullOutPiecewiseRules
             , expandPiecewiseRealImag
+            , twiceReFTAndImFTRules
             ] ++
         [ rulesFromPattern --
         , removeUnreachable

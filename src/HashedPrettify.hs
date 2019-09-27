@@ -242,3 +242,9 @@ hiddenPrettify pastable (mp, n) =
                         T.concat ["reFT", wrapParentheses $ innerPrettify arg]
                     ImFT arg ->
                         T.concat ["imFT", wrapParentheses $ innerPrettify arg]
+                    TwiceReFT arg ->
+                        T.concat
+                            ["twiceReFT", wrapParentheses $ innerPrettify arg]
+                    TwiceImFT arg ->
+                        T.concat
+                            ["twiceImFT", wrapParentheses $ innerPrettify arg]

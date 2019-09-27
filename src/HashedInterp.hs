@@ -354,7 +354,7 @@ evaluate1DReal valMap (mp, n)
                 rotate1D size amount (eval valMap $ expOneR mp arg)
             TwiceReFT arg ->
                 let innerRes = eval valMap $ expOneR mp arg
-                    scaleFactor = fromIntegral size
+                    scaleFactor = fromIntegral size / 2
                  in listArray
                         (0, size - 1)
                         [ scaleFactor *
@@ -363,7 +363,7 @@ evaluate1DReal valMap (mp, n)
                         ]
             TwiceImFT arg ->
                 let innerRes = eval valMap $ expOneR mp arg
-                    scaleFactor = fromIntegral size
+                    scaleFactor = fromIntegral size / 2
                  in listArray
                         (0, size - 1)
                         [ scaleFactor *
@@ -516,7 +516,7 @@ evaluate2DReal valMap (mp, n)
                     (eval valMap $ expTwoR mp arg)
             TwiceReFT arg ->
                 let innerRes = eval valMap $ expTwoR mp arg
-                    scaleFactor = fromIntegral size1 * fromIntegral size2
+                    scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ scaleFactor *
@@ -528,7 +528,7 @@ evaluate2DReal valMap (mp, n)
                         ]
             TwiceImFT arg ->
                 let innerRes = eval valMap $ expTwoR mp arg
-                    scaleFactor = fromIntegral size1 * fromIntegral size2
+                    scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ scaleFactor *
@@ -689,7 +689,8 @@ evaluate3DReal valMap (mp, n)
                 let innerRes = eval valMap $ expThreeR mp arg
                     scaleFactor =
                         fromIntegral size1 * fromIntegral size2 *
-                        fromIntegral size3
+                        fromIntegral size3 /
+                        2
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ scaleFactor *
@@ -706,7 +707,8 @@ evaluate3DReal valMap (mp, n)
                 let innerRes = eval valMap $ expThreeR mp arg
                     scaleFactor =
                         fromIntegral size1 * fromIntegral size2 *
-                        fromIntegral size3
+                        fromIntegral size3 /
+                        2
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ scaleFactor *

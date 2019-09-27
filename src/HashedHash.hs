@@ -109,6 +109,8 @@ hash (shape, node) =
                 separator ++ show arg
             ReFT arg -> offsetHash 30 . hashString' $ show arg
             ImFT arg -> offsetHash 31 . hashString' $ show arg
+            TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
+            TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
 
 -- |
 --

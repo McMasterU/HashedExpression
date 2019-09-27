@@ -23,7 +23,7 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
 import HashedNormalize
-import HashedOperation hiding (product, sum)
+import HashedOperation
 import qualified HashedOperation
 import HashedPrettify
 import HashedUtils
@@ -78,14 +78,6 @@ format :: [(String, String)] -> String
 format = intercalate "\n" . map oneLine
   where
     oneLine (f, s) = f ++ ": " ++ s
-
--- |
---
-sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum = fromJust . HashedOperation.sum
-
-product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-product = fromJust . HashedOperation.product
 
 -- |
 --
