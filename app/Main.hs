@@ -71,39 +71,22 @@ main = do
         y = variable1D @10 "y"
         z = variable1D @10 "z"
         t = variable1D @10 "t"
-        valMap =
+        exp =
+            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
+            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
+        vars = Set.fromList ["x", "y"]
+        problem = constructProblem exp vars
+        values =
             fromList
-                [ ("x", V1D $ listArray (0, 9) [1 ..])
-                , ("y", V1D $ listArray (0, 9) [2,5 ..])
-                , ("z", V1D $ listArray (0, 9) [3,8 ..])
-                , ("z", V1D $ listArray (0, 9) [0,-1 ..])
+                [ ("z", V1DFile HDF5 "z.h5")
+                , ("t", V1DFile HDF5 "t.h5")
+                , ("x", V1DFile HDF5 "x.h5")
+                , ("y", V1DFile HDF5 "y.h5")
                 ]
-    let res1 = eval valMap $ reFT (reFT (x + z))
-        res2 = eval valMap . normalize $ reFT (reFT (x + z))
-    print $ res1 ~= res2
-    let res1 = eval valMap $ imFT (imFT (x + z))
-        res2 = eval valMap . normalize $ imFT (imFT (x + z))
-    print $ res1 ~= res2
-    let res1 = eval valMap $ reFT (reFT (x + z)) + imFT (imFT (x + z))
-        res2 =
-            eval valMap . normalize $ reFT (reFT (x + z)) + imFT (imFT (x + z))
-    print $ res1 ~= res2--    let exp =
---            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
---            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
---        vars = Set.fromList ["x", "y"]
---        problem = constructProblem exp vars
---        values =
---            fromList
---                [ ("z", V1DFile HDF5 "z.h5")
---                , ("t", V1DFile HDF5 "t.h5")
---                , ("x", V1DFile HDF5 "x.h5")
---                , ("y", V1DFile HDF5 "y.h5")
---                ]
---    print problem
---    case generateProblemCode values problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs"
---main = do
+    print problem
+    case generateProblemCode values problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs"--main = do
 --    let x = var "x"
 --    let exp = huber 1 x
 --        fun = Function exp empty

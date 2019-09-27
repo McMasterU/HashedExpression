@@ -23,7 +23,7 @@ import Data.List
     , sortOn
     , transpose
     )
-import Data.List.Extra (groupSort)
+import Data.List.Extra (firstJust, groupSort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
@@ -606,30 +606,43 @@ pullOutPiecewiseRules exp@(mp, n)
     one = diffConst shape 1
     zero = diffConst shape 0
 
--- | twiceReFT(x) + twiceImFT(x) ~~~> size(x) *. x
+-- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
 --
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
     | Sum R args <- retrieveNode n mp
-    , Just twiceReFTid <- find isTwiceReFT args
-    , TwiceReFT nId <- retrieveNode twiceReFTid mp
-    , Just twiceImFTid <- find (isTwiceImFTof nId) args =
-        let rest = filter (\x -> x /= twiceReFTid && x /= twiceImFTid) args
-            sizeScalar =
-                diffConst [] . Prelude.product . map fromIntegral $
-                retrieveShape nId mp
+    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT args
+    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) args =
+        let rest =
+                map noChange .
+                filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
+                args
+            totalScaleFactor =
+                (scaleFactor *
+                 fromIntegral (Prelude.product $ retrieveShape innerArg mp)) /
+                2
+            scalar = diffConst [] totalScaleFactor
             scaled =
                 applyDiff
                     mp
                     (binaryET Scale ElementDefault)
-                    [sizeScalar, noChange nId]
-         in sumManyDiff mp $ scaled : map noChange rest
+                    [scalar, noChange innerArg]
+         in sumManyDiff mp $ scaled : rest
     | otherwise = noChange n
   where
     isTwiceReFT nId
-        | TwiceReFT _ <- retrieveNode nId mp = True
-        | otherwise = False
-    isTwiceImFTof innerId nId
+        | TwiceReFT inner <- retrieveNode nId mp = Just (1, nId, inner)
+        | Scale R scalarId scaleeId <- retrieveNode nId mp
+        , Const val <- retrieveNode scalarId mp
+        , TwiceReFT inner <- retrieveNode scaleeId mp = Just (val, nId, inner)
+        | otherwise = Nothing
+    isTwiceImFTof innerArg scaleFactor nId
         | TwiceImFT x <- retrieveNode nId mp
-        , x == innerId = True
+        , scaleFactor == 1
+        , x == innerArg = True
+        | Scale R scalarId scaleeId <- retrieveNode nId mp
+        , Const val <- retrieveNode scalarId mp
+        , val == scaleFactor
+        , TwiceImFT x <- retrieveNode scaleeId mp
+        , x == innerArg = True
         | otherwise = False
