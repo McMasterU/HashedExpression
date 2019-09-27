@@ -12,7 +12,8 @@ import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List
-    ( foldl'
+    ( find
+    , foldl'
     , group
     , groupBy
     , intercalate
@@ -254,6 +255,8 @@ fourierTransformRules =
     , reFT (s *. x) |. isCovector s ~~~~~~> s *. reFT x
     , imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x
     , imFT (s *. x) |. isCovector s ~~~~~~> s *. imFT x
+    , reFT (reFT x) |. isReal x ~~~~~~> twiceReFT x
+    , imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x
     ]
 
 -- | Rules of piecewise
@@ -601,3 +604,31 @@ pullOutPiecewiseRules exp@(mp, n)
     shape = retrieveShape n mp
     one = diffConst shape 1
     zero = diffConst shape 0
+
+-- | twiceReFT(x) + twiceImFT(x) ~~~> size(x) *. x
+--
+twiceReFTAndImFTRules :: Modification
+twiceReFTAndImFTRules exp@(mp, n)
+    | Sum R args <- retrieveNode n mp
+    , Just twiceReFTid <- find isTwiceReFT args
+    , TwiceReFT nId <- retrieveNode twiceReFTid mp
+    , Just twiceImFTid <- find (isTwiceImFTof nId) args =
+        let rest = filter (\x -> x /= twiceReFTid && x /= twiceImFTid) args
+            sizeScalar =
+                diffConst [] . Prelude.product . map fromIntegral $
+                retrieveShape nId mp
+            scaled =
+                applyDiff
+                    mp
+                    (binaryET Scale ElementDefault)
+                    [sizeScalar, noChange nId]
+         in sumManyDiff mp $ scaled : map noChange rest
+    | otherwise = noChange n
+  where
+    isTwiceReFT nId
+        | TwiceReFT _ <- retrieveNode nId mp = True
+        | otherwise = False
+    isTwiceImFTof innerId nId
+        | TwiceImFT x <- retrieveNode nId mp
+        , x == innerId = True
+        | otherwise = False
