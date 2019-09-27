@@ -1,8 +1,9 @@
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
+module Problems where
 
-module Main where
 
 import Data.Array
 import Data.Complex
@@ -66,23 +67,17 @@ reFT = xRe . ft
 imFT :: (DimensionType d) => Expression d R -> Expression d R
 imFT = xIm . ft
 
---
---main = do
---    let exp = norm2square $ reFT . reFT $ x1
---    showExp . collectDifferentials . exteriorDerivative allVars $ exp--    let x = var "x"
---    let exp = huber 1 x
---        fun = Function exp empty
---    plot1VariableFunction fun "haha"
-main = anotherFruit
---main = do
---    let a = const 33
---        b = const 100
---        x = var "x"
---        y = var "y"
---        exp = huber 2 $ (a - x) ^ 2 + b * (y - x ^ 2) ^ 2
---        vars = Set.fromList ["x", "y"]
---        valMap = fromList [("x", VScalar 0), ("y", VScalar 0)]
---    let problem = constructProblem exp vars
---    case generateProblemCode valMap problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs"
+bananaFunction = do
+    let a = const 30
+        b = const 100
+        x = var "x"
+        y = var "y"
+        exp = (a - x) ^ 2 + b * (y - x ^ 2) ^ 2
+        vars = Set.fromList ["x", "y"]
+        valMap = fromList [("x", VScalar 0), ("y", VScalar 0)]
+    let problem = constructProblem exp vars
+    case generateProblemCode valMap problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs"
+
+

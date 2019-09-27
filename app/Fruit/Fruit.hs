@@ -225,3 +225,26 @@ easyFruitProblem = do
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs"
+
+anotherFruit :: IO ()
+anotherFruit = do
+    let [s, img, c, median] = map (variable2D @256 @256) ["s", "img", "c", "median"]
+        one = constant2D @256 @256 1
+        zero = constant2D @256 @256 0
+    let objectiveFunction =
+            norm2square ((img - s * c) * (const 0.00000001 *. median)) +
+            (norm2square (s - rotate (0, 1) s) +
+             norm2square (s - rotate (1, 0) s))
+    let valMap =
+            fromList
+                [ ("img", V2DFile HDF5 "img.h5")
+                , ("c", V2DFile HDF5 "c.h5")
+                , ("median", V2DFile HDF5 "median.h5")
+                , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
+                ]
+        vars = Set.fromList ["s"]
+    let problem = constructProblem objectiveFunction vars
+    print problem
+    case generateProblemCode valMap problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs"
