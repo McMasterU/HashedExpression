@@ -204,13 +204,13 @@ easyFruitProblem = do
         zero = constant2D @256 @256 0
     let objectiveFunction =
             norm2square (ft (x +: y) - (re +: im)) +
-            const 200000 *
-            (norm2square (x - rotate (0, 1) x) +
-             norm2square (x - rotate (1, 0) x) +
-             norm2square (x - rotate (0, 1) y) +
-             norm2square (x - rotate (1, 0) y)) +
-            const 10000000 * norm2square ((one - fruits) * x) +
-            const 10000000 * norm2square ((one - fruits) * y)
+            const 12000000 *
+            (huberNorm 1000 (x - rotate (0, 1) x) +
+             huberNorm 1000 (x - rotate (1, 0) x) +
+             huberNorm 1000 (y - rotate (0, 1) y) +
+             huberNorm 1000 (y - rotate (1, 0) y)) +
+            const 1000000 * norm2square ((one - fruits) * x) +
+            const 1000000 * norm2square ((one - fruits) * y)
     let valMap =
             fromList
                 [ ("fruits", V2DFile HDF5 "fruits.h5")
