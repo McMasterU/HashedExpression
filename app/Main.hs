@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
@@ -58,35 +59,16 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
-sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum1 = fromJust . HashedOperation.sum
+reFT :: (DimensionType d) => Expression d R -> Expression d R
+reFT = xRe . ft
 
-prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-prod1 = fromJust . HashedOperation.product
+imFT :: (DimensionType d) => Expression d R -> Expression d R
+imFT = xIm . ft
 
 --
 --main = do
---    let x = variable1D @10 "x"
---        y = variable1D @10 "y"
---        z = variable1D @10 "z"
---        t = variable1D @10 "t"
---    let exp =
---            (xRe (ft (x +: y) - (z +: t)) <.> xRe (ft (x +: y) - (z +: t))) +
---            (xIm (ft (x +: y) - (z +: t)) <.> xIm (ft (x +: y) - (z +: t)))
---        vars = Set.fromList ["x", "y"]
---        problem = constructProblem exp vars
---        values =
---            fromList
---                [ ("z", V1DFile HDF5 "z.h5")
---                , ("t", V1DFile HDF5 "t.h5")
---                , ("x", V1DFile HDF5 "x.h5")
---                , ("y", V1DFile HDF5 "y.h5")
---                ]
---    case generateProblemCode values problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs"
---main = do
---    let x = var "x"
+--    let exp = norm2square $ reFT . reFT $ x1
+--    showExp . collectDifferentials . exteriorDerivative allVars $ exp--    let x = var "x"
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"

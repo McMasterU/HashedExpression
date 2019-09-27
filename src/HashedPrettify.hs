@@ -154,7 +154,7 @@ hiddenPrettify pastable (mp, n) =
                     Sum _ args
                         | pastable ->
                             T.concat
-                                [ "sum1 ["
+                                [ "sum ["
                                 , T.intercalate ", " . map innerPrettify $ args
                                 , "]"
                                 ]
@@ -163,7 +163,7 @@ hiddenPrettify pastable (mp, n) =
                     Mul _ args
                         | pastable ->
                             T.concat
-                                [ "prod1 ["
+                                [ "prod ["
                                 , T.intercalate ", " . map innerPrettify $ args
                                 , "]"
                                 ]
@@ -242,3 +242,9 @@ hiddenPrettify pastable (mp, n) =
                         T.concat ["reFT", wrapParentheses $ innerPrettify arg]
                     ImFT arg ->
                         T.concat ["imFT", wrapParentheses $ innerPrettify arg]
+                    TwiceReFT arg ->
+                        T.concat
+                            ["twiceReFT", wrapParentheses $ innerPrettify arg]
+                    TwiceImFT arg ->
+                        T.concat
+                            ["twiceImFT", wrapParentheses $ innerPrettify arg]

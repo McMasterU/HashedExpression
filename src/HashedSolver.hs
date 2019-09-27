@@ -67,7 +67,7 @@ instance Show Problem where
         showPartial var =
             intercalate
                 "\n"
-                [ "----------------∂f/∂(" ++ varName var ++ ")-------------"
+                [ "----------------∂f/∂" ++ varName var ++ "-------------"
                 , debugPrint (expressionMap, partialDerivativeId var)
                 ]
 

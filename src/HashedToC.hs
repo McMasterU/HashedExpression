@@ -370,58 +370,42 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                         , n `at` toIndex i j k <<-
                           arg `at` toIndex "ai" "aj" "ak"
                         ]
-                -- ReFT(ReFT(x) can be compute in linear time, TODO - Make a new node DoubleReFT ?
-                ReFT _arg
-                    | ReFT innerArg <- retrieveNode _arg mp
-                    , retrieveElementType innerArg mp == R ->
-                        case shape of
-                            [size] ->
-                                let functionParameters =
-                                        [ show size
-                                        , addressOf innerArg
-                                        , addressOf n
-                                        ]
-                                 in [ "re_dft_twice_1d(" ++
-                                      intercalate ", " functionParameters ++
-                                      ");"
+                TwiceReFT arg ->
+                    case shape of
+                        [size] ->
+                            let functionParameters =
+                                    [show size, addressOf arg, addressOf n]
+                             in [ "re_dft_twice_1d(" ++
+                                  intercalate ", " functionParameters ++ ");"
+                                ]
+                        [size1, size2] ->
+                            let functionParameters =
+                                    [ show size1
+                                    , show size2
+                                    , addressOf arg
+                                    , addressOf n
                                     ]
-                            [size1, size2] ->
-                                let functionParameters =
-                                        [ show size1
-                                        , show size2
-                                        , addressOf innerArg
-                                        , addressOf n
-                                        ]
-                                 in [ "re_dft_twice_2d(" ++
-                                      intercalate ", " functionParameters ++
-                                      ");"
+                             in [ "re_dft_twice_2d(" ++
+                                  intercalate ", " functionParameters ++ ");"
+                                ]
+                TwiceImFT arg ->
+                    case shape of
+                        [size] ->
+                            let functionParameters =
+                                    [show size, addressOf arg, addressOf n]
+                             in [ "im_dft_twice_1d(" ++
+                                  intercalate ", " functionParameters ++ ");"
+                                ]
+                        [size1, size2] ->
+                            let functionParameters =
+                                    [ show size1
+                                    , show size2
+                                    , addressOf arg
+                                    , addressOf n
                                     ]
-                -- ImFT(ImFT(x) can be compute in linear time, TODO - Make a new node DoubleImFT
-                ImFT _arg
-                    | ImFT innerArg <- retrieveNode _arg mp
-                    , retrieveElementType innerArg mp == R ->
-                        case shape of
-                            [size] ->
-                                let functionParameters =
-                                        [ show size
-                                        , addressOf innerArg
-                                        , addressOf n
-                                        ]
-                                 in [ "im_dft_twice_1d(" ++
-                                      intercalate ", " functionParameters ++
-                                      ");"
-                                    ]
-                            [size1, size2] ->
-                                let functionParameters =
-                                        [ show size1
-                                        , show size2
-                                        , addressOf innerArg
-                                        , addressOf n
-                                        ]
-                                 in [ "im_dft_twice_2d(" ++
-                                      intercalate ", " functionParameters ++
-                                      ");"
-                                    ]
+                             in [ "im_dft_twice_2d(" ++
+                                  intercalate ", " functionParameters ++ ");"
+                                ]
                 ReFT arg
                     | [size] <- shape
                     , retrieveElementType arg mp == R ->

@@ -1,14 +1,21 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
+
 module HashedNormalizeSpec where
 
 import Commons
+import Data.Array (listArray)
 import Data.Complex (Complex(..))
+import qualified Data.IntMap.Strict as IM
+import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import HashedExpression
-import HashedInterp ((~=))
+import HashedInterp ((~=), eval)
 import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
+import HashedOperation
 import HashedPrettify
+import HashedUtils
 import HashedVar
 import Prelude hiding
     ( (*)
@@ -38,6 +45,12 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
+
+reFT :: (DimensionType d) => Expression d R -> Expression d R
+reFT = xRe . ft
+
+imFT :: (DimensionType d) => Expression d R -> Expression d R
+imFT = xIm . ft
 
 spec :: Spec
 spec = do
@@ -188,3 +201,37 @@ spec = do
             piecewise [1] c1 [c1 +: y1, z1 +: t1] `shouldNormalizeTo`
                 piecewise [1] c1 [c1, z1] +:
                 piecewise [1] c1 [y1, t1]
+    describe "Fourier transform" $
+        specify "some Ft rules" $ do
+            reFT (reFT x1) +
+                imFT (imFT x1) `shouldNormalizeTo`
+                const (fromIntegral defaultDim1D) *.
+                x1
+            reFT (reFT x2) +
+                imFT (imFT x2) `shouldNormalizeTo`
+                const (fromIntegral (default1stDim2D * default2ndDim2D)) *.
+                x2
+            let x = variable1D @10 "x"
+                y = variable1D @10 "y"
+                z = variable1D @10 "z"
+                t = variable1D @10 "t"
+                valMap =
+                    Map.fromList
+                        [ ("x", V1D $ listArray (0, 9) [1 ..])
+                        , ("y", V1D $ listArray (0, 9) [2,5 ..])
+                        , ("z", V1D $ listArray (0, 9) [3,8 ..])
+                        , ("t", V1D $ listArray (0, 9) [0,-1 ..])
+                        ]
+            let res1 = eval valMap $ reFT (reFT (x * y + z * t))
+                res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t))
+            res1 `shouldApprox` res2
+            let res1 = eval valMap $ imFT (imFT (x * y + z * t))
+                res2 = eval valMap . normalize $ imFT (imFT (x * y + z * t))
+            res1 `shouldApprox` res2
+            let res1 =
+                    eval valMap $
+                    reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
+                res2 =
+                    eval valMap . normalize $
+                    reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
+            res1 `shouldApprox` res2

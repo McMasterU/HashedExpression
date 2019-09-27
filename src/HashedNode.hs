@@ -49,6 +49,12 @@ nodeElementType node mp =
         ImFT arg
             | retrieveElementType arg mp == Covector -> Covector
             | otherwise -> R
+        TwiceImFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
+        TwiceReFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
 
 -- | For ordering things inside Sum or Product so we can write rules like
 --   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
@@ -90,6 +96,8 @@ nodeTypeWeight node =
         Rotate {} -> 27
         ReFT {} -> 28
         ImFT {} -> 29
+        TwiceReFT {} -> 30
+        TwiceImFT {} -> 31
 
 -- |
 --
@@ -133,6 +141,8 @@ nodeArgs node =
         Rotate _ arg -> [arg]
         ReFT arg -> [arg]
         ImFT arg -> [arg]
+        TwiceReFT arg -> [arg]
+        TwiceImFT arg -> [arg]
 
 -- | Auxiliary functions for operations
 --

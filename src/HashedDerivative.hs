@@ -262,6 +262,8 @@ hiddenDerivative vars (Expression n mp) = coerce res
             Rotate amount arg -> d1Input (Rotate amount) arg
             ReFT arg -> d1Input ReFT arg
             ImFT arg -> d1Input ImFT arg
+            TwiceReFT arg -> d1Input TwiceReFT arg
+            TwiceImFT arg -> d1Input TwiceImFT arg
             _ -> error $ show node
             -- TODO: If we normalize before computing the derivative? Should RealPart, ImagPart or RealImag here? Probably no !!
             -- d(xRe(f)) = xRe(d(f))

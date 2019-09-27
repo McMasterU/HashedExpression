@@ -136,6 +136,8 @@ data Pattern
     | PRotate PatternRotateAmount Pattern
     | PReFT Pattern
     | PImFT Pattern
+    | PTwiceReFT Pattern
+    | PTwiceImFT Pattern
     deriving (Show)
 
 -- |
@@ -233,6 +235,12 @@ reFT = PReFT
 
 imFT :: Pattern -> Pattern
 imFT = PImFT
+
+twiceReFT :: Pattern -> Pattern
+twiceReFT = PTwiceReFT
+
+twiceImFT :: Pattern -> Pattern
+twiceImFT = PTwiceImFT
 
 -- | Guarded patterns for normalizier
 --
@@ -594,6 +602,8 @@ match (mp, n) outerWH =
                     Just $ unionMatch matchInner matchRotateAmount
             (ReFT arg, PReFT sp) -> recursiveAndCombine [arg] [sp]
             (ImFT arg, PImFT sp) -> recursiveAndCombine [arg] [sp]
+            (TwiceReFT arg, PTwiceReFT sp) -> recursiveAndCombine [arg] [sp]
+            (TwiceImFT arg, PTwiceImFT sp) -> recursiveAndCombine [arg] [sp]
             _ -> Nothing
 
 -- |
@@ -720,6 +730,8 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
                         [buildFromPattern' sp]
             PReFT sp -> applyDiff' (unary ReFT) [buildFromPattern' sp]
             PImFT sp -> applyDiff' (unary ImFT) [buildFromPattern' sp]
+            PTwiceReFT sp -> applyDiff' (unary TwiceReFT) [buildFromPattern' sp]
+            PTwiceImFT sp -> applyDiff' (unary TwiceImFT) [buildFromPattern' sp]
             _ ->
                 error
                     "The right hand-side of substitution has something that we don't support yet"

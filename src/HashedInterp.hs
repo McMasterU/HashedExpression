@@ -352,6 +352,24 @@ evaluate1DReal valMap (mp, n)
                         ]
             Rotate [amount] arg ->
                 rotate1D size amount (eval valMap $ expOneR mp arg)
+            TwiceReFT arg ->
+                let innerRes = eval valMap $ expOneR mp arg
+                    scaleFactor = fromIntegral size / 2
+                 in listArray
+                        (0, size - 1)
+                        [ scaleFactor *
+                        (innerRes ! i + innerRes ! ((size - i) `mod` size))
+                        | i <- [0 .. size - 1]
+                        ]
+            TwiceImFT arg ->
+                let innerRes = eval valMap $ expOneR mp arg
+                    scaleFactor = fromIntegral size / 2
+                 in listArray
+                        (0, size - 1)
+                        [ scaleFactor *
+                        (innerRes ! i - innerRes ! ((size - i) `mod` size))
+                        | i <- [0 .. size - 1]
+                        ]
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
@@ -496,6 +514,30 @@ evaluate2DReal valMap (mp, n)
                     (size1, size2)
                     (amount1, amount2)
                     (eval valMap $ expTwoR mp arg)
+            TwiceReFT arg ->
+                let innerRes = eval valMap $ expTwoR mp arg
+                    scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
+                 in listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ scaleFactor *
+                        (innerRes ! (i, j) +
+                         innerRes !
+                         ((size1 - i) `mod` size1, (size2 - j) `mod` size2))
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        ]
+            TwiceImFT arg ->
+                let innerRes = eval valMap $ expTwoR mp arg
+                    scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
+                 in listArray
+                        ((0, 0), (size1 - 1, size2 - 1))
+                        [ scaleFactor *
+                        (innerRes ! (i, j) -
+                         innerRes !
+                         ((size1 - i) `mod` size1, (size2 - j) `mod` size2))
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        ]
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
@@ -643,6 +685,42 @@ evaluate3DReal valMap (mp, n)
                     (size1, size2, size3)
                     (amount1, amount2, amount3)
                     (eval valMap $ expThreeR mp arg)
+            TwiceReFT arg ->
+                let innerRes = eval valMap $ expThreeR mp arg
+                    scaleFactor =
+                        fromIntegral size1 * fromIntegral size2 *
+                        fromIntegral size3 /
+                        2
+                 in listArray
+                        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                        [ scaleFactor *
+                        (innerRes ! (i, j, k) +
+                         innerRes !
+                         ( (size1 - i) `mod` size1
+                         , (size2 - j) `mod` size2
+                         , (size3 - k) `mod` size3))
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , k <- [0 .. size3 - 1]
+                        ]
+            TwiceImFT arg ->
+                let innerRes = eval valMap $ expThreeR mp arg
+                    scaleFactor =
+                        fromIntegral size1 * fromIntegral size2 *
+                        fromIntegral size3 /
+                        2
+                 in listArray
+                        ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
+                        [ scaleFactor *
+                        (innerRes ! (i, j, k) -
+                         innerRes !
+                         ( (size1 - i) `mod` size1
+                         , (size2 - j) `mod` size2
+                         , (size3 - k) `mod` size3))
+                        | i <- [0 .. size1 - 1]
+                        , j <- [0 .. size2 - 1]
+                        , k <- [0 .. size3 - 1]
+                        ]
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->

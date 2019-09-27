@@ -21,6 +21,8 @@ extern double ptr[MEM_SIZE];
 extern void assign_values();
 extern void evaluate_partial_derivatives_and_objective();
 
+int num_iterations;
+
 double random_in(double min, double max) {
   double range = (max - min);
   double div = RAND_MAX / range;
@@ -38,11 +40,7 @@ void print_vars() {
     } else {
       printf("Writing %s to %s...\n", var_name[i], var_file_name);
       hid_t file, space, dset;
-      hsize_t dims[3];
-      int d;
-      for (d = 0; d < 3; d++) {
-        dims[d] = var_shape[i][d];
-      }
+      hsize_t dims[3] = {var_shape[i][0], var_shape[i][1], var_shape[i][2]};
       file = H5Fcreate(var_file_name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
       space = H5Screate_simple (var_num_dim[i], dims, NULL);
       dset = H5Dcreate (file, var_name[i], H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -82,6 +80,7 @@ static int progress(void *instance, const lbfgsfloatval_t *x,
     const lbfgsfloatval_t fx,
     const lbfgsfloatval_t xnorm, const lbfgsfloatval_t gnorm, const lbfgsfloatval_t step, int n, int k,
     int ls) {
+  num_iterations = k;
   if (k % 1000 == 0) {
     printf("Iteration %d:\n", k);
     printf("fx = %f\n", fx);
@@ -125,6 +124,7 @@ int main() {
   lbfgs_parameter_init(&param);
   ret = lbfgs(N, x, &fx, evaluate, progress, NULL, &param);
 
+  printf("After %d iterations: \n", num_iterations);
   printf("f_min = %f\n", fx);
   print_vars();
   printf("Done\n");

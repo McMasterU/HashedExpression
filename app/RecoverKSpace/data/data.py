@@ -30,7 +30,7 @@ def skip_every(n):
     return [i for i in range(1, r) if (i % n == 0)]
 
 
-for i in skip_every(3):
+for i in skip_every(4):
     re[i] = 0
     im[i] = 0
     mask[i] = 0

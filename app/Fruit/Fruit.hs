@@ -12,8 +12,7 @@ import HashedDerivative
 import HashedExpression
 import HashedInterp
 import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
+import HashedOperation 
 import HashedPrettify
 import Prelude hiding
     ( (*)
@@ -84,7 +83,7 @@ hardOne = do
         one = constant2D @256 @256 1
         zero = constant2D @256 @256 0
     let objectiveFunction =
-            sum1
+            sum
                 [ norm2square
                     ((kMask +: zero) *
                      (ft ((sRe i +: sIm i) * (x +: y)) - (mRe i +: mIm i)))
@@ -95,7 +94,7 @@ hardOne = do
             huberNorm 2 (y - rotate (0, 1) y) +
             huberNorm 2 (y - rotate (1, 0) y) +
             const 10000 * norm2square ((one - imageMask) * (x * x + y * y)) +
-            sum1
+            sum
                 [ sumElements $
                 (sRe i - rotate (0, 1) (sRe i)) ^ 2 +
                 (sIm i - rotate (0, 1) (sIm i)) ^ 2 +
@@ -119,13 +118,6 @@ hardOne = do
         codes = generateProblemCode valMap problem
     undefined
     return ()
-
---    writeFile "algorithms/lbfgs/problem.c" $ intercalate "\n" codes
-sum1 :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum1 = fromJust . HashedOperation.sum
-
-prod1 :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-prod1 = fromJust . HashedOperation.product
 
 numCoils :: Int
 numCoils = 2
@@ -151,7 +143,7 @@ easyFruit = do
         one = constant2D @256 @256 1
         zero = constant2D @256 @256 0
     let objectiveFunction =
-            sum1
+            sum
                 [ norm2square
                     (ft ((sRe i +: sIm i) * (x +: y)) - (mRe i +: mIm i))
                 | i <- [0 .. numCoils - 1]
@@ -161,7 +153,7 @@ easyFruit = do
             huberNorm 2 (y - rotate (0, 1) y) +
             huberNorm 2 (y - rotate (1, 0) y) +
             sumElements (x * x + y * y) +
-            sum1
+            sum
                 [ sumElements $
                 (sRe i - rotate (0, 1) (sRe i)) ^ 2 +
                 (sIm i - rotate (0, 1) (sIm i)) ^ 2 +

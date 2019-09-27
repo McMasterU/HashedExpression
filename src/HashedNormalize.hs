@@ -12,7 +12,8 @@ import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List
-    ( foldl'
+    ( find
+    , foldl'
     , group
     , groupBy
     , intercalate
@@ -22,7 +23,7 @@ import Data.List
     , sortOn
     , transpose
     )
-import Data.List.Extra (groupSort)
+import Data.List.Extra (firstJust, groupSort)
 import Data.List.NonEmpty (groupWith)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
@@ -105,6 +106,7 @@ normalizingTransformation = secondPass . firstPass
             , negativeZeroRules
             , pullOutPiecewiseRules
             , expandPiecewiseRealImag
+            , twiceReFTAndImFTRules
             ] ++
         [ rulesFromPattern --
         , removeUnreachable
@@ -254,6 +256,8 @@ fourierTransformRules =
     , reFT (s *. x) |. isCovector s ~~~~~~> s *. reFT x
     , imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x
     , imFT (s *. x) |. isCovector s ~~~~~~> s *. imFT x
+    , reFT (reFT x) |. isReal x ~~~~~~> twiceReFT x
+    , imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x
     ]
 
 -- | Rules of piecewise
@@ -601,3 +605,43 @@ pullOutPiecewiseRules exp@(mp, n)
     shape = retrieveShape n mp
     one = diffConst shape 1
     zero = diffConst shape 0
+
+-- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
+--
+twiceReFTAndImFTRules :: Modification
+twiceReFTAndImFTRules exp@(mp, n)
+    | Sum R args <- retrieveNode n mp
+    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT args
+    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) args =
+        let rest =
+                map noChange .
+                filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
+                args
+            totalScaleFactor =
+                scaleFactor *
+                fromIntegral (Prelude.product $ retrieveShape innerArg mp)
+            scalar = diffConst [] totalScaleFactor
+            scaled =
+                applyDiff
+                    mp
+                    (binaryET Scale ElementDefault)
+                    [scalar, noChange innerArg]
+         in sumManyDiff mp $ scaled : rest
+    | otherwise = noChange n
+  where
+    isTwiceReFT nId
+        | TwiceReFT inner <- retrieveNode nId mp = Just (1, nId, inner)
+        | Scale R scalarId scaleeId <- retrieveNode nId mp
+        , Const val <- retrieveNode scalarId mp
+        , TwiceReFT inner <- retrieveNode scaleeId mp = Just (val, nId, inner)
+        | otherwise = Nothing
+    isTwiceImFTof innerArg scaleFactor nId
+        | TwiceImFT x <- retrieveNode nId mp
+        , scaleFactor == 1
+        , x == innerArg = True
+        | Scale R scalarId scaleeId <- retrieveNode nId mp
+        , Const val <- retrieveNode scalarId mp
+        , val == scaleFactor
+        , TwiceImFT x <- retrieveNode scaleeId mp
+        , x == innerArg = True
+        | otherwise = False
