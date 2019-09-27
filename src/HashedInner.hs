@@ -375,6 +375,8 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
             Rotate amount _ -> combine (unary (Rotate amount))
             ReFT _ -> combine (unary ReFT)
             ImFT _ -> combine (unary ImFT)
+            TwiceReFT _ -> combine (unary TwiceReFT)
+            TwiceImFT _ -> combine (unary TwiceImFT)
   where
     (oldShape, oldNode) = retrieveInternal n contextMp
     oldChildren = nodeArgs oldNode

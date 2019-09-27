@@ -49,8 +49,12 @@ nodeElementType node mp =
         ImFT arg
             | retrieveElementType arg mp == Covector -> Covector
             | otherwise -> R
-        TwiceImFT arg -> R
-        TwiceReFT arg -> R
+        TwiceImFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
+        TwiceReFT arg
+            | retrieveElementType arg mp == Covector -> Covector
+            | otherwise -> R
 
 -- | For ordering things inside Sum or Product so we can write rules like
 --   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*

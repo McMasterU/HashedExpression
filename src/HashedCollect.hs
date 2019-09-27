@@ -122,6 +122,8 @@ separateDVarAlone =
           (rotate (negate amount) x <.> y)
         , x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y
         , x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y
+        , x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y
+        , x <.> twiceImFT y |. isCovector y ~~~~~~> twiceImFT x <.> y
         ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar

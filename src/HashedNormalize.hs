@@ -618,9 +618,8 @@ twiceReFTAndImFTRules exp@(mp, n)
                 filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
                 args
             totalScaleFactor =
-                (scaleFactor *
-                 fromIntegral (Prelude.product $ retrieveShape innerArg mp)) /
-                2
+                scaleFactor *
+                fromIntegral (Prelude.product $ retrieveShape innerArg mp)
             scalar = diffConst [] totalScaleFactor
             scaled =
                 applyDiff

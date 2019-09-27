@@ -67,9 +67,9 @@ smilingFaceProblem = do
         zero = constant2D @128 @128 0
     let objectiveFunction =
             norm2square ((mask +: zero) * (ft x - (re +: im))) +
-            huberNorm 2 (x - rotate (0, 1) x) +
-            huberNorm 2 (x - rotate (1, 0) x) +
-            const 10000 * norm2square ((one - head) * x)
+            huberNorm 20 (x - rotate (0, 1) x) +
+            huberNorm 20 (x - rotate (1, 0) x)
+--            const 1000 * norm2square ((one - head) * x)
     let valMap =
             fromList
                 [ ("mask", V2DFile HDF5 "mask.h5")
@@ -80,6 +80,7 @@ smilingFaceProblem = do
                 ]
         vars = Set.fromList ["x"]
     let problem = constructProblem objectiveFunction vars
+    print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs"

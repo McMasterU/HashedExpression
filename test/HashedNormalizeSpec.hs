@@ -209,7 +209,7 @@ spec = do
                 x1
             reFT (reFT x2) +
                 imFT (imFT x2) `shouldNormalizeTo`
-                const (fromIntegral $ default1stDim2D * default2ndDim2D) *.
+                const (fromIntegral (default1stDim2D * default2ndDim2D)) *.
                 x2
             let x = variable1D @10 "x"
                 y = variable1D @10 "y"
@@ -220,16 +220,18 @@ spec = do
                         [ ("x", V1D $ listArray (0, 9) [1 ..])
                         , ("y", V1D $ listArray (0, 9) [2,5 ..])
                         , ("z", V1D $ listArray (0, 9) [3,8 ..])
-                        , ("z", V1D $ listArray (0, 9) [0,-1 ..])
+                        , ("t", V1D $ listArray (0, 9) [0,-1 ..])
                         ]
-            let res1 = eval valMap $ reFT (reFT (x + z))
-                res2 = eval valMap . normalize $ reFT (reFT (x + z))
+            let res1 = eval valMap $ reFT (reFT (x * y + z * t))
+                res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t))
             res1 `shouldApprox` res2
-            let res1 = eval valMap $ imFT (imFT (x + z))
-                res2 = eval valMap . normalize $ imFT (imFT (x + z))
+            let res1 = eval valMap $ imFT (imFT (x * y + z * t))
+                res2 = eval valMap . normalize $ imFT (imFT (x * y + z * t))
             res1 `shouldApprox` res2
-            let res1 = eval valMap $ reFT (reFT (x + z)) + imFT (imFT (x + z))
+            let res1 =
+                    eval valMap $
+                    reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
                 res2 =
                     eval valMap . normalize $
-                    reFT (reFT (x + z)) + imFT (imFT (x + z))
+                    reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
             res1 `shouldApprox` res2
