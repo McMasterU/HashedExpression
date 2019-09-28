@@ -7,8 +7,6 @@
 #include <lbfgs.h>
 #include <string.h>
 
-#define oo 10000000
-
 extern const char* var_name[NUM_VARIABLES];
 extern const int var_num_dim[NUM_VARIABLES];
 extern const int var_shape[NUM_VARIABLES][3];
@@ -32,7 +30,7 @@ double random_in(double min, double max) {
 void print_vars() {
   int i;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    char* var_file_name = malloc(strlen(var_name[i]) + 7);
+    char* var_file_name = (char*) malloc(strlen(var_name[i]) + 7);
     strcpy(var_file_name, var_name[i]);
     strcat(var_file_name, "_out.h5");
     if (var_num_dim[i] == 0) {
@@ -40,7 +38,7 @@ void print_vars() {
     } else {
       printf("Writing %s to %s...\n", var_name[i], var_file_name);
       hid_t file, space, dset;
-      hsize_t dims[3] = {var_shape[i][0], var_shape[i][1], var_shape[i][2]};
+      hsize_t dims[3] = { (hsize_t) var_shape[i][0], (hsize_t) var_shape[i][1], (hsize_t) var_shape[i][2]};
       file = H5Fcreate(var_file_name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
       space = H5Screate_simple (var_num_dim[i], dims, NULL);
       dset = H5Dcreate (file, var_name[i], H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
