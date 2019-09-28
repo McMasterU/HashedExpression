@@ -32,9 +32,9 @@ double random_in(double min, double max) {
 void print_vars() {
   int i;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    char* var_file_name = malloc(strlen(var_name[i]) + 4);
+    char* var_file_name = malloc(strlen(var_name[i]) + 7);
     strcpy(var_file_name, var_name[i]);
-    strcat(var_file_name, ".h5");
+    strcat(var_file_name, "_out.h5");
     if (var_num_dim[i] == 0) {
       printf("%s = %lf\n", var_name[i], ptr[var_offset[i]]);
     } else {
