@@ -1,6 +1,7 @@
 #include "problem.c"
 #include <time.h>
 #include <math.h>
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -45,6 +46,18 @@ void print_vars() {
   }
 }
 
+double x[4];
 int main() {
+  {
+    hid_t file, dset;
+    file = H5Fopen ("hihi.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
+    dset = H5Dopen (file, "hihi", H5P_DEFAULT);
+    H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, x);
+    H5Fclose (file);
+    H5Dclose (dset);
+  }
 
+  for (int i = 0; i < 4; i++) {
+    std::cout << x[i] << std::endl;
+  }
 }

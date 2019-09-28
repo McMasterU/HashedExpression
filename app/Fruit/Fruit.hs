@@ -113,7 +113,7 @@ hardOne = do
                 (\i vals -> ("mIm" ++ show i, V2D vals))
                 [0 .. numCoils]
                 mImValues
-        vars = Set.fromList ["x"]
+        vars = ["x"]
     let problem = constructProblem objectiveFunction vars
         codes = generateProblemCode valMap problem
     undefined
@@ -187,10 +187,9 @@ anotherFruiteProblem = do
             , ("y", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
             ]
         vars =
-            Set.fromList
-                (["x", "y"] ++
-                 ["sIm" ++ show i | i <- [0 .. numCoils - 1]] ++
-                 ["sRe" ++ show i | i <- [0 .. numCoils - 1]])
+            ["x", "y"] ++
+            ["sIm" ++ show i | i <- [0 .. numCoils - 1]] ++
+            ["sRe" ++ show i | i <- [0 .. numCoils - 1]]
     let problem = constructProblem objectiveFunction vars
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
@@ -219,7 +218,7 @@ easyFruitProblem = do
                 , ("x", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 , ("y", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
-        vars = Set.fromList ["x", "y"]
+        vars = ["x", "y"]
     let problem = constructProblem objectiveFunction vars
     print problem
     case generateProblemCode valMap problem of
@@ -228,7 +227,8 @@ easyFruitProblem = do
 
 anotherFruit :: IO ()
 anotherFruit = do
-    let [s, img, c, median] = map (variable2D @256 @256) ["s", "img", "c", "median"]
+    let [s, img, c, median] =
+            map (variable2D @256 @256) ["s", "img", "c", "median"]
         one = constant2D @256 @256 1
         zero = constant2D @256 @256 0
     let objectiveFunction =
@@ -242,7 +242,7 @@ anotherFruit = do
                 , ("median", V2DFile HDF5 "median.h5")
                 , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
-        vars = Set.fromList ["s"]
+        vars = ["s"]
     let problem = constructProblem objectiveFunction vars
     print problem
     case generateProblemCode valMap problem of

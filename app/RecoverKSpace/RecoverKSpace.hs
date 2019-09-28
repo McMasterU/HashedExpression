@@ -78,7 +78,7 @@ smilingFaceProblem = do
                 , ("im", V2DFile HDF5 "im.h5" )
                 , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
-        vars = Set.fromList ["x"]
+        vars = ["x"]
     let problem = constructProblem objectiveFunction vars
     print problem
     case generateProblemCode valMap problem of

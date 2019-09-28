@@ -73,8 +73,7 @@ imFT = xIm . ft
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = anotherFruit
---main = do
+main = anotherFruit--main = do
 --    let a = const 33
 --        b = const 100
 --        x = var "x"

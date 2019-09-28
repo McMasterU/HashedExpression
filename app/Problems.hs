@@ -1,9 +1,8 @@
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
-module Problems where
 
+module Problems where
 
 import Data.Array
 import Data.Complex
@@ -73,11 +72,9 @@ bananaFunction = do
         x = var "x"
         y = var "y"
         exp = (a - x) ^ 2 + b * (y - x ^ 2) ^ 2
-        vars = Set.fromList ["x", "y"]
+        vars = ["x", "y"]
         valMap = fromList [("x", VScalar 0), ("y", VScalar 0)]
     let problem = constructProblem exp vars
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs"
-
-

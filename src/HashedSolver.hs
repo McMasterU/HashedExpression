@@ -71,6 +71,20 @@ instance Show Problem where
                 , debugPrint (expressionMap, partialDerivativeId var)
                 ]
 
+-- |
+--
+data Bound
+    = UpperBound Val
+    | LowerBound Val
+    deriving (Show, Eq, Ord)
+
+-- | 
+--
+data Constraint
+    = NoConstraint
+    | BoxConstraint (Map String Bound)
+    deriving (Show, Eq, Ord)
+
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
 --
@@ -90,9 +104,10 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Scalar R -> Set String -> Problem
-constructProblem notSimplifedF vars =
-    let f@(Expression fId fMp) = normalize notSimplifedF
+constructProblem :: Expression Scalar R -> [String] -> Problem
+constructProblem notSimplifedF varList =
+    let vars = Set.fromList varList
+        f@(Expression fId fMp) = normalize notSimplifedF
         df@(Expression dfId dfMp) =
             collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
