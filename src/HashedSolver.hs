@@ -25,6 +25,7 @@ import HashedExpression
     , Node(..)
     , R
     , Scalar
+    , Shape
     , exIndex
     , exMap
     )
@@ -54,6 +55,7 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
+        , constraint :: Constraint
         }
 
 instance Show Problem where
@@ -77,6 +79,10 @@ data Bound
     = UpperBound Val
     | LowerBound Val
     deriving (Show, Eq, Ord)
+
+getBoundVal :: Bound -> Val
+getBoundVal (UpperBound val) = val
+getBoundVal (LowerBound val) = val
 
 -- | 
 --
@@ -104,8 +110,8 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Scalar R -> [String] -> Problem
-constructProblem notSimplifedF varList =
+constructProblem :: Expression Scalar R -> [String] -> Constraint -> Problem
+constructProblem notSimplifedF varList constraint =
     let vars = Set.fromList varList
         f@(Expression fId fMp) = normalize notSimplifedF
         df@(Expression dfId dfMp) =
@@ -149,6 +155,7 @@ constructProblem notSimplifedF varList =
             , objectiveId = problemObjectiveId
             , memMap = problemMemMap
             , expressionMap = problemExpressionMap
+            , constraint = constraint
             }
 
 -- | Read $numDoubles$ doubles from $fileName$ to ptr[offset]
@@ -209,7 +216,9 @@ generateProblemCode valMaps Problem {..}
             mapM_ writeVal $ Map.toList valMaps
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
   where
-    vs = varsAndShape expressionMap
+    vs :: [(String, Int)]
+    vs = varNodesWithId expressionMap
+    compatible :: Shape -> Val -> Bool
     compatible shape v =
         case (shape, v) of
             ([], VScalar val) -> True
@@ -223,26 +232,41 @@ generateProblemCode valMaps Problem {..}
             ([x, y], V2DFile {}) -> True
             ([x, y, z], V3DFile {}) -> True
             _ -> False
+    -- Check if is variable or a fixed value
+    isVariable :: String -> Bool
     isVariable v = v `elem` map varName variables
+    variableShape :: String -> Shape
+    variableShape name =
+        let nId = nodeId . fromJust . find ((== name) . varName) $ variables
+         in retrieveShape nId expressionMap
     checkError
         | Just var <-
              find (not . (`Map.member` valMaps)) . map varName $ variables =
             Just $ "No initial value for variable " ++ var
         | Just var <- find (not . (`Map.member` valMaps)) . map fst $ vs =
             Just $ "No value provided for fixed parameter " ++ var
-        | otherwise =
-            let isOk (var, nId) =
-                    compatible
-                        (retrieveShape nId expressionMap)
-                        (fromJust (var `Map.lookup` valMaps))
-             in case find (not . isOk) vs of
-                    Just (var, shape) ->
-                        Just $
-                        "variable " ++
-                        var ++
-                        "is of shape " ++
-                        show shape ++ " but the value provided is not"
-                    Nothing -> Nothing
+        | otherwise
+        , let isOk (var, nId) =
+                  compatible
+                      (retrieveShape nId expressionMap)
+                      (fromJust (var `Map.lookup` valMaps))
+        , Just (var, shape) <- find (not . isOk) vs =
+            Just $
+            "variable " ++
+            var ++
+            "is of shape " ++ show shape ++ " but the value provided is not"
+        | BoxConstraint boundMap <- constraint
+        , Just var <- find (not . isVariable) $ Map.keys boundMap =
+            Just $
+            var ++ " is not a variable but you're trying to box constrained it"
+        | BoxConstraint boundMap <- constraint
+        , let isOk (var, val) = compatible (variableShape var) val
+        , Just (var, _) <-
+             find (not . isOk) . Map.toList . Map.map getBoundVal $ boundMap =
+            Just $
+            "The bound provided to variable " ++
+            var ++ " is not the same shape as " ++ var
+        | otherwise = Nothing
     readValCodeEach (var, nId) =
         generateReadValuesCode
             var
@@ -308,19 +332,3 @@ generateProblemCode valMaps Problem {..}
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]
-
-getMinimumGradientDescent :: Code -> IO ()
-getMinimumGradientDescent codes = do
-    let filePath = "algorithms/gradient_descent/problem.c"
-    TIO.writeFile filePath $ T.intercalate "\n" $ map T.pack codes
-    (exitCode, stdout, stderr) <-
-        readProcessWithExitCode "make" ["-C", "algorithms/gradient_descent"] ""
-    putStrLn stdout
-    putStrLn stderr
-    (exitCode, stdout, stderr) <-
-        readProcessWithExitCode
-            "algorithms/gradient_descent/gradient_descent"
-            []
-            ""
-    putStrLn stdout
-    putStrLn stderr

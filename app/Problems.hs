@@ -74,7 +74,7 @@ bananaFunction = do
         exp = (a - x) ^ 2 + b * (y - x ^ 2) ^ 2
         vars = ["x", "y"]
         valMap = fromList [("x", VScalar 0), ("y", VScalar 0)]
-    let problem = constructProblem exp vars
+    let problem = constructProblem exp vars NoConstraint
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs"

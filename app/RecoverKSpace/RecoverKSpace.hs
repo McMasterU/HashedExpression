@@ -79,7 +79,7 @@ smilingFaceProblem = do
                 , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
         vars = ["x"]
-    let problem = constructProblem objectiveFunction vars
+    let problem = constructProblem objectiveFunction vars NoConstraint
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str

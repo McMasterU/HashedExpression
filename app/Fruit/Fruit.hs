@@ -114,7 +114,7 @@ hardOne = do
                 [0 .. numCoils]
                 mImValues
         vars = ["x"]
-    let problem = constructProblem objectiveFunction vars
+    let problem = constructProblem objectiveFunction vars NoConstraint
         codes = generateProblemCode valMap problem
     undefined
     return ()
@@ -190,7 +190,7 @@ anotherFruiteProblem = do
             ["x", "y"] ++
             ["sIm" ++ show i | i <- [0 .. numCoils - 1]] ++
             ["sRe" ++ show i | i <- [0 .. numCoils - 1]]
-    let problem = constructProblem objectiveFunction vars
+    let problem = constructProblem objectiveFunction vars NoConstraint
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs"
@@ -219,7 +219,7 @@ easyFruitProblem = do
                 , ("y", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
         vars = ["x", "y"]
-    let problem = constructProblem objectiveFunction vars
+    let problem = constructProblem objectiveFunction vars NoConstraint
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
@@ -243,7 +243,7 @@ anotherFruit = do
                 , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
         vars = ["s"]
-    let problem = constructProblem objectiveFunction vars
+    let problem = constructProblem objectiveFunction vars NoConstraint
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
