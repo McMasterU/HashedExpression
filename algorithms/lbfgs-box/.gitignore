@@ -2,6 +2,7 @@
 !cppoptlib
 !cppoptlib/*
 !*.c
+!*.cpp
 !Makefile
 !*.h
 !.gitignore
