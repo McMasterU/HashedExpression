@@ -1,5 +1,6 @@
 *
-/cppoptlib/
+!cppoptlib
+!cppoptlib/*
 !*.c
 !Makefile
 !*.h
