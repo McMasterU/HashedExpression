@@ -208,7 +208,11 @@ generateProblemCode valMaps Problem {..}
     | Just errorMsg <- checkError = Invalid errorMsg
     | otherwise =
         Success $ \folder -> do
-            let codes = defineStuffs ++ readVals ++ evaluatingCodes
+            let codes =
+                    defineStuffs ++
+                    readVals ++
+                    evaluatingCodes ++
+                    evaluateObjectiveCodes ++ evaluatePartialDerivatives
             let writeVal (var, val) =
                     unless (null $ valElems val) $ do
                         let str = unwords . map show . valElems $ val
@@ -264,7 +268,7 @@ generateProblemCode valMaps Problem {..}
         , Just (var, _) <-
              find (not . isOk) . Map.toList . Map.map getBoundVal $ boundMap =
             Just $
-            "The bound provided to variable " ++
+            "The box bound provided to variable " ++
             var ++ " is not the same shape as " ++ var
         | otherwise = Nothing
     readValCodeEach (var, nId) =
@@ -297,6 +301,9 @@ generateProblemCode valMaps Problem {..}
             variables
     objectiveOffset = fst3 . fromJust . flip IM.lookup entries $ objectiveId
     evaluatingIds = objectiveId : map partialDerivativeId variables
+    vars = map varName variables
+    varSize = map (product . variableShape) vars
+    totalVarSize = sum varSize
     defineStuffs =
         [ "#include <math.h>"
         , "#include <stdio.h>"
@@ -306,6 +313,7 @@ generateProblemCode valMaps Problem {..}
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)
+        , "#define NUM_ACTUAL_VARIABLES " ++ show totalVarSize
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
         , "const char* var_name[NUM_VARIABLES] = {" ++
           (intercalate ", " . map (show . varName) $ variables) ++ "};"
@@ -324,6 +332,17 @@ generateProblemCode valMaps Problem {..}
         , ""
         , ""
         ]
+    constraintCodes =
+        case constraint of
+            NoConstraint -> []
+            BoxConstraint boundMap ->
+                let varPosition = scanl (+) 0 varSize
+                    declarations =
+                        [ "const int var_bound_start_pos[NUM_VARIABLES];"
+                        , "const int lower_bound[NUM_ACTUAL_VARIABLES];"
+                        , "const int upper_bound[NUM_ACTUAL_VARIABLES];"
+                        ]
+                 in []
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
@@ -331,4 +350,16 @@ generateProblemCode valMaps Problem {..}
     evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
+        ["}"]
+    evaluateObjectiveCodes =
+        ["void evaluate_objective() {"] ++
+        space 2 (generateEvaluatingCodes memMap (expressionMap, [objectiveId])) ++
+        ["}"]
+    evaluatePartialDerivatives =
+        ["void evaluate_partial_derivatives() {"] ++
+        space
+            2
+            (generateEvaluatingCodes
+                 memMap
+                 (expressionMap, map partialDerivativeId variables)) ++
         ["}"]
