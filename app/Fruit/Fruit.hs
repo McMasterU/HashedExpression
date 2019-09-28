@@ -243,7 +243,8 @@ anotherFruit = do
                 , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
         vars = ["s"]
-    let problem = constructProblem objectiveFunction vars NoConstraint
+    let constraint = BoxConstraint empty
+    let problem = constructProblem objectiveFunction vars constraint
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str

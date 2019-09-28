@@ -210,6 +210,7 @@ generateProblemCode valMaps Problem {..}
         Success $ \folder -> do
             let codes =
                     defineStuffs ++
+                    constraintCodes ++
                     readVals ++
                     evaluatingCodes ++
                     evaluateObjectiveCodes ++ evaluatePartialDerivatives
@@ -315,6 +316,8 @@ generateProblemCode valMaps Problem {..}
         , "#define NUM_VARIABLES " ++ show (length variables)
         , "#define NUM_ACTUAL_VARIABLES " ++ show totalVarSize
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
+        , ""
+        , ""
         , "const char* var_name[NUM_VARIABLES] = {" ++
           (intercalate ", " . map (show . varName) $ variables) ++ "};"
         , "const int var_num_dim[NUM_VARIABLES] = {" ++
@@ -336,13 +339,18 @@ generateProblemCode valMaps Problem {..}
         case constraint of
             NoConstraint -> []
             BoxConstraint boundMap ->
-                let varPosition = scanl (+) 0 varSize
+                let varPosition = take (length varSize) $ scanl (+) 0 varSize
+                    varWithPos = zip vars varPosition
+                    getPos name = snd . fromJust . find ((== name) . fst) $ varWithPos
                     declarations =
-                        [ "const int var_bound_start_pos[NUM_VARIABLES];"
+                        [ "const int start_pos[NUM_VARIABLES] = {" ++
+                          (intercalate ", " . map show $ varPosition) ++ "};"
                         , "const int lower_bound[NUM_ACTUAL_VARIABLES];"
                         , "const int upper_bound[NUM_ACTUAL_VARIABLES];"
+                        , ""
+                        , ""
                         ]
-                 in []
+                 in declarations
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
