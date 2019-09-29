@@ -1,5 +1,5 @@
 #include "problem.c"
-#include "lib/lbfgs.h"
+#include "lbfgs.h"
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
