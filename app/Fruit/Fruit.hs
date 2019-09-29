@@ -243,7 +243,12 @@ anotherFruit = do
                 , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
         vars = ["s"]
-    let constraint = BoxConstraint empty
+    let constraint =
+            BoxConstraint $
+            fromList
+                [ ( "s"
+                  , LowerBound $ V2D $ listArray ((0, 0), (255, 255)) (repeat 0))
+                ]
     let problem = constructProblem objectiveFunction vars constraint
     print problem
     case generateProblemCode valMap problem of
