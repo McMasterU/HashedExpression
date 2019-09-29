@@ -1,6 +1,6 @@
 CPP = g++
 CFLAGS  = -Wall -std=c++11
-FAST_FLAGS  = -Wall -std=c11 -Ofast
+FAST_FLAGS  = -Wall -std=c++11 -Ofast
 LINK_LIBRARY = -lm -lfftw3 -lhdf5
 
 all: lbfgs-b.cpp problem.c utils.c

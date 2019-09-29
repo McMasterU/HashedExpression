@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include <lbfgs.h>
 #include <string.h>
+#include "cppoptlib/meta.h"
+#include "cppoptlib/boundedproblem.h"
+#include "cppoptlib/solver/lbfgsbsolver.h"
 
 extern const char* var_name[NUM_VARIABLES];
 extern const int var_num_dim[NUM_VARIABLES];
@@ -19,6 +22,8 @@ extern double ptr[MEM_SIZE];
 
 extern void assign_values();
 extern void evaluate_partial_derivatives_and_objective();
+extern void evaluate_objective();
+extern void evaluate_partial_derivatives();
 
 int num_iterations;
 
@@ -46,18 +51,82 @@ void print_vars() {
   }
 }
 
-double x[4];
+using namespace cppoptlib;
+
+class OptimizationProblem : public BoundedProblem<double> {
+  public:
+    using typename Problem<double>::TVector;
+    double value(const TVector &x) {
+      int cnt = 0;
+      for (int i = 0; i < NUM_VARIABLES; i++) {
+        for (int j = 0; j < var_size[i]; j++) {
+          ptr[var_offset[i] + j] = x(cnt);
+          cnt++;
+        }
+      }
+
+      evaluate_objective();
+      return ptr[objective_offset];
+    }
+    void gradient(const TVector &x, TVector &grad) {
+      int cnt = 0;
+      for (int i = 0; i < NUM_VARIABLES; i++) {
+        for (int j = 0; j < var_size[i]; j++) {
+          ptr[var_offset[i] + j] = x(cnt);
+          cnt++;
+        }
+      }
+
+      evaluate_partial_derivatives();
+      cnt = 0;
+      for (int i = 0; i < NUM_VARIABLES; i++) {
+        for (int j = 0; j < var_size[i]; j++) {
+          grad(cnt) = ptr[partial_derivative_offset[i] + j];
+          cnt++;
+        }
+      }
+    }
+};
+
+typedef typename OptimizationProblem::TVector TVector;
+
 int main() {
-  {
-    hid_t file, dset;
-    file = H5Fopen ("hihi.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
-    dset = H5Dopen (file, "hihi", H5P_DEFAULT);
-    H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, x);
-    H5Fclose (file);
-    H5Dclose (dset);
+
+  TVector x = TVector::Zero(NUM_ACTUAL_VARIABLES);
+  TVector x_lower_bound = TVector::Zero(NUM_ACTUAL_VARIABLES);
+  TVector x_upper_bound = TVector::Zero(NUM_ACTUAL_VARIABLES);
+
+  // read fixed value, initialial values and bounds
+  read_values();
+  read_bounds();
+  // copying initial values
+  int cnt = 0;
+  for (int i = 0; i < NUM_VARIABLES; i++) {
+    for (int j = 0; j < var_size[i]; j++) {
+      x(cnt) = ptr[var_offset[i] + j];
+      cnt++;
+    }
   }
 
-  for (int i = 0; i < 4; i++) {
-    std::cout << x[i] << std::endl;
+  // copying lower bound and upper bound
+  for (int i = 0; i < NUM_VARIABLES; i++) {
+    x_lower_bound(i) = lower_bound[i];
+    x_upper_bound(i) = upper_bound[i];
+  }
+
+  // optimization problem
+  OptimizationProblem f;
+  f.setLowerBound(x_lower_bound);
+  f.setUpperBound(x_upper_bound);
+
+  LbfgsbSolver<OptimizationProblem> solver;
+  solver.minimize(f, x);
+
+  cnt = 0;
+  for (int i = 0; i < NUM_VARIABLES; i++) {
+    for (int j = 0; j < var_size[i]; j++) {
+      ptr[var_offset[i] + j] = x(cnt);
+      cnt++;
+    }
   }
 }

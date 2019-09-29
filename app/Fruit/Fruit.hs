@@ -253,4 +253,4 @@ anotherFruit = do
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs"
+        Success proceed -> proceed "algorithms/lbfgs-box"

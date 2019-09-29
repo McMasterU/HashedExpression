@@ -31,7 +31,7 @@ def normalize(img):
 
 
 def main():
-    hihi = np.array([1, 2, np.inf, np.inf]);
+    hihi = np.array([1, 2, -np.inf, -np.inf]);
     save_file_hdf5(hihi, "hihi")
     return
     # read data from np
