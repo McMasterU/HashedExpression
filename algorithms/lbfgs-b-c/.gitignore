@@ -1,6 +1,6 @@
 *
-!cppoptlib
-!cppoptlib/*
+!lib
+!lib/*
 !*.c
 !*.cpp
 !Makefile
