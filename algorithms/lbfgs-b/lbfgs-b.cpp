@@ -55,7 +55,11 @@ using namespace cppoptlib;
 
 class OptimizationProblem : public BoundedProblem<double> {
   public:
-    using typename Problem<double>::TVector;
+    using typename BoundedProblem<double>::TVector;
+    using Superclass = BoundedProblem<double>;
+
+    OptimizationProblem(int DIM) : Superclass(DIM) {}
+
     double value(const TVector &x) {
       int cnt = 0;
       for (int i = 0; i < NUM_VARIABLES; i++) {
@@ -92,9 +96,13 @@ typedef typename OptimizationProblem::TVector TVector;
 
 int main() {
 
+  TVector infBound(NUM_ACTUAL_VARIABLES);
+  infBound.setConstant(std::numeric_limits<double>::infinity());
+  TVector x_lower_bound = -infBound;
+  TVector x_upper_bound = infBound;
+
+  //
   TVector x = TVector::Zero(NUM_ACTUAL_VARIABLES);
-  TVector x_lower_bound = TVector::Zero(NUM_ACTUAL_VARIABLES);
-  TVector x_upper_bound = TVector::Zero(NUM_ACTUAL_VARIABLES);
 
   // read fixed value, initialial values and bounds
   read_values();
@@ -109,19 +117,24 @@ int main() {
   }
 
   // copying lower bound and upper bound
-  for (int i = 0; i < NUM_VARIABLES; i++) {
-    x_lower_bound(i) = lower_bound[i];
-    x_upper_bound(i) = upper_bound[i];
+  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {
+      x_lower_bound(i) = lower_bound[i];
+      x_upper_bound(i) = upper_bound[i];
   }
 
+  printf("NUM_ACTUAL_VARIABLES = %d\n", NUM_ACTUAL_VARIABLES);
+  std::cout << x_lower_bound << std::endl;
+  std::cout << x_upper_bound << std::endl;
+
   // optimization problem
-  OptimizationProblem f;
+  OptimizationProblem f(NUM_ACTUAL_VARIABLES);
   f.setLowerBound(x_lower_bound);
   f.setUpperBound(x_upper_bound);
 
   LbfgsbSolver<OptimizationProblem> solver;
   solver.minimize(f, x);
 
+  printf("f(x) = %f\n", f(x));
   cnt = 0;
   for (int i = 0; i < NUM_VARIABLES; i++) {
     for (int j = 0; j < var_size[i]; j++) {
@@ -129,4 +142,5 @@ int main() {
       cnt++;
     }
   }
+  print_vars();
 }

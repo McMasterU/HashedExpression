@@ -88,7 +88,7 @@ getBoundVal (LowerBound val) = val
 --
 data Constraint
     = NoConstraint
-    | BoxConstraint (Map String Bound)
+    | BoxConstraint [(String, Bound)]
     deriving (Show, Eq, Ord)
 
 -- | Return a map from variable name to the corresponding partial derivative node id
@@ -232,7 +232,7 @@ generateProblemCode valMaps Problem {..}
             mapM_ writeVal $ Map.toList valMaps
             case constraint of
                 NoConstraint -> return ()
-                BoxConstraint boundMap -> mapM_ writeBound $ Map.toList boundMap
+                BoxConstraint bounds -> mapM_ writeBound bounds
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
   where
     vs :: [(String, Int)]
@@ -280,13 +280,13 @@ generateProblemCode valMaps Problem {..}
             var ++
             "is of shape " ++ show shape ++ " but the value provided is not"
         | BoxConstraint boundMap <- constraint
-        , Just var <- find (not . isVariable) $ Map.keys boundMap =
+        , Just var <- find (not . isVariable) $ map fst boundMap =
             Just $
             var ++ " is not a variable but you're trying to box constrain it"
         | BoxConstraint boundMap <- constraint
         , let isOk (var, val) = compatible (variableShape var) val
         , Just (var, _) <-
-             find (not . isOk) . Map.toList . Map.map getBoundVal $ boundMap =
+             find (not . isOk) . mapSecond getBoundVal $ boundMap =
             Just $
             "The box bound provided to variable " ++
             var ++ " is not the same shape as " ++ var
@@ -390,7 +390,7 @@ generateProblemCode valMaps Problem {..}
                     ] ++
                     space
                         2
-                        (concatMap readBoundCodeEach . Map.toList $ boundMap) ++
+                        (concatMap readBoundCodeEach boundMap) ++
                     ["}"]
     readVals =
         ["void read_values() {"] ++ --
