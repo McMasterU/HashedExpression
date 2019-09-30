@@ -77,6 +77,12 @@ mapBoth f (x, y) = (f x, f y)
 
 -- |
 --
+mapSecond :: (b -> c) -> [(a, b)] -> [(a, c)]
+mapSecond _ [] = []
+mapSecond f ((x, y):rest) = (x, f y) : mapSecond f rest
+
+-- |
+--
 measureTime :: IO a -> IO ()
 measureTime action = do
     beforeTime <- getCurrentTime

@@ -73,8 +73,7 @@ imFT = xIm . ft
 --    let exp = huber 1 x
 --        fun = Function exp empty
 --    plot1VariableFunction fun "haha"
-main = anotherFruit
---main = do
+--main = anotherFruit--main = do
 --    let a = const 33
 --        b = const 100
 --        x = var "x"
@@ -86,3 +85,12 @@ main = anotherFruit
 --    case generateProblemCode valMap problem of
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs"
+main = smilingFaceProblem --main = do
+--    let objectiveFunction = x - const 3
+--    let valMap = fromList [("x", VScalar 19999)]
+--        vars = ["x"]
+--    let constraint = BoxConstraint [("x", LowerBound $ VScalar 0)]
+--    let problem = constructProblem objectiveFunction vars constraint
+--    case generateProblemCode valMap problem of
+--        Invalid str -> putStrLn str
+--        Success proceed -> proceed "algorithms/lbfgs-b"

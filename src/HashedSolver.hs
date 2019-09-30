@@ -25,6 +25,7 @@ import HashedExpression
     , Node(..)
     , R
     , Scalar
+    , Shape
     , exIndex
     , exMap
     )
@@ -54,6 +55,7 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
+        , constraint :: Constraint
         }
 
 instance Show Problem where
@@ -70,6 +72,24 @@ instance Show Problem where
                 [ "----------------∂f/∂" ++ varName var ++ "-------------"
                 , debugPrint (expressionMap, partialDerivativeId var)
                 ]
+
+-- |
+--
+data Bound
+    = UpperBound Val
+    | LowerBound Val
+    deriving (Show, Eq, Ord)
+
+getBoundVal :: Bound -> Val
+getBoundVal (UpperBound val) = val
+getBoundVal (LowerBound val) = val
+
+-- | 
+--
+data Constraint
+    = NoConstraint
+    | BoxConstraint [(String, Bound)]
+    deriving (Show, Eq, Ord)
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
@@ -90,9 +110,10 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Scalar R -> Set String -> Problem
-constructProblem notSimplifedF vars =
-    let f@(Expression fId fMp) = normalize notSimplifedF
+constructProblem :: Expression Scalar R -> [String] -> Constraint -> Problem
+constructProblem notSimplifedF varList constraint =
+    let vars = Set.fromList varList
+        f@(Expression fId fMp) = normalize notSimplifedF
         df@(Expression dfId dfMp) =
             collectDifferentials . exteriorDerivative vars $ f
         -- Map from a variable name to id in the problem's ExpressionMap
@@ -134,17 +155,18 @@ constructProblem notSimplifedF vars =
             , objectiveId = problemObjectiveId
             , memMap = problemMemMap
             , expressionMap = problemExpressionMap
+            , constraint = constraint
             }
 
 -- | Read $numDoubles$ doubles from $fileName$ to ptr[offset]
 --
-generateReadValuesCode :: String -> Val -> Int -> Int -> Code
-generateReadValuesCode varName val offset numDoubles =
+generateReadValuesCode :: String -> Val -> String -> Int -> Code
+generateReadValuesCode dataset val address numDoubles =
     case val of
-        VScalar value -> scoped ["ptr[" ++ show offset ++ "]" <<- show value]
-        V1D _ -> readFileText (varName ++ ".txt")
-        V2D _ -> readFileText (varName ++ ".txt")
-        V3D _ -> readFileText (varName ++ ".txt")
+        VScalar value -> scoped ["*(" ++ address ++ ")" <<- show value]
+        V1D _ -> readFileText (dataset ++ ".txt")
+        V2D _ -> readFileText (dataset ++ ".txt")
+        V3D _ -> readFileText (dataset ++ ".txt")
         V1DFile TXT fileName -> readFileText fileName
         V2DFile TXT fileName -> readFileText fileName
         V3DFile TXT fileName -> readFileText fileName
@@ -154,21 +176,25 @@ generateReadValuesCode varName val offset numDoubles =
   where
     readFileText fileName =
         scoped
-            [ "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
+            [ "printf(\"Reading " ++
+              dataset ++ " from text file " ++ fileName ++ "....\\n\");"
+            , "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
             , "int i;"
             , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
-            , "  fscanf(fp, \"%lf\", &ptr[" ++ show offset ++ " + i]);"
+            , "  fscanf(fp, \"%lf\", " ++ address ++ " + i);"
             , "}"
             , "fclose(fp);"
             ]
     readFileHD5 fileName =
         scoped
-            [ "hid_t file, dset;"
+            [ "printf(\"Reading " ++
+              dataset ++ " from HDF5 file " ++ fileName ++ "....\\n\");"
+            , "hid_t file, dset;"
             , "file = H5Fopen (\"" ++
               fileName ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
-            , "dset = H5Dopen (file, \"" ++ varName ++ "\", H5P_DEFAULT);"
-            , "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + " ++
-              show offset ++ ");"
+            , "dset = H5Dopen (file, \"" ++ dataset ++ "\", H5P_DEFAULT);"
+            , "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, " ++
+              address ++ ");"
             , "H5Fclose (file);"
             , "H5Dclose (dset);"
             ]
@@ -186,15 +212,45 @@ generateProblemCode valMaps Problem {..}
     | Just errorMsg <- checkError = Invalid errorMsg
     | otherwise =
         Success $ \folder -> do
-            let codes = defineStuffs ++ readVals ++ evaluatingCodes
+            let codes =
+                    defineStuffs ++
+                    constraintCodes ++
+                    readVals ++
+                    evaluatingCodes ++
+                    evaluateObjectiveCodes ++ evaluatePartialDerivatives
             let writeVal (var, val) =
                     unless (null $ valElems val) $ do
                         let str = unwords . map show . valElems $ val
                         writeFile (folder ++ "/" ++ var ++ ".txt") str
+            let writeBound (var, bound) =
+                    unless (null . valElems . getBoundVal $ bound) $ do
+                        let str =
+                                unwords . map show . valElems $
+                                getBoundVal bound
+                            fileName
+                                | UpperBound _ <- bound = var ++ "_ub.txt"
+                                | otherwise = var ++ "_lb.txt"
+                        writeFile (folder ++ "/" ++ fileName) str
             mapM_ writeVal $ Map.toList valMaps
+            case constraint of
+                NoConstraint -> return ()
+                BoxConstraint bounds -> mapM_ writeBound bounds
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
   where
-    vs = varsAndShape expressionMap
+    vs :: [(String, Int)]
+    vs = varNodesWithId expressionMap
+    isVariable :: String -> Bool
+    isVariable v = v `elem` map varName variables
+    vars :: [String] -- variables we're trying to optimize over
+    vars = map varName variables
+    varSize = map (product . variableShape) vars
+    totalVarSize = sum varSize
+    entries = entryMap memMap
+    variableShape :: String -> Shape
+    variableShape name =
+        let nId = nodeId . fromJust . find ((== name) . varName) $ variables
+         in retrieveShape nId expressionMap
+    compatible :: Shape -> Val -> Bool
     compatible shape v =
         case (shape, v) of
             ([], VScalar val) -> True
@@ -208,36 +264,35 @@ generateProblemCode valMaps Problem {..}
             ([x, y], V2DFile {}) -> True
             ([x, y, z], V3DFile {}) -> True
             _ -> False
-    isVariable v = v `elem` map varName variables
+    -- Check if is variable or a fixed value
     checkError
         | Just var <-
              find (not . (`Map.member` valMaps)) . map varName $ variables =
             Just $ "No initial value for variable " ++ var
         | Just var <- find (not . (`Map.member` valMaps)) . map fst $ vs =
             Just $ "No value provided for fixed parameter " ++ var
-        | otherwise =
-            let isOk (var, nId) =
-                    compatible
-                        (retrieveShape nId expressionMap)
-                        (fromJust (var `Map.lookup` valMaps))
-             in case find (not . isOk) vs of
-                    Just (var, shape) ->
-                        Just $
-                        "variable " ++
-                        var ++
-                        "is of shape " ++
-                        show shape ++ " but the value provided is not"
-                    Nothing -> Nothing
-    readValCodeEach (var, nId) =
-        generateReadValuesCode
-            var
-            (fromJust $ Map.lookup var valMaps)
-            offset
-            (product shape)
-      where
-        offset = memOffset memMap nId LookupR
-        shape = retrieveShape nId expressionMap
-    entries = entryMap memMap
+        | otherwise
+        , let isOk (var, nId) =
+                  compatible
+                      (retrieveShape nId expressionMap)
+                      (fromJust (var `Map.lookup` valMaps))
+        , Just (var, shape) <- find (not . isOk) vs =
+            Just $
+            "variable " ++
+            var ++
+            "is of shape " ++ show shape ++ " but the value provided is not"
+        | BoxConstraint boundMap <- constraint
+        , Just var <- find (not . isVariable) $ map fst boundMap =
+            Just $
+            var ++ " is not a variable but you're trying to box constrain it"
+        | BoxConstraint boundMap <- constraint
+        , let isOk (var, val) = compatible (variableShape var) val
+        , Just (var, _) <- find (not . isOk) . mapSecond getBoundVal $ boundMap =
+            Just $
+            "The box bound provided to variable " ++
+            var ++ " is not the same shape as " ++ var
+        | otherwise = Nothing
+    evaluatingIds = objectiveId : map partialDerivativeId variables
     toShapeString shape
         | length shape < 3 =
             "{" ++
@@ -257,7 +312,16 @@ generateProblemCode valMaps Problem {..}
             (fst3 . fromJust . flip IM.lookup entries . partialDerivativeId)
             variables
     objectiveOffset = fst3 . fromJust . flip IM.lookup entries $ objectiveId
-    evaluatingIds = objectiveId : map partialDerivativeId variables
+    -- For both variables and fixed value
+    readValCodeEach (var, nId) =
+        generateReadValuesCode
+            var
+            (fromJust $ Map.lookup var valMaps)
+            ("ptr + " ++ show offset)
+            (product shape)
+      where
+        offset = memOffset memMap nId LookupR
+        shape = retrieveShape nId expressionMap
     defineStuffs =
         [ "#include <math.h>"
         , "#include <stdio.h>"
@@ -267,7 +331,10 @@ generateProblemCode valMaps Problem {..}
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)
+        , "#define NUM_ACTUAL_VARIABLES " ++ show totalVarSize
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
+        , ""
+        , ""
         , "const char* var_name[NUM_VARIABLES] = {" ++
           (intercalate ", " . map (show . varName) $ variables) ++ "};"
         , "const int var_num_dim[NUM_VARIABLES] = {" ++
@@ -285,6 +352,44 @@ generateProblemCode valMaps Problem {..}
         , ""
         , ""
         ]
+    constraintCodes =
+        case constraint of
+            NoConstraint -> []
+            BoxConstraint boundMap ->
+                let varPosition = take (length varSize) $ scanl (+) 0 varSize
+                    varWithPos = zip vars varPosition
+                    getPos name =
+                        snd . fromJust . find ((== name) . fst) $ varWithPos
+                    declarations =
+                        [ "const int bound_pos[NUM_VARIABLES] = {" ++
+                          (intercalate ", " . map show $ varPosition) ++ "};"
+                        , "double lower_bound[NUM_ACTUAL_VARIABLES];"
+                        , "double upper_bound[NUM_ACTUAL_VARIABLES];"
+                        , ""
+                        , ""
+                        ]
+                    readBoundCodeEach (name, bound) =
+                        case bound of
+                            UpperBound val ->
+                                generateReadValuesCode
+                                    (name ++ "_ub")
+                                    val
+                                    ("upper_bound + " ++ show (getPos name))
+                                    (product $ variableShape name)
+                            LowerBound val ->
+                                generateReadValuesCode
+                                    (name ++ "_lb")
+                                    val
+                                    ("lower_bound + " ++ show (getPos name))
+                                    (product $ variableShape name)
+                 in declarations ++ --
+                    [ "void read_bounds() {" --
+                    , "  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {"
+                    , "    lower_bound[i] = -INFINITY;"
+                    , "    upper_bound[i] = INFINITY;"
+                    , "  }"
+                    ] ++
+                    space 2 (concatMap readBoundCodeEach boundMap) ++ ["}"]
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
@@ -293,19 +398,15 @@ generateProblemCode valMaps Problem {..}
         ["void evaluate_partial_derivatives_and_objective() {"] ++
         space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
         ["}"]
-
-getMinimumGradientDescent :: Code -> IO ()
-getMinimumGradientDescent codes = do
-    let filePath = "algorithms/gradient_descent/problem.c"
-    TIO.writeFile filePath $ T.intercalate "\n" $ map T.pack codes
-    (exitCode, stdout, stderr) <-
-        readProcessWithExitCode "make" ["-C", "algorithms/gradient_descent"] ""
-    putStrLn stdout
-    putStrLn stderr
-    (exitCode, stdout, stderr) <-
-        readProcessWithExitCode
-            "algorithms/gradient_descent/gradient_descent"
-            []
-            ""
-    putStrLn stdout
-    putStrLn stderr
+    evaluateObjectiveCodes =
+        ["void evaluate_objective() {"] ++
+        space 2 (generateEvaluatingCodes memMap (expressionMap, [objectiveId])) ++
+        ["}"]
+    evaluatePartialDerivatives =
+        ["void evaluate_partial_derivatives() {"] ++
+        space
+            2
+            (generateEvaluatingCodes
+                 memMap
+                 (expressionMap, map partialDerivativeId variables)) ++
+        ["}"]

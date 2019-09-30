@@ -125,7 +125,7 @@ tof2DUp size@(row, column) =
         t = var2d size tName
         mask = var2d size maskName
         (matchObjective, predefinedValMap1) = tof2DTimeVelocityConstraint size
-        vars = Set.fromList [tName]
+        vars = [tName]
         tZeroOnBottom = mask <.> (t * t)
         objectiveFn = matchObjective + tZeroOnBottom
         valMaps =
@@ -140,7 +140,7 @@ tof2DUp size@(row, column) =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars
+        problem = constructProblem objectiveFn vars NoConstraint
      in (problem, finalValMap1)
 
 -- |
@@ -154,7 +154,7 @@ tof2DStraight size@(row, column) start width scalingFactor =
         mask = var2d size maskName
         (vxVal, vyVal) = straightFlow size start width scalingFactor
         (matchObjective, predefinedValMap1) = tof2DTimeVelocityConstraint size
-        vars = Set.fromList [tName]
+        vars = [tName]
         tZeroOnBottom = mask <.> (t * t)
         objectiveFn = matchObjective + tZeroOnBottom
         valMaps =
@@ -167,7 +167,7 @@ tof2DStraight size@(row, column) start width scalingFactor =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars
+        problem = constructProblem objectiveFn vars NoConstraint
      in (problem, finalValMap1, (vxVal, vyVal))
 
 -- |
@@ -181,7 +181,7 @@ tof2DQuarterCircle size@(row, column) start width scalingFactor =
         mask = var2d size maskName
         (vxVal, vyVal) = quarterCircleFlow size start width scalingFactor
         (matchObjective, predefinedValMap1) = tof2DTimeVelocityConstraint size
-        vars = Set.fromList [tName]
+        vars = [tName]
         tZeroOnBottom = mask <.> (t * t)
         objectiveFn = matchObjective + tZeroOnBottom
         valMaps =
@@ -194,5 +194,5 @@ tof2DQuarterCircle size@(row, column) start width scalingFactor =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars
+        problem = constructProblem objectiveFn vars NoConstraint
      in (problem, finalValMap1, (vxVal, vyVal))
