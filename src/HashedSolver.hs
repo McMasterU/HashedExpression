@@ -176,7 +176,8 @@ generateReadValuesCode dataset val address numDoubles =
   where
     readFileText fileName =
         scoped
-            [ "printf(\"Reading " ++ dataset ++ " from text file " ++ fileName ++ "....\\n\");"
+            [ "printf(\"Reading " ++
+              dataset ++ " from text file " ++ fileName ++ "....\\n\");"
             , "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
             , "int i;"
             , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
@@ -186,7 +187,8 @@ generateReadValuesCode dataset val address numDoubles =
             ]
     readFileHD5 fileName =
         scoped
-            [ "printf(\"Reading " ++ dataset ++ " from HDF5 file " ++ fileName ++ "....\\n\");"
+            [ "printf(\"Reading " ++
+              dataset ++ " from HDF5 file " ++ fileName ++ "....\\n\");"
             , "hid_t file, dset;"
             , "file = H5Fopen (\"" ++
               fileName ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
@@ -285,8 +287,7 @@ generateProblemCode valMaps Problem {..}
             var ++ " is not a variable but you're trying to box constrain it"
         | BoxConstraint boundMap <- constraint
         , let isOk (var, val) = compatible (variableShape var) val
-        , Just (var, _) <-
-             find (not . isOk) . mapSecond getBoundVal $ boundMap =
+        , Just (var, _) <- find (not . isOk) . mapSecond getBoundVal $ boundMap =
             Just $
             "The box bound provided to variable " ++
             var ++ " is not the same shape as " ++ var
@@ -388,10 +389,7 @@ generateProblemCode valMaps Problem {..}
                     , "    upper_bound[i] = INFINITY;"
                     , "  }"
                     ] ++
-                    space
-                        2
-                        (concatMap readBoundCodeEach boundMap) ++
-                    ["}"]
+                    space 2 (concatMap readBoundCodeEach boundMap) ++ ["}"]
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
