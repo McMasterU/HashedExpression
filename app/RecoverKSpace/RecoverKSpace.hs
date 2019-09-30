@@ -88,11 +88,11 @@ directory = "app/RecoverKSpace/data/"
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 smilingFaceProblem :: IO ()
 smilingFaceProblem = do
-    let x = variable2D @2 @2 "x"
-        one = constant2D @2 @2 1
-        zero = constant2D @2 @2 0
+    let x = variable2D @128 @128 "x"
+        one = constant2D @128 @128 1
+        zero = constant2D @128 @128 0
     let objectiveFunction = norm2square x
-    let valMap = fromList [("x", V2D $ listArray ((0, 0), (1, 1)) $ repeat 21)]
+    let valMap = fromList [("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 21)]
         vars = ["x"]
     let constraint =
             BoxConstraint

@@ -79,11 +79,6 @@ def main():
     save_file_hdf5(x_ub, "x_ub")
     save_file_hdf5(x_lb, "x_lb")
 
-def main1():
-    x_ub = np.ones((2, 2)) * 41
-    x_lb = np.ones((2, 2)) * 20
-    save_file_hdf5(x_ub, "x_ub")
-    save_file_hdf5(x_lb, "x_lb")
 
-main1()
+main()
 

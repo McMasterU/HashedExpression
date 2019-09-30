@@ -85,8 +85,7 @@ imFT = xIm . ft
 --    case generateProblemCode valMap problem of
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs"
-main = smilingFaceProblem
---main = do
+main = smilingFaceProblem--main = do
 --    let objectiveFunction = x - const 3
 --    let valMap = fromList [("x", VScalar 19999)]
 --        vars = ["x"]

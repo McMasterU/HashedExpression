@@ -52,6 +52,15 @@ void print_vars() {
 
 int main() {
     int i, j;
+    // Helpers, DON'T TOUCH
+    static double dsave[29];
+    static integer isave[44];
+    static logical lsave[4];
+    static integer taskValue;
+    static integer *task=&taskValue;
+    static integer csaveValue;
+    static integer *csave=&csaveValue;
+
     // f - objective, g - gradient
     static double f, g[NUM_ACTUAL_VARIABLES], x[NUM_ACTUAL_VARIABLES];
     // l - lower bound, u - upper bound
@@ -112,15 +121,34 @@ int main() {
     //                    summarize the iteration.
     static integer iprint = 0;
 
-    // Helpers, DON'T TOUCH
-    static double dsave[29];
-    static integer isave[44];
-    static logical lsave[4];
-    static integer taskValue;
-    static integer *task=&taskValue;
-    static integer csaveValue;
-    static integer *csave=&csaveValue;
 
+    // MARK: initialization, read values, bounds
+    read_values();
+    read_bounds();
+
+    // initial values
+    int cnt = 0;
+    for (i = 0; i < NUM_VARIABLES; i++) {
+      for (j = 0; j < var_size[i]; j++) {
+        x[cnt] = ptr[var_offset[i] + j];
+        cnt++;
+      }
+    }
+
+    // bounds
+    for (i = 0; i < NUM_ACTUAL_VARIABLES; i++) {
+      l[i] = lower_bound[i];
+      u[i] = upper_bound[i];
+      if (lower_bound[i] == -INFINITY && upper_bound[i] == INFINITY) {
+        nbd[i] = 0; // unbound
+      } else if (lower_bound[i] != -INFINITY && upper_bound[i] == INFINITY) {
+        nbd[i] = 1; // 1 if x(i) has only a lower bound,
+      } else if (lower_bound[i] != -INFINITY && upper_bound[i] != INFINITY) {
+        nbd[i] = 2; // bounded both
+      } else if (lower_bound[i] == -INFINITY && upper_bound[i] != INFINITY) {
+        nbd[i] = 3; // only lower_bound
+      }
+    }
 
     *task = START;
     /*        ------- the beginning of the loop ---------- */
@@ -159,6 +187,8 @@ L111:
     if ( *task==NEW_X ) {
         goto L111;
     }
+
+    print_vars();
     /*           ---------- the end of the loop ------------- */
     /*     If task is neither FG nor NEW_X we terminate execution. */
     return 0;
