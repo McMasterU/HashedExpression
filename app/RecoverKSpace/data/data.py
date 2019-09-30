@@ -42,6 +42,8 @@ def main():
     gaussian = np.random.normal(noise_mean, noise_sigma, (r, c))
     img = wanted_image + gaussian
 
+    show_img(img)
+
     # get the region of head
     median = normalize(ndimage.median_filter(img, 10));
     head = median > 0.1
@@ -60,16 +62,17 @@ def main():
         im[i] = 0
         mask[i] = 0
 
-    # bound_noise = 10 * 1.3  # 80% of gaussian
-    bound_noise = 40
+    bound_noise = 1;
 
-    x_ub = np.ones((r, c)) * 41
-    x_lb = np.ones((r, c)) * 20
-    # for i in range(r):
-    #     for j in range(c):
-    #         if not head[i, j]:
-    #             x_ub[i, j] = bound_noise
-    #             x_lb[i, j] = -bound_noise
+    x_ub = np.ones((r, c)) * np.PINF
+    x_lb = np.ones((r, c)) * np.NINF
+    for i in range(r):
+        for j in range(c):
+            if not head[i, j]:
+                x_ub[i, j] = bound_noise
+                x_lb[i, j] = -bound_noise
+            else:
+                x_lb[i, j] = 0
 
 
     save_file_hdf5(re, "re")
