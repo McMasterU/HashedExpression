@@ -1,5 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module HashedSolver where
 
@@ -58,6 +62,15 @@ data Problem =
         , constraint :: Constraint
         }
 
+-- | 
+--
+data Constraint
+    = NoConstraint
+    | BoxConstraint [(String, Bound)]
+    | BoxConstraint1 [NewConstraint]
+    | IPOPTConstraint [NewConstraint]
+    deriving (Show, Eq, Ord)
+
 -- |
 --
 data Bound
@@ -68,6 +81,37 @@ data Bound
 getBoundVal :: Bound -> Val
 getBoundVal (UpperBound val) = val
 getBoundVal (LowerBound val) = val
+
+data NewConstraint
+    = ScalarLower (Expression Scalar R) Double
+    | ScalarUpper (Expression Scalar R) Double
+    | ScalarBetween (Expression Scalar R) (Double, Double)
+    | VariableUpper String Val
+    | VariableLower String Val
+    | VariableBetween String (Val, Val)
+    deriving (Show, Eq, Ord)
+
+-- | 
+--
+class ConstraintOperation a b | a -> b where
+    (.<=) :: a -> b -> NewConstraint
+    (.>=) :: a -> b -> NewConstraint
+    between :: a -> (b, b) -> NewConstraint
+    (.==) :: a -> b -> NewConstraint
+
+infix 1 `between`, .>=, .<=
+
+instance ConstraintOperation (Expression Scalar R) Double where
+    (.<=) = ScalarUpper
+    (.>=) = ScalarLower
+    between = ScalarBetween
+    (.==) exp db = ScalarBetween exp (db, db)
+
+instance ConstraintOperation String Val where
+    (.<=) = VariableUpper
+    (.>=) = VariableLower
+    between = VariableBetween
+    (.==) var val = VariableBetween var (val, val)
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
@@ -176,13 +220,6 @@ generateReadValuesCode dataset val address numDoubles =
             , "H5Fclose (file);"
             , "H5Dclose (dset);"
             ]
-
--- | 
---
-data Constraint
-    = NoConstraint
-    | BoxConstraint [(String, Bound)]
-    deriving (Show, Eq, Ord)
 
 -- |
 --
