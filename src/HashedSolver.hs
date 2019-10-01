@@ -73,24 +73,6 @@ instance Show Problem where
                 , debugPrint (expressionMap, partialDerivativeId var)
                 ]
 
--- |
---
-data Bound
-    = UpperBound Val
-    | LowerBound Val
-    deriving (Show, Eq, Ord)
-
-getBoundVal :: Bound -> Val
-getBoundVal (UpperBound val) = val
-getBoundVal (LowerBound val) = val
-
--- | 
---
-data Constraint
-    = NoConstraint
-    | BoxConstraint [(String, Bound)]
-    deriving (Show, Eq, Ord)
-
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
 --
@@ -201,6 +183,24 @@ generateReadValuesCode dataset val address numDoubles =
 
 -- |
 --
+data Bound
+    = UpperBound Val
+    | LowerBound Val
+    deriving (Show, Eq, Ord)
+
+getBoundVal :: Bound -> Val
+getBoundVal (UpperBound val) = val
+getBoundVal (LowerBound val) = val
+
+-- | 
+--
+data Constraint
+    = NoConstraint
+    | BoxConstraint [(String, Bound)]
+    deriving (Show, Eq, Ord)
+
+-- |
+--
 data GenResult
     = Invalid String
     | Success (String -> IO ()) -- Give it the name of the folder of your solver, it will write all the files necessary
@@ -236,34 +236,27 @@ generateProblemCode valMaps Problem {..}
                 NoConstraint -> return ()
                 BoxConstraint bounds -> mapM_ writeBound bounds
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
+    -- var nodes, can be optimizing variables or fixed values
   where
     vs :: [(String, Int)]
     vs = varNodesWithId expressionMap
+    -- check if this name is optimizing variable or fixed value
     isVariable :: String -> Bool
     isVariable v = v `elem` map varName variables
-    vars :: [String] -- variables we're trying to optimize over
+    -- variables we're trying to optimize over
+    vars :: [String]
     vars = map varName variables
-    varSize = map (product . variableShape) vars
-    totalVarSize = sum varSize
-    entries = entryMap memMap
+    -- get shape of an optimizing variable
     variableShape :: String -> Shape
     variableShape name =
         let nId = nodeId . fromJust . find ((== name) . varName) $ variables
          in retrieveShape nId expressionMap
-    compatible :: Shape -> Val -> Bool
-    compatible shape v =
-        case (shape, v) of
-            ([], VScalar val) -> True
-            ([x], V1D arr1d)
-                | bounds arr1d == (0, x - 1) -> True
-            ([x, y], V2D arr2d)
-                | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
-            ([x, y, z], V3D arr3d)
-                | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
-            ([x], V1DFile {}) -> True
-            ([x, y], V2DFile {}) -> True
-            ([x, y, z], V3DFile {}) -> True
-            _ -> False
+    -- size of each variable (product of it's shape)
+    variableSizes = map (product . variableShape) vars
+    totalVarSize = sum variableSizes
+    -- MemMap
+    entries = entryMap memMap
+    getMemOffset = fst3 . fromJust . flip IM.lookup entries
     -- Check if is variable or a fixed value
     checkError
         | Just var <-
@@ -292,26 +285,11 @@ generateProblemCode valMaps Problem {..}
             "The box bound provided to variable " ++
             var ++ " is not the same shape as " ++ var
         | otherwise = Nothing
-    evaluatingIds = objectiveId : map partialDerivativeId variables
-    toShapeString shape
-        | length shape < 3 =
-            "{" ++
-            (intercalate ", " . map show $
-             shape ++ replicate (3 - length shape) 1) ++
-            "}"
-        | otherwise = "{" ++ (intercalate ", " . map show $ shape) ++ "}"
-    variableShapes = map (flip retrieveShape expressionMap . nodeId) variables
-    variableSizes =
-        map
-            (product . thd3 . fromJust . flip IM.lookup entries . nodeId)
-            variables
-    variableOffsets =
-        map (fst3 . fromJust . flip IM.lookup entries . nodeId) variables
+    variableShapes = map (variableShape . varName) variables
+    variableOffsets = map (getMemOffset . nodeId) variables
     partialDerivativeOffsets =
-        map
-            (fst3 . fromJust . flip IM.lookup entries . partialDerivativeId)
-            variables
-    objectiveOffset = fst3 . fromJust . flip IM.lookup entries $ objectiveId
+        map (getMemOffset . partialDerivativeId) variables
+    objectiveOffset = getMemOffset objectiveId
     -- For both variables and fixed value
     readValCodeEach (var, nId) =
         generateReadValuesCode
@@ -322,6 +300,7 @@ generateProblemCode valMaps Problem {..}
       where
         offset = memOffset memMap nId LookupR
         shape = retrieveShape nId expressionMap
+    objectiveAndGradient = objectiveId : map partialDerivativeId variables
     defineStuffs =
         [ "#include <math.h>"
         , "#include <stdio.h>"
@@ -356,7 +335,8 @@ generateProblemCode valMaps Problem {..}
         case constraint of
             NoConstraint -> []
             BoxConstraint boundMap ->
-                let varPosition = take (length varSize) $ scanl (+) 0 varSize
+                let varPosition =
+                        take (length variableSizes) $ scanl (+) 0 variableSizes
                     varWithPos = zip vars varPosition
                     getPos name =
                         snd . fromJust . find ((== name) . fst) $ varWithPos
@@ -396,7 +376,11 @@ generateProblemCode valMaps Problem {..}
         ["}"]
     evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective() {"] ++
-        space 2 (generateEvaluatingCodes memMap (expressionMap, evaluatingIds)) ++
+        space
+            2
+            (generateEvaluatingCodes
+                 memMap
+                 (expressionMap, objectiveAndGradient)) ++
         ["}"]
     evaluateObjectiveCodes =
         ["void evaluate_objective() {"] ++
@@ -410,3 +394,30 @@ generateProblemCode valMaps Problem {..}
                  memMap
                  (expressionMap, map partialDerivativeId variables)) ++
         ["}"]
+
+-- | 
+--
+compatible :: Shape -> Val -> Bool
+compatible shape v =
+    case (shape, v) of
+        ([], VScalar val) -> True
+        ([x], V1D arr1d)
+            | bounds arr1d == (0, x - 1) -> True
+        ([x, y], V2D arr2d)
+            | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
+        ([x, y, z], V3D arr3d)
+            | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
+        ([x], V1DFile {}) -> True
+        ([x, y], V2DFile {}) -> True
+        ([x, y, z], V3DFile {}) -> True
+        _ -> False
+
+-- | 
+--
+toShapeString :: Shape -> String
+toShapeString shape
+    | length shape < 3 =
+        "{" ++
+        (intercalate ", " . map show $ shape ++ replicate (3 - length shape) 1) ++
+        "}"
+    | otherwise = "{" ++ (intercalate ", " . map show $ shape) ++ "}"
