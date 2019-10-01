@@ -77,9 +77,10 @@ smilingFaceProblem = do
         xUpperBound = V2D $ listArray ((0, 0), (127, 127)) $ repeat 1
     let constraint =
             BoxConstraint
-                [
+                [ x .>= xLowerBound
+                , x .<= xUpperBound
                 ]
-    let (ProblemValid problem) = constructProblem objectiveFunction vars NoConstraint
+    let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
     let valMap =
             fromList
                 [ ("mask", V2DFile HDF5 "mask.h5")

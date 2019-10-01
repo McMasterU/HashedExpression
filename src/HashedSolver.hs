@@ -320,6 +320,7 @@ constructProblem objectiveFunction varList constraint
                     Just $ var ++ " is not a variable"
                 | any (not . compatible (variableShape var)) (getValCS cs) ->
                     Just $ "Bound for " ++ var ++ " is not in the right shape"
+                | otherwise -> Nothing
             _ -> Just "Box constraint only apply for stand-alone variable"
       where
         (mp, n) = getExpressionCS cs
@@ -550,7 +551,7 @@ generateProblemCode valMaps Problem {..}
                                         readLowerBoundCode name val1 ++
                                         readUpperBoundCode name val2
                          in concatMap readBoundCodeEach cnts
-                    _ -> [] 
+                    _ -> []
          in [ "const int bound_pos[NUM_VARIABLES] = {" ++
               (intercalate ", " . map show $ varPosition) ++ "};"
             , "double lower_bound[NUM_ACTUAL_VARIABLES];"
