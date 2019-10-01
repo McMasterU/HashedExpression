@@ -67,7 +67,7 @@ data Problem =
 data Constraint
     = NoConstraint
     | BoxConstraint [(String, Bound)]
-    | BoxConstraint1 [NewConstraint]
+    | BoxConstraintNew [NewConstraint]
     | IPOPTConstraint [NewConstraint]
     deriving (Show, Eq, Ord)
 
@@ -309,6 +309,7 @@ generateProblemCode valMaps Problem {..}
             "variable " ++
             var ++
             "is of shape " ++ show shape ++ " but the value provided is not"
+        -- Box constraint
         | BoxConstraint boundMap <- constraint
         , Just var <- find (not . isVariable) $ map fst boundMap =
             Just $
@@ -319,6 +320,12 @@ generateProblemCode valMaps Problem {..}
             Just $
             "The box bound provided to variable " ++
             var ++ " is not the same shape as " ++ var
+        -- Box constraint new
+        | BoxConstraintNew cnts <- constraint
+        , any (not . isBox) cnts = Just "constraint(s) is not box-constraint"
+        | BoxConstraintNew cnts <- constraint
+        , Just reason <- checkConstraint cnts varsWithShape = Just reason
+        -- everything is fine
         | otherwise = Nothing
     variableShapes = map (variableShape . varName) variables
     variableOffsets = map (getMemOffset . nodeId) variables
@@ -368,45 +375,59 @@ generateProblemCode valMaps Problem {..}
         , ""
         ]
     constraintCodes =
-        case constraint of
-            NoConstraint -> []
-            BoxConstraint boundMap ->
-                let declarations =
-                        [ "const int bound_pos[NUM_VARIABLES] = {" ++
-                          (intercalate ", " . map show $ varPosition) ++ "};"
-                        , "double lower_bound[NUM_ACTUAL_VARIABLES];"
-                        , "double upper_bound[NUM_ACTUAL_VARIABLES];"
-                        , ""
-                        , ""
-                        ]
-                    varPosition =
-                        take (length variableSizes) $ scanl (+) 0 variableSizes
-                    varWithPos = zip vars varPosition
-                    getPos name =
-                        snd . fromJust . find ((== name) . fst) $ varWithPos
-                    readBoundCodeEach (name, bound) =
-                        case bound of
-                            UpperBound val ->
-                                generateReadValuesCode
-                                    (name ++ "_ub")
-                                    val
-                                    ("upper_bound + " ++ show (getPos name))
-                                    (product $ variableShape name)
-                            LowerBound val ->
-                                generateReadValuesCode
-                                    (name ++ "_lb")
-                                    val
-                                    ("lower_bound + " ++ show (getPos name))
-                                    (product $ variableShape name)
-                 in declarations ++ --
-                    [ "void read_bounds() {" --
-                    , "  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {"
-                    , "    lower_bound[i] = -INFINITY;"
-                    , "    upper_bound[i] = INFINITY;"
-                    , "  }"
-                    ] ++
-                    space 2 (concatMap readBoundCodeEach boundMap) ++ --
-                    ["}"]
+        let varPosition =
+                take (length variableSizes) $ scanl (+) 0 variableSizes
+            varWithPos = zip vars varPosition
+            getPos name = snd . fromJust . find ((== name) . fst) $ varWithPos
+            readUpperBoundCode name val =
+                generateReadValuesCode
+                    (name ++ "_ub")
+                    val
+                    ("upper_bound + " ++ show (getPos name))
+                    (product $ variableShape name)
+            readLowerBoundCode name val =
+                generateReadValuesCode
+                    (name ++ "_lb")
+                    val
+                    ("lower_bound + " ++ show (getPos name))
+                    (product $ variableShape name)
+            readBounds =
+                case constraint of
+                    NoConstraint -> []
+                    BoxConstraint boundMap ->
+                        let readBoundCodeEach (name, bound) =
+                                case bound of
+                                    UpperBound val ->
+                                        readUpperBoundCode name val
+                                    LowerBound val ->
+                                        readLowerBoundCode name val
+                         in concatMap readBoundCodeEach boundMap
+                    BoxConstraintNew cnts ->
+                        let readBoundCodeEach cnt =
+                                case cnt of
+                                    BoxUpper name val ->
+                                        readUpperBoundCode name val
+                                    BoxLower name val ->
+                                        readLowerBoundCode name val
+                                    BoxBetween name (val1, val2) ->
+                                        readLowerBoundCode name val1 ++
+                                        readUpperBoundCode name val2
+                         in concatMap readBoundCodeEach cnts
+         in [ "const int bound_pos[NUM_VARIABLES] = {" ++
+              (intercalate ", " . map show $ varPosition) ++ "};"
+            , "double lower_bound[NUM_ACTUAL_VARIABLES];"
+            , "double upper_bound[NUM_ACTUAL_VARIABLES];"
+            , ""
+            , ""
+            ] ++ --
+            [ "void read_bounds() {" --
+            , "  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {"
+            , "    lower_bound[i] = -INFINITY;"
+            , "    upper_bound[i] = INFINITY;"
+            , "  }"
+            ] ++
+            space 2 readBounds ++ --
+            ["}"]
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
@@ -434,8 +455,8 @@ generateProblemCode valMaps Problem {..}
 
 -- | 
 --
-checkBoxConstraint :: [NewConstraint] -> [(String, Shape)] -> Maybe String
-checkBoxConstraint cts varsWithShape =
+checkConstraint :: [NewConstraint] -> [(String, Shape)] -> Maybe String
+checkConstraint cts varsWithShape =
     case mapMaybe validEach cts of
         firstReason:_ -> Just firstReason
         [] -> Nothing
@@ -463,7 +484,7 @@ checkBoxConstraint cts varsWithShape =
                         else Just $
                              "Bound provided for " ++ var ++ " is invalid"
                 | otherwise -> Just $ var ++ " is not variable"
-            _ -> Just "The set of constriant has non-box constraint"
+            _ -> Nothing
 
 -- | 
 --
