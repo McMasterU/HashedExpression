@@ -58,20 +58,16 @@ data Problem =
         , constraint :: Constraint
         }
 
-instance Show Problem where
-    show Problem {..} =
-        intercalate "\n" $
-        [ "-------------- Objective Function --------------"
-        , debugPrint (expressionMap, objectiveId)
-        ] ++
-        map showPartial variables
-      where
-        showPartial var =
-            intercalate
-                "\n"
-                [ "----------------∂f/∂" ++ varName var ++ "-------------"
-                , debugPrint (expressionMap, partialDerivativeId var)
-                ]
+-- |
+--
+data Bound
+    = UpperBound Val
+    | LowerBound Val
+    deriving (Show, Eq, Ord)
+
+getBoundVal :: Bound -> Val
+getBoundVal (UpperBound val) = val
+getBoundVal (LowerBound val) = val
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
@@ -180,17 +176,6 @@ generateReadValuesCode dataset val address numDoubles =
             , "H5Fclose (file);"
             , "H5Dclose (dset);"
             ]
-
--- |
---
-data Bound
-    = UpperBound Val
-    | LowerBound Val
-    deriving (Show, Eq, Ord)
-
-getBoundVal :: Bound -> Val
-getBoundVal (UpperBound val) = val
-getBoundVal (LowerBound val) = val
 
 -- | 
 --
@@ -301,6 +286,7 @@ generateProblemCode valMaps Problem {..}
         offset = memOffset memMap nId LookupR
         shape = retrieveShape nId expressionMap
     objectiveAndGradient = objectiveId : map partialDerivativeId variables
+    -- MARK: codes part --
     defineStuffs =
         [ "#include <math.h>"
         , "#include <stdio.h>"
@@ -335,12 +321,7 @@ generateProblemCode valMaps Problem {..}
         case constraint of
             NoConstraint -> []
             BoxConstraint boundMap ->
-                let varPosition =
-                        take (length variableSizes) $ scanl (+) 0 variableSizes
-                    varWithPos = zip vars varPosition
-                    getPos name =
-                        snd . fromJust . find ((== name) . fst) $ varWithPos
-                    declarations =
+                let declarations =
                         [ "const int bound_pos[NUM_VARIABLES] = {" ++
                           (intercalate ", " . map show $ varPosition) ++ "};"
                         , "double lower_bound[NUM_ACTUAL_VARIABLES];"
@@ -348,6 +329,11 @@ generateProblemCode valMaps Problem {..}
                         , ""
                         , ""
                         ]
+                    varPosition =
+                        take (length variableSizes) $ scanl (+) 0 variableSizes
+                    varWithPos = zip vars varPosition
+                    getPos name =
+                        snd . fromJust . find ((== name) . fst) $ varWithPos
                     readBoundCodeEach (name, bound) =
                         case bound of
                             UpperBound val ->
@@ -369,7 +355,8 @@ generateProblemCode valMaps Problem {..}
                     , "    upper_bound[i] = INFINITY;"
                     , "  }"
                     ] ++
-                    space 2 (concatMap readBoundCodeEach boundMap) ++ ["}"]
+                    space 2 (concatMap readBoundCodeEach boundMap) ++ --
+                    ["}"]
     readVals =
         ["void read_values() {"] ++ --
         space 2 (concatMap readValCodeEach vs) ++ --
@@ -421,3 +408,18 @@ toShapeString shape
         (intercalate ", " . map show $ shape ++ replicate (3 - length shape) 1) ++
         "}"
     | otherwise = "{" ++ (intercalate ", " . map show $ shape) ++ "}"
+
+instance Show Problem where
+    show Problem {..} =
+        intercalate "\n" $
+        [ "-------------- Objective Function --------------"
+        , debugPrint (expressionMap, objectiveId)
+        ] ++
+        map showPartial variables
+      where
+        showPartial var =
+            intercalate
+                "\n"
+                [ "----------------∂f/∂" ++ varName var ++ "-------------"
+                , debugPrint (expressionMap, partialDerivativeId var)
+                ]
