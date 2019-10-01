@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,6 +12,7 @@ import Control.Monad (unless)
 import Data.Array (bounds)
 import qualified Data.IntMap as IM
 import Data.List (find, intercalate)
+import Data.List.Extra (firstJust)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromJust, mapMaybe)
@@ -23,6 +25,7 @@ import HashedCollect
 import HashedDerivative
 import HashedExpression
     ( Covector
+    , DimensionType
     , ET(..)
     , Expression(..)
     , ExpressionMap
@@ -59,58 +62,76 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
-        , constraint :: Constraint
+        , boxConstraints :: Maybe [BoxConstraint]
+        , scalarConstraints :: Maybe [ScalarConstraint]
         }
 
--- | 
+-- |
+--
+data BoxConstraint
+    = BoxUpper String Val
+    | BoxLower String Val
+    | BoxBetween String (Val, Val)
+
+data ScalarConstraint =
+    ScalarConstraint
+        { constraintValueId :: Int
+        , constraintPartialDerivatives :: [Int]
+        , constraintLowerBound :: Double
+        , constraintUpperBound :: Double
+        }
+
+-- |
 --
 data Constraint
     = NoConstraint
-    | BoxConstraint [ConstraintInfo]
-    | IPOPTConstraint [ConstraintInfo]
+    | BoxConstraint [ConstraintStatement]
+    | IPOPTConstraint [ConstraintStatement]
     deriving (Show, Eq, Ord)
 
 -- |
 --
-data ConstraintInfo
-    = ScalarLower (Expression Scalar R) Double
-    | ScalarUpper (Expression Scalar R) Double
-    | ScalarBetween (Expression Scalar R) (Double, Double)
-    -- box constraint of variables
-    | BoxUpper String Val
-    | BoxLower String Val
-    | BoxBetween String (Val, Val)
+data ConstraintStatement
+    = Lower (ExpressionMap, Int) Val
+    | Upper (ExpressionMap, Int) Val
+    | Between (ExpressionMap, Int) (Val, Val)
     deriving (Show, Eq, Ord)
 
-isBox :: ConstraintInfo -> Bool
-isBox c =
-    case c of
-        BoxUpper {} -> True
-        BoxLower {} -> True
-        BoxBetween {} -> True
-        _ -> False
+getExpressionCS :: ConstraintStatement -> (ExpressionMap, Int)
+getExpressionCS cs =
+    case cs of
+        Lower exp _ -> exp
+        Upper exp _ -> exp
+        Between exp _ -> exp
 
--- | 
+getValCS :: ConstraintStatement -> [Val]
+getValCS cs =
+    case cs of
+        Lower _ val -> [val]
+        Upper _ val -> [val]
+        Between _ (val1, val2) -> [val1, val2]
+
+isBoxConstraint :: ConstraintStatement -> Bool
+isBoxConstraint cs =
+    case retrieveNode n mp of
+        Var var -> True
+        _ -> False
+  where
+    (mp, n) = getExpressionCS cs
+
+-- |
 --
-class ConstraintOperation a b | a -> b where
-    (.<=) :: a -> b -> ConstraintInfo
-    (.>=) :: a -> b -> ConstraintInfo
-    between :: a -> (b, b) -> ConstraintInfo
-    (.==) :: a -> b -> ConstraintInfo
+(.>=) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+(.>=) exp = Lower (unwrap exp)
+
+(.<=) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+(.<=) exp = Upper (unwrap exp)
+
+between ::
+       (DimensionType d) => Expression d R -> (Val, Val) -> ConstraintStatement
+between exp = Between (unwrap exp)
 
 infix 1 `between`, .>=, .<=
-
-instance ConstraintOperation (Expression Scalar R) Double where
-    (.<=) = ScalarUpper
-    (.>=) = ScalarLower
-    between = ScalarBetween
-    (.==) exp db = ScalarBetween exp (db, db)
-
-instance ConstraintOperation String Val where
-    (.<=) = BoxUpper
-    (.>=) = BoxLower
-    between = BoxBetween
-    (.==) var val = BoxBetween var (val, val)
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
@@ -129,57 +150,202 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
         , DVar name <- retrieveNode dId dfMp = Just (name, partialId)
         | otherwise = Nothing
 
+-- |
+--
+data ProblemResult
+    = ProblemValid Problem
+    | ProblemInvalid String -- reason
+    deriving (Show)
+
+extractBoxConstraint :: Constraint -> Maybe [BoxConstraint]
+extractBoxConstraint constraint =
+    case constraint of
+        NoConstraint -> Nothing
+        BoxConstraint css -> Just . map toBoxConstraint $ css
+        IPOPTConstraint css ->
+            Just . map toBoxConstraint . filter isBoxConstraint $ css
+  where
+    toBoxConstraint cs =
+        case cs of
+            Lower (mp, n) val ->
+                let Var name = retrieveNode n mp
+                 in BoxLower name val
+            Upper (mp, n) val ->
+                let Var name = retrieveNode n mp
+                 in BoxUpper name val
+            Between (mp, n) vals ->
+                let Var name = retrieveNode n mp
+                 in BoxBetween name vals
+
+extractScalarConstraint ::
+       [String] -> Constraint -> Maybe [(ScalarConstraint, ExpressionMap)]
+extractScalarConstraint vars constraint =
+    case constraint of
+        NoConstraint -> Nothing
+        BoxConstraint _ -> Nothing
+        IPOPTConstraint css ->
+            let scalarConstraints = filter (not . isBoxConstraint) css
+                listScalarExpressions =
+                    Set.toList . Set.fromList . map getExpressionCS $
+                    scalarConstraints
+                ninf = (-1 / 0) :: Double
+                inf = (1 / 0) :: Double
+                getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
+                  where
+                    update (lb, ub) cs
+                        | (mp, n) == getExpressionCS cs =
+                            case cs of
+                                Lower _ (VScalar val) -> (max lb val, ub)
+                                Upper _ (VScalar val) -> (lb, min ub val)
+                                Between _ (VScalar val1, VScalar val2) ->
+                                    (max lb val1, min ub val2)
+                        | otherwise = (lb, ub)
+                toScalarConstraint (mp, n) =
+                    let exp = Expression @Scalar @R n mp
+                        g = normalize exp
+                        dg =
+                            collectDifferentials .
+                            exteriorDerivative (Set.fromList vars) $
+                            g
+                        (lb, ub) = getBound (mp, n)
+                        name2PartialDerivativeId :: Map String Int
+                        name2PartialDerivativeId = partialDerivativeMaps dg
+                        constraintPartialDerivatives =
+                            map
+                                (fromJust .
+                                 flip Map.lookup name2PartialDerivativeId)
+                                vars
+                     in ( ScalarConstraint
+                              { constraintValueId = exIndex g
+                              , constraintPartialDerivatives =
+                                    constraintPartialDerivatives
+                              , constraintLowerBound = lb
+                              , constraintUpperBound = ub
+                              }
+                        , exMap g `IM.union` exMap dg)
+             in Just $ map toScalarConstraint listScalarExpressions
+
 -- | Construct a Problem from given objective function
 --
-constructProblem :: Expression Scalar R -> [String] -> Constraint -> Problem
-constructProblem notSimplifedF varList constraint =
-    let vars = Set.fromList varList
-        f@(Expression fId fMp) = normalize notSimplifedF
-        df@(Expression dfId dfMp) =
-            collectDifferentials . exteriorDerivative vars $ f
-        -- Map from a variable name to id in the problem's ExpressionMap
-        name2Id :: Map String Int
-        name2Id =
-            Map.fromList $
-            filter (flip Set.member vars . fst) $ expressionVarNodes f
-        -- Map from a variable name to partial derivative id in the problem's ExpressionMap
-        name2PartialDerivativeId :: Map String Int
-        name2PartialDerivativeId = partialDerivativeMaps df
-        -- Root ids, including the objective function and all partial derivatives
-        rootNs = exIndex f : (map snd . Map.toList $ name2PartialDerivativeId)
-        -- From a name to a Variable data
-        toVariable :: String -> Variable
-        toVariable varName =
-            Variable
-                { varName = varName
-                , nodeId = fromJust $ Map.lookup varName name2Id
-                , partialDerivativeId =
-                      fromJust $ Map.lookup varName name2PartialDerivativeId
+constructProblem ::
+       Expression Scalar R -> [String] -> Constraint -> ProblemResult
+constructProblem objectiveFunction varList constraint
+    | Just reason <- checkError = ProblemInvalid reason
+    | otherwise -- all the constraints are good 
+     =
+        let boxConstraints = extractBoxConstraint constraint
+            scalarConstraints = extractScalarConstraint vars constraint
+            mergedMap =
+                case scalarConstraints of
+                    Nothing -> IM.union dfMp fMp
+                    Just scalarConstraintAndExMap ->
+                        IM.unions $
+                        [dfMp, fMp] ++ map snd scalarConstraintAndExMap
+            rootNs =
+                case scalarConstraints of
+                    Nothing ->
+                        exIndex f : map partialDerivativeId problemVariables
+                    Just scalarConstraintAndExMap ->
+                        exIndex f :
+                        (map partialDerivativeId problemVariables ++
+                         map (constraintValueId . fst) scalarConstraintAndExMap ++
+                         concatMap
+                             (constraintPartialDerivatives . fst)
+                             scalarConstraintAndExMap)
+            topologicalOrder = topologicalSortManyRoots (mergedMap, rootNs)
+            -- expression map
+            problemExpressionMap :: ExpressionMap
+            problemExpressionMap =
+                IM.fromList $
+                map
+                    (\nId -> (nId, fromJust $ IM.lookup nId mergedMap))
+                    topologicalOrder
+            -- mem map
+            problemMemMap = makeMemMap problemExpressionMap
+            -- objective id
+            problemObjectiveId = fId
+         in ProblemValid $
+            Problem
+                { variables = problemVariables
+                , objectiveId = problemObjectiveId
+                , memMap = problemMemMap
+                , expressionMap = problemExpressionMap
+                , boxConstraints = boxConstraints
+                , scalarConstraints = fmap (map fst) scalarConstraints
                 }
-        -- variables
-        problemVariables = map toVariable . Set.toList $ vars
-        mergedMap = IM.union dfMp fMp
-        topologicalOrder = topologicalSortManyRoots (mergedMap, rootNs)
-        -- expression map
-        problemExpressionMap :: ExpressionMap
-        problemExpressionMap =
-            IM.fromList $
-            map
-                (\nId -> (nId, fromJust $ IM.lookup nId mergedMap))
-                topologicalOrder
-        -- mem map
-        problemMemMap = makeMemMap problemExpressionMap
-        -- objective id
-        problemObjectiveId = fId
-     in Problem
-            { variables = problemVariables
-            , objectiveId = problemObjectiveId
-            , memMap = problemMemMap
-            , expressionMap = problemExpressionMap
-            , constraint = constraint
+  where
+    f@(Expression fId fMp) = normalize objectiveFunction
+    varNodesName = Set.fromList . map fst $ expressionVarNodes f
+    -- set of vars
+    varSet = Set.fromList varList `Set.intersection` varNodesName
+    df@(Expression dfId dfMp) =
+        collectDifferentials . exteriorDerivative varSet $ f
+    -- Map from a variable name to id in the problem's ExpressionMap
+    name2Id :: Map String Int
+    name2Id =
+        Map.fromList $
+        filter (flip Set.member varSet . fst) $ expressionVarNodes f
+    -- Map from a variable name to partial derivative id in the problem's ExpressionMap
+    name2PartialDerivativeId :: Map String Int
+    name2PartialDerivativeId = partialDerivativeMaps df
+    -- Final valid list of vars
+    vars = Set.elems varSet
+    -- From a name to a Variable data
+    toVariable :: String -> Variable
+    toVariable varName =
+        Variable
+            { varName = varName
+            , nodeId = fromJust $ Map.lookup varName name2Id
+            , partialDerivativeId =
+                  fromJust $ Map.lookup varName name2PartialDerivativeId
             }
+    -- variables
+    problemVariables :: [Variable]
+    problemVariables = map toVariable vars
+    -- get variable shape
+    variableShape :: String -> Shape
+    variableShape name =
+        let nId = fromJust $ Map.lookup name name2Id
+         in retrieveShape nId fMp
+    checkError =
+        case constraint of
+            NoConstraint -> Nothing
+            BoxConstraint cs -> firstJust checkBoxConstraint cs
+            IPOPTConstraint cs -> firstJust checkCombinedConstraint cs
+    checkBoxConstraint :: ConstraintStatement -> Maybe String
+    checkBoxConstraint cs =
+        case retrieveNode n mp of
+            Var var
+                | not (Set.member var varSet) ->
+                    Just $ var ++ " is not a variable"
+                | any (not . compatible (variableShape var)) (getValCS cs) ->
+                    Just $ "Bound for " ++ var ++ " is not in the right shape"
+            _ -> Just "Box constraint only apply for stand-alone variable"
+      where
+        (mp, n) = getExpressionCS cs
+    checkCombinedConstraint :: ConstraintStatement -> Maybe String
+    checkCombinedConstraint cs =
+        case retrieveInternal n mp of
+            (_, Var var) -- if it is a var, then should be box constraint
+                | not (Set.member var varSet) ->
+                    Just $ var ++ " is not a variable"
+                | any (not . compatible (variableShape var)) (getValCS cs) ->
+                    Just $ "Bound for " ++ var ++ " is not in the right shape"
+                | otherwise -> Nothing
+            ([], _)
+                | any (not . compatible []) (getValCS cs) ->
+                    Just "Scalar expression must be bounded by scalar value"
+                | otherwise -> Nothing
+            _ ->
+                Just
+                    "Only scalar inequality and box constraint for variable are supported"
+      where
+        (mp, n) = getExpressionCS cs
 
--- | Read $numDoubles$ doubles from $fileName$ to ptr[offset]
+--            ubles $
+--        doubles from $fileName $ to ptr [offset]
+--        checkError
+--            | otherwise = Nothing
 --
 generateReadValuesCode :: String -> Val -> String -> Int -> Code
 generateReadValuesCode dataset val address numDoubles =
@@ -245,26 +411,26 @@ generateProblemCode valMaps Problem {..}
                         writeFile (folder ++ "/" ++ var ++ ".txt") str
             let writeUpperBound var val =
                     unless (null . valElems $ val) $ do
-                        let str =
-                                unwords . map show . valElems $ val
+                        let str = unwords . map show . valElems $ val
                             fileName = var ++ "_ub.txt"
                         writeFile (folder ++ "/" ++ fileName) str
             let writeLowerBound var val =
                     unless (null . valElems $ val) $ do
-                        let str =
-                                unwords . map show . valElems $ val
+                        let str = unwords . map show . valElems $ val
                             fileName = var ++ "_lb.txt"
                         writeFile (folder ++ "/" ++ fileName) str
             mapM_ writeVal $ Map.toList valMaps
-            case constraint of
-                NoConstraint -> return ()
-                BoxConstraint cnts ->
-                    let writeEach cnt = case cnt of
-                            BoxLower var val -> writeLowerBound var val
-                            BoxUpper var val -> writeUpperBound var val
-                            BoxBetween var (val1, val2) ->
-                                writeLowerBound var val1 >> writeUpperBound var val2
+            case boxConstraints of
+                Just cnts ->
+                    let writeEach cnt =
+                            case cnt of
+                                BoxLower var val -> writeLowerBound var val
+                                BoxUpper var val -> writeUpperBound var val
+                                BoxBetween var (val1, val2) ->
+                                    writeLowerBound var val1 >>
+                                    writeUpperBound var val2
                      in mapM_ writeEach cnts
+                _ -> return ()
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
     -- var nodes, can be optimizing variables or fixed values
   where
@@ -281,7 +447,7 @@ generateProblemCode valMaps Problem {..}
     variableShape name =
         let nId = nodeId . fromJust . find ((== name) . varName) $ variables
          in retrieveShape nId expressionMap
-    -- variable we have along with shape 
+    -- variable we have along with shape
     varsWithShape = zip vars (map variableShape vars)
     -- size of each variable (product of it's shape)
     variableSizes = map (product . variableShape) vars
@@ -306,12 +472,6 @@ generateProblemCode valMaps Problem {..}
             "variable " ++
             var ++
             "is of shape " ++ show shape ++ " but the value provided is not"
-        -- Box constraint
-        | BoxConstraint cnts <- constraint
-        , any (not . isBox) cnts = Just "constraint(s) is not box-constraint"
-        | BoxConstraint cnts <- constraint
-        , Just reason <- checkConstraint cnts varsWithShape = Just reason
-        -- everything is fine
         | otherwise = Nothing
     variableShapes = map (variableShape . varName) variables
     variableOffsets = map (getMemOffset . nodeId) variables
@@ -378,9 +538,8 @@ generateProblemCode valMaps Problem {..}
                     ("lower_bound + " ++ show (getPos name))
                     (product $ variableShape name)
             readBounds =
-                case constraint of
-                    NoConstraint -> []
-                    BoxConstraint cnts ->
+                case boxConstraints of
+                    Just cnts ->
                         let readBoundCodeEach cnt =
                                 case cnt of
                                     BoxUpper name val ->
@@ -390,9 +549,8 @@ generateProblemCode valMaps Problem {..}
                                     BoxBetween name (val1, val2) ->
                                         readLowerBoundCode name val1 ++
                                         readUpperBoundCode name val2
-                                    _ ->
-                                        error $ show cnt
                          in concatMap readBoundCodeEach cnts
+                    _ -> [] 
          in [ "const int bound_pos[NUM_VARIABLES] = {" ++
               (intercalate ", " . map show $ varPosition) ++ "};"
             , "double lower_bound[NUM_ACTUAL_VARIABLES];"
@@ -433,40 +591,7 @@ generateProblemCode valMaps Problem {..}
                  (expressionMap, map partialDerivativeId variables)) ++
         ["}"]
 
--- | 
---
-checkConstraint :: [ConstraintInfo] -> [(String, Shape)] -> Maybe String
-checkConstraint cts varsWithShape =
-    case mapMaybe validEach cts of
-        firstReason:_ -> Just firstReason
-        [] -> Nothing
-  where
-    validEach ct =
-        case ct of
-            BoxLower var val
-                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
-                    if compatible shape val
-                        then Nothing
-                        else Just $
-                             "Bound provided for " ++ var ++ " is invalid"
-                | otherwise -> Just $ var ++ " is not variable"
-            BoxUpper var val
-                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
-                    if compatible shape val
-                        then Nothing
-                        else Just $
-                             "Bound provided for " ++ var ++ " is invalid"
-                | otherwise -> Just $ var ++ " is not variable"
-            BoxBetween var (val1, val2)
-                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
-                    if compatible shape val1 && compatible shape val2
-                        then Nothing
-                        else Just $
-                             "Bound provided for " ++ var ++ " is invalid"
-                | otherwise -> Just $ var ++ " is not variable"
-            _ -> Nothing
-
--- | 
+-- |
 --
 compatible :: Shape -> Val -> Bool
 compatible shape v =

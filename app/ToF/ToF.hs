@@ -140,7 +140,7 @@ tof2DUp size@(row, column) =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars NoConstraint
+        problem = undefined
      in (problem, finalValMap1)
 
 -- |
@@ -167,7 +167,7 @@ tof2DStraight size@(row, column) start width scalingFactor =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars NoConstraint
+        problem = undefined
      in (problem, finalValMap1, (vxVal, vyVal))
 
 -- |
@@ -194,5 +194,5 @@ tof2DQuarterCircle size@(row, column) start width scalingFactor =
                     replicate ((row - 1) * column) 0 ++ replicate column 1)
                 ]
         finalValMap1 = union valMaps predefinedValMap1
-        problem = constructProblem objectiveFn vars NoConstraint
+        problem = undefined
      in (problem, finalValMap1, (vxVal, vyVal))
