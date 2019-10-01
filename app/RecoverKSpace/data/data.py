@@ -76,8 +76,8 @@ def main():
     kspace = re + 1j * im
     kspaceM = 20 * np.log(np.fft.fftshift(np.absolute(kspace)))
 
-    show_img(np.abs(np.fft.ifft2(kspace)))
-    show_img(kspaceM)
+    # show_img(np.abs(np.fft.ifft2(kspace)))
+    # show_img(kspaceM)
     bound_noise = 1;
 
     x_ub = np.ones((r, c)) * np.PINF

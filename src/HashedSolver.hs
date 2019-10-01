@@ -66,25 +66,13 @@ data Problem =
 --
 data Constraint
     = NoConstraint
-    | BoxConstraint [(String, Bound)]
-    | BoxConstraintNew [NewConstraint]
-    | IPOPTConstraint [NewConstraint]
+    | BoxConstraint [ConstraintInfo]
+    | IPOPTConstraint [ConstraintInfo]
     deriving (Show, Eq, Ord)
 
 -- |
 --
-data Bound
-    = UpperBound Val
-    | LowerBound Val
-    deriving (Show, Eq, Ord)
-
-getBoundVal :: Bound -> Val
-getBoundVal (UpperBound val) = val
-getBoundVal (LowerBound val) = val
-
--- | 
---
-data NewConstraint
+data ConstraintInfo
     = ScalarLower (Expression Scalar R) Double
     | ScalarUpper (Expression Scalar R) Double
     | ScalarBetween (Expression Scalar R) (Double, Double)
@@ -94,7 +82,7 @@ data NewConstraint
     | BoxBetween String (Val, Val)
     deriving (Show, Eq, Ord)
 
-isBox :: NewConstraint -> Bool
+isBox :: ConstraintInfo -> Bool
 isBox c =
     case c of
         BoxUpper {} -> True
@@ -105,10 +93,10 @@ isBox c =
 -- | 
 --
 class ConstraintOperation a b | a -> b where
-    (.<=) :: a -> b -> NewConstraint
-    (.>=) :: a -> b -> NewConstraint
-    between :: a -> (b, b) -> NewConstraint
-    (.==) :: a -> b -> NewConstraint
+    (.<=) :: a -> b -> ConstraintInfo
+    (.>=) :: a -> b -> ConstraintInfo
+    between :: a -> (b, b) -> ConstraintInfo
+    (.==) :: a -> b -> ConstraintInfo
 
 infix 1 `between`, .>=, .<=
 
@@ -255,19 +243,28 @@ generateProblemCode valMaps Problem {..}
                     unless (null $ valElems val) $ do
                         let str = unwords . map show . valElems $ val
                         writeFile (folder ++ "/" ++ var ++ ".txt") str
-            let writeBound (var, bound) =
-                    unless (null . valElems . getBoundVal $ bound) $ do
+            let writeUpperBound var val =
+                    unless (null . valElems $ val) $ do
                         let str =
-                                unwords . map show . valElems $
-                                getBoundVal bound
-                            fileName
-                                | UpperBound _ <- bound = var ++ "_ub.txt"
-                                | otherwise = var ++ "_lb.txt"
+                                unwords . map show . valElems $ val
+                            fileName = var ++ "_ub.txt"
+                        writeFile (folder ++ "/" ++ fileName) str
+            let writeLowerBound var val =
+                    unless (null . valElems $ val) $ do
+                        let str =
+                                unwords . map show . valElems $ val
+                            fileName = var ++ "_lb.txt"
                         writeFile (folder ++ "/" ++ fileName) str
             mapM_ writeVal $ Map.toList valMaps
             case constraint of
                 NoConstraint -> return ()
-                BoxConstraint bounds -> mapM_ writeBound bounds
+                BoxConstraint cnts ->
+                    let writeEach cnt = case cnt of
+                            BoxLower var val -> writeLowerBound var val
+                            BoxUpper var val -> writeUpperBound var val
+                            BoxBetween var (val1, val2) ->
+                                writeLowerBound var val1 >> writeUpperBound var val2
+                     in mapM_ writeEach cnts
             writeFile (folder ++ "/problem.c") $ intercalate "\n" codes
     -- var nodes, can be optimizing variables or fixed values
   where
@@ -310,20 +307,9 @@ generateProblemCode valMaps Problem {..}
             var ++
             "is of shape " ++ show shape ++ " but the value provided is not"
         -- Box constraint
-        | BoxConstraint boundMap <- constraint
-        , Just var <- find (not . isVariable) $ map fst boundMap =
-            Just $
-            var ++ " is not a variable but you're trying to box constrain it"
-        | BoxConstraint boundMap <- constraint
-        , let isOk (var, val) = compatible (variableShape var) val
-        , Just (var, _) <- find (not . isOk) . mapSecond getBoundVal $ boundMap =
-            Just $
-            "The box bound provided to variable " ++
-            var ++ " is not the same shape as " ++ var
-        -- Box constraint new
-        | BoxConstraintNew cnts <- constraint
+        | BoxConstraint cnts <- constraint
         , any (not . isBox) cnts = Just "constraint(s) is not box-constraint"
-        | BoxConstraintNew cnts <- constraint
+        | BoxConstraint cnts <- constraint
         , Just reason <- checkConstraint cnts varsWithShape = Just reason
         -- everything is fine
         | otherwise = Nothing
@@ -394,15 +380,7 @@ generateProblemCode valMaps Problem {..}
             readBounds =
                 case constraint of
                     NoConstraint -> []
-                    BoxConstraint boundMap ->
-                        let readBoundCodeEach (name, bound) =
-                                case bound of
-                                    UpperBound val ->
-                                        readUpperBoundCode name val
-                                    LowerBound val ->
-                                        readLowerBoundCode name val
-                         in concatMap readBoundCodeEach boundMap
-                    BoxConstraintNew cnts ->
+                    BoxConstraint cnts ->
                         let readBoundCodeEach cnt =
                                 case cnt of
                                     BoxUpper name val ->
@@ -412,6 +390,8 @@ generateProblemCode valMaps Problem {..}
                                     BoxBetween name (val1, val2) ->
                                         readLowerBoundCode name val1 ++
                                         readUpperBoundCode name val2
+                                    _ ->
+                                        error $ show cnt
                          in concatMap readBoundCodeEach cnts
          in [ "const int bound_pos[NUM_VARIABLES] = {" ++
               (intercalate ", " . map show $ varPosition) ++ "};"
@@ -455,7 +435,7 @@ generateProblemCode valMaps Problem {..}
 
 -- | 
 --
-checkConstraint :: [NewConstraint] -> [(String, Shape)] -> Maybe String
+checkConstraint :: [ConstraintInfo] -> [(String, Shape)] -> Maybe String
 checkConstraint cts varsWithShape =
     case mapMaybe validEach cts of
         firstReason:_ -> Just firstReason
