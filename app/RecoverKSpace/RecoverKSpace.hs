@@ -87,4 +87,4 @@ smilingFaceProblem = do
     print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs-b-c"
+        Success proceed -> proceed "algorithms/lbfgs-b"
