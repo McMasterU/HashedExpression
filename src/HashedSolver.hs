@@ -82,14 +82,25 @@ getBoundVal :: Bound -> Val
 getBoundVal (UpperBound val) = val
 getBoundVal (LowerBound val) = val
 
+-- | 
+--
 data NewConstraint
     = ScalarLower (Expression Scalar R) Double
     | ScalarUpper (Expression Scalar R) Double
     | ScalarBetween (Expression Scalar R) (Double, Double)
-    | VariableUpper String Val
-    | VariableLower String Val
-    | VariableBetween String (Val, Val)
+    -- box constraint of variables
+    | BoxUpper String Val
+    | BoxLower String Val
+    | BoxBetween String (Val, Val)
     deriving (Show, Eq, Ord)
+
+isBox :: NewConstraint -> Bool
+isBox c =
+    case c of
+        BoxUpper {} -> True
+        BoxLower {} -> True
+        BoxBetween {} -> True
+        _ -> False
 
 -- | 
 --
@@ -108,10 +119,10 @@ instance ConstraintOperation (Expression Scalar R) Double where
     (.==) exp db = ScalarBetween exp (db, db)
 
 instance ConstraintOperation String Val where
-    (.<=) = VariableUpper
-    (.>=) = VariableLower
-    between = VariableBetween
-    (.==) var val = VariableBetween var (val, val)
+    (.<=) = BoxUpper
+    (.>=) = BoxLower
+    between = BoxBetween
+    (.==) var val = BoxBetween var (val, val)
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
@@ -273,6 +284,8 @@ generateProblemCode valMaps Problem {..}
     variableShape name =
         let nId = nodeId . fromJust . find ((== name) . varName) $ variables
          in retrieveShape nId expressionMap
+    -- variable we have along with shape 
+    varsWithShape = zip vars (map variableShape vars)
     -- size of each variable (product of it's shape)
     variableSizes = map (product . variableShape) vars
     totalVarSize = sum variableSizes
@@ -418,6 +431,39 @@ generateProblemCode valMaps Problem {..}
                  memMap
                  (expressionMap, map partialDerivativeId variables)) ++
         ["}"]
+
+-- | 
+--
+checkBoxConstraint :: [NewConstraint] -> [(String, Shape)] -> Maybe String
+checkBoxConstraint cts varsWithShape =
+    case mapMaybe validEach cts of
+        firstReason:_ -> Just firstReason
+        [] -> Nothing
+  where
+    validEach ct =
+        case ct of
+            BoxLower var val
+                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
+                    if compatible shape val
+                        then Nothing
+                        else Just $
+                             "Bound provided for " ++ var ++ " is invalid"
+                | otherwise -> Just $ var ++ " is not variable"
+            BoxUpper var val
+                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
+                    if compatible shape val
+                        then Nothing
+                        else Just $
+                             "Bound provided for " ++ var ++ " is invalid"
+                | otherwise -> Just $ var ++ " is not variable"
+            BoxBetween var (val1, val2)
+                | Just (_, shape) <- find ((== var) . fst) varsWithShape ->
+                    if compatible shape val1 && compatible shape val2
+                        then Nothing
+                        else Just $
+                             "Bound provided for " ++ var ++ " is invalid"
+                | otherwise -> Just $ var ++ " is not variable"
+            _ -> Just "The set of constriant has non-box constraint"
 
 -- | 
 --
