@@ -20,6 +20,15 @@ def show_img(data):
     plt.show()
 
 
+# def show_many_imgs(row, column, imgs):
+#     i = 1
+#     for img in imgs:
+#         plt.subplot(row, column, i)
+#         plt.imshow(img, cmap='gray')
+#         i = i + 1
+#     plt.show()
+
+
 def rgb2gray(rgb):
     return np.dot(rgb[..., :3], [0.299, 0.587, 0.144])
 
@@ -44,6 +53,8 @@ def main():
 
     show_img(img)
 
+    # show_img(img)
+
     # get the region of head
     median = normalize(ndimage.median_filter(img, 10));
     head = median > 0.1
@@ -62,6 +73,11 @@ def main():
         im[i] = 0
         mask[i] = 0
 
+    kspace = re + 1j * im
+    kspaceM = 20 * np.log(np.fft.fftshift(np.absolute(kspace)))
+
+    # show_img(np.abs(np.fft.ifft2(kspace)))
+    # show_img(kspaceM)
     bound_noise = 1;
 
     x_ub = np.ones((r, c)) * np.PINF
@@ -74,7 +90,6 @@ def main():
             else:
                 x_lb[i, j] = 0
 
-
     save_file_hdf5(re, "re")
     save_file_hdf5(im, "im")
     save_file_hdf5(head, "head")
@@ -84,4 +99,3 @@ def main():
 
 
 main()
-

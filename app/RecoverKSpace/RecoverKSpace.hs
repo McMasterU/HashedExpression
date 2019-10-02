@@ -61,14 +61,28 @@ directory = "app/RecoverKSpace/data/"
 
 smilingFaceProblem :: IO ()
 smilingFaceProblem = do
-    let [x, mask, im, re, head] = map (variable2D @128 @128) ["x", "mask", "im", "re", "head"]
+    let [x, mask, im, re, head] =
+            map (variable2D @128 @128) ["x", "mask", "im", "re", "head"]
         one = constant2D @128 @128 1
         zero = constant2D @128 @128 0
+    let vars = ["x"]
     let objectiveFunction =
             norm2square ((mask +: zero) * (ft x - (re +: im))) +
             const 3000 *
-            (norm2square (head * (rotate (0, 1) x + rotate (0, -1) x - const 2 *. x)) +
-             norm2square (head * (rotate (1, 0) x + rotate (-1, 0) x - const 2 *. x)))
+            (norm2square
+                 (head * (rotate (0, 1) x + rotate (0, -1) x - const 2 *. x)) +
+             norm2square
+                 (head * (rotate (1, 0) x + rotate (-1, 0) x - const 2 *. x)))
+    let xLowerBound = V2DFile HDF5 "x_lb.h5"
+        xUpperBound = V2DFile HDF5 "x_ub.h5"
+    let constraint =
+            IPOPTConstraint
+                [ x .>= xLowerBound
+                , x .<= xUpperBound
+                , (x <.> x) .<= VScalar 1
+                , (x <.> (const 2 *. im)) .>= VScalar 15
+                ]
+    let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
     let valMap =
             fromList
                 [ ("mask", V2DFile HDF5 "mask.h5")
@@ -77,14 +91,6 @@ smilingFaceProblem = do
                 , ("im", V2DFile HDF5 "im.h5")
                 , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
-        vars = ["x"]
-    let constraint =
-            BoxConstraint
-                [ ("x", LowerBound $ V2DFile HDF5 "x_lb.h5")
-                , ("x", UpperBound $ V2DFile HDF5 "x_ub.h5")
-                ]
-    let problem = constructProblem objectiveFunction vars constraint
-    print problem
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs-b-c"
+        Success proceed -> proceed "algorithms/lbfgs-b"

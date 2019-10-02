@@ -66,31 +66,4 @@ reFT = xRe . ft
 imFT :: (DimensionType d) => Expression d R -> Expression d R
 imFT = xIm . ft
 
---
---main = do
---    let exp = norm2square $ reFT . reFT $ x1
---    showExp . collectDifferentials . exteriorDerivative allVars $ exp--    let x = var "x"
---    let exp = huber 1 x
---        fun = Function exp empty
---    plot1VariableFunction fun "haha"
---main = anotherFruit--main = do
---    let a = const 33
---        b = const 100
---        x = var "x"
---        y = var "y"
---        exp = huber 2 $ (a - x) ^ 2 + b * (y - x ^ 2) ^ 2
---        vars = Set.fromList ["x", "y"]
---        valMap = fromList [("x", VScalar 0), ("y", VScalar 0)]
---    let problem = constructProblem exp vars
---    case generateProblemCode valMap problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs"
-main = smilingFaceProblem --main = do
---    let objectiveFunction = x - const 3
---    let valMap = fromList [("x", VScalar 19999)]
---        vars = ["x"]
---    let constraint = BoxConstraint [("x", LowerBound $ VScalar 0)]
---    let problem = constructProblem objectiveFunction vars constraint
---    case generateProblemCode valMap problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs-b"
+main = smilingFaceProblem
