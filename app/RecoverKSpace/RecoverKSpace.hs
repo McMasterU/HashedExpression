@@ -73,12 +73,13 @@ smilingFaceProblem = do
                  (head * (rotate (0, 1) x + rotate (0, -1) x - const 2 *. x)) +
              norm2square
                  (head * (rotate (1, 0) x + rotate (-1, 0) x - const 2 *. x)))
-    let xLowerBound = V2D $ listArray ((0, 0), (127, 127)) $ repeat 0
-        xUpperBound = V2D $ listArray ((0, 0), (127, 127)) $ repeat 1
+    let xLowerBound = V2DFile HDF5 "x_lb.h5"
+        xUpperBound = V2DFile HDF5 "x_ub.h5"
     let constraint =
-            BoxConstraint
+            IPOPTConstraint
                 [ x .>= xLowerBound
                 , x .<= xUpperBound
+                , (x <.> x) .<= VScalar 1
                 ]
     let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
     let valMap =

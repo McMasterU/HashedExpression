@@ -44,6 +44,16 @@ import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 
+ninf = (-1 / 0) :: Double
+
+inf = (1 / 0) :: Double
+
+d2s :: Double -> String
+d2s val
+    | val == ninf = "-INFINITY"
+    | val == inf = "INFINITY"
+    | otherwise = show val
+
 -- |
 --
 data Variable =
@@ -188,8 +198,6 @@ extractScalarConstraint vars constraint =
                 listScalarExpressions =
                     Set.toList . Set.fromList . map getExpressionCS $
                     scalarConstraints
-                ninf = (-1 / 0) :: Double
-                inf = (1 / 0) :: Double
                 getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
                   where
                     update (lb, ub) cs
@@ -343,10 +351,7 @@ constructProblem objectiveFunction varList constraint
       where
         (mp, n) = getExpressionCS cs
 
---            ubles $
---        doubles from $fileName $ to ptr [offset]
---        checkError
---            | otherwise = Nothing
+-- |
 --
 generateReadValuesCode :: String -> Val -> String -> Int -> Code
 generateReadValuesCode dataset val address numDoubles =
@@ -405,7 +410,10 @@ generateProblemCode valMaps Problem {..}
                     constraintCodes ++
                     readVals ++
                     evaluatingCodes ++
-                    evaluateObjectiveCodes ++ evaluatePartialDerivatives
+                    evaluateObjectiveCodes ++
+                    evaluatePartialDerivatives ++
+                    evaluateScalarConstraints ++
+                    evaluateScalarConstraintsJacobian
             let writeVal (var, val) =
                     unless (null $ valElems val) $ do
                         let str = unwords . map show . valElems $ val
@@ -552,13 +560,56 @@ generateProblemCode valMaps Problem {..}
                                         readUpperBoundCode name val2
                          in concatMap readBoundCodeEach cnts
                     _ -> []
+            scalarConstraintDefineStuffs =
+                case scalarConstraints of
+                    Just scs ->
+                        [ "#define NUM_SCALAR_CONSTRAINT " ++ show (length scs)
+                        , ""
+                        , "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];"
+                        , "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];"
+                        , "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {" ++
+                          (intercalate "," .
+                           map (show . getMemOffset . constraintValueId) $
+                           scs) ++
+                          "};"
+                        , ""
+                        , "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {" ++
+                          intercalate
+                              ", "
+                              [ "{" ++
+                              intercalate
+                                  ","
+                                  (map (show . getMemOffset) .
+                                   constraintPartialDerivatives $
+                                   sc) ++
+                              "}"
+                              | sc <- scs
+                              ] ++
+                          "};"
+                        , ""
+                        , ""
+                        ]
+                    _ -> []
+            readBoundScalarConstraints =
+                case scalarConstraints of
+                    Just scs ->
+                        [ "sc_lower_bound[" ++
+                        show i ++ "] = " ++ d2s val ++ ";"
+                        | (i, val) <- zip [0 ..] $ map constraintLowerBound scs
+                        ] ++
+                        [ "sc_upper_bound[" ++
+                        show i ++ "] = " ++ d2s val ++ ";"
+                        | (i, val) <- zip [0 ..] $ map constraintUpperBound scs
+                        ]
+                    _ -> []
          in [ "const int bound_pos[NUM_VARIABLES] = {" ++
               (intercalate ", " . map show $ varPosition) ++ "};"
             , "double lower_bound[NUM_ACTUAL_VARIABLES];"
             , "double upper_bound[NUM_ACTUAL_VARIABLES];"
             , ""
             , ""
-            ] ++ --
+            ] ++
+            scalarConstraintDefineStuffs ++
             [ "void read_bounds() {" --
             , "  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {"
             , "    lower_bound[i] = -INFINITY;"
@@ -566,6 +617,7 @@ generateProblemCode valMaps Problem {..}
             , "  }"
             ] ++
             space 2 readBounds ++ --
+            space 2 readBoundScalarConstraints ++ --
             ["}"]
     readVals =
         ["void read_values() {"] ++ --
@@ -591,6 +643,29 @@ generateProblemCode valMaps Problem {..}
                  memMap
                  (expressionMap, map partialDerivativeId variables)) ++
         ["}"]
+    evaluateScalarConstraints =
+        case scalarConstraints of
+            Just scs ->
+                ["void evaluate_scalar_constraints() {"] ++
+                space
+                    2
+                    (generateEvaluatingCodes
+                         memMap
+                         (expressionMap, map constraintValueId scs)) ++
+                ["}"]
+            _ -> []
+    evaluateScalarConstraintsJacobian =
+        case scalarConstraints of
+            Just scs ->
+                ["void evaluate_scalar_constraints_jacobian() {"] ++
+                space
+                    2
+                    (generateEvaluatingCodes
+                         memMap
+                         ( expressionMap
+                         , concatMap constraintPartialDerivatives scs)) ++
+                ["}"]
+            _ -> []
 
 -- |
 --
