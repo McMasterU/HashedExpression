@@ -147,6 +147,7 @@ hiddenPrettify pastable (mp, n) =
                                 , " "
                                 , wrapParentheses . T.pack . show $ val
                                 ]
+                        _ -> T.pack $ show val
                 | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
             _ ->
                 wrapParentheses $

@@ -448,7 +448,6 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
     ns = topologicalSort (mp, n)
     collect nId
         | Var varName <- retrieveNode nId mp = Just (varName, nId)
-        | DVar varName <- retrieveNode nId mp = Just (varName, nId)
         | otherwise = Nothing
 
 varNodesWithId :: ExpressionMap -> [(String, Int)]

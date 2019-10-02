@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module HashedCollect where
 
 import Data.Function.HT (nest)
@@ -171,15 +173,47 @@ aggregateByDVar =
 -- | Normalize each partial derivative
 --
 normalizeEachPartialDerivative :: Transformation
-normalizeEachPartialDerivative exp@(mp, n)
-    | Sum Covector ns <- retrieveNode n mp = sumMany $ map normalizeEach ns
-    | InnerProd Covector _ _ <- retrieveNode n mp = normalizeEach n
-    | otherwise = (mp, n)
+normalizeEachPartialDerivative exp@(mp, n) =
+    case retrieveNode n mp of
+        Sum Covector ns -> sumMany $ map normalizeEach ns
+        InnerProd Covector _ _ -> normalizeEach n
+        Mul Covector _ -> normalizeEach n
+        _ -> (mp, n)
   where
-    normalizeEach nId
-        | Mul Covector [partialDeriv, dVar] <- retrieveNode nId mp =
-            mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
-        | InnerProd Covector partialDeriv dVar <- retrieveNode nId mp =
-            apply
-                (binaryET InnerProd ElementDefault `hasShape` [])
-                [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+    normalizeEach nId =
+        case retrieveNode nId mp of
+            Mul Covector [partialDeriv, dVar] ->
+                mulMany
+                    [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+            InnerProd Covector partialDeriv dVar ->
+                apply
+                    (binaryET InnerProd ElementDefault `hasShape` [])
+                    [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+
+-- | A function might be treated as function of variables that not appears in the function itself (like constraint of
+-- optimization problem, so we want to pad zero partial derivative)
+-- (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
+--
+introduceZeroPartialDerivatives ::
+       [(String, Shape)]
+    -> Expression Scalar Covector
+    -> Expression Scalar Covector
+introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
+    let isD name nId
+            | DVar varName <- retrieveNode nId mp
+            , varName == name = True
+            | otherwise = False
+        alreadyExist name = any (isD name) . IM.keys $ mp
+        makePart (name, shape)
+            | isScalarShape shape =
+                mulMany [aConst shape 0, dVarWithShape shape name]
+            | otherwise =
+                apply
+                    (binaryET InnerProd ElementDefault `hasShape` [])
+                    [aConst shape 0, dVarWithShape shape name]
+        listToInsert =
+            map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
+     in wrap $
+        case retrieveNode n mp of
+            Sum Covector ns -> sumMany $ map (mp, ) ns ++ listToInsert
+            _ -> sumMany $ (mp, n) : listToInsert
