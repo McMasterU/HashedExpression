@@ -202,7 +202,7 @@ dVarWithShape shape name = (IM.fromList [(h, node)], h)
   where
     node = (shape, DVar name)
     h = hash node
-    
+
 -- |
 --
 data FileType
