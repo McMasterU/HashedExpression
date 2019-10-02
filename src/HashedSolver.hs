@@ -44,9 +44,11 @@ import HashedToC
 import HashedUtils
 import System.Process (readProcess, readProcessWithExitCode)
 
-ninf = (-1 / 0) :: Double
+ninf :: Double
+ninf = -1 / 0
 
-inf = (1 / 0) :: Double
+inf :: Double
+inf = 1 / 0
 
 d2s :: Double -> String
 d2s val
@@ -191,8 +193,10 @@ extractBoxConstraint constraint =
                  in BoxBetween name vals
 
 extractScalarConstraint ::
-       [String] -> Constraint -> Maybe [(ScalarConstraint, ExpressionMap)]
-extractScalarConstraint vars constraint =
+       [(String, Shape)]
+    -> Constraint
+    -> Maybe [(ScalarConstraint, ExpressionMap)]
+extractScalarConstraint varsWithShape constraint =
     case constraint of
         NoConstraint -> Nothing
         BoxConstraint _ -> Nothing
@@ -215,17 +219,20 @@ extractScalarConstraint vars constraint =
                     let exp = Expression @Scalar @R n mp
                         g = normalize exp
                         dg =
+                            introduceZeroPartialDerivatives varsWithShape .
                             collectDifferentials .
-                            exteriorDerivative (Set.fromList vars) $
+                            exteriorDerivative
+                                (Set.fromList . map fst $ varsWithShape) $
                             g
                         (lb, ub) = getBound (mp, n)
                         name2PartialDerivativeId :: Map String Int
                         name2PartialDerivativeId = partialDerivativeMaps dg
                         constraintPartialDerivatives =
                             map
-                                (fromJust .
-                                 flip Map.lookup name2PartialDerivativeId)
-                                vars
+                                ((fromJust .
+                                  flip Map.lookup name2PartialDerivativeId) .
+                                 fst)
+                                varsWithShape
                      in ( ScalarConstraint
                               { constraintValueId = exIndex g
                               , constraintPartialDerivatives =
@@ -241,11 +248,12 @@ extractScalarConstraint vars constraint =
 constructProblem ::
        Expression Scalar R -> [String] -> Constraint -> ProblemResult
 constructProblem objectiveFunction varList constraint
+    | null vars = ProblemInvalid "No variable to optimize over"
     | Just reason <- checkError = ProblemInvalid reason
-    | otherwise -- all the constraints are good 
+    | otherwise -- all the constraints are good
      =
         let boxConstraints = extractBoxConstraint constraint
-            scalarConstraints = extractScalarConstraint vars constraint
+            scalarConstraints = extractScalarConstraint varsWithShape constraint
             mergedMap =
                 case scalarConstraints of
                     Nothing -> IM.union dfMp fMp
@@ -318,6 +326,8 @@ constructProblem objectiveFunction varList constraint
     variableShape name =
         let nId = fromJust $ Map.lookup name name2Id
          in retrieveShape nId fMp
+    -- vars with shape 
+    varsWithShape = zip vars (map variableShape vars)
     checkError =
         case constraint of
             NoConstraint -> Nothing

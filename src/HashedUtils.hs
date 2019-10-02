@@ -195,6 +195,14 @@ aConst shape val = (IM.fromList [(h, node)], h)
     node = (shape, Const val)
     h = hash node
 
+-- | 
+--
+dVarWithShape :: Shape -> String -> (ExpressionMap, Int)
+dVarWithShape shape name = (IM.fromList [(h, node)], h)
+  where
+    node = (shape, DVar name)
+    h = hash node
+    
 -- |
 --
 data FileType
