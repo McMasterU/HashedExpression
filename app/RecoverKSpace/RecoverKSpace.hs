@@ -80,6 +80,7 @@ smilingFaceProblem = do
                 [ x .>= xLowerBound
                 , x .<= xUpperBound
                 , (x <.> x) .<= VScalar 1
+                , (x <.> im) .>= VScalar 2
                 ]
     let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
     let valMap =

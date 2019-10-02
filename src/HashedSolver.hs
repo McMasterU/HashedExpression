@@ -141,7 +141,10 @@ between ::
        (DimensionType d) => Expression d R -> (Val, Val) -> ConstraintStatement
 between exp = Between (unwrap exp)
 
-infix 1 `between`, .>=, .<=
+(.==) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+(.==) exp val = Between (unwrap exp) (val, val)
+
+infix 1 `between`, .>=, .<=, .==
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
