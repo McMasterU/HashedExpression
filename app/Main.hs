@@ -69,7 +69,6 @@ imFT = xIm . ft
 --main = do
 --    let exp = const 2 * x
 --    showExp $ introduceZeroPartialDerivatives [("y", [2, 3])] . collectDifferentials . exteriorDerivative allVars $ exp
-
 main = do
     let [x, y] = map (variable2D @128 @128) ["x", "y"]
     let objectiveFunction = sumElements (x * x + y)
