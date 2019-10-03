@@ -13,6 +13,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import HashedExpression
     ( DimensionType
     , ET(..)
@@ -73,7 +74,7 @@ makeMemMap mp = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
 
 -- |
 --
-memOffset :: MemMap -> Int -> LookupPart -> Int
+memOffset :: HasCallStack => MemMap -> Int -> LookupPart -> Int
 memOffset (MemMap entryMap _) nId lookupPart
     | Just (globalOffset, entryType, entryShape) <- IM.lookup nId entryMap =
         case (entryType, lookupPart) of
@@ -81,6 +82,14 @@ memOffset (MemMap entryMap _) nId lookupPart
             (EntryC, LookupReC) -> globalOffset
             (EntryC, LookupImC) -> globalOffset + product entryShape
     | otherwise = error "node id is not in the mem map"
+
+-- | Get mem offset of real node
+--
+getMemOffsetReal :: HasCallStack => MemMap -> Int -> Int
+getMemOffsetReal (MemMap entryMap _) nId =
+    case IM.lookup nId entryMap of
+        Just (globalOffset, _, _) -> globalOffset
+        _ -> error "node id is not in the mem map"
 
 -- | Compute the inner offset:
 -- e.g localOffset [3, 4, 5] [2, 0, 1] = 2 * (4 * 5) + 0 * (5) + 1
