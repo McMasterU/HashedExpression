@@ -69,19 +69,20 @@ imFT = xIm . ft
 --main = do
 --    let exp = const 2 * x
 --    showExp $ introduceZeroPartialDerivatives [("y", [2, 3])] . collectDifferentials . exteriorDerivative allVars $ exp
-main = do
-    let [x, y] = map (variable2D @128 @128) ["x", "y"]
-    let objectiveFunction = sumElements (x * x + y)
-    let valMap =
-            fromList
-                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
-                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
-                ]
-    let vars = ["x", "y"]
-    let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
-    let (ProblemValid problem) =
-            constructProblem objectiveFunction vars constraint
-    case generateProblemCode valMap problem of
-        Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs-b"
+--main = do
+--    let [x, y] = map (variable2D @128 @128) ["x", "y"]
+--    let objectiveFunction = sumElements (x * x + y)
+--    let valMap =
+--            fromList
+--                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
+--                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
+--                ]
+--    let vars = ["x", "y"]
+--    let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
+--    let (ProblemValid problem) =
+--            constructProblem objectiveFunction vars constraint
+--    case generateProblemCode valMap problem of
+--        Invalid str -> putStrLn str
+--        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ length show probem
+main = smilingFaceProblem

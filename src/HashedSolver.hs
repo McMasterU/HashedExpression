@@ -271,14 +271,11 @@ constructProblem objectiveFunction varList constraint
                          concatMap
                              (constraintPartialDerivatives . fst)
                              scalarConstraintAndExMap)
-            topologicalOrder = topologicalSortManyRoots (mergedMap, rootNs)
+            -- remove DVar nodes
+            relevantNodes = Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs) 
             -- expression map
             problemExpressionMap :: ExpressionMap
-            problemExpressionMap =
-                IM.fromList $
-                map
-                    (\nId -> (nId, fromJust $ IM.lookup nId mergedMap))
-                    topologicalOrder
+            problemExpressionMap = IM.filterWithKey (\nId _ -> Set.member nId relevantNodes) mergedMap
             -- mem map
             problemMemMap = makeMemMap problemExpressionMap
             -- objective id
