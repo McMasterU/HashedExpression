@@ -59,6 +59,7 @@ import HashedVar
 import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
+import Problems
 
 reFT :: (DimensionType d) => Expression d R -> Expression d R
 reFT = xRe . ft
@@ -84,5 +85,5 @@ imFT = xIm . ft
 --    case generateProblemCode valMap problem of
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs-b"
---    print $ length show probem
-main = smilingFaceProblem
+--    print $ problem
+main = bananaFunction

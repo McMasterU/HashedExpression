@@ -15,12 +15,13 @@ import Data.List (find, intercalate)
 import Data.List.Extra (firstJust)
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import Data.Set (Set)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
+import Debug.Trace (traceShowId)
 import HashedCollect
 import HashedDerivative
 import HashedExpression
@@ -92,6 +93,7 @@ data ScalarConstraint =
         , constraintLowerBound :: Double
         , constraintUpperBound :: Double
         }
+    deriving (Show, Eq, Ord)
 
 -- |
 --
@@ -215,24 +217,24 @@ extractScalarConstraint varsWithShape constraint =
                                 Between _ (VScalar val1, VScalar val2) ->
                                     (max lb val1, min ub val2)
                         | otherwise = (lb, ub)
+                vars = map fst varsWithShape
                 toScalarConstraint (mp, n) =
                     let exp = Expression @Scalar @R n mp
                         g = normalize exp
                         dg =
                             introduceZeroPartialDerivatives varsWithShape .
                             collectDifferentials .
-                            exteriorDerivative
-                                (Set.fromList . map fst $ varsWithShape) $
+                            exteriorDerivative (Set.fromList vars) $
                             g
                         (lb, ub) = getBound (mp, n)
                         name2PartialDerivativeId :: Map String Int
                         name2PartialDerivativeId = partialDerivativeMaps dg
-                        constraintPartialDerivatives =
-                            map
-                                ((fromJust .
-                                  flip Map.lookup name2PartialDerivativeId) .
-                                 fst)
-                                varsWithShape
+                        constraintPartialDerivatives
+                            | Map.keys name2PartialDerivativeId == vars =
+                                Map.elems name2PartialDerivativeId
+                            | otherwise =
+                                error
+                                    "variables of objective and constraints should be the same, but is different here"
                      in ( ScalarConstraint
                               { constraintValueId = exIndex g
                               , constraintPartialDerivatives =
@@ -272,10 +274,14 @@ constructProblem objectiveFunction varList constraint
                              (constraintPartialDerivatives . fst)
                              scalarConstraintAndExMap)
             -- remove DVar nodes
-            relevantNodes = Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs) 
+            relevantNodes =
+                Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs)
             -- expression map
             problemExpressionMap :: ExpressionMap
-            problemExpressionMap = IM.filterWithKey (\nId _ -> Set.member nId relevantNodes) mergedMap
+            problemExpressionMap =
+                IM.filterWithKey
+                    (\nId _ -> Set.member nId relevantNodes)
+                    mergedMap
             -- mem map
             problemMemMap = makeMemMap problemExpressionMap
             -- objective id
@@ -289,39 +295,40 @@ constructProblem objectiveFunction varList constraint
                 , boxConstraints = boxConstraints
                 , scalarConstraints = fmap (map fst) scalarConstraints
                 }
+    -- set of name users consider as variable
   where
+    userVarsSet = Set.fromList varList
     f@(Expression fId fMp) = normalize objectiveFunction
-    varNodesName = Set.fromList . map fst $ expressionVarNodes f
     -- set of vars
-    varSet = Set.fromList varList `Set.intersection` varNodesName
-    df@(Expression dfId dfMp) =
-        collectDifferentials . exteriorDerivative varSet $ f
-    -- Map from a variable name to id in the problem's ExpressionMap
     name2Id :: Map String Int
     name2Id =
         Map.fromList $
-        filter (flip Set.member varSet . fst) $ expressionVarNodes f
+        filter (flip Set.member userVarsSet . fst) $ expressionVarNodes f
+    -- Final valid list of vars
+    vars = Map.keys name2Id
+    varSet = Set.fromList vars
+    df@(Expression dfId dfMp) =
+        collectDifferentials . exteriorDerivative (Set.fromList vars) $ f
+    -- Map from a variable name to id in the problem's ExpressionMap
     -- Map from a variable name to partial derivative id in the problem's ExpressionMap
     name2PartialDerivativeId :: Map String Int
     name2PartialDerivativeId = partialDerivativeMaps df
-    -- Final valid list of vars
-    vars = Set.elems varSet
+    variableDatas :: [(String, (Int, Int))]
+    variableDatas =
+        Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
     -- From a name to a Variable data
-    toVariable :: String -> Variable
-    toVariable varName =
-        Variable
-            { varName = varName
-            , nodeId = fromJust $ Map.lookup varName name2Id
-            , partialDerivativeId =
-                  fromJust $ Map.lookup varName name2PartialDerivativeId
-            }
+    toVariable :: (String, (Int, Int)) -> Variable
+    toVariable (varName, (nId, pId)) =
+        Variable {varName = varName, nodeId = nId, partialDerivativeId = pId}
     -- variables
     problemVariables :: [Variable]
-    problemVariables = map toVariable vars
+    problemVariables = map toVariable variableDatas
     -- get variable shape
     variableShape :: String -> Shape
     variableShape name =
-        let nId = fromJust $ Map.lookup name name2Id
+        let nId =
+                fromMaybe (error "query non-variable name?") $
+                Map.lookup name name2Id
          in retrieveShape nId fMp
     -- vars with shape 
     varsWithShape = zip vars (map variableShape vars)
@@ -464,7 +471,10 @@ generateProblemCode valMaps Problem {..}
     -- get shape of an optimizing variable
     variableShape :: String -> Shape
     variableShape name =
-        let nId = nodeId . fromJust . find ((== name) . varName) $ variables
+        let nId =
+                case find ((== name) . varName) variables of
+                    Just var -> nodeId var
+                    _ -> error "not a variable but you're getting it's shape"
          in retrieveShape nId expressionMap
     -- variable we have along with shape
     varsWithShape = zip vars (map variableShape vars)
@@ -473,7 +483,6 @@ generateProblemCode valMaps Problem {..}
     totalVarSize = sum variableSizes
     -- MemMap
     entries = entryMap memMap
-    getMemOffset = fst3 . fromJust . flip IM.lookup entries
     -- Check if is variable or a fixed value
     checkError
         | Just var <-
@@ -485,7 +494,7 @@ generateProblemCode valMaps Problem {..}
         , let isOk (var, nId) =
                   compatible
                       (retrieveShape nId expressionMap)
-                      (fromJust (var `Map.lookup` valMaps))
+                      (getVal valMaps var)
         , Just (var, shape) <- find (not . isOk) vs =
             Just $
             "variable " ++
@@ -493,15 +502,15 @@ generateProblemCode valMaps Problem {..}
             "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
     variableShapes = map (variableShape . varName) variables
-    variableOffsets = map (getMemOffset . nodeId) variables
+    variableOffsets = map (getMemOffsetReal memMap . nodeId) variables
     partialDerivativeOffsets =
-        map (getMemOffset . partialDerivativeId) variables
-    objectiveOffset = getMemOffset objectiveId
+        map (getMemOffsetReal memMap . partialDerivativeId) variables
+    objectiveOffset = getMemOffsetReal memMap objectiveId
     -- For both variables and fixed value
     readValCodeEach (var, nId) =
         generateReadValuesCode
             var
-            (fromJust $ Map.lookup var valMaps)
+            (getVal valMaps var)
             ("ptr + " ++ show offset)
             (product shape)
       where
@@ -543,7 +552,11 @@ generateProblemCode valMaps Problem {..}
         let varPosition =
                 take (length variableSizes) $ scanl (+) 0 variableSizes
             varWithPos = zip vars varPosition
-            getPos name = snd . fromJust . find ((== name) . fst) $ varWithPos
+            getPos name =
+                snd .
+                fromMaybe (error "get starting position variable") .
+                find ((== name) . fst) $
+                varWithPos
             readUpperBoundCode name val =
                 generateReadValuesCode
                     (name ++ "_ub")
@@ -573,13 +586,16 @@ generateProblemCode valMaps Problem {..}
             scalarConstraintDefineStuffs =
                 case scalarConstraints of
                     Just scs ->
-                        [ "#define NUM_SCALAR_CONSTRAINT " ++ show (length scs)
+                        [ "#define NUM_SCALAR_CONSTRAINT " ++
+                          show (length $ traceShowId $ scs)
                         , ""
                         , "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];"
                         , "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];"
                         , "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {" ++
                           (intercalate "," .
-                           map (show . getMemOffset . constraintValueId) $
+                           map
+                               (show .
+                                getMemOffsetReal memMap . constraintValueId) $
                            scs) ++
                           "};"
                         , ""
@@ -589,7 +605,7 @@ generateProblemCode valMaps Problem {..}
                               [ "{" ++
                               intercalate
                                   ","
-                                  (map (show . getMemOffset) .
+                                  (map (show . getMemOffsetReal memMap) .
                                    constraintPartialDerivatives $
                                    sc) ++
                               "}"

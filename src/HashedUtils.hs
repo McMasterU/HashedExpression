@@ -45,6 +45,7 @@ import Data.List.Split (splitOn)
 import Data.Maybe
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
+import GHC.Stack (HasCallStack)
 
 -- | Forward pipe operator in Elm
 --
@@ -227,6 +228,14 @@ data Val
     deriving (Eq, Show, Ord)
 
 type ValMaps = Map String Val
+
+-- | 
+--
+getVal :: HasCallStack => ValMaps -> String -> Val
+getVal valMap name =
+    case Map.lookup name valMap of
+        Just val -> val
+        _ -> error "value is not on val map"
 
 -- | 
 --
