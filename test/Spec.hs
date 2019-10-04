@@ -14,6 +14,7 @@ import qualified HashedNormalizeSpec
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
+import qualified HashedSolverSpec
 import qualified HashedToCSpec
 import qualified NormalizeEval.OneCSpec as OneCSpec
 import qualified NormalizeEval.OneRSpec as OneRSpec
@@ -77,6 +78,7 @@ spec = do
     describe "Test2" Test2.spec
     describe "HashedInterpSpec" HashedInterpSpec.spec
     describe "HashedCollectSpec" HashedCollectSpec.spec
+    describe "SolverSpec" HashedSolverSpec.spec
     describe "HashedToCSpec" HashedToCSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec

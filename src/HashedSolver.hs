@@ -75,7 +75,7 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
-        , boxConstraints :: Maybe [BoxConstraint]
+        , boxConstraints :: Maybe [BoxConstraint] -- TODO: we can just check if list is empty and remove Maybe?
         , scalarConstraints :: Maybe [ScalarConstraint]
         }
 
@@ -86,6 +86,8 @@ data BoxConstraint
     | BoxLower String Val
     | BoxBetween String (Val, Val)
 
+-- |
+--
 data ScalarConstraint =
     ScalarConstraint
         { constraintValueId :: Int
@@ -172,6 +174,7 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 data ProblemResult
     = ProblemValid Problem
     | ProblemInvalid String -- reason
+    | NoVariables -- TODO - what about feasibility problems given constraints?
     deriving (Show)
 
 extractBoxConstraint :: Constraint -> Maybe [BoxConstraint]
@@ -250,7 +253,7 @@ extractScalarConstraint varsWithShape constraint =
 constructProblem ::
        Expression Scalar R -> [String] -> Constraint -> ProblemResult
 constructProblem objectiveFunction varList constraint
-    | null vars = ProblemInvalid "No variable to optimize over"
+    | null varsList = NoVariables
     | Just reason <- checkError = ProblemInvalid reason
     | otherwise -- all the constraints are good
      =
@@ -296,23 +299,30 @@ constructProblem objectiveFunction varList constraint
                 , scalarConstraints = fmap (map fst) scalarConstraints
                 }
     -- set of name users consider as variable
+    -- list of var names provided by users
   where
-    userVarsSet = Set.fromList varList
+    userSpecifiedVars = Set.fromList varList
+    -- list of all vars name in the expression, they can be variables or fixed values
+    expressionVars = Set.fromList . map fst . expressionVarNodes $ f
+    -- list of possible names that could be variables
+    -- just user says it is variable and it is var node doesn't mean it is actually
+    -- appears in the d: for example f = 0 * x, then this will just be 0 and dx doesn't appear
+    -- when we take the derivative
+    possibleVars = Set.intersection expressionVars userSpecifiedVars
+    -- normalize and take the derivative and collect differentials
     f@(Expression fId fMp) = normalize objectiveFunction
-    -- set of vars
-    name2Id :: Map String Int
-    name2Id =
-        Map.fromList $
-        filter (flip Set.member userVarsSet . fst) $ expressionVarNodes f
-    -- Final valid list of vars
-    vars = Map.keys name2Id
-    varSet = Set.fromList vars
     df@(Expression dfId dfMp) =
-        collectDifferentials . exteriorDerivative (Set.fromList vars) $ f
-    -- Map from a variable name to id in the problem's ExpressionMap
+        collectDifferentials . exteriorDerivative possibleVars $ f
     -- Map from a variable name to partial derivative id in the problem's ExpressionMap
     name2PartialDerivativeId :: Map String Int
     name2PartialDerivativeId = partialDerivativeMaps df
+    -- After this step we can know which are actually variables - those appear in name2PartialDerivativeId
+    varsList = Map.keys name2PartialDerivativeId
+    vars = Set.fromList varsList
+    -- Map from a variable name to id in the problem's ExpressionMap
+    name2Id :: Map String Int
+    name2Id =
+        Map.fromList $ filter ((`Set.member` vars) . fst) $ expressionVarNodes f
     variableDatas :: [(String, (Int, Int))]
     variableDatas =
         Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
@@ -331,7 +341,7 @@ constructProblem objectiveFunction varList constraint
                 Map.lookup name name2Id
          in retrieveShape nId fMp
     -- vars with shape 
-    varsWithShape = zip vars (map variableShape vars)
+    varsWithShape = zip varsList (map variableShape varsList)
     checkError =
         case constraint of
             NoConstraint -> Nothing
@@ -341,7 +351,7 @@ constructProblem objectiveFunction varList constraint
     checkBoxConstraint cs =
         case retrieveNode n mp of
             Var var
-                | not (Set.member var varSet) ->
+                | not (Set.member var vars) ->
                     Just $ var ++ " is not a variable"
                 | any (not . compatible (variableShape var)) (getValCS cs) ->
                     Just $ "Bound for " ++ var ++ " is not in the right shape"
@@ -353,7 +363,7 @@ constructProblem objectiveFunction varList constraint
     checkCombinedConstraint cs =
         case retrieveInternal n mp of
             (_, Var var) -- if it is a var, then should be box constraint
-                | not (Set.member var varSet) ->
+                | not (Set.member var vars) ->
                     Just $ var ++ " is not a variable"
                 | any (not . compatible (variableShape var)) (getValCS cs) ->
                     Just $ "Bound for " ++ var ++ " is not in the right shape"
