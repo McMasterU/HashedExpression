@@ -9,7 +9,7 @@ module HashedSolverSpec where
 import Commons
 import Control.Applicative (liftA2)
 import Control.Concurrent
-import Control.Monad (replicateM_, unless, when)
+import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Array
 import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
@@ -51,6 +51,8 @@ import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
 
+-- |
+--
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemNoConstraint (SuiteScalarR exp valMap) = do
     let names = Map.keys valMap
@@ -72,6 +74,8 @@ prop_constructProblemNoConstraint (SuiteScalarR exp valMap) = do
             assertBool "partial derivative ids aren't correct" $
                 all ok variables
 
+-- |
+--
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
 makeValidBoxConstraint (name, shape) =
     case shape of
@@ -112,6 +116,8 @@ makeValidBoxConstraint (name, shape) =
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
 
+-- |
+--
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
     let names = Map.keys valMap
@@ -121,7 +127,8 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
         vars = Map.keys pdMap
         varsWithShape = Map.toList $ Map.map (`retrieveShape` dfMp) pdMap
     bcs <- mapM makeValidBoxConstraint varsWithShape
-    let constraints = BoxConstraint bcs
+    sampled <- generate $ sublistOf bcs
+    let constraints = BoxConstraint sampled
     let constructResult = constructProblem exp names constraints
     case constructResult of
         NoVariables -> return () -- it is possible that the random expression doesn't have any variables
@@ -136,6 +143,62 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
                     | otherwise = False
             assertBool "partial derivative ids aren't correct" $
                 all ok variables
+            case (sampled, boxConstraints) of
+                (_:_, Nothing) ->
+                    assertFailure
+                        "Valid box constraints but not appear in the problem"
+                (_, Just bs) -> length sampled `shouldBe` length bs
+
+-- | 
+--
+makeValidScalarConstraint :: IO ConstraintStatement
+makeValidScalarConstraint = do
+    sc <- fst <$> generate genScalarR
+    val1 <- VScalar <$> generate arbitrary
+    val2 <- VScalar <$> generate arbitrary
+    generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]
+
+-- |
+--
+prop_constructProblemScalarConstraints :: SuiteScalarR -> Expectation
+prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
+    let names = Map.keys valMap
+    let df@(Expression dfN dfMp) =
+            collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
+        pdMap = partialDerivativeMaps df
+        vars = Map.keys pdMap
+        varsWithShape = Map.toList $ Map.map (`retrieveShape` dfMp) pdMap
+    -- box constraints
+    bcs <- mapM makeValidBoxConstraint varsWithShape
+    sampled <- generate $ sublistOf bcs
+    -- scalar constraints
+    numScalarConstraint <- generate $ elements [2 .. 4]
+    scc <- replicateM numScalarConstraint makeValidScalarConstraint
+    let constraints = IPOPTConstraint $ sampled ++ scc
+    let constructResult = constructProblem exp names constraints
+    case constructResult of
+        NoVariables -> return () -- it is possible that the random expression doesn't have any variables
+        ProblemInvalid reason ->
+            assertFailure $ "Can't construct problem: " ++ reason
+        ProblemValid Problem {..} -> do
+            let vars = map varName variables
+            vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
+            let ok variable
+                    | Just pId <- Map.lookup (varName variable) pdMap
+                    , pId == partialDerivativeId variable = True
+                    | otherwise = False
+            assertBool "partial derivative ids aren't correct" $
+                all ok variables
+            case (scc, scalarConstraints) of
+                ([], _) -> return ()
+                (_:_, Nothing) ->
+                    assertFailure
+                        "Having scalar constraints but not present in problem"
+                (_, Just sConstraints) -> do
+                    let isOk sc =
+                            length (constraintPartialDerivatives sc) `shouldBe`
+                            length vars
+                    mapM_ isOk sConstraints
 
 spec :: Spec
 spec =
@@ -146,5 +209,5 @@ spec =
             "valid box constrained problem should be constructed successfully" $
             property prop_constructProblemBoxConstraint
         specify
-            "valid scalar constraints problem should be successfully successfully" $ do
-            print ()
+            "valid scalar constraints problem should be successfully successfully" $
+            property prop_constructProblemScalarConstraints

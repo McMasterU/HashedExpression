@@ -77,7 +77,7 @@ main = do
     let vars = ["x", "y"]
     let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
 --    let (ProblemValid problem) =
-    print $ constructProblem objectiveFunction vars constraint--    let valMap =
+    print $ constructProblem objectiveFunction vars constraint --    let valMap =
 --            fromList
 --                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
 --                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)

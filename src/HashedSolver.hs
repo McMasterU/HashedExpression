@@ -595,36 +595,37 @@ generateProblemCode valMaps Problem {..}
                     _ -> []
             scalarConstraintDefineStuffs =
                 case scalarConstraints of
-                    Just scs ->
-                        [ "#define NUM_SCALAR_CONSTRAINT " ++
-                          show (length $ traceShowId $ scs)
-                        , ""
-                        , "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];"
-                        , "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];"
-                        , "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {" ++
-                          (intercalate "," .
-                           map
-                               (show .
-                                getMemOffsetReal memMap . constraintValueId) $
-                           scs) ++
-                          "};"
-                        , ""
-                        , "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {" ++
-                          intercalate
-                              ", "
-                              [ "{" ++
+                    Just scs
+                        | not (null scs) ->
+                            [ "#define NUM_SCALAR_CONSTRAINT " ++
+                              show (length scs)
+                            , ""
+                            , "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];"
+                            , "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];"
+                            , "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {" ++
+                              (intercalate "," .
+                               map
+                                   (show .
+                                    getMemOffsetReal memMap . constraintValueId) $
+                               scs) ++
+                              "};"
+                            , ""
+                            , "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {" ++
                               intercalate
-                                  ","
-                                  (map (show . getMemOffsetReal memMap) .
-                                   constraintPartialDerivatives $
-                                   sc) ++
-                              "}"
-                              | sc <- scs
-                              ] ++
-                          "};"
-                        , ""
-                        , ""
-                        ]
+                                  ", "
+                                  [ "{" ++
+                                  intercalate
+                                      ","
+                                      (map (show . getMemOffsetReal memMap) .
+                                       constraintPartialDerivatives $
+                                       sc) ++
+                                  "}"
+                                  | sc <- scs
+                                  ] ++
+                              "};"
+                            , ""
+                            , ""
+                            ]
                     _ -> []
             readBoundScalarConstraints =
                 case scalarConstraints of
