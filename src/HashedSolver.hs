@@ -285,8 +285,30 @@ constructProblem objectiveFunction varList constraint
                 IM.filterWithKey
                     (\nId _ -> Set.member nId relevantNodes)
                     mergedMap
+            consecutivelyAllocatedIds =
+                case scalarConstraints of
+                    Nothing ->
+                        map nodeId problemVariables ++ -- variables are one after another
+                        map partialDerivativeId problemVariables -- gradient are one after another
+                    Just scalarConstraintAndExMap ->
+                        let constraints = map fst scalarConstraintAndExMap
+                            -- values of scalar constraints are one after another --> like a row vector of 
+                            -- constraints
+                            scalarNodeIds = map constraintValueId constraints
+                            -- gradient of each constraint are one after another, and gradients themselves are 
+                            -- also one after another --> jacobian
+                            jacobianNodeIds =
+                                concatMap
+                                    constraintPartialDerivatives
+                                    constraints
+                         in map nodeId problemVariables ++ -- variables are one after another
+                            map partialDerivativeId problemVariables ++ -- gradient are one after another
+                            scalarNodeIds ++ jacobianNodeIds
             -- mem map
-            problemMemMap = makeMemMap problemExpressionMap
+            problemMemMap =
+                makeMemMapCondition
+                    problemExpressionMap
+                    consecutivelyAllocatedIds
             -- objective id
             problemObjectiveId = fId
          in ProblemValid $

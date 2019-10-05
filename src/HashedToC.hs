@@ -60,17 +60,36 @@ type Code = [CodeLine]
 -- | Make a memory map from an expression
 --
 makeMemMap :: ExpressionMap -> MemMap
-makeMemMap mp = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
+makeMemMap mp = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
   where
     nIds = IM.keys mp
-    f :: (IntMap MemMapEntry, Int) -> Int -> (IntMap MemMapEntry, Int)
-    f (memMapSoFar, sizeSoFar) nId =
-        let (shape, node) = retrieveInternal nId mp
-            (nodeSz, mmShape)
-                | nodeElementType node mp == R = (product shape, EntryR)
-                | nodeElementType node mp == C = (2 * product shape, EntryC)
-            newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
-         in (newMemMap, sizeSoFar + nodeSz)
+
+-- |  Make a memory map from an expression and make sures those given node ids are allocated consecutively
+--
+makeMemMapCondition :: ExpressionMap -> [Int] -> MemMap
+makeMemMapCondition mp nodeIds
+    | any (not . (`IM.member` mp)) nodeIds = error "node id not in the map"
+    | otherwise = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
+  where
+    nodeSet = Set.fromList nodeIds
+    originalOrder = IM.keys mp
+    theRest = filter (not . (`Set.member` nodeSet)) originalOrder
+    nIds = nodeIds ++ theRest
+
+-- | An update function for foldl
+--
+mmUpdate ::
+       ExpressionMap
+    -> (IntMap MemMapEntry, Int)
+    -> Int
+    -> (IntMap MemMapEntry, Int)
+mmUpdate mp (memMapSoFar, sizeSoFar) nId =
+    let (shape, node) = retrieveInternal nId mp
+        (nodeSz, mmShape)
+            | nodeElementType node mp == R = (product shape, EntryR)
+            | nodeElementType node mp == C = (2 * product shape, EntryC)
+        newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
+     in (newMemMap, sizeSoFar + nodeSz)
 
 -- |
 --
