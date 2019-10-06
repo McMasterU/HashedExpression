@@ -13,6 +13,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
+import Debug.Trace (traceShowId)
 import GHC.Stack (HasCallStack)
 import HashedExpression
     ( DimensionType
@@ -60,17 +61,39 @@ type Code = [CodeLine]
 -- | Make a memory map from an expression
 --
 makeMemMap :: ExpressionMap -> MemMap
-makeMemMap mp = uncurry MemMap $ foldl' f (IM.empty, 0) nIds
+makeMemMap mp = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
   where
     nIds = IM.keys mp
-    f :: (IntMap MemMapEntry, Int) -> Int -> (IntMap MemMapEntry, Int)
-    f (memMapSoFar, sizeSoFar) nId =
-        let (shape, node) = retrieveInternal nId mp
-            (nodeSz, mmShape)
-                | nodeElementType node mp == R = (product shape, EntryR)
-                | nodeElementType node mp == C = (2 * product shape, EntryC)
-            newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
-         in (newMemMap, sizeSoFar + nodeSz)
+
+-- |  Make a memory map for a problem
+-- Make sure varIds are allocated one after another
+--
+makeProblemMemMap :: ExpressionMap -> [Int] -> MemMap
+makeProblemMemMap mp varIds
+    | any (not . (`IM.member` mp)) varIds = error "var id not in the map"
+    | length nIds /= length originalOrder =
+        error "reordering shouldn't change the number of nodes"
+    | otherwise = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
+  where
+    varSet = Set.fromList varIds
+    originalOrder = IM.keys mp
+    theRest = filter (not . (`Set.member` varSet)) originalOrder
+    nIds = varIds ++ theRest
+
+-- | An update function for foldl
+--
+mmUpdate ::
+       ExpressionMap
+    -> (IntMap MemMapEntry, Int)
+    -> Int
+    -> (IntMap MemMapEntry, Int)
+mmUpdate mp (memMapSoFar, sizeSoFar) nId =
+    let (shape, node) = retrieveInternal nId mp
+        (nodeSz, mmShape)
+            | nodeElementType node mp == R = (product shape, EntryR)
+            | nodeElementType node mp == C = (2 * product shape, EntryC)
+        newMemMap = IM.insert nId (sizeSoFar, mmShape, shape) memMapSoFar
+     in (newMemMap, sizeSoFar + nodeSz)
 
 -- |
 --

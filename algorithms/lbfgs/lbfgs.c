@@ -54,15 +54,8 @@ void print_vars() {
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x,
     lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step ) {
   int i, j;
-  int cnt = 0;
-  for (i = 0; i < NUM_VARIABLES; i++) {
-    for (j = 0; j < var_size[i]; j++) {
-      ptr[var_offset[i] + j] = x[cnt];
-      cnt++;
-    }
-  }
   evaluate_partial_derivatives_and_objective();
-  cnt = 0;
+  int cnt = 0;
   for (i = 0; i < NUM_VARIABLES; i++) {
     for (j = 0; j < var_size[i]; j++) {
       g[cnt] = ptr[partial_derivative_offset[i] + j];
@@ -101,22 +94,8 @@ int main() {
   read_values();
 
   lbfgsfloatval_t fx;
-  lbfgsfloatval_t *x = lbfgs_malloc(N);
+  lbfgsfloatval_t *x = ptr + VARS_START_OFFSET;
   lbfgs_parameter_t param;
-
-  if (x == NULL) {
-    printf("ERROR: Failed to allocate a memory block for variables.\n");
-    return 1;
-  }
-
-  // copying initial values
-  int cnt = 0;
-  for (i = 0; i < NUM_VARIABLES; i++) {
-    for (j = 0; j < var_size[i]; j++) {
-      x[cnt] = ptr[var_offset[i] + j];
-      cnt++;
-    }
-  }
 
   // solve L-BFGS
   lbfgs_parameter_init(&param);

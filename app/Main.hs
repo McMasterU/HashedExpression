@@ -70,14 +70,14 @@ imFT = xIm . ft
 --main = do
 --    let exp = const 2 * x
 --    showExp $ introduceZeroPartialDerivatives [("y", [2, 3])] . collectDifferentials . exteriorDerivative allVars $ exp
-main = do
-    let [x, y] = map (variable2D @128 @128) ["x", "y"]
-        [zero, one] = map (constant2D @128 @128) [1, 0]
-    let objectiveFunction = piecewise [1] x [zero, one] <.> one
-    let vars = ["x", "y"]
-    let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
---    let (ProblemValid problem) =
-    print $ constructProblem objectiveFunction vars constraint --    let valMap =
+--main = do
+--    let [x, y] = map (variable2D @128 @128) ["x", "y"]
+--        [zero, one] = map (constant2D @128 @128) [1, 0]
+--    let objectiveFunction = piecewise [1] x [zero, one] <.> one
+--    let vars = ["x", "y"]
+--    let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
+----    let (ProblemValid problem) =
+--    print $ constructProblem objectiveFunction vars constraint --    let valMap =
 --            fromList
 --                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
 --                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
@@ -86,4 +86,4 @@ main = do
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ problem
---main = bananaFunction
+main = smilingFaceProblem

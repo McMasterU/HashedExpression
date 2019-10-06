@@ -62,7 +62,8 @@ int main() {
     static integer *csave=&csaveValue;
 
     // f - objective, g - gradient
-    static double f, g[NUM_ACTUAL_VARIABLES], x[NUM_ACTUAL_VARIABLES];
+    static double f, g[NUM_ACTUAL_VARIABLES];
+    static double* x = ptr + VARS_START_OFFSET;
     // l - lower bound, u - upper bound
     // nbd(i)= 0 if x(i) is unbounded,
     //         1 if x(i) has only a lower bound,
@@ -126,15 +127,6 @@ int main() {
     read_values();
     read_bounds();
 
-    // initial values
-    int cnt = 0;
-    for (i = 0; i < NUM_VARIABLES; i++) {
-      for (j = 0; j < var_size[i]; j++) {
-        x[cnt] = ptr[var_offset[i] + j];
-        cnt++;
-      }
-    }
-
     // bounds
     for (i = 0; i < NUM_ACTUAL_VARIABLES; i++) {
       l[i] = lower_bound[i];
@@ -162,16 +154,10 @@ L111:
         /*        Compute function value f for the sample problem. */
         /* Computing 2nd power */
         /*          go back to the minimization routine. */
-        int cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
-          for (j = 0; j < var_size[i]; j++) {
-            ptr[var_offset[i] + j] = x[cnt];
-            cnt++;
-          }
-        }
+
         evaluate_partial_derivatives_and_objective();
 
-        cnt = 0;
+        int cnt = 0;
         for (i = 0; i < NUM_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             g[cnt] = ptr[partial_derivative_offset[i] + j];

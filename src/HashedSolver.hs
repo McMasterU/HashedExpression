@@ -286,7 +286,10 @@ constructProblem objectiveFunction varList constraint
                     (\nId _ -> Set.member nId relevantNodes)
                     mergedMap
             -- mem map
-            problemMemMap = makeMemMap problemExpressionMap
+            problemMemMap =
+                makeProblemMemMap
+                    problemExpressionMap
+                    (map nodeId problemVariables)
             -- objective id
             problemObjectiveId = fId
          in ProblemValid $
@@ -539,6 +542,11 @@ generateProblemCode valMaps Problem {..}
         , "#define NUM_VARIABLES " ++ show (length variables)
         , "#define NUM_ACTUAL_VARIABLES " ++ show totalVarSize
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
+        , ""
+        , "// all the actual double variables are allocated"
+        , "// one after another, starts from here"
+        , "#define VARS_START_OFFSET " ++
+          show (getMemOffsetReal memMap (nodeId . head $ variables))
         , ""
         , ""
         , "const char* var_name[NUM_VARIABLES] = {" ++
