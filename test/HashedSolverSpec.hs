@@ -51,7 +51,7 @@ import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
 
--- | 
+-- |
 --
 isOneAfterAnother :: MemMap -> [Int] -> Bool
 isOneAfterAnother memMap nIds = all isOk xs
@@ -60,7 +60,7 @@ isOneAfterAnother memMap nIds = all isOk xs
     isOk (cur, nxt) =
         let (offsetCur, _, shapeCur) =
                 fromJust $ IM.lookup cur (entryMap memMap)
-            (offsetNxt, _, _) = fromJust $ IM.lookup cur (entryMap memMap)
+            (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
          in offsetCur + product shapeCur == offsetNxt
 
 -- |
@@ -85,10 +85,8 @@ prop_constructProblemNoConstraint (SuiteScalarR exp valMap) = do
                     | otherwise = False
             assertBool "partial derivative ids aren't correct" $
                 all ok variables
-            assertBool "variables are not allocated consecutively" $ 
+            assertBool "variables are not allocated consecutively" $
                 isOneAfterAnother memMap (map nodeId variables)
-            assertBool "partial derivatives are not allocated consecutively" $ 
-                isOneAfterAnother memMap (map partialDerivativeId variables)
 
 -- |
 --
@@ -159,17 +157,15 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
                     | otherwise = False
             assertBool "partial derivative ids aren't correct" $
                 all ok variables
-            assertBool "variables are not allocated consecutively" $ 
+            assertBool "variables are not allocated consecutively" $
                 isOneAfterAnother memMap (map nodeId variables)
-            assertBool "partial derivatives are not allocated consecutively" $ 
-                isOneAfterAnother memMap (map partialDerivativeId variables)
             case (sampled, boxConstraints) of
                 (_:_, Nothing) ->
                     assertFailure
                         "Valid box constraints but not appear in the problem"
                 (_, Just bs) -> length sampled `shouldBe` length bs
 
--- | 
+-- |
 --
 makeValidScalarConstraint :: IO ConstraintStatement
 makeValidScalarConstraint = do
@@ -209,10 +205,8 @@ prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
                     | otherwise = False
             assertBool "partial derivative ids aren't correct" $
                 all ok variables
-            assertBool "variables are not allocated consecutively" $ 
+            assertBool "variables are not allocated consecutively" $
                 isOneAfterAnother memMap (map nodeId variables)
-            assertBool "partial derivatives are not allocated consecutively" $ 
-                isOneAfterAnother memMap (map partialDerivativeId variables)
             case (scc, scalarConstraints) of
                 ([], _) -> return ()
                 (_:_, Nothing) ->

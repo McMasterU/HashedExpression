@@ -285,30 +285,11 @@ constructProblem objectiveFunction varList constraint
                 IM.filterWithKey
                     (\nId _ -> Set.member nId relevantNodes)
                     mergedMap
-            consecutivelyAllocatedIds =
-                case scalarConstraints of
-                    Nothing ->
-                        map nodeId problemVariables ++ -- variables are one after another
-                        map partialDerivativeId problemVariables -- gradient are one after another
-                    Just scalarConstraintAndExMap ->
-                        let constraints = map fst scalarConstraintAndExMap
-                            -- values of scalar constraints are one after another --> like a row vector of 
-                            -- constraints
-                            scalarNodeIds = map constraintValueId constraints
-                            -- gradient of each constraint are one after another, and gradients themselves are 
-                            -- also one after another --> jacobian
-                            jacobianNodeIds =
-                                concatMap
-                                    constraintPartialDerivatives
-                                    constraints
-                         in map nodeId problemVariables ++ -- variables are one after another
-                            map partialDerivativeId problemVariables ++ -- gradient are one after another
-                            scalarNodeIds ++ jacobianNodeIds
             -- mem map
             problemMemMap =
-                makeMemMapCondition
+                makeProblemMemMap
                     problemExpressionMap
-                    consecutivelyAllocatedIds
+                    (map nodeId problemVariables)
             -- objective id
             problemObjectiveId = fId
          in ProblemValid $
@@ -561,6 +542,11 @@ generateProblemCode valMaps Problem {..}
         , "#define NUM_VARIABLES " ++ show (length variables)
         , "#define NUM_ACTUAL_VARIABLES " ++ show totalVarSize
         , "#define MEM_SIZE " ++ show (totalDoubles memMap)
+        , ""
+        , "// all the actual double variables are allocated"
+        , "// one after another, starts from here"
+        , "#define VARS_START_OFFSET " ++
+          show (getMemOffsetReal memMap (nodeId . head $ variables))
         , ""
         , ""
         , "const char* var_name[NUM_VARIABLES] = {" ++

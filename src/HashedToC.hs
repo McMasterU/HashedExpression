@@ -13,6 +13,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
+import Debug.Trace (traceShowId)
 import GHC.Stack (HasCallStack)
 import HashedExpression
     ( DimensionType
@@ -64,17 +65,20 @@ makeMemMap mp = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
   where
     nIds = IM.keys mp
 
--- |  Make a memory map from an expression and make sures those given node ids are allocated consecutively
+-- |  Make a memory map for a problem
+-- Make sure varIds are allocated one after another
 --
-makeMemMapCondition :: ExpressionMap -> [Int] -> MemMap
-makeMemMapCondition mp nodeIds
-    | any (not . (`IM.member` mp)) nodeIds = error "node id not in the map"
+makeProblemMemMap :: ExpressionMap -> [Int] -> MemMap
+makeProblemMemMap mp varIds
+    | any (not . (`IM.member` mp)) varIds = error "var id not in the map"
+    | length nIds /= length originalOrder =
+        error "reordering shouldn't change the number of nodes"
     | otherwise = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
   where
-    nodeSet = Set.fromList nodeIds
+    varSet = Set.fromList varIds
     originalOrder = IM.keys mp
-    theRest = filter (not . (`Set.member` nodeSet)) originalOrder
-    nIds = nodeIds ++ theRest
+    theRest = filter (not . (`Set.member` varSet)) originalOrder
+    nIds = varIds ++ theRest
 
 -- | An update function for foldl
 --
