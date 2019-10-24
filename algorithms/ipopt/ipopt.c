@@ -1,8 +1,8 @@
-/* Copyright (C) 2005, 2011 International Business Machines and others.
+/* Copyright (C) 2019
  * All Rights Reserved.
- * This code is published under the Eclipse Public License.
+ * This code is published under the GNU GPL.
  *
- * Authors:  Carl Laird, Andreas Waechter     IBM    2005-08-17
+ * Authors:  Curtis D'Alves
  */
 
 #include "IpStdCInterface.h"
@@ -64,6 +64,7 @@ Bool eval_h(
    UserDataPtr user_data
 );
 
+// TODO delete me?
 Bool intermediate_cb(
    Index       alg_mod,
    Index       iter_count,
@@ -79,25 +80,26 @@ Bool intermediate_cb(
    UserDataPtr user_data
 );
 
-/** This is an example how user_data can be used. */
-struct MyUserData
-{
-   Number g_offset[2]; /**< This is an offset for the constraints.  */
-};
+/** Structure that can be cast over UserDataPtr
+      SharedData->data should point to ptr in problem.c and holds all variables and auxiliary data
+ */
+struct _SharedData {Number* data; int data_size; };
+typedef struct _SharedData* SharedData;
+
 
 /** Main Program */
 /* [MAIN] */
 int main()
 {
-   Index n = -1;                        /* number of variables */
-   Index m = -1;                        /* number of constraints */
+  // Index n = -1;                        /* number of variables */
+  // Index m = -1;                        /* number of constraints */
    Index nele_jac;                      /* number of nonzeros in the Jacobian of the constraints */
    Index nele_hess;                     /* number of nonzeros in the Hessian of the Lagrangian (lower or upper triangular part only) */
    Index index_style;                   /* indexing style for matrices */
-   Number* x_L = NULL;                  /* lower bounds on x */
-   Number* x_U = NULL;                  /* upper bounds on x */
-   Number* g_L = NULL;                  /* lower bounds on g */
-   Number* g_U = NULL;                  /* upper bounds on g */
+  // Number* x_L = NULL;                  /* lower bounds on x */
+  // Number* x_U = NULL;                  /* upper bounds on x */
+  // Number* g_L = NULL;                  /* lower bounds on g */
+  // Number* g_U = NULL;                  /* upper bounds on g */
    IpoptProblem nlp = NULL;             /* IpoptProblem */
    enum ApplicationReturnStatus status; /* Solve return code */
    Number* x = NULL;                    /* starting point and solution vector */
@@ -105,101 +107,86 @@ int main()
    Number* mult_x_L = NULL;             /* lower bound multipliers at the solution */
    Number* mult_x_U = NULL;             /* upper bound multipliers at the solution */
    Number obj;                          /* objective value */
-   struct MyUserData user_data;         /* our user data for the function evaluations */
    Index i;                             /* generic counter */
+   SharedData sdata;
+   // TODO remove unnecessary declerations above
 
-   /* set the number of variables and allocate space for the bounds */
-   n = 4;
-   x_L = (Number*) malloc(sizeof(Number) * n);
-   x_U = (Number*) malloc(sizeof(Number) * n);
-   /* set the values for the variable bounds */
-   for( i = 0; i < n; i++ )
-   {
-      x_L[i] = 1.0;
-      x_U[i] = 5.0;
-   }
+   /* set sdata to ptr */
+   sdata = (SharedData)malloc(sizeof(struct _SharedData));
+   sdata->data = ptr;
+   sdata->data_size = MEM_SIZE;
 
-   /* set the number of constraints and allocate space for the bounds */
-   m = 2;
-   g_L = (Number*) malloc(sizeof(Number) * m);
-   g_U = (Number*) malloc(sizeof(Number) * m);
-   /* set the values of the constraint bounds */
-   g_L[0] = 25;
-   g_U[0] = 2e19;
-   g_L[1] = 40;
-   g_U[1] = 40;
+   /* initializes bounds for variables and constraints
+      (lower_bound,upper_bound,sc_lower_bound,sc_upper_bound) */
+   read_bounds();
 
    /* set the number of nonzeros in the Jacobian and Hessian */
-   nele_jac = 8;
-   nele_hess = 10;
+   nele_jac = NUM_ACTUAL_VARIABLES*NUM_SCALAR_CONSTRAINT;  // TODO use sparse jacobian?
+   nele_hess = NUM_ACTUAL_VARIABLES*NUM_ACTUAL_VARIABLES; // TODO use sparse hessian?
 
    /* set the indexing style to C-style (start counting of rows and column indices at 0) */
    index_style = 0;
 
    /* create the IpoptProblem */
-   nlp = CreateIpoptProblem(n, x_L, x_U, m, g_L, g_U, nele_jac, nele_hess, index_style,
+   nlp = CreateIpoptProblem(NUM_ACTUAL_VARIABLES, lower_bound, upper_bound,
+                            NUM_SCALAR_CONSTRAINT, sc_lower_bound, sc_upper_bound,
+                            nele_jac, nele_hess, index_style,
                             &eval_f, &eval_g, &eval_grad_f,
                             &eval_jac_g, &eval_h);
 
-   /* We can free the memory now - the values for the bounds have been
-    * copied internally in CreateIpoptProblem
+   /* TODO if lower_bound,upper_bound,_sc_lower_bound and sc_upper_bound were dynamically allocated
+    *      we could free them here
     */
-   free(x_L);
-   free(x_U);
-   free(g_L);
-   free(g_U);
 
-   /* Set some options.  Note the following ones are only examples,
-    * they might not be suitable for your problem.
+   /* Set ipopt options.
     */
-   AddIpoptNumOption(nlp, "tol", 1e-7);
-   AddIpoptStrOption(nlp, "mu_strategy", "adaptive");
-   AddIpoptStrOption(nlp, "output_file", "ipopt.out");
+   AddIpoptNumOption(nlp, "tol", 1e-7);  // TODO adjust me?
+   AddIpoptStrOption(nlp, "mu_strategy", "adaptive"); // TODO does this help?
+   AddIpoptStrOption(nlp, "hessian_approximation","limited-memory"); // TODO add option to turn off/on?
 
-   /* allocate space for the initial point and set the values */
-   x = (Number*) malloc(sizeof(Number) * n);
-   x[0] = 1.0;
-   x[1] = 5.0;
-   x[2] = 5.0;
-   x[3] = 1.0;
+   /* Initialize objective variables */
+   read_values();
+
+   /* variables are allocated sequentially in ptr memory */
+   x = sdata->data + VARS_START_OFFSET;
 
    /* allocate space to store the bound multipliers at the solution */
-   mult_g = (Number*) malloc(sizeof(Number) * m);
-   mult_x_L = (Number*) malloc(sizeof(Number) * n);
-   mult_x_U = (Number*) malloc(sizeof(Number) * n);
-
-   /* Initialize the user data */
-   user_data.g_offset[0] = 0.;
-   user_data.g_offset[1] = 0.;
+   mult_g = (Number*) malloc(sizeof(Number) * NUM_SCALAR_CONSTRAINT);
+   mult_x_L = (Number*) malloc(sizeof(Number) * NUM_ACTUAL_VARIABLES);
+   mult_x_U = (Number*) malloc(sizeof(Number) * NUM_ACTUAL_VARIABLES);
 
    /* Set the callback method for intermediate user-control.
     * This is not required, just gives you some intermediate control in
     * case you need it.
+    * TODO decide whether or not this is of use
     */
    /* SetIntermediateCallback(nlp, intermediate_cb); */
 
    /* solve the problem */
-   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, &user_data);
+   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, (void*)sdata);
 
+   /* check IpoptSolve results and print solutions upon success
+    * TODO write solution to file
+    */
    if( status == Solve_Succeeded )
    {
       printf("\n\nSolution of the primal variables, x\n");
-      for( i = 0; i < n; i++ )
+      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
       {
          printf("x[%d] = %e\n", i, x[i]);
       }
 
       printf("\n\nSolution of the constraint multipliers, lambda\n");
-      for( i = 0; i < m; i++ )
+      for( i = 0; i < NUM_SCALAR_CONSTRAINT; i++ )
       {
          printf("lambda[%d] = %e\n", i, mult_g[i]);
       }
       printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-      for( i = 0; i < n; i++ )
+      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
       {
          printf("z_L[%d] = %e\n", i, mult_x_L[i]);
       }
-      for( i = 0; i < n; i++ )
+      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
       {
          printf("z_U[%d] = %e\n", i, mult_x_U[i]);
       }
@@ -211,58 +198,8 @@ int main()
       printf("\n\nERROR OCCURRED DURING IPOPT OPTIMIZATION.\n");
    }
 
-   /* Now we are going to solve this problem again, but with slightly
-    * modified constraints.  We change the constraint offset of the
-    * first constraint a bit, and resolve the problem using the warm
-    * start option.
-    */
-   user_data.g_offset[0] = 0.2;
-
-   if( status == Solve_Succeeded )
-   {
-      /* Now resolve with a warmstart. */
-      AddIpoptStrOption(nlp, "warm_start_init_point", "yes");
-      /* The following option reduce the automatic modification of the
-       * starting point done my Ipopt.
-       */
-      AddIpoptNumOption(nlp, "bound_push", 1e-5);
-      AddIpoptNumOption(nlp, "bound_frac", 1e-5);
-      status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, &user_data);
-
-      if( status == Solve_Succeeded )
-      {
-         printf("\n\nSolution of the primal variables, x\n");
-         for( i = 0; i < n; i++ )
-         {
-            printf("x[%d] = %e\n", i, x[i]);
-         }
-
-         printf("\n\nSolution of the constraint multipliers, lambda\n");
-         for( i = 0; i < m; i++ )
-         {
-            printf("lambda[%d] = %e\n", i, mult_g[i]);
-         }
-         printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-         for( i = 0; i < n; i++ )
-         {
-            printf("z_L[%d] = %e\n", i, mult_x_L[i]);
-         }
-         for( i = 0; i < n; i++ )
-         {
-            printf("z_U[%d] = %e\n", i, mult_x_U[i]);
-         }
-
-         printf("\n\nObjective value\nf(x*) = %e\n", obj);
-      }
-      else
-      {
-         printf("\n\nERROR OCCURRED DURING IPOPT OPTIMIZATION WITH WARM START.\n");
-      }
-   }
-
    /* free allocated memory */
    FreeIpoptProblem(nlp);
-   free(x);
    free(mult_g);
    free(mult_x_L);
    free(mult_x_U);
@@ -280,15 +217,12 @@ Bool eval_f(
    UserDataPtr user_data
 )
 {
-   assert(n == 4);
-   (void) n;
+  SharedData sdata = (SharedData)user_data;
 
-   (void) new_x;
-   (void) user_data;
+  evaluate_objective();
+  *obj_value = sdata->data[objective_offset];
 
-   *obj_value = x[0] * x[3] * (x[0] + x[1] + x[2]) + x[2];
-
-   return TRUE;
+  return TRUE;
 }
 
 Bool eval_grad_f(
@@ -299,18 +233,23 @@ Bool eval_grad_f(
    UserDataPtr user_data
 )
 {
-   assert(n == 4);
-   (void) n;
+  SharedData sdata = (SharedData)user_data;
 
-   (void) new_x;
-   (void) user_data;
+  evaluate_partial_derivatives();
 
-   grad_f[0] = x[0] * x[3] + x[3] * (x[0] + x[1] + x[2]);
-   grad_f[1] = x[0] * x[3];
-   grad_f[2] = x[0] * x[3] + 1;
-   grad_f[3] = x[0] * (x[0] + x[1] + x[2]);
+  /* copy partial derivatives from shared memory into grad_f
+   * NOTE: unfortunately because of hashing, we cannot guarentee partials will be stored
+   *       sequentially in memory
+   */
+  int i;
+  int acc = 0;
+  for (i = 0; i < NUM_VARIABLES; i++) {
+    int pOff = partial_derivative_offset[i];
+    memcpy(&grad_f[acc],&sdata->data[pOff],sizeof(Number)*var_size[i]);
+    acc += var_size[i];
+  }
 
-   return TRUE;
+  return TRUE;
 }
 
 Bool eval_g(
@@ -322,19 +261,18 @@ Bool eval_g(
    UserDataPtr user_data
 )
 {
-   struct MyUserData* my_data = user_data;
+  SharedData sdata = (SharedData)user_data;
 
-   assert(n == 4);
-   (void) n;
-   assert(m == 2);
-   (void) m;
+  evaluate_scalar_constraints();
 
-   (void) new_x;
-
-   g[0] = x[0] * x[1] * x[2] * x[3] + my_data->g_offset[0];
-   g[1] = x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3] + my_data->g_offset[1];
-
-   return TRUE;
+  // TODO scalar constraints are always ... scalars right?
+  //      like each constraint always evaluates to a single double?
+  int i;
+  for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
+    int scOff = sc_offset[i];
+    g[i] = sdata->data[scOff];
+  }
+  return TRUE;
 }
 
 Bool eval_jac_g(
@@ -349,47 +287,39 @@ Bool eval_jac_g(
    UserDataPtr user_data
 )
 {
-   (void) n;
-   (void) new_x;
-   (void) m;
-   (void) nele_jac;
-   (void) user_data;
+   SharedData sdata = (SharedData)user_data;
 
    if( values == NULL )
    {
-      /* return the structure of the jacobian */
+      /* return the structure of the jacobian OF THE CONSTRAINTS (not objective) */
 
-      /* this particular jacobian is dense */
-      iRow[0] = 0;
-      jCol[0] = 0;
-      iRow[1] = 0;
-      jCol[1] = 1;
-      iRow[2] = 0;
-      jCol[2] = 2;
-      iRow[3] = 0;
-      jCol[3] = 3;
-      iRow[4] = 1;
-      jCol[4] = 0;
-      iRow[5] = 1;
-      jCol[5] = 1;
-      iRow[6] = 1;
-      jCol[6] = 2;
-      iRow[7] = 1;
-      jCol[7] = 3;
+      /* following speifies completely dense jacobian
+       * TODO currently variables per column, constraint per row (is this correct?)
+       */
+     int i;
+     for (i = 0; i < nele_jac; i++) {
+       iRow[i] = i / NUM_ACTUAL_VARIABLES;
+       jCol[i] = i % NUM_ACTUAL_VARIABLES;
+     }
    }
    else
    {
-      /* return the values of the jacobian of the constraints */
+     /* evaluate jacobian of the constraints */
+     evaluate_scalar_constraints_jacobian();
 
-      values[0] = x[1] * x[2] * x[3]; /* 0,0 */
-      values[1] = x[0] * x[2] * x[3]; /* 0,1 */
-      values[2] = x[0] * x[1] * x[3]; /* 0,2 */
-      values[3] = x[0] * x[1] * x[2]; /* 0,3 */
-
-      values[4] = 2 * x[0]; /* 1,0 */
-      values[5] = 2 * x[1]; /* 1,1 */
-      values[6] = 2 * x[2]; /* 1,2 */
-      values[7] = 2 * x[3]; /* 1,3 */
+     /* return the values of the jacobian of the constraints */
+     /* FIXME does accumulation ever cause a bad access? */
+     int i,j,acc;
+     acc = 0;
+     for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
+       for (j = 0; j < NUM_VARIABLES; j++) {
+         int sc_off = sc_partial_derivative_offset[i][j];
+         int var_sz = var_shape[j][0] * var_shape[j][1] * var_shape[j][2];
+         Number *p = sdata->data;
+         memcpy(&values[acc],&p[sc_off],sizeof(Number)*var_sz);
+         acc += var_sz;
+       }
+     }
    }
 
    return TRUE;
@@ -410,77 +340,9 @@ Bool eval_h(
    UserDataPtr user_data
 )
 {
-   Index idx = 0; /* nonzero element counter */
-   Index row = 0; /* row counter for loop */
-   Index col = 0; /* col counter for loop */
-
-   (void) n;
-   (void) new_x;
-   (void) m;
-   (void) new_lambda;
-   (void) user_data;
-
-   if( values == NULL )
-   {
-      /* return the structure. This is a symmetric matrix, fill the lower left
-       * triangle only. */
-
-      /* the hessian for this problem is actually dense */
-      idx = 0;
-      for( row = 0; row < 4; row++ )
-      {
-         for( col = 0; col <= row; col++ )
-         {
-            iRow[idx] = row;
-            jCol[idx] = col;
-            idx++;
-         }
-      }
-
-      assert(idx == nele_hess);
-      (void) nele_hess;
-   }
-   else
-   {
-      /* return the values. This is a symmetric matrix, fill the lower left
-       * triangle only */
-
-      /* fill the objective portion */
-      values[0] = obj_factor * (2 * x[3]); /* 0,0 */
-
-      values[1] = obj_factor * (x[3]); /* 1,0 */
-      values[2] = 0; /* 1,1 */
-
-      values[3] = obj_factor * (x[3]); /* 2,0 */
-      values[4] = 0; /* 2,1 */
-      values[5] = 0; /* 2,2 */
-
-      values[6] = obj_factor * (2 * x[0] + x[1] + x[2]); /* 3,0 */
-      values[7] = obj_factor * (x[0]); /* 3,1 */
-      values[8] = obj_factor * (x[0]); /* 3,2 */
-      values[9] = 0; /* 3,3 */
-
-      /* add the portion for the first constraint */
-      values[1] += lambda[0] * (x[2] * x[3]); /* 1,0 */
-
-      values[3] += lambda[0] * (x[1] * x[3]); /* 2,0 */
-      values[4] += lambda[0] * (x[0] * x[3]); /* 2,1 */
-
-      values[6] += lambda[0] * (x[1] * x[2]); /* 3,0 */
-      values[7] += lambda[0] * (x[0] * x[2]); /* 3,1 */
-      values[8] += lambda[0] * (x[0] * x[1]); /* 3,2 */
-
-      /* add the portion for the second constraint */
-      values[0] += lambda[1] * 2; /* 0,0 */
-
-      values[2] += lambda[1] * 2; /* 1,1 */
-
-      values[5] += lambda[1] * 2; /* 2,2 */
-
-      values[9] += lambda[1] * 2; /* 3,3 */
-   }
-
-   return TRUE;
+  /* no work is performed because hessian_approximation (lbfgs) option is on */
+  /* TODO have option to actually return hessian when option is off */
+   return FALSE;
 }
 
 Bool intermediate_cb(
@@ -501,19 +363,9 @@ Bool intermediate_cb(
    printf("Testing intermediate callback in iteration %d\n", iter_count);
    if( inf_pr < 1e-4 )
    {
-      return FALSE;
+     return FALSE;
    }
 
-   (void) alg_mod;
-   (void) obj_value;
-   (void) inf_du;
-   (void) mu;
-   (void) d_norm;
-   (void) regularization_size;
-   (void) alpha_du;
-   (void) alpha_pr;
-   (void) ls_trials;
-   (void) user_data;
-
+   /* TODO remove this or actually use it? */
    return TRUE;
 }
