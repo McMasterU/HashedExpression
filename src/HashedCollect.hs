@@ -62,6 +62,7 @@ import qualified Prelude
 -- - Scale is pushed to the outer most layer and real scalars are group together in a product
 --
 collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
+
 collectDifferentials = wrap . applyRules . unwrap . normalize
   where
     applyRules =

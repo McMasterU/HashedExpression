@@ -88,11 +88,65 @@ instance Print Integer where
 instance Print Double where
   prt _ x = doc (shows x)
 
-instance Print AbsHashedLang.Exp where
+instance Print AbsHashedLang.Ident where
+  prt _ (AbsHashedLang.Ident i) = doc (showString i)
+
+instance Print AbsHashedLang.TKShape2D where
+  prt _ (AbsHashedLang.TKShape2D i) = doc (showString i)
+
+instance Print AbsHashedLang.TKShape3D where
+  prt _ (AbsHashedLang.TKShape3D i) = doc (showString i)
+
+instance Print AbsHashedLang.TKDataPattern where
+  prt _ (AbsHashedLang.TKDataPattern i) = doc (showString i)
+
+instance Print AbsHashedLang.Problem where
   prt i e = case e of
-    AbsHashedLang.EAdd exp1 exp2 -> prPrec i 0 (concatD [prt 0 exp1, doc (showString "+"), prt 1 exp2])
-    AbsHashedLang.ESub exp1 exp2 -> prPrec i 0 (concatD [prt 0 exp1, doc (showString "-"), prt 1 exp2])
-    AbsHashedLang.EMul exp1 exp2 -> prPrec i 1 (concatD [prt 1 exp1, doc (showString "*"), prt 2 exp2])
-    AbsHashedLang.EDiv exp1 exp2 -> prPrec i 1 (concatD [prt 1 exp1, doc (showString "/"), prt 2 exp2])
-    AbsHashedLang.EInt n -> prPrec i 2 (concatD [prt 0 n])
+    AbsHashedLang.Problem variablesblock constantsblock -> prPrec i 0 (concatD [prt 0 variablesblock, prt 0 constantsblock])
+
+instance Print AbsHashedLang.Number where
+  prt i e = case e of
+    AbsHashedLang.NumInt n -> prPrec i 0 (concatD [prt 0 n])
+    AbsHashedLang.NumDouble d -> prPrec i 0 (concatD [prt 0 d])
+
+instance Print AbsHashedLang.Val where
+  prt i e = case e of
+    AbsHashedLang.ValFile str -> prPrec i 0 (concatD [doc (showString "File"), doc (showString "("), prt 0 str, doc (showString ")")])
+    AbsHashedLang.ValPattern tkdatapattern -> prPrec i 0 (concatD [doc (showString "Pattern"), doc (showString "("), prt 0 tkdatapattern, doc (showString ")")])
+    AbsHashedLang.ValRandom -> prPrec i 0 (concatD [doc (showString "Random")])
+    AbsHashedLang.ValLiteral number -> prPrec i 0 (concatD [prt 0 number])
+
+instance Print AbsHashedLang.Shape where
+  prt i e = case e of
+    AbsHashedLang.ShapeScalar -> prPrec i 0 (concatD [])
+    AbsHashedLang.Shape1D n -> prPrec i 0 (concatD [prt 0 n])
+    AbsHashedLang.Shape2D tkshaped -> prPrec i 0 (concatD [prt 0 tkshaped])
+    AbsHashedLang.Shape3D tkshaped -> prPrec i 0 (concatD [prt 0 tkshaped])
+
+instance Print AbsHashedLang.VariableDeclaration where
+  prt i e = case e of
+    AbsHashedLang.VariableDeclaration id shape val -> prPrec i 0 (concatD [prt 0 id, doc (showString ":"), prt 0 shape, doc (showString "init"), doc (showString "by"), prt 0 val])
+  prtList _ [] = concatD []
+  prtList _ (x:xs) = concatD [prt 0 x, doc (showString ";"), prt 0 xs]
+
+instance Print [AbsHashedLang.VariableDeclaration] where
+  prt = prtList
+
+instance Print AbsHashedLang.VariablesBlock where
+  prt i e = case e of
+    AbsHashedLang.VariablesBlock variabledeclarations -> prPrec i 0 (concatD [doc (showString "variables"), doc (showString "{"), prt 0 variabledeclarations, doc (showString "}")])
+
+instance Print AbsHashedLang.ConstantDeclaration where
+  prt i e = case e of
+    AbsHashedLang.ConstantDeclaration id shape val -> prPrec i 0 (concatD [prt 0 id, doc (showString ":"), prt 0 shape, doc (showString "read"), doc (showString "from"), prt 0 val])
+  prtList _ [] = concatD []
+  prtList _ (x:xs) = concatD [prt 0 x, doc (showString ";"), prt 0 xs]
+
+instance Print [AbsHashedLang.ConstantDeclaration] where
+  prt = prtList
+
+instance Print AbsHashedLang.ConstantsBlock where
+  prt i e = case e of
+    AbsHashedLang.NoConstantsBlock -> prPrec i 0 (concatD [])
+    AbsHashedLang.ConstantsBlock constantdeclarations -> prPrec i 0 (concatD [doc (showString "constants"), doc (showString "{"), prt 0 constantdeclarations, doc (showString "}")])
 

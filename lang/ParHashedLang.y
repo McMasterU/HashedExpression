@@ -8,36 +8,100 @@ import ErrM
 
 }
 
-%name pExp Exp
-%name pExp1 Exp1
-%name pExp2 Exp2
+%name pProblem Problem
+%name pNumber Number
+%name pVal Val
+%name pShape Shape
+%name pVariableDeclaration VariableDeclaration
+%name pListVariableDeclaration ListVariableDeclaration
+%name pVariablesBlock VariablesBlock
+%name pConstantDeclaration ConstantDeclaration
+%name pListConstantDeclaration ListConstantDeclaration
+%name pConstantsBlock ConstantsBlock
 -- no lexer declaration
 %monad { Err } { thenM } { returnM }
 %tokentype {Token}
 %token
   '(' { PT _ (TS _ 1) }
   ')' { PT _ (TS _ 2) }
-  '*' { PT _ (TS _ 3) }
-  '+' { PT _ (TS _ 4) }
-  '-' { PT _ (TS _ 5) }
-  '/' { PT _ (TS _ 6) }
+  ':' { PT _ (TS _ 3) }
+  ';' { PT _ (TS _ 4) }
+  'File' { PT _ (TS _ 5) }
+  'Pattern' { PT _ (TS _ 6) }
+  'Random' { PT _ (TS _ 7) }
+  'by' { PT _ (TS _ 8) }
+  'constant' { PT _ (TS _ 9) }
+  'constants' { PT _ (TS _ 10) }
+  'from' { PT _ (TS _ 11) }
+  'init' { PT _ (TS _ 12) }
+  'read' { PT _ (TS _ 13) }
+  'variable' { PT _ (TS _ 14) }
+  'variables' { PT _ (TS _ 15) }
+  '{' { PT _ (TS _ 16) }
+  '}' { PT _ (TS _ 17) }
   L_integ  { PT _ (TI $$) }
+  L_doubl  { PT _ (TD $$) }
+  L_quoted { PT _ (TL $$) }
+  L_ident  { PT _ (TV $$) }
+  L_TKShape2D { PT _ (T_TKShape2D $$) }
+  L_TKShape3D { PT _ (T_TKShape3D $$) }
+  L_TKDataPattern { PT _ (T_TKDataPattern $$) }
 
 %%
 
 Integer :: { Integer }
 Integer  : L_integ  { (read ( $1)) :: Integer }
 
-Exp :: { Exp }
-Exp : Exp '+' Exp1 { AbsHashedLang.EAdd $1 $3 }
-    | Exp '-' Exp1 { AbsHashedLang.ESub $1 $3 }
-    | Exp1 { $1 }
-Exp1 :: { Exp }
-Exp1 : Exp1 '*' Exp2 { AbsHashedLang.EMul $1 $3 }
-     | Exp1 '/' Exp2 { AbsHashedLang.EDiv $1 $3 }
-     | Exp2 { $1 }
-Exp2 :: { Exp }
-Exp2 : Integer { AbsHashedLang.EInt $1 } | '(' Exp ')' { $2 }
+Double  :: { Double }
+Double   : L_doubl  { (read ( $1)) :: Double }
+
+String  :: { String }
+String   : L_quoted {  $1 }
+
+Ident   :: { Ident }
+Ident    : L_ident  { Ident $1 }
+
+TKShape2D :: { TKShape2D}
+TKShape2D  : L_TKShape2D { TKShape2D ($1)}
+
+TKShape3D :: { TKShape3D}
+TKShape3D  : L_TKShape3D { TKShape3D ($1)}
+
+TKDataPattern :: { TKDataPattern}
+TKDataPattern  : L_TKDataPattern { TKDataPattern ($1)}
+
+Problem :: { Problem }
+Problem : VariablesBlock ConstantsBlock { AbsHashedLang.Problem $1 $2 }
+Number :: { Number }
+Number : Integer { AbsHashedLang.NumInt $1 }
+       | Double { AbsHashedLang.NumDouble $1 }
+Val :: { Val }
+Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
+    | 'Pattern' '(' TKDataPattern ')' { AbsHashedLang.ValPattern $3 }
+    | 'Random' { AbsHashedLang.ValRandom }
+    | Number { AbsHashedLang.ValLiteral $1 }
+Shape :: { Shape }
+Shape : {- empty -} { AbsHashedLang.ShapeScalar }
+      | Integer { AbsHashedLang.Shape1D $1 }
+      | TKShape2D { AbsHashedLang.Shape2D $1 }
+      | TKShape3D { AbsHashedLang.Shape3D $1 }
+VariableDeclaration :: { VariableDeclaration }
+VariableDeclaration : Ident ':' Shape 'init' 'by' Val { AbsHashedLang.VariableDeclaration $1 $3 $6 }
+ListVariableDeclaration :: { [VariableDeclaration] }
+ListVariableDeclaration : {- empty -} { [] }
+                        | ListVariableDeclaration VariableDeclaration ';' { flip (:) $1 $2 }
+VariablesBlock :: { VariablesBlock }
+VariablesBlock : 'variables' '{' ListVariableDeclaration '}' { AbsHashedLang.VariablesBlock (reverse $3) }
+               | 'variable' '{' ListVariableDeclaration '}' { AbsHashedLang.VariablesBlock (reverse $3) }
+ConstantDeclaration :: { ConstantDeclaration }
+ConstantDeclaration : Ident ':' Shape 'read' 'from' Val { AbsHashedLang.ConstantDeclaration $1 $3 $6 }
+ListConstantDeclaration :: { [ConstantDeclaration] }
+ListConstantDeclaration : {- empty -} { [] }
+                        | ListConstantDeclaration ConstantDeclaration ';' { flip (:) $1 $2 }
+ConstantsBlock :: { ConstantsBlock }
+ConstantsBlock : {- empty -} { AbsHashedLang.NoConstantsBlock }
+               | 'constants' '{' ListConstantDeclaration '}' { AbsHashedLang.ConstantsBlock (reverse $3) }
+               | 'constant' '{' ListConstantDeclaration '}' { AbsHashedLang.ConstantsBlock (reverse $3) }
 {
 
 returnM :: a -> Err a

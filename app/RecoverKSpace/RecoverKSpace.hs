@@ -82,7 +82,8 @@ smilingFaceProblem = do
                 , (x <.> x) .<= VScalar 1
                 , (x <.> (const 2 *. im)) .>= VScalar 15
                 ]
-    let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
+    let (ProblemValid problem) =
+            constructProblem objectiveFunction vars constraint
     let valMap =
             fromList
                 [ ("mask", V2DFile HDF5 "mask.h5")

@@ -3,11 +3,48 @@
 
 module AbsHashedLang where
 
-data Exp
-    = EAdd Exp Exp
-    | ESub Exp Exp
-    | EMul Exp Exp
-    | EDiv Exp Exp
-    | EInt Integer
+newtype Ident = Ident String
+  deriving (Eq, Ord, Show, Read)
+
+newtype TKShape2D = TKShape2D String
+  deriving (Eq, Ord, Show, Read)
+
+newtype TKShape3D = TKShape3D String
+  deriving (Eq, Ord, Show, Read)
+
+newtype TKDataPattern = TKDataPattern String
+  deriving (Eq, Ord, Show, Read)
+
+data Problem = Problem VariablesBlock ConstantsBlock
+  deriving (Eq, Ord, Show, Read)
+
+data Number = NumInt Integer | NumDouble Double
+  deriving (Eq, Ord, Show, Read)
+
+data Val
+    = ValFile String
+    | ValPattern TKDataPattern
+    | ValRandom
+    | ValLiteral Number
+  deriving (Eq, Ord, Show, Read)
+
+data Shape
+    = ShapeScalar
+    | Shape1D Integer
+    | Shape2D TKShape2D
+    | Shape3D TKShape3D
+  deriving (Eq, Ord, Show, Read)
+
+data VariableDeclaration = VariableDeclaration Ident Shape Val
+  deriving (Eq, Ord, Show, Read)
+
+data VariablesBlock = VariablesBlock [VariableDeclaration]
+  deriving (Eq, Ord, Show, Read)
+
+data ConstantDeclaration = ConstantDeclaration Ident Shape Val
+  deriving (Eq, Ord, Show, Read)
+
+data ConstantsBlock
+    = NoConstantsBlock | ConstantsBlock [ConstantDeclaration]
   deriving (Eq, Ord, Show, Read)
 

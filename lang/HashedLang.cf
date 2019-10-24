@@ -1,7 +1,50 @@
-EAdd. Exp  ::= Exp  "+" Exp1;
-ESub. Exp  ::= Exp  "-" Exp1;
-EMul. Exp1 ::= Exp1 "*" Exp2;
-EDiv. Exp1 ::= Exp1 "/" Exp2;
-EInt. Exp2 ::= Integer;
+-- Token
+token TKShape2D (["123456789"] digit*) {"x"} (["123456789"] digit*);
+token TKShape3D (["123456789"] digit*) {"x"} (["123456789"] digit*) {"x"} (["123456789"] digit*);
+token TKDataPattern
+    {"ALL_1"}
+  | {"ALL_0"}
+  | {"FIRST_ROW_1"}
+  | {"LAST_ROW_1"}
+  | {"FIRST_COLUMN_1"}
+  | {"LAST_COLUMN_1"}
+  | {"FIRST_SLICE_1"}
+  | {"LAST_SLICE_1"};
 
-coercions Exp 2;
+
+Problem. Problem ::= VariablesBlock ConstantsBlock;
+
+-- Number
+NumInt. Number ::= Integer;
+NumDouble. Number ::= Double;
+
+-- Value
+ValFile. Val ::= "File" "(" String ")";
+ValPattern. Val ::= "Pattern" "(" TKDataPattern ")";
+ValRandom. Val ::= "Random";
+ValLiteral. Val ::= Number;
+
+-- Shape
+ShapeScalar. Shape ::= ;
+Shape1D. Shape ::= Integer;
+Shape2D. Shape ::= TKShape2D;
+Shape3D. Shape ::= TKShape3D;
+
+-- Variable
+VariableDeclaration. VariableDeclaration ::= Ident ":" Shape "init by" Val;
+[].  [VariableDeclaration] ::= ;
+(:). [VariableDeclaration] ::= VariableDeclaration ";" [VariableDeclaration];
+
+VariablesBlock. VariablesBlock ::= "variables" "{" [VariableDeclaration] "}";
+VariablesBlock. VariablesBlock ::= "variable" "{" [VariableDeclaration] "}";
+
+
+-- Constant
+ConstantDeclaration. ConstantDeclaration ::= Ident ":" Shape "read from" Val;
+[].  [ConstantDeclaration] ::= ;
+(:). [ConstantDeclaration] ::= ConstantDeclaration ";" [ConstantDeclaration];
+
+NoConstantsBlock. ConstantsBlock ::= ;
+ConstantsBlock. ConstantsBlock ::= "constants" "{" [ConstantDeclaration] "}";
+ConstantsBlock. ConstantsBlock ::= "constant" "{" [ConstantDeclaration] "}";
+

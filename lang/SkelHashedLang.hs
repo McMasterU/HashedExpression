@@ -9,11 +9,48 @@ type Result = Err String
 failure :: Show a => a -> Result
 failure x = Bad $ "Undefined case: " ++ show x
 
-transExp :: Exp -> Result
-transExp x = case x of
-  EAdd exp1 exp2 -> failure x
-  ESub exp1 exp2 -> failure x
-  EMul exp1 exp2 -> failure x
-  EDiv exp1 exp2 -> failure x
-  EInt integer -> failure x
+transIdent :: Ident -> Result
+transIdent x = case x of
+  Ident string -> failure x
+transTKShape2D :: TKShape2D -> Result
+transTKShape2D x = case x of
+  TKShape2D string -> failure x
+transTKShape3D :: TKShape3D -> Result
+transTKShape3D x = case x of
+  TKShape3D string -> failure x
+transTKDataPattern :: TKDataPattern -> Result
+transTKDataPattern x = case x of
+  TKDataPattern string -> failure x
+transProblem :: Problem -> Result
+transProblem x = case x of
+  Problem variablesblock constantsblock -> failure x
+transNumber :: Number -> Result
+transNumber x = case x of
+  NumInt integer -> failure x
+  NumDouble double -> failure x
+transVal :: Val -> Result
+transVal x = case x of
+  ValFile string -> failure x
+  ValPattern tkdatapattern -> failure x
+  ValRandom -> failure x
+  ValLiteral number -> failure x
+transShape :: Shape -> Result
+transShape x = case x of
+  ShapeScalar -> failure x
+  Shape1D integer -> failure x
+  Shape2D tkshaped -> failure x
+  Shape3D tkshaped -> failure x
+transVariableDeclaration :: VariableDeclaration -> Result
+transVariableDeclaration x = case x of
+  VariableDeclaration ident shape val -> failure x
+transVariablesBlock :: VariablesBlock -> Result
+transVariablesBlock x = case x of
+  VariablesBlock variabledeclarations -> failure x
+transConstantDeclaration :: ConstantDeclaration -> Result
+transConstantDeclaration x = case x of
+  ConstantDeclaration ident shape val -> failure x
+transConstantsBlock :: ConstantsBlock -> Result
+transConstantsBlock x = case x of
+  NoConstantsBlock -> failure x
+  ConstantsBlock constantdeclarations -> failure x
 
