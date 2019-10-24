@@ -34,12 +34,14 @@ dependencies:
 - split
 - extra
 - easyplot
+- mtl
 
 
 
 library:
   source-dirs:
   - src
+  - lang
 
 executables:
   HashedExpression-exe:
