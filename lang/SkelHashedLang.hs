@@ -9,21 +9,25 @@ type Result = Err String
 failure :: Show a => a -> Result
 failure x = Bad $ "Undefined case: " ++ show x
 
-transIdent :: Ident -> Result
-transIdent x = case x of
-  Ident string -> failure x
-transTKShape2D :: TKShape2D -> Result
-transTKShape2D x = case x of
-  TKShape2D string -> failure x
-transTKShape3D :: TKShape3D -> Result
-transTKShape3D x = case x of
-  TKShape3D string -> failure x
-transTKDataPattern :: TKDataPattern -> Result
-transTKDataPattern x = case x of
-  TKDataPattern string -> failure x
+transKWVariable :: KWVariable -> Result
+transKWVariable x = case x of
+  KWVariable string -> failure x
+transKWConstant :: KWConstant -> Result
+transKWConstant x = case x of
+  KWConstant string -> failure x
+transKWDataPattern :: KWDataPattern -> Result
+transKWDataPattern x = case x of
+  KWDataPattern string -> failure x
+transPIdent :: PIdent -> Result
+transPIdent x = case x of
+  PIdent string -> failure x
 transProblem :: Problem -> Result
 transProblem x = case x of
-  Problem variablesblock constantsblock -> failure x
+  Problem blocks -> failure x
+transBlock :: Block -> Result
+transBlock x = case x of
+  BlockVariable variableblock -> failure x
+  BlockConstant constantblock -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
   NumInt integer -> failure x
@@ -31,26 +35,36 @@ transNumber x = case x of
 transVal :: Val -> Result
 transVal x = case x of
   ValFile string -> failure x
-  ValPattern tkdatapattern -> failure x
+  ValDataset string1 string2 -> failure x
+  ValPattern kwdatapattern -> failure x
   ValRandom -> failure x
   ValLiteral number -> failure x
+transDim :: Dim -> Result
+transDim x = case x of
+  Dim integer -> failure x
 transShape :: Shape -> Result
 transShape x = case x of
   ShapeScalar -> failure x
-  Shape1D integer -> failure x
-  Shape2D tkshaped -> failure x
-  Shape3D tkshaped -> failure x
-transVariableDeclaration :: VariableDeclaration -> Result
-transVariableDeclaration x = case x of
-  VariableDeclaration ident shape val -> failure x
-transVariablesBlock :: VariablesBlock -> Result
-transVariablesBlock x = case x of
-  VariablesBlock variabledeclarations -> failure x
-transConstantDeclaration :: ConstantDeclaration -> Result
-transConstantDeclaration x = case x of
-  ConstantDeclaration ident shape val -> failure x
-transConstantsBlock :: ConstantsBlock -> Result
-transConstantsBlock x = case x of
-  NoConstantsBlock -> failure x
-  ConstantsBlock constantdeclarations -> failure x
+  Shape1D dim -> failure x
+  Shape2D dim1 dim2 -> failure x
+  Shape3D dim1 dim2 dim3 -> failure x
+transVariableDecl :: VariableDecl -> Result
+transVariableDecl x = case x of
+  VariableNoInit pident shape -> failure x
+  VariableWithInit pident shape val -> failure x
+transVariableDeclGroup :: VariableDeclGroup -> Result
+transVariableDeclGroup x = case x of
+  VariableDeclGroup variabledecls -> failure x
+transVariableBlock :: VariableBlock -> Result
+transVariableBlock x = case x of
+  VariableBlock kwvariable variabledeclgroups -> failure x
+transConstantDecl :: ConstantDecl -> Result
+transConstantDecl x = case x of
+  ConstantDecl pident shape val -> failure x
+transConstantDeclGroup :: ConstantDeclGroup -> Result
+transConstantDeclGroup x = case x of
+  ConstantDeclGroup constantdecls -> failure x
+transConstantBlock :: ConstantBlock -> Result
+transConstantBlock x = case x of
+  ConstantBlock kwconstant constantdeclgroups -> failure x
 

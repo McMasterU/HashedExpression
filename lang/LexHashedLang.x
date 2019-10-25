@@ -21,19 +21,23 @@ $i = [$l $d _ ']     -- identifier character
 $u = [. \n]          -- universal: any character
 
 @rsyms =    -- symbols and non-identifier-like reserved words
-   \( | \) | \: | \; | \{ | \}
+   \( | \) | \, | \[ | \] | \= | \; | \: | \{ | \}
 
 :-
+"//" [.]* ; -- Toss single line comments
+"{*" ([$u # \*] | \*+ [$u # [\* \/]])* ("*")+ "/" ;
 
 $white+ ;
 @rsyms
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
-[1 2 3 4 5 6 7 8 9]$d * (x)([1 2 3 4 5 6 7 8 9]$d *)
-    { tok (\p s -> PT p (eitherResIdent (T_TKShape2D . share) s)) }
-[1 2 3 4 5 6 7 8 9]$d * (x)([1 2 3 4 5 6 7 8 9]$d *)(x)([1 2 3 4 5 6 7 8 9]$d *)
-    { tok (\p s -> PT p (eitherResIdent (T_TKShape3D . share) s)) }
-A L L \_ 1 | A L L \_ 0 | F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
-    { tok (\p s -> PT p (eitherResIdent (T_TKDataPattern . share) s)) }
+v a r i a b l e s | v a r i a b l e
+    { tok (\p s -> PT p (eitherResIdent (T_KWVariable . share) s)) }
+c o n s t a n t s | c o n s t a n t
+    { tok (\p s -> PT p (eitherResIdent (T_KWConstant . share) s)) }
+F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
+    { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
+$l ($l | $d | \_ | \')*
+    { tok (\p s -> PT p (eitherResIdent (T_PIdent . share) s)) }
 
 $l $i*
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
@@ -60,9 +64,10 @@ data Tok =
  | TV !String         -- identifiers
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
- | T_TKShape2D !String
- | T_TKShape3D !String
- | T_TKDataPattern !String
+ | T_KWVariable !String
+ | T_KWConstant !String
+ | T_KWDataPattern !String
+ | T_PIdent !String
 
  deriving (Eq,Show,Ord)
 
@@ -100,9 +105,10 @@ prToken t = case t of
   PT _ (TD s)   -> s
   PT _ (TC s)   -> s
   Err _         -> "#error"
-  PT _ (T_TKShape2D s) -> s
-  PT _ (T_TKShape3D s) -> s
-  PT _ (T_TKDataPattern s) -> s
+  PT _ (T_KWVariable s) -> s
+  PT _ (T_KWConstant s) -> s
+  PT _ (T_KWDataPattern s) -> s
+  PT _ (T_PIdent s) -> s
 
 
 data BTree = N | B String Tok BTree BTree deriving (Show)
@@ -116,7 +122,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "constant" 9 (b "File" 5 (b ":" 3 (b ")" 2 (b "(" 1 N N) N) (b ";" 4 N N)) (b "Random" 7 (b "Pattern" 6 N N) (b "by" 8 N N))) (b "variable" 14 (b "init" 12 (b "from" 11 (b "constants" 10 N N) N) (b "read" 13 N N)) (b "{" 16 (b "variables" 15 N N) (b "}" 17 N N)))
+resWords = b "File" 8 (b ":" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b "=" 6 (b ";" 5 N N) (b "Dataset" 7 N N))) (b "]" 12 (b "Random" 10 (b "Pattern" 9 N N) (b "[" 11 N N)) (b "}" 14 (b "{" 13 N N) N))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

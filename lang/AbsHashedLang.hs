@@ -3,19 +3,23 @@
 
 module AbsHashedLang where
 
-newtype Ident = Ident String
+newtype KWVariable = KWVariable String
   deriving (Eq, Ord, Show, Read)
 
-newtype TKShape2D = TKShape2D String
+newtype KWConstant = KWConstant String
   deriving (Eq, Ord, Show, Read)
 
-newtype TKShape3D = TKShape3D String
+newtype KWDataPattern = KWDataPattern String
   deriving (Eq, Ord, Show, Read)
 
-newtype TKDataPattern = TKDataPattern String
+newtype PIdent = PIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
-data Problem = Problem VariablesBlock ConstantsBlock
+data Problem = Problem [Block]
+  deriving (Eq, Ord, Show, Read)
+
+data Block
+    = BlockVariable VariableBlock | BlockConstant ConstantBlock
   deriving (Eq, Ord, Show, Read)
 
 data Number = NumInt Integer | NumDouble Double
@@ -23,28 +27,35 @@ data Number = NumInt Integer | NumDouble Double
 
 data Val
     = ValFile String
-    | ValPattern TKDataPattern
+    | ValDataset String String
+    | ValPattern KWDataPattern
     | ValRandom
     | ValLiteral Number
   deriving (Eq, Ord, Show, Read)
 
+data Dim = Dim Integer
+  deriving (Eq, Ord, Show, Read)
+
 data Shape
-    = ShapeScalar
-    | Shape1D Integer
-    | Shape2D TKShape2D
-    | Shape3D TKShape3D
+    = ShapeScalar | Shape1D Dim | Shape2D Dim Dim | Shape3D Dim Dim Dim
   deriving (Eq, Ord, Show, Read)
 
-data VariableDeclaration = VariableDeclaration Ident Shape Val
+data VariableDecl
+    = VariableNoInit PIdent Shape | VariableWithInit PIdent Shape Val
   deriving (Eq, Ord, Show, Read)
 
-data VariablesBlock = VariablesBlock [VariableDeclaration]
+data VariableDeclGroup = VariableDeclGroup [VariableDecl]
   deriving (Eq, Ord, Show, Read)
 
-data ConstantDeclaration = ConstantDeclaration Ident Shape Val
+data VariableBlock = VariableBlock KWVariable [VariableDeclGroup]
   deriving (Eq, Ord, Show, Read)
 
-data ConstantsBlock
-    = NoConstantsBlock | ConstantsBlock [ConstantDeclaration]
+data ConstantDecl = ConstantDecl PIdent Shape Val
+  deriving (Eq, Ord, Show, Read)
+
+data ConstantDeclGroup = ConstantDeclGroup [ConstantDecl]
+  deriving (Eq, Ord, Show, Read)
+
+data ConstantBlock = ConstantBlock KWConstant [ConstantDeclGroup]
   deriving (Eq, Ord, Show, Read)
 

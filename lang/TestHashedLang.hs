@@ -12,7 +12,7 @@ import ParHashedLang
 import SkelHashedLang
 import PrintHashedLang
 import AbsHashedLang
-
+import LayoutHashedLang
 
 
 
@@ -20,7 +20,7 @@ import ErrM
 
 type ParseFun a = [Token] -> Err a
 
-myLLexer = myLexer
+myLLexer = resolveLayout True . myLexer
 
 type Verbosity = Int
 
