@@ -11,7 +11,35 @@
 #include <stdio.h>
 #include "problem.c"
 
-/* Function Declarations */
+/* problem.c Declarations */
+extern const char* var_name[NUM_VARIABLES];
+extern const int var_num_dim[NUM_VARIABLES];
+extern const int var_shape[NUM_VARIABLES][3];
+extern const int var_size[NUM_VARIABLES];
+extern const int var_offset[NUM_VARIABLES];
+extern const int partial_derivative_offset[NUM_VARIABLES];
+extern const int objective_offset;
+extern double ptr[MEM_SIZE];
+
+extern const int bound_pos[NUM_VARIABLES];
+extern double lower_bound[NUM_ACTUAL_VARIABLES];
+extern double upper_bound[NUM_ACTUAL_VARIABLES];
+
+extern double sc_lower_bound[NUM_SCALAR_CONSTRAINT];
+extern double sc_upper_bound[NUM_SCALAR_CONSTRAINT];
+extern const int sc_offset[NUM_SCALAR_CONSTRAINT];
+
+extern const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES];
+
+extern void read_values();
+extern void read_bounds();
+extern void evaluate_partial_derivatives_and_objective();
+extern void evaluate_objective();
+extern void evaluate_partial_derivatives();
+extern void evaluate_scalar_constraints();
+extern void evaluate_scalar_constraints_jacobian();
+
+/* Ipopt Function Declarations */
 Bool eval_f(
    Index       n,
    Number*     x,
@@ -91,25 +119,28 @@ typedef struct _SharedData* SharedData;
 /* [MAIN] */
 int main()
 {
-  // Index n = -1;                        /* number of variables */
-  // Index m = -1;                        /* number of constraints */
-   Index nele_jac;                      /* number of nonzeros in the Jacobian of the constraints */
-   Index nele_hess;                     /* number of nonzeros in the Hessian of the Lagrangian (lower or upper triangular part only) */
-   Index index_style;                   /* indexing style for matrices */
+  Index n = -1;                        /* number of variables */
+  Index m = -1;                        /* number of constraints */
+  Index nele_jac;                      /* number of nonzeros in the Jacobian of the constraints */
+  Index nele_hess;                     /* number of nonzeros in the Hessian of the Lagrangian (lower or upper triangular part only) */
+  Index index_style;                   /* indexing style for matrices */
   // Number* x_L = NULL;                  /* lower bounds on x */
   // Number* x_U = NULL;                  /* upper bounds on x */
   // Number* g_L = NULL;                  /* lower bounds on g */
   // Number* g_U = NULL;                  /* upper bounds on g */
-   IpoptProblem nlp = NULL;             /* IpoptProblem */
-   enum ApplicationReturnStatus status; /* Solve return code */
-   Number* x = NULL;                    /* starting point and solution vector */
-   Number* mult_g = NULL;               /* constraint multipliers at the solution */
-   Number* mult_x_L = NULL;             /* lower bound multipliers at the solution */
-   Number* mult_x_U = NULL;             /* upper bound multipliers at the solution */
-   Number obj;                          /* objective value */
-   Index i;                             /* generic counter */
-   SharedData sdata;
-   // TODO remove unnecessary declerations above
+  IpoptProblem nlp = NULL;             /* IpoptProblem */
+  enum ApplicationReturnStatus status; /* Solve return code */
+  Number* x = NULL;                    /* starting point and solution vector */
+  Number* mult_g = NULL;               /* constraint multipliers at the solution */
+  Number* mult_x_L = NULL;             /* lower bound multipliers at the solution */
+  Number* mult_x_U = NULL;             /* upper bound multipliers at the solution */
+  Number obj;                          /* objective value */
+  Index i;                             /* generic counter */
+  SharedData sdata;
+  // TODO remove unnecessary declerations above
+
+  /* set number of variables and constraints */
+   n = NUM_ACTUAL_VARIABLES; m = NUM_SCALAR_CONSTRAINT;
 
    /* set sdata to ptr */
    sdata = (SharedData)malloc(sizeof(struct _SharedData));
@@ -128,8 +159,8 @@ int main()
    index_style = 0;
 
    /* create the IpoptProblem */
-   nlp = CreateIpoptProblem(NUM_ACTUAL_VARIABLES, lower_bound, upper_bound,
-                            NUM_SCALAR_CONSTRAINT, sc_lower_bound, sc_upper_bound,
+   nlp = CreateIpoptProblem(n, lower_bound, upper_bound,
+                            m, sc_lower_bound, sc_upper_bound,
                             nele_jac, nele_hess, index_style,
                             &eval_f, &eval_g, &eval_grad_f,
                             &eval_jac_g, &eval_h);
@@ -163,7 +194,7 @@ int main()
    /* SetIntermediateCallback(nlp, intermediate_cb); */
 
    /* solve the problem */
-   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, (void*)sdata);
+   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, &sdata);
 
    /* check IpoptSolve results and print solutions upon success
     * TODO write solution to file
@@ -244,8 +275,8 @@ Bool eval_grad_f(
   int i;
   int acc = 0;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    int pOff = partial_derivative_offset[i];
-    memcpy(&grad_f[acc],&sdata->data[pOff],sizeof(Number)*var_size[i]);
+    int pOff = partial_derivative_offset[i]; 
+    memcpy(&grad_f[acc],&(sdata->data[pOff]),sizeof(Number)*var_size[i]);
     acc += var_size[i];
   }
 
@@ -342,7 +373,7 @@ Bool eval_h(
 {
   /* no work is performed because hessian_approximation (lbfgs) option is on */
   /* TODO have option to actually return hessian when option is off */
-   return FALSE;
+  return FALSE;
 }
 
 Bool intermediate_cb(
