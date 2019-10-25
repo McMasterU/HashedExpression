@@ -18,16 +18,12 @@ import ErrM
 %name pVariableDecl VariableDecl
 %name pListVariableDecl ListVariableDecl
 %name pListListVariableDecl ListListVariableDecl
-%name pVariableBlock VariableBlock
 %name pConstantDecl ConstantDecl
 %name pListConstantDecl ListConstantDecl
 %name pListListConstantDecl ListListConstantDecl
-%name pConstantBlock ConstantBlock
 %name pLetDecl LetDecl
 %name pListLetDecl ListLetDecl
 %name pListListLetDecl ListListLetDecl
-%name pLetBlock LetBlock
-%name pMinimizeBlock MinimizeBlock
 %name pRotateAmount RotateAmount
 %name pExp Exp
 %name pExp1 Exp1
@@ -56,16 +52,18 @@ import ErrM
   'Random' { PT _ (TS _ 16) }
   '[' { PT _ (TS _ 17) }
   ']' { PT _ (TS _ 18) }
-  'rotate' { PT _ (TS _ 19) }
-  '{' { PT _ (TS _ 20) }
-  '}' { PT _ (TS _ 21) }
+  'constant' { PT _ (TS _ 19) }
+  'constants' { PT _ (TS _ 20) }
+  'let' { PT _ (TS _ 21) }
+  'minimize' { PT _ (TS _ 22) }
+  'rotate' { PT _ (TS _ 23) }
+  'variable' { PT _ (TS _ 24) }
+  'variables' { PT _ (TS _ 25) }
+  '{' { PT _ (TS _ 26) }
+  '}' { PT _ (TS _ 27) }
   L_integ  { PT _ (TI $$) }
   L_doubl  { PT _ (TD $$) }
   L_quoted { PT _ (TL $$) }
-  L_KWVariable { PT _ (T_KWVariable $$) }
-  L_KWConstant { PT _ (T_KWConstant $$) }
-  L_KWLet { PT _ (T_KWLet $$) }
-  L_KWMinimize { PT _ (T_KWMinimize $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
   L_PIdent { PT _ (T_PIdent _) }
 
@@ -80,18 +78,6 @@ Double   : L_doubl  { (read ( $1)) :: Double }
 String  :: { String }
 String   : L_quoted {  $1 }
 
-KWVariable :: { KWVariable}
-KWVariable  : L_KWVariable { KWVariable ($1)}
-
-KWConstant :: { KWConstant}
-KWConstant  : L_KWConstant { KWConstant ($1)}
-
-KWLet :: { KWLet}
-KWLet  : L_KWLet { KWLet ($1)}
-
-KWMinimize :: { KWMinimize}
-KWMinimize  : L_KWMinimize { KWMinimize ($1)}
-
 KWDataPattern :: { KWDataPattern}
 KWDataPattern  : L_KWDataPattern { KWDataPattern ($1)}
 
@@ -101,10 +87,12 @@ PIdent  : L_PIdent { PIdent (mkPosToken $1)}
 Problem :: { Problem }
 Problem : ListBlock { AbsHashedLang.Problem $1 }
 Block :: { Block }
-Block : VariableBlock { AbsHashedLang.BlockVariable $1 }
-      | ConstantBlock { AbsHashedLang.BlockConstant $1 }
-      | LetBlock { AbsHashedLang.BlockLet $1 }
-      | MinimizeBlock { AbsHashedLang.BlockMinimize $1 }
+Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariable $4 }
+      | 'variable' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariable $4 }
+      | 'constants' ':' '{' ListListConstantDecl '}' { AbsHashedLang.BlockConstant $4 }
+      | 'constant' ':' '{' ListListConstantDecl '}' { AbsHashedLang.BlockConstant $4 }
+      | 'let' ':' '{' ListListLetDecl '}' { AbsHashedLang.BlockLet $4 }
+      | 'minimize' ':' '{' Exp '}' { AbsHashedLang.BlockMinimize $4 }
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
 Number :: { Number }
@@ -134,8 +122,6 @@ ListListVariableDecl :: { [[VariableDecl]] }
 ListListVariableDecl : {- empty -} { [] }
                      | ListVariableDecl { (:[]) $1 }
                      | ListVariableDecl ';' ListListVariableDecl { (:) $1 $3 }
-VariableBlock :: { VariableBlock }
-VariableBlock : KWVariable ':' '{' ListListVariableDecl '}' { AbsHashedLang.VariableBlock $1 $4 }
 ConstantDecl :: { ConstantDecl }
 ConstantDecl : PIdent Shape '=' Val { AbsHashedLang.ConstantDecl $1 $2 $4 }
 ListConstantDecl :: { [ConstantDecl] }
@@ -146,8 +132,6 @@ ListListConstantDecl :: { [[ConstantDecl]] }
 ListListConstantDecl : {- empty -} { [] }
                      | ListConstantDecl { (:[]) $1 }
                      | ListConstantDecl ';' ListListConstantDecl { (:) $1 $3 }
-ConstantBlock :: { ConstantBlock }
-ConstantBlock : KWConstant ':' '{' ListListConstantDecl '}' { AbsHashedLang.ConstantBlock $1 $4 }
 LetDecl :: { LetDecl }
 LetDecl : PIdent '=' Exp { AbsHashedLang.LetDecl $1 $3 }
 ListLetDecl :: { [LetDecl] }
@@ -158,10 +142,6 @@ ListListLetDecl :: { [[LetDecl]] }
 ListListLetDecl : {- empty -} { [] }
                 | ListLetDecl { (:[]) $1 }
                 | ListLetDecl ';' ListListLetDecl { (:) $1 $3 }
-LetBlock :: { LetBlock }
-LetBlock : KWLet ':' '{' ListListLetDecl '}' { AbsHashedLang.LetBlock $1 $4 }
-MinimizeBlock :: { MinimizeBlock }
-MinimizeBlock : KWMinimize ':' '{' Exp '}' { AbsHashedLang.MinimizeBlock $1 $4 }
 RotateAmount :: { RotateAmount }
 RotateAmount : Integer { AbsHashedLang.RA1D $1 }
              | '(' Integer ',' Integer ')' { AbsHashedLang.RA2D $2 $4 }

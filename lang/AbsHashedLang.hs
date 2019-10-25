@@ -3,18 +3,6 @@
 
 module AbsHashedLang where
 
-newtype KWVariable = KWVariable String
-  deriving (Eq, Ord, Show, Read)
-
-newtype KWConstant = KWConstant String
-  deriving (Eq, Ord, Show, Read)
-
-newtype KWLet = KWLet String
-  deriving (Eq, Ord, Show, Read)
-
-newtype KWMinimize = KWMinimize String
-  deriving (Eq, Ord, Show, Read)
-
 newtype KWDataPattern = KWDataPattern String
   deriving (Eq, Ord, Show, Read)
 
@@ -25,10 +13,10 @@ data Problem = Problem [Block]
   deriving (Eq, Ord, Show, Read)
 
 data Block
-    = BlockVariable VariableBlock
-    | BlockConstant ConstantBlock
-    | BlockLet LetBlock
-    | BlockMinimize MinimizeBlock
+    = BlockVariable [[VariableDecl]]
+    | BlockConstant [[ConstantDecl]]
+    | BlockLet [[LetDecl]]
+    | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
 data Number = NumInt Integer | NumDouble Double
@@ -53,22 +41,10 @@ data VariableDecl
     = VariableNoInit PIdent Shape | VariableWithInit PIdent Shape Val
   deriving (Eq, Ord, Show, Read)
 
-data VariableBlock = VariableBlock KWVariable [[VariableDecl]]
-  deriving (Eq, Ord, Show, Read)
-
 data ConstantDecl = ConstantDecl PIdent Shape Val
   deriving (Eq, Ord, Show, Read)
 
-data ConstantBlock = ConstantBlock KWConstant [[ConstantDecl]]
-  deriving (Eq, Ord, Show, Read)
-
 data LetDecl = LetDecl PIdent Exp
-  deriving (Eq, Ord, Show, Read)
-
-data LetBlock = LetBlock KWLet [[LetDecl]]
-  deriving (Eq, Ord, Show, Read)
-
-data MinimizeBlock = MinimizeBlock KWMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
 data RotateAmount

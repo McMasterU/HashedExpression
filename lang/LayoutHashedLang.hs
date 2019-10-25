@@ -234,9 +234,15 @@ sToken p s = PT p (TS s i)
       "Random" -> 16
       "[" -> 17
       "]" -> 18
-      "rotate" -> 19
-      "{" -> 20
-      "}" -> 21
+      "constant" -> 19
+      "constants" -> 20
+      "let" -> 21
+      "minimize" -> 22
+      "rotate" -> 23
+      "variable" -> 24
+      "variables" -> 25
+      "{" -> 26
+      "}" -> 27
       _ -> error $ "not a reserved word: " ++ show s
 
 -- | Get the position of a token.

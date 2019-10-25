@@ -21,7 +21,7 @@ $i = [$l $d _ ']     -- identifier character
 $u = [. \n]          -- universal: any character
 
 @rsyms =    -- symbols and non-identifier-like reserved words
-   \( | \) | \, | \[ | \] | \= | \; | \: | \{ | \} | \+ | \- | \* | \/ | \* \. | \< \. \>
+   \: | \{ | \} | \( | \) | \, | \[ | \] | \= | \; | \+ | \- | \* | \/ | \* \. | \< \. \>
 
 :-
 "//" [.]* ; -- Toss single line comments
@@ -30,14 +30,6 @@ $u = [. \n]          -- universal: any character
 $white+ ;
 @rsyms
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
-v a r i a b l e s | v a r i a b l e
-    { tok (\p s -> PT p (eitherResIdent (T_KWVariable . share) s)) }
-c o n s t a n t s | c o n s t a n t
-    { tok (\p s -> PT p (eitherResIdent (T_KWConstant . share) s)) }
-l e t
-    { tok (\p s -> PT p (eitherResIdent (T_KWLet . share) s)) }
-m i n i m i z e
-    { tok (\p s -> PT p (eitherResIdent (T_KWMinimize . share) s)) }
 F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
     { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
 $l ($l | $d | \_ | \')*
@@ -68,10 +60,6 @@ data Tok =
  | TV !String         -- identifiers
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
- | T_KWVariable !String
- | T_KWConstant !String
- | T_KWLet !String
- | T_KWMinimize !String
  | T_KWDataPattern !String
  | T_PIdent !String
 
@@ -111,10 +99,6 @@ prToken t = case t of
   PT _ (TD s)   -> s
   PT _ (TC s)   -> s
   Err _         -> "#error"
-  PT _ (T_KWVariable s) -> s
-  PT _ (T_KWConstant s) -> s
-  PT _ (T_KWLet s) -> s
-  PT _ (T_KWMinimize s) -> s
   PT _ (T_KWDataPattern s) -> s
   PT _ (T_PIdent s) -> s
 
@@ -130,7 +114,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "<.>" 11 (b "," 6 (b "*" 3 (b ")" 2 (b "(" 1 N N) N) (b "+" 5 (b "*." 4 N N) N)) (b ":" 9 (b "/" 8 (b "-" 7 N N) N) (b ";" 10 N N))) (b "[" 17 (b "File" 14 (b "Dataset" 13 (b "=" 12 N N) N) (b "Random" 16 (b "Pattern" 15 N N) N)) (b "{" 20 (b "rotate" 19 (b "]" 18 N N) N) (b "}" 21 N N)))
+resWords = b "File" 14 (b "-" 7 (b "*." 4 (b ")" 2 (b "(" 1 N N) (b "*" 3 N N)) (b "," 6 (b "+" 5 N N) N)) (b "<.>" 11 (b ":" 9 (b "/" 8 N N) (b ";" 10 N N)) (b "Dataset" 13 (b "=" 12 N N) N))) (b "let" 21 (b "]" 18 (b "Random" 16 (b "Pattern" 15 N N) (b "[" 17 N N)) (b "constants" 20 (b "constant" 19 N N) N)) (b "variables" 25 (b "rotate" 23 (b "minimize" 22 N N) (b "variable" 24 N N)) (b "}" 27 (b "{" 26 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

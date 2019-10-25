@@ -88,18 +88,6 @@ instance Print Integer where
 instance Print Double where
   prt _ x = doc (shows x)
 
-instance Print AbsHashedLang.KWVariable where
-  prt _ (AbsHashedLang.KWVariable i) = doc (showString i)
-
-instance Print AbsHashedLang.KWConstant where
-  prt _ (AbsHashedLang.KWConstant i) = doc (showString i)
-
-instance Print AbsHashedLang.KWLet where
-  prt _ (AbsHashedLang.KWLet i) = doc (showString i)
-
-instance Print AbsHashedLang.KWMinimize where
-  prt _ (AbsHashedLang.KWMinimize i) = doc (showString i)
-
 instance Print AbsHashedLang.KWDataPattern where
   prt _ (AbsHashedLang.KWDataPattern i) = doc (showString i)
 
@@ -112,10 +100,10 @@ instance Print AbsHashedLang.Problem where
 
 instance Print AbsHashedLang.Block where
   prt i e = case e of
-    AbsHashedLang.BlockVariable variableblock -> prPrec i 0 (concatD [prt 0 variableblock])
-    AbsHashedLang.BlockConstant constantblock -> prPrec i 0 (concatD [prt 0 constantblock])
-    AbsHashedLang.BlockLet letblock -> prPrec i 0 (concatD [prt 0 letblock])
-    AbsHashedLang.BlockMinimize minimizeblock -> prPrec i 0 (concatD [prt 0 minimizeblock])
+    AbsHashedLang.BlockVariable variabledeclss -> prPrec i 0 (concatD [doc (showString "variables"), doc (showString ":"), doc (showString "{"), prt 0 variabledeclss, doc (showString "}")])
+    AbsHashedLang.BlockConstant constantdeclss -> prPrec i 0 (concatD [doc (showString "constants"), doc (showString ":"), doc (showString "{"), prt 0 constantdeclss, doc (showString "}")])
+    AbsHashedLang.BlockLet letdeclss -> prPrec i 0 (concatD [doc (showString "let"), doc (showString ":"), doc (showString "{"), prt 0 letdeclss, doc (showString "}")])
+    AbsHashedLang.BlockMinimize exp -> prPrec i 0 (concatD [doc (showString "minimize"), doc (showString ":"), doc (showString "{"), prt 0 exp, doc (showString "}")])
   prtList _ [x] = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
@@ -163,10 +151,6 @@ instance Print [AbsHashedLang.VariableDecl] where
 instance Print [[AbsHashedLang.VariableDecl]] where
   prt = prtList
 
-instance Print AbsHashedLang.VariableBlock where
-  prt i e = case e of
-    AbsHashedLang.VariableBlock kwvariable variabledeclss -> prPrec i 0 (concatD [prt 0 kwvariable, doc (showString ":"), doc (showString "{"), prt 0 variabledeclss, doc (showString "}")])
-
 instance Print AbsHashedLang.ConstantDecl where
   prt i e = case e of
     AbsHashedLang.ConstantDecl pident shape val -> prPrec i 0 (concatD [prt 0 pident, prt 0 shape, doc (showString "="), prt 0 val])
@@ -183,10 +167,6 @@ instance Print [AbsHashedLang.ConstantDecl] where
 instance Print [[AbsHashedLang.ConstantDecl]] where
   prt = prtList
 
-instance Print AbsHashedLang.ConstantBlock where
-  prt i e = case e of
-    AbsHashedLang.ConstantBlock kwconstant constantdeclss -> prPrec i 0 (concatD [prt 0 kwconstant, doc (showString ":"), doc (showString "{"), prt 0 constantdeclss, doc (showString "}")])
-
 instance Print AbsHashedLang.LetDecl where
   prt i e = case e of
     AbsHashedLang.LetDecl pident exp -> prPrec i 0 (concatD [prt 0 pident, doc (showString "="), prt 0 exp])
@@ -202,14 +182,6 @@ instance Print [AbsHashedLang.LetDecl] where
 
 instance Print [[AbsHashedLang.LetDecl]] where
   prt = prtList
-
-instance Print AbsHashedLang.LetBlock where
-  prt i e = case e of
-    AbsHashedLang.LetBlock kwlet letdeclss -> prPrec i 0 (concatD [prt 0 kwlet, doc (showString ":"), doc (showString "{"), prt 0 letdeclss, doc (showString "}")])
-
-instance Print AbsHashedLang.MinimizeBlock where
-  prt i e = case e of
-    AbsHashedLang.MinimizeBlock kwminimize exp -> prPrec i 0 (concatD [prt 0 kwminimize, doc (showString ":"), doc (showString "{"), prt 0 exp, doc (showString "}")])
 
 instance Print AbsHashedLang.RotateAmount where
   prt i e = case e of
