@@ -218,18 +218,25 @@ sToken p s = PT p (TS s i)
     i = case s of
       "(" -> 1
       ")" -> 2
-      "," -> 3
-      ":" -> 4
-      ";" -> 5
-      "=" -> 6
-      "Dataset" -> 7
-      "File" -> 8
-      "Pattern" -> 9
-      "Random" -> 10
-      "[" -> 11
-      "]" -> 12
-      "{" -> 13
-      "}" -> 14
+      "*" -> 3
+      "*." -> 4
+      "+" -> 5
+      "," -> 6
+      "-" -> 7
+      "/" -> 8
+      ":" -> 9
+      ";" -> 10
+      "<.>" -> 11
+      "=" -> 12
+      "Dataset" -> 13
+      "File" -> 14
+      "Pattern" -> 15
+      "Random" -> 16
+      "[" -> 17
+      "]" -> 18
+      "rotate" -> 19
+      "{" -> 20
+      "}" -> 21
       _ -> error $ "not a reserved word: " ++ show s
 
 -- | Get the position of a token.

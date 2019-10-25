@@ -9,6 +9,12 @@ newtype KWVariable = KWVariable String
 newtype KWConstant = KWConstant String
   deriving (Eq, Ord, Show, Read)
 
+newtype KWLet = KWLet String
+  deriving (Eq, Ord, Show, Read)
+
+newtype KWMinimize = KWMinimize String
+  deriving (Eq, Ord, Show, Read)
+
 newtype KWDataPattern = KWDataPattern String
   deriving (Eq, Ord, Show, Read)
 
@@ -19,7 +25,10 @@ data Problem = Problem [Block]
   deriving (Eq, Ord, Show, Read)
 
 data Block
-    = BlockVariable VariableBlock | BlockConstant ConstantBlock
+    = BlockVariable VariableBlock
+    | BlockConstant ConstantBlock
+    | BlockLet LetBlock
+    | BlockMinimize MinimizeBlock
   deriving (Eq, Ord, Show, Read)
 
 data Number = NumInt Integer | NumDouble Double
@@ -44,18 +53,40 @@ data VariableDecl
     = VariableNoInit PIdent Shape | VariableWithInit PIdent Shape Val
   deriving (Eq, Ord, Show, Read)
 
-data VariableDeclGroup = VariableDeclGroup [VariableDecl]
-  deriving (Eq, Ord, Show, Read)
-
-data VariableBlock = VariableBlock KWVariable [VariableDeclGroup]
+data VariableBlock = VariableBlock KWVariable [[VariableDecl]]
   deriving (Eq, Ord, Show, Read)
 
 data ConstantDecl = ConstantDecl PIdent Shape Val
   deriving (Eq, Ord, Show, Read)
 
-data ConstantDeclGroup = ConstantDeclGroup [ConstantDecl]
+data ConstantBlock = ConstantBlock KWConstant [[ConstantDecl]]
   deriving (Eq, Ord, Show, Read)
 
-data ConstantBlock = ConstantBlock KWConstant [ConstantDeclGroup]
+data LetDecl = LetDecl PIdent Exp
+  deriving (Eq, Ord, Show, Read)
+
+data LetBlock = LetBlock KWLet [[LetDecl]]
+  deriving (Eq, Ord, Show, Read)
+
+data MinimizeBlock = MinimizeBlock KWMinimize Exp
+  deriving (Eq, Ord, Show, Read)
+
+data RotateAmount
+    = RA1D Integer
+    | RA2D Integer Integer
+    | RA3D Integer Integer Integer
+  deriving (Eq, Ord, Show, Read)
+
+data Exp
+    = EPlus Exp Exp
+    | ESubtract Exp Exp
+    | EMul Exp Exp
+    | EDiv Exp Exp
+    | EScale Exp Exp
+    | EDot Exp Exp
+    | EFun PIdent Exp
+    | ERotate RotateAmount Exp
+    | ENum Number
+    | EIdent PIdent
   deriving (Eq, Ord, Show, Read)
 

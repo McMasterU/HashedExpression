@@ -15,6 +15,12 @@ transKWVariable x = case x of
 transKWConstant :: KWConstant -> Result
 transKWConstant x = case x of
   KWConstant string -> failure x
+transKWLet :: KWLet -> Result
+transKWLet x = case x of
+  KWLet string -> failure x
+transKWMinimize :: KWMinimize -> Result
+transKWMinimize x = case x of
+  KWMinimize string -> failure x
 transKWDataPattern :: KWDataPattern -> Result
 transKWDataPattern x = case x of
   KWDataPattern string -> failure x
@@ -28,6 +34,8 @@ transBlock :: Block -> Result
 transBlock x = case x of
   BlockVariable variableblock -> failure x
   BlockConstant constantblock -> failure x
+  BlockLet letblock -> failure x
+  BlockMinimize minimizeblock -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
   NumInt integer -> failure x
@@ -52,19 +60,39 @@ transVariableDecl :: VariableDecl -> Result
 transVariableDecl x = case x of
   VariableNoInit pident shape -> failure x
   VariableWithInit pident shape val -> failure x
-transVariableDeclGroup :: VariableDeclGroup -> Result
-transVariableDeclGroup x = case x of
-  VariableDeclGroup variabledecls -> failure x
 transVariableBlock :: VariableBlock -> Result
 transVariableBlock x = case x of
-  VariableBlock kwvariable variabledeclgroups -> failure x
+  VariableBlock kwvariable variabledeclss -> failure x
 transConstantDecl :: ConstantDecl -> Result
 transConstantDecl x = case x of
   ConstantDecl pident shape val -> failure x
-transConstantDeclGroup :: ConstantDeclGroup -> Result
-transConstantDeclGroup x = case x of
-  ConstantDeclGroup constantdecls -> failure x
 transConstantBlock :: ConstantBlock -> Result
 transConstantBlock x = case x of
-  ConstantBlock kwconstant constantdeclgroups -> failure x
+  ConstantBlock kwconstant constantdeclss -> failure x
+transLetDecl :: LetDecl -> Result
+transLetDecl x = case x of
+  LetDecl pident exp -> failure x
+transLetBlock :: LetBlock -> Result
+transLetBlock x = case x of
+  LetBlock kwlet letdeclss -> failure x
+transMinimizeBlock :: MinimizeBlock -> Result
+transMinimizeBlock x = case x of
+  MinimizeBlock kwminimize exp -> failure x
+transRotateAmount :: RotateAmount -> Result
+transRotateAmount x = case x of
+  RA1D integer -> failure x
+  RA2D integer1 integer2 -> failure x
+  RA3D integer1 integer2 integer3 -> failure x
+transExp :: Exp -> Result
+transExp x = case x of
+  EPlus exp1 exp2 -> failure x
+  ESubtract exp1 exp2 -> failure x
+  EMul exp1 exp2 -> failure x
+  EDiv exp1 exp2 -> failure x
+  EScale exp1 exp2 -> failure x
+  EDot exp1 exp2 -> failure x
+  EFun pident exp -> failure x
+  ERotate rotateamount exp -> failure x
+  ENum number -> failure x
+  EIdent pident -> failure x
 

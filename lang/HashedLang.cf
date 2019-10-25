@@ -4,6 +4,8 @@ comment "{*" "*/" ;
 -- Token
 token KWVariable {"variables"} | {"variable"};
 token KWConstant {"constants"} | {"constant"};
+token KWLet {"let"};
+token KWMinimize {"minimize"};
 token KWDataPattern
     {"FIRST_ROW_1"}
   | {"LAST_ROW_1"}
@@ -20,6 +22,8 @@ layout ":";
 Problem. Problem ::= [Block];
 BlockVariable. Block ::= VariableBlock;
 BlockConstant. Block ::= ConstantBlock;
+BlockLet. Block ::= LetBlock;
+BlockMinimize. Block ::= MinimizeBlock;
 separator nonempty Block "";
 
 -- Number
@@ -46,13 +50,45 @@ Shape3D. Shape ::= Dim Dim Dim;
 VariableNoInit. VariableDecl ::= PIdent Shape;
 VariableWithInit. VariableDecl ::= PIdent Shape "=" Val;
 separator VariableDecl ",";
-VariableDeclGroup. VariableDeclGroup ::= [VariableDecl];
-separator VariableDeclGroup ";";
-VariableBlock. VariableBlock ::= KWVariable ":" "{" [VariableDeclGroup] "}";
+separator [VariableDecl] ";";
+VariableBlock. VariableBlock ::= KWVariable ":" "{" [[VariableDecl]] "}";
 
 -- Constant
 ConstantDecl. ConstantDecl ::= PIdent Shape "=" Val;
 separator ConstantDecl ",";
-ConstantDeclGroup. ConstantDeclGroup ::= [ConstantDecl];
-separator ConstantDeclGroup ";";
-ConstantBlock. ConstantBlock ::= KWConstant ":" "{" [ConstantDeclGroup] "}";
+separator [ConstantDecl] ";";
+ConstantBlock. ConstantBlock ::= KWConstant ":" "{" [[ConstantDecl]] "}";
+
+
+-- Let
+LetDecl. LetDecl ::= PIdent "=" Exp;
+separator LetDecl ",";
+separator [LetDecl] ";";
+LetBlock. LetBlock ::= KWLet ":" "{" [[LetDecl]] "}";
+
+-- Minimize
+MinimizeBlock. MinimizeBlock ::= KWMinimize ":" "{" Exp "}";
+
+-- Rotate Amount
+RA1D. RotateAmount ::= Integer;
+RA2D. RotateAmount ::= "(" Integer "," Integer ")";
+RA3D. RotateAmount ::= "(" Integer "," Integer "," Integer ")";
+
+-- Expression
+EPlus. Exp ::= Exp "+" Exp1;
+ESubtract. Exp ::= Exp "-" Exp1;
+_. Exp ::= Exp1;
+EMul. Exp1 ::= Exp1 "*" Exp2;
+EDiv. Exp1 ::= Exp1 "/" Exp2;
+_. Exp1 ::= Exp2;
+EScale. Exp2 ::= Exp2 "*." Exp3;
+EDot. Exp2 ::= Exp2 "<.>" Exp3;
+_. Exp2 ::= Exp3;
+EFun. Exp3 ::= PIdent Exp4;
+ERotate. Exp3 ::= "rotate" RotateAmount Exp4;
+_. Exp3 ::= Exp4;
+_. Exp4 ::= "(" Exp ")";
+ENum. Exp4 ::= Number;
+EIdent. Exp4 ::= PIdent
+
+
