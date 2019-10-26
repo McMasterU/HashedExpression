@@ -20,11 +20,13 @@ data Block
     | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
-data Number
-    = NumIntPos Integer
-    | NumDoublePos Double
-    | NumIntNeg Integer
-    | NumDoubleNeg Double
+data TInt = IntPos Integer | IntNeg Integer
+  deriving (Eq, Ord, Show, Read)
+
+data TDouble = DoublePos Double | DoubleNeg Double
+  deriving (Eq, Ord, Show, Read)
+
+data Number = NumInt TInt | NumDouble TDouble
   deriving (Eq, Ord, Show, Read)
 
 data Val
@@ -78,7 +80,7 @@ data Exp
     | EDiv Exp Exp
     | EScale Exp Exp
     | EDot Exp Exp
-    | EPower Exp Integer
+    | EPower Exp TInt
     | EFun PIdent Exp
     | ERotate RotateAmount Exp
     | ENegate Exp

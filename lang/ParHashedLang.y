@@ -11,6 +11,8 @@ import ErrM
 %name pProblem Problem
 %name pBlock Block
 %name pListBlock ListBlock
+%name pTInt TInt
+%name pTDouble TDouble
 %name pNumber Number
 %name pVal Val
 %name pDim Dim
@@ -115,11 +117,15 @@ Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariab
       | 'minimize' ':' '{' Exp '}' { AbsHashedLang.BlockMinimize $4 }
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
+TInt :: { TInt }
+TInt : Integer { AbsHashedLang.IntPos $1 }
+     | '-' Integer { AbsHashedLang.IntNeg $2 }
+TDouble :: { TDouble }
+TDouble : Double { AbsHashedLang.DoublePos $1 }
+        | '-' Double { AbsHashedLang.DoubleNeg $2 }
 Number :: { Number }
-Number : Integer { AbsHashedLang.NumIntPos $1 }
-       | Double { AbsHashedLang.NumDoublePos $1 }
-       | '-' Integer { AbsHashedLang.NumIntNeg $2 }
-       | '-' Double { AbsHashedLang.NumDoubleNeg $2 }
+Number : TInt { AbsHashedLang.NumInt $1 }
+       | TDouble { AbsHashedLang.NumDouble $1 }
 Val :: { Val }
 Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
     | 'Dataset' '(' String ',' String ')' { AbsHashedLang.ValDataset $3 $5 }
@@ -199,8 +205,7 @@ Exp2 : Exp2 '*.' Exp3 { AbsHashedLang.EScale $1 $3 }
      | Exp2 '<.>' Exp3 { AbsHashedLang.EDot $1 $3 }
      | Exp3 { $1 }
 Exp3 :: { Exp }
-Exp3 : Exp3 '^' Integer { AbsHashedLang.EPower $1 $3 }
-     | Exp4 { $1 }
+Exp3 : Exp3 '^' TInt { AbsHashedLang.EPower $1 $3 } | Exp4 { $1 }
 Exp4 :: { Exp }
 Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
      | 'rotate' RotateAmount Exp5 { AbsHashedLang.ERotate $2 $3 }

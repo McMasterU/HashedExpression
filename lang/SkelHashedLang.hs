@@ -25,12 +25,18 @@ transBlock x = case x of
   BlockConstraint constraintdeclss -> failure x
   BlockLet letdeclss -> failure x
   BlockMinimize exp -> failure x
+transTInt :: TInt -> Result
+transTInt x = case x of
+  IntPos integer -> failure x
+  IntNeg integer -> failure x
+transTDouble :: TDouble -> Result
+transTDouble x = case x of
+  DoublePos double -> failure x
+  DoubleNeg double -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
-  NumIntPos integer -> failure x
-  NumDoublePos double -> failure x
-  NumIntNeg integer -> failure x
-  NumDoubleNeg double -> failure x
+  NumInt tint -> failure x
+  NumDouble tdouble -> failure x
 transVal :: Val -> Result
 transVal x = case x of
   ValFile string -> failure x
@@ -87,7 +93,7 @@ transExp x = case x of
   EDiv exp1 exp2 -> failure x
   EScale exp1 exp2 -> failure x
   EDot exp1 exp2 -> failure x
-  EPower exp integer -> failure x
+  EPower exp tint -> failure x
   EFun pident exp -> failure x
   ERotate rotateamount exp -> failure x
   ENegate exp -> failure x

@@ -26,12 +26,15 @@ BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
 separator nonempty Block "";
 
+IntPos. TInt ::= Integer;
+IntNeg. TInt ::= "-" Integer;
+
+DoublePos. TDouble ::= Double;
+DoubleNeg. TDouble ::= "-" Double;
 
 -- Number
-NumIntPos. Number ::= Integer;
-NumDoublePos. Number ::= Double;
-NumIntNeg. Number ::= "-" Integer;
-NumDoubleNeg. Number ::= "-" Double;
+NumInt. Number ::= TInt;
+NumDouble. Number ::= TDouble;
 
 -- Value
 ValFile. Val ::= "File" "(" String ")";
@@ -99,7 +102,7 @@ EScale. Exp2 ::= Exp2 "*." Exp3;
 EDot. Exp2 ::= Exp2 "<.>" Exp3;
 _. Exp2 ::= Exp3;
 
-EPower. Exp3 ::= Exp3 "^" Integer;
+EPower. Exp3 ::= Exp3 "^" TInt;
 _. Exp3 ::= Exp4;
 
 EFun. Exp4 ::= PIdent Exp5;
