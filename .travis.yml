@@ -267,12 +267,12 @@ install:
       PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
       cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
-      cabal install alex
-      cabal install happy
       ;;
   esac
   set +ex
 - chmod u+x $TRAVIS_BUILD_DIR/buildscripts/build-cabal.sh
+- stack --no-terminal install happy
+- stack --no-terminal install alex
 
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
