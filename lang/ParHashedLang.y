@@ -205,7 +205,9 @@ Exp2 : Exp2 '*.' Exp3 { AbsHashedLang.EScale $1 $3 }
      | Exp2 '<.>' Exp3 { AbsHashedLang.EDot $1 $3 }
      | Exp3 { $1 }
 Exp3 :: { Exp }
-Exp3 : Exp3 '^' TInt { AbsHashedLang.EPower $1 $3 } | Exp4 { $1 }
+Exp3 : Exp3 '^' TInt { AbsHashedLang.EPower $1 $3 }
+     | Exp3 '^' '(' TInt ')' { AbsHashedLang.EPower $1 $4 }
+     | Exp4 { $1 }
 Exp4 :: { Exp }
 Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
      | 'rotate' RotateAmount Exp5 { AbsHashedLang.ERotate $2 $3 }

@@ -103,6 +103,7 @@ EDot. Exp2 ::= Exp2 "<.>" Exp3;
 _. Exp2 ::= Exp3;
 
 EPower. Exp3 ::= Exp3 "^" TInt;
+EPower. Exp3 ::= Exp3 "^" "(" TInt ")";
 _. Exp3 ::= Exp4;
 
 EFun. Exp4 ::= PIdent Exp5;
