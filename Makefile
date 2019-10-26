@@ -1,5 +1,6 @@
 format:
-	hindent **/*.hs
+	hindent src/*.hs
+	hindent test/*.hs
 
 check_exhaustive:
 	stack clean
