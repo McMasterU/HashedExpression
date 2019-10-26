@@ -54,6 +54,8 @@ jobs:
     if: NOT (branch = master OR (branch = develop && type = push)) AND commit_message =~ /(checkhaddock)/
 
   - script:
+    - stack --no-terminal install happy
+    - stack --no-terminal install alex
     - stack --no-terminal test
     addons: {apt: {packages: [libgmp-dev]}}
     env: CACHE_NAME=tes
@@ -271,8 +273,6 @@ install:
   esac
   set +ex
 - chmod u+x $TRAVIS_BUILD_DIR/buildscripts/build-cabal.sh
-- stack --no-terminal install happy
-- stack --no-terminal install alex
 
 script:
 - echo "Building using $BUILD (commands for other compiler will return 0)."
