@@ -137,32 +137,26 @@ VariableDecl :: { VariableDecl }
 VariableDecl : PIdent Shape { AbsHashedLang.VariableNoInit $1 $2 }
              | PIdent Shape '=' Val { AbsHashedLang.VariableWithInit $1 $2 $4 }
 ListVariableDecl :: { [VariableDecl] }
-ListVariableDecl : {- empty -} { [] }
-                 | VariableDecl { (:[]) $1 }
+ListVariableDecl : VariableDecl { (:[]) $1 }
                  | VariableDecl ',' ListVariableDecl { (:) $1 $3 }
 ListListVariableDecl :: { [[VariableDecl]] }
-ListListVariableDecl : {- empty -} { [] }
-                     | ListVariableDecl { (:[]) $1 }
+ListListVariableDecl : ListVariableDecl { (:[]) $1 }
                      | ListVariableDecl ';' ListListVariableDecl { (:) $1 $3 }
 ConstantDecl :: { ConstantDecl }
 ConstantDecl : PIdent Shape '=' Val { AbsHashedLang.ConstantDecl $1 $2 $4 }
 ListConstantDecl :: { [ConstantDecl] }
-ListConstantDecl : {- empty -} { [] }
-                 | ConstantDecl { (:[]) $1 }
+ListConstantDecl : ConstantDecl { (:[]) $1 }
                  | ConstantDecl ',' ListConstantDecl { (:) $1 $3 }
 ListListConstantDecl :: { [[ConstantDecl]] }
-ListListConstantDecl : {- empty -} { [] }
-                     | ListConstantDecl { (:[]) $1 }
+ListListConstantDecl : ListConstantDecl { (:[]) $1 }
                      | ListConstantDecl ';' ListListConstantDecl { (:) $1 $3 }
 LetDecl :: { LetDecl }
 LetDecl : PIdent '=' Exp { AbsHashedLang.LetDecl $1 $3 }
 ListLetDecl :: { [LetDecl] }
-ListLetDecl : {- empty -} { [] }
-            | LetDecl { (:[]) $1 }
+ListLetDecl : LetDecl { (:[]) $1 }
             | LetDecl ',' ListLetDecl { (:) $1 $3 }
 ListListLetDecl :: { [[LetDecl]] }
-ListListLetDecl : {- empty -} { [] }
-                | ListLetDecl { (:[]) $1 }
+ListListLetDecl : ListLetDecl { (:[]) $1 }
                 | ListLetDecl ';' ListListLetDecl { (:) $1 $3 }
 Bound :: { Bound }
 Bound : PIdent { AbsHashedLang.ConstantBound $1 }
@@ -171,12 +165,10 @@ ConstraintDecl :: { ConstraintDecl }
 ConstraintDecl : Exp '>=' Bound { AbsHashedLang.ConstraintLower $1 $3 }
                | Exp '<=' Bound { AbsHashedLang.ConstraintUpper $1 $3 }
 ListConstraintDecl :: { [ConstraintDecl] }
-ListConstraintDecl : {- empty -} { [] }
-                   | ConstraintDecl { (:[]) $1 }
+ListConstraintDecl : ConstraintDecl { (:[]) $1 }
                    | ConstraintDecl ',' ListConstraintDecl { (:) $1 $3 }
 ListListConstraintDecl :: { [[ConstraintDecl]] }
-ListListConstraintDecl : {- empty -} { [] }
-                       | ListConstraintDecl { (:[]) $1 }
+ListListConstraintDecl : ListConstraintDecl { (:[]) $1 }
                        | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
 Offset :: { Offset }
 Offset : Integer { AbsHashedLang.OffsetPos $1 }
@@ -216,7 +208,8 @@ Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
      | Exp5 { $1 }
 Exp5 :: { Exp }
 Exp5 : '(' Exp ')' { $2 }
-     | Number { AbsHashedLang.ENum $1 }
+     | Double { AbsHashedLang.ENumDouble $1 }
+     | Integer { AbsHashedLang.ENumInteger $1 }
      | PIdent { AbsHashedLang.EIdent $1 }
 {
 

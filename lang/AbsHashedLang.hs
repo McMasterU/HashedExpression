@@ -82,7 +82,8 @@ data Exp
     | EFun PIdent Exp
     | ERotate RotateAmount Exp
     | ENegate Exp
-    | ENum Number
+    | ENumDouble Double
+    | ENumInteger Integer
     | EIdent PIdent
     | EPiecewise Exp [PiecewiseCase]
   deriving (Eq, Ord, Show, Read)

@@ -91,7 +91,8 @@ transExp x = case x of
   EFun pident exp -> failure x
   ERotate rotateamount exp -> failure x
   ENegate exp -> failure x
-  ENum number -> failure x
+  ENumDouble double -> failure x
+  ENumInteger integer -> failure x
   EIdent pident -> failure x
   EPiecewise exp piecewisecases -> failure x
 

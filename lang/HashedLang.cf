@@ -52,26 +52,26 @@ Shape3D. Shape ::= Dim Dim Dim;
 -- Variable
 VariableNoInit. VariableDecl ::= PIdent Shape;
 VariableWithInit. VariableDecl ::= PIdent Shape "=" Val;
-separator VariableDecl ",";
-separator [VariableDecl] ";";
+separator nonempty VariableDecl ",";
+separator nonempty [VariableDecl] ";";
 
 -- Constant
 ConstantDecl. ConstantDecl ::= PIdent Shape "=" Val;
-separator ConstantDecl ",";
-separator [ConstantDecl] ";";
+separator nonempty ConstantDecl ",";
+separator nonempty [ConstantDecl] ";";
 
 -- Let
 LetDecl. LetDecl ::= PIdent "=" Exp;
-separator LetDecl ",";
-separator [LetDecl] ";";
+separator nonempty LetDecl ",";
+separator nonempty [LetDecl] ";";
 
 -- Constraint
 ConstantBound. Bound ::= PIdent;
 NumberBound. Bound ::= Number;
 ConstraintLower. ConstraintDecl ::= Exp ">=" Bound;
 ConstraintUpper. ConstraintDecl ::= Exp "<=" Bound;
-separator ConstraintDecl ",";
-separator [ConstraintDecl] ";";
+separator nonempty ConstraintDecl ",";
+separator nonempty [ConstraintDecl] ";";
 
 -- Rotate Amount
 OffsetPos. Offset ::= Integer;
@@ -108,7 +108,8 @@ ENegate. Exp4 ::= "-" Exp5;
 _. Exp4 ::= Exp5;
 
 _. Exp5 ::= "(" Exp ")";
-ENum. Exp5 ::= Number;
+ENumDouble. Exp5 ::= Double;
+ENumInteger. Exp5 ::= Integer;
 EIdent. Exp5 ::= PIdent;
 
 EPiecewise. Exp ::= "case" Exp ":" "{" [PiecewiseCase] "}";
