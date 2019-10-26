@@ -26,16 +26,12 @@ BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
 separator nonempty Block "";
 
--- Aux
-Z. Z ::= Integer;
-Z. Z ::= "-" Integer;
-
-R. R ::= Double;
-R. R ::= "-" Double;
 
 -- Number
-NumInt. Number ::= Z;
-NumDouble. Number ::= R;
+NumIntPos. Number ::= Integer;
+NumDoublePos. Number ::= Double;
+NumIntNeg. Number ::= "-" Integer;
+NumDoubleNeg. Number ::= "-" Double;
 
 -- Value
 ValFile. Val ::= "File" "(" String ")";
@@ -78,9 +74,11 @@ separator ConstraintDecl ",";
 separator [ConstraintDecl] ";";
 
 -- Rotate Amount
-RA1D. RotateAmount ::= Integer;
-RA2D. RotateAmount ::= "(" Integer "," Integer ")";
-RA3D. RotateAmount ::= "(" Integer "," Integer "," Integer ")";
+OffsetPos. Offset ::= Integer;
+OffsetNeg. Offset ::= "-" Integer;
+RA1D. RotateAmount ::= "(" Offset ")";
+RA2D. RotateAmount ::= "(" Offset "," Offset ")";
+RA3D. RotateAmount ::= "(" Offset "," Offset "," Offset ")";
 
 -- Piecewise
 PiecewiseCase. PiecewiseCase ::= "it" "<=" Number "->" Exp;
@@ -106,6 +104,7 @@ _. Exp3 ::= Exp4;
 
 EFun. Exp4 ::= PIdent Exp5;
 ERotate. Exp4 ::= "rotate" RotateAmount Exp5;
+ENegate. Exp4 ::= "-" Exp5;
 _. Exp4 ::= Exp5;
 
 _. Exp5 ::= "(" Exp ")";

@@ -11,8 +11,6 @@ import ErrM
 %name pProblem Problem
 %name pBlock Block
 %name pListBlock ListBlock
-%name pZ Z
-%name pR R
 %name pNumber Number
 %name pVal Val
 %name pDim Dim
@@ -30,6 +28,7 @@ import ErrM
 %name pConstraintDecl ConstraintDecl
 %name pListConstraintDecl ListConstraintDecl
 %name pListListConstraintDecl ListListConstraintDecl
+%name pOffset Offset
 %name pRotateAmount RotateAmount
 %name pPiecewiseCase PiecewiseCase
 %name pListPiecewiseCase ListPiecewiseCase
@@ -116,15 +115,11 @@ Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariab
       | 'minimize' ':' '{' Exp '}' { AbsHashedLang.BlockMinimize $4 }
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
-Z :: { Z }
-Z : Integer { AbsHashedLang.Z $1 }
-  | '-' Integer { AbsHashedLang.Z $2 }
-R :: { R }
-R : Double { AbsHashedLang.R $1 }
-  | '-' Double { AbsHashedLang.R $2 }
 Number :: { Number }
-Number : Z { AbsHashedLang.NumInt $1 }
-       | R { AbsHashedLang.NumDouble $1 }
+Number : Integer { AbsHashedLang.NumIntPos $1 }
+       | Double { AbsHashedLang.NumDoublePos $1 }
+       | '-' Integer { AbsHashedLang.NumIntNeg $2 }
+       | '-' Double { AbsHashedLang.NumDoubleNeg $2 }
 Val :: { Val }
 Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
     | 'Dataset' '(' String ',' String ')' { AbsHashedLang.ValDataset $3 $5 }
@@ -183,10 +178,13 @@ ListListConstraintDecl :: { [[ConstraintDecl]] }
 ListListConstraintDecl : {- empty -} { [] }
                        | ListConstraintDecl { (:[]) $1 }
                        | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
+Offset :: { Offset }
+Offset : Integer { AbsHashedLang.OffsetPos $1 }
+       | '-' Integer { AbsHashedLang.OffsetNeg $2 }
 RotateAmount :: { RotateAmount }
-RotateAmount : Integer { AbsHashedLang.RA1D $1 }
-             | '(' Integer ',' Integer ')' { AbsHashedLang.RA2D $2 $4 }
-             | '(' Integer ',' Integer ',' Integer ')' { AbsHashedLang.RA3D $2 $4 $6 }
+RotateAmount : '(' Offset ')' { AbsHashedLang.RA1D $2 }
+             | '(' Offset ',' Offset ')' { AbsHashedLang.RA2D $2 $4 }
+             | '(' Offset ',' Offset ',' Offset ')' { AbsHashedLang.RA3D $2 $4 $6 }
 PiecewiseCase :: { PiecewiseCase }
 PiecewiseCase : 'it' '<=' Number '->' Exp { AbsHashedLang.PiecewiseCase $3 $5 }
               | 'otherwise' '->' Exp { AbsHashedLang.PiecewiseFinalCase $3 }
@@ -214,6 +212,7 @@ Exp3 : Exp3 '^' Integer { AbsHashedLang.EPower $1 $3 }
 Exp4 :: { Exp }
 Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
      | 'rotate' RotateAmount Exp5 { AbsHashedLang.ERotate $2 $3 }
+     | '-' Exp5 { AbsHashedLang.ENegate $2 }
      | Exp5 { $1 }
 Exp5 :: { Exp }
 Exp5 : '(' Exp ')' { $2 }

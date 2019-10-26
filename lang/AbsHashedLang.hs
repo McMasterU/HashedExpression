@@ -20,13 +20,11 @@ data Block
     | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
-data Z = Z Integer
-  deriving (Eq, Ord, Show, Read)
-
-data R = R Double
-  deriving (Eq, Ord, Show, Read)
-
-data Number = NumInt Z | NumDouble R
+data Number
+    = NumIntPos Integer
+    | NumDoublePos Double
+    | NumIntNeg Integer
+    | NumDoubleNeg Double
   deriving (Eq, Ord, Show, Read)
 
 data Val
@@ -61,10 +59,11 @@ data ConstraintDecl
     = ConstraintLower Exp Bound | ConstraintUpper Exp Bound
   deriving (Eq, Ord, Show, Read)
 
+data Offset = OffsetPos Integer | OffsetNeg Integer
+  deriving (Eq, Ord, Show, Read)
+
 data RotateAmount
-    = RA1D Integer
-    | RA2D Integer Integer
-    | RA3D Integer Integer Integer
+    = RA1D Offset | RA2D Offset Offset | RA3D Offset Offset Offset
   deriving (Eq, Ord, Show, Read)
 
 data PiecewiseCase
@@ -82,6 +81,7 @@ data Exp
     | EPower Exp Integer
     | EFun PIdent Exp
     | ERotate RotateAmount Exp
+    | ENegate Exp
     | ENum Number
     | EIdent PIdent
     | EPiecewise Exp [PiecewiseCase]

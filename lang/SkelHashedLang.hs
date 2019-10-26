@@ -25,16 +25,12 @@ transBlock x = case x of
   BlockConstraint constraintdeclss -> failure x
   BlockLet letdeclss -> failure x
   BlockMinimize exp -> failure x
-transZ :: Z -> Result
-transZ x = case x of
-  Z integer -> failure x
-transR :: R -> Result
-transR x = case x of
-  R double -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
-  NumInt z -> failure x
-  NumDouble r -> failure x
+  NumIntPos integer -> failure x
+  NumDoublePos double -> failure x
+  NumIntNeg integer -> failure x
+  NumDoubleNeg double -> failure x
 transVal :: Val -> Result
 transVal x = case x of
   ValFile string -> failure x
@@ -69,11 +65,15 @@ transConstraintDecl :: ConstraintDecl -> Result
 transConstraintDecl x = case x of
   ConstraintLower exp bound -> failure x
   ConstraintUpper exp bound -> failure x
+transOffset :: Offset -> Result
+transOffset x = case x of
+  OffsetPos integer -> failure x
+  OffsetNeg integer -> failure x
 transRotateAmount :: RotateAmount -> Result
 transRotateAmount x = case x of
-  RA1D integer -> failure x
-  RA2D integer1 integer2 -> failure x
-  RA3D integer1 integer2 integer3 -> failure x
+  RA1D offset -> failure x
+  RA2D offset1 offset2 -> failure x
+  RA3D offset1 offset2 offset3 -> failure x
 transPiecewiseCase :: PiecewiseCase -> Result
 transPiecewiseCase x = case x of
   PiecewiseCase number exp -> failure x
@@ -90,6 +90,7 @@ transExp x = case x of
   EPower exp integer -> failure x
   EFun pident exp -> failure x
   ERotate rotateamount exp -> failure x
+  ENegate exp -> failure x
   ENum number -> failure x
   EIdent pident -> failure x
   EPiecewise exp piecewisecases -> failure x
