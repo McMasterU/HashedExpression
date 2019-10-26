@@ -22,12 +22,19 @@ transBlock :: Block -> Result
 transBlock x = case x of
   BlockVariable variabledeclss -> failure x
   BlockConstant constantdeclss -> failure x
+  BlockConstraint constraintdeclss -> failure x
   BlockLet letdeclss -> failure x
   BlockMinimize exp -> failure x
+transZ :: Z -> Result
+transZ x = case x of
+  Z integer -> failure x
+transR :: R -> Result
+transR x = case x of
+  R double -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
-  NumInt integer -> failure x
-  NumDouble double -> failure x
+  NumInt z -> failure x
+  NumDouble r -> failure x
 transVal :: Val -> Result
 transVal x = case x of
   ValFile string -> failure x
@@ -54,21 +61,36 @@ transConstantDecl x = case x of
 transLetDecl :: LetDecl -> Result
 transLetDecl x = case x of
   LetDecl pident exp -> failure x
+transBound :: Bound -> Result
+transBound x = case x of
+  ConstantBound pident -> failure x
+  NumberBound number -> failure x
+transConstraintDecl :: ConstraintDecl -> Result
+transConstraintDecl x = case x of
+  ConstraintLower exp bound -> failure x
+  ConstraintUpper exp bound -> failure x
 transRotateAmount :: RotateAmount -> Result
 transRotateAmount x = case x of
   RA1D integer -> failure x
   RA2D integer1 integer2 -> failure x
   RA3D integer1 integer2 integer3 -> failure x
+transPiecewiseCase :: PiecewiseCase -> Result
+transPiecewiseCase x = case x of
+  PiecewiseCase number exp -> failure x
+  PiecewiseFinalCase exp -> failure x
 transExp :: Exp -> Result
 transExp x = case x of
   EPlus exp1 exp2 -> failure x
+  ERealImag exp1 exp2 -> failure x
   ESubtract exp1 exp2 -> failure x
   EMul exp1 exp2 -> failure x
   EDiv exp1 exp2 -> failure x
   EScale exp1 exp2 -> failure x
   EDot exp1 exp2 -> failure x
+  EPower exp integer -> failure x
   EFun pident exp -> failure x
   ERotate rotateamount exp -> failure x
   ENum number -> failure x
   EIdent pident -> failure x
+  EPiecewise exp piecewisecases -> failure x
 

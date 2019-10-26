@@ -15,11 +15,18 @@ data Problem = Problem [Block]
 data Block
     = BlockVariable [[VariableDecl]]
     | BlockConstant [[ConstantDecl]]
+    | BlockConstraint [[ConstraintDecl]]
     | BlockLet [[LetDecl]]
     | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
-data Number = NumInt Integer | NumDouble Double
+data Z = Z Integer
+  deriving (Eq, Ord, Show, Read)
+
+data R = R Double
+  deriving (Eq, Ord, Show, Read)
+
+data Number = NumInt Z | NumDouble R
   deriving (Eq, Ord, Show, Read)
 
 data Val
@@ -47,22 +54,36 @@ data ConstantDecl = ConstantDecl PIdent Shape Val
 data LetDecl = LetDecl PIdent Exp
   deriving (Eq, Ord, Show, Read)
 
+data Bound = ConstantBound PIdent | NumberBound Number
+  deriving (Eq, Ord, Show, Read)
+
+data ConstraintDecl
+    = ConstraintLower Exp Bound | ConstraintUpper Exp Bound
+  deriving (Eq, Ord, Show, Read)
+
 data RotateAmount
     = RA1D Integer
     | RA2D Integer Integer
     | RA3D Integer Integer Integer
   deriving (Eq, Ord, Show, Read)
 
+data PiecewiseCase
+    = PiecewiseCase Number Exp | PiecewiseFinalCase Exp
+  deriving (Eq, Ord, Show, Read)
+
 data Exp
     = EPlus Exp Exp
+    | ERealImag Exp Exp
     | ESubtract Exp Exp
     | EMul Exp Exp
     | EDiv Exp Exp
     | EScale Exp Exp
     | EDot Exp Exp
+    | EPower Exp Integer
     | EFun PIdent Exp
     | ERotate RotateAmount Exp
     | ENum Number
     | EIdent PIdent
+    | EPiecewise Exp [PiecewiseCase]
   deriving (Eq, Ord, Show, Read)
 

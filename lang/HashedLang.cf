@@ -20,13 +20,22 @@ BlockVariable. Block ::= "variables" ":" "{" [[VariableDecl]] "}";
 BlockVariable. Block ::= "variable" ":" "{" [[VariableDecl]] "}";
 BlockConstant. Block ::= "constants" ":" "{" [[ConstantDecl]] "}";
 BlockConstant. Block ::= "constant" ":" "{" [[ConstantDecl]] "}";
+BlockConstraint. Block ::= "constraints" ":" "{" [[ConstraintDecl]] "}";
+BlockConstraint. Block ::= "constraint" ":" "{" [[ConstraintDecl]] "}";
 BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
 separator nonempty Block "";
 
+-- Aux
+Z. Z ::= Integer;
+Z. Z ::= "-" Integer;
+
+R. R ::= Double;
+R. R ::= "-" Double;
+
 -- Number
-NumInt. Number ::= Integer;
-NumDouble. Number ::= Double;
+NumInt. Number ::= Z;
+NumDouble. Number ::= R;
 
 -- Value
 ValFile. Val ::= "File" "(" String ")";
@@ -55,32 +64,52 @@ ConstantDecl. ConstantDecl ::= PIdent Shape "=" Val;
 separator ConstantDecl ",";
 separator [ConstantDecl] ";";
 
-
 -- Let
 LetDecl. LetDecl ::= PIdent "=" Exp;
 separator LetDecl ",";
 separator [LetDecl] ";";
+
+-- Constraint
+ConstantBound. Bound ::= PIdent;
+NumberBound. Bound ::= Number;
+ConstraintLower. ConstraintDecl ::= Exp ">=" Bound;
+ConstraintUpper. ConstraintDecl ::= Exp "<=" Bound;
+separator ConstraintDecl ",";
+separator [ConstraintDecl] ";";
 
 -- Rotate Amount
 RA1D. RotateAmount ::= Integer;
 RA2D. RotateAmount ::= "(" Integer "," Integer ")";
 RA3D. RotateAmount ::= "(" Integer "," Integer "," Integer ")";
 
+-- Piecewise
+PiecewiseCase. PiecewiseCase ::= "it" "<=" Number "->" Exp;
+PiecewiseFinalCase. PiecewiseCase ::= "otherwise" "->" Exp;
+separator PiecewiseCase ";";
+
 -- Expression
 EPlus. Exp ::= Exp "+" Exp1;
+ERealImag. Exp ::= Exp "+:" Exp1;
 ESubtract. Exp ::= Exp "-" Exp1;
 _. Exp ::= Exp1;
+
 EMul. Exp1 ::= Exp1 "*" Exp2;
 EDiv. Exp1 ::= Exp1 "/" Exp2;
 _. Exp1 ::= Exp2;
+
 EScale. Exp2 ::= Exp2 "*." Exp3;
 EDot. Exp2 ::= Exp2 "<.>" Exp3;
 _. Exp2 ::= Exp3;
-EFun. Exp3 ::= PIdent Exp4;
-ERotate. Exp3 ::= "rotate" RotateAmount Exp4;
+
+EPower. Exp3 ::= Exp3 "^" Integer;
 _. Exp3 ::= Exp4;
-_. Exp4 ::= "(" Exp ")";
-ENum. Exp4 ::= Number;
-EIdent. Exp4 ::= PIdent
 
+EFun. Exp4 ::= PIdent Exp5;
+ERotate. Exp4 ::= "rotate" RotateAmount Exp5;
+_. Exp4 ::= Exp5;
 
+_. Exp5 ::= "(" Exp ")";
+ENum. Exp5 ::= Number;
+EIdent. Exp5 ::= PIdent;
+
+EPiecewise. Exp ::= "case" Exp ":" "{" [PiecewiseCase] "}";

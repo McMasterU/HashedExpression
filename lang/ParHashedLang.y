@@ -11,6 +11,8 @@ import ErrM
 %name pProblem Problem
 %name pBlock Block
 %name pListBlock ListBlock
+%name pZ Z
+%name pR R
 %name pNumber Number
 %name pVal Val
 %name pDim Dim
@@ -24,12 +26,19 @@ import ErrM
 %name pLetDecl LetDecl
 %name pListLetDecl ListLetDecl
 %name pListListLetDecl ListListLetDecl
+%name pBound Bound
+%name pConstraintDecl ConstraintDecl
+%name pListConstraintDecl ListConstraintDecl
+%name pListListConstraintDecl ListListConstraintDecl
 %name pRotateAmount RotateAmount
+%name pPiecewiseCase PiecewiseCase
+%name pListPiecewiseCase ListPiecewiseCase
 %name pExp Exp
 %name pExp1 Exp1
 %name pExp2 Exp2
 %name pExp3 Exp3
 %name pExp4 Exp4
+%name pExp5 Exp5
 -- no lexer declaration
 %monad { Err } { thenM } { returnM }
 %tokentype {Token}
@@ -39,28 +48,38 @@ import ErrM
   '*' { PT _ (TS _ 3) }
   '*.' { PT _ (TS _ 4) }
   '+' { PT _ (TS _ 5) }
-  ',' { PT _ (TS _ 6) }
-  '-' { PT _ (TS _ 7) }
-  '/' { PT _ (TS _ 8) }
-  ':' { PT _ (TS _ 9) }
-  ';' { PT _ (TS _ 10) }
-  '<.>' { PT _ (TS _ 11) }
-  '=' { PT _ (TS _ 12) }
-  'Dataset' { PT _ (TS _ 13) }
-  'File' { PT _ (TS _ 14) }
-  'Pattern' { PT _ (TS _ 15) }
-  'Random' { PT _ (TS _ 16) }
-  '[' { PT _ (TS _ 17) }
-  ']' { PT _ (TS _ 18) }
-  'constant' { PT _ (TS _ 19) }
-  'constants' { PT _ (TS _ 20) }
-  'let' { PT _ (TS _ 21) }
-  'minimize' { PT _ (TS _ 22) }
-  'rotate' { PT _ (TS _ 23) }
-  'variable' { PT _ (TS _ 24) }
-  'variables' { PT _ (TS _ 25) }
-  '{' { PT _ (TS _ 26) }
-  '}' { PT _ (TS _ 27) }
+  '+:' { PT _ (TS _ 6) }
+  ',' { PT _ (TS _ 7) }
+  '-' { PT _ (TS _ 8) }
+  '->' { PT _ (TS _ 9) }
+  '/' { PT _ (TS _ 10) }
+  ':' { PT _ (TS _ 11) }
+  ';' { PT _ (TS _ 12) }
+  '<.>' { PT _ (TS _ 13) }
+  '<=' { PT _ (TS _ 14) }
+  '=' { PT _ (TS _ 15) }
+  '>=' { PT _ (TS _ 16) }
+  'Dataset' { PT _ (TS _ 17) }
+  'File' { PT _ (TS _ 18) }
+  'Pattern' { PT _ (TS _ 19) }
+  'Random' { PT _ (TS _ 20) }
+  '[' { PT _ (TS _ 21) }
+  ']' { PT _ (TS _ 22) }
+  '^' { PT _ (TS _ 23) }
+  'case' { PT _ (TS _ 24) }
+  'constant' { PT _ (TS _ 25) }
+  'constants' { PT _ (TS _ 26) }
+  'constraint' { PT _ (TS _ 27) }
+  'constraints' { PT _ (TS _ 28) }
+  'it' { PT _ (TS _ 29) }
+  'let' { PT _ (TS _ 30) }
+  'minimize' { PT _ (TS _ 31) }
+  'otherwise' { PT _ (TS _ 32) }
+  'rotate' { PT _ (TS _ 33) }
+  'variable' { PT _ (TS _ 34) }
+  'variables' { PT _ (TS _ 35) }
+  '{' { PT _ (TS _ 36) }
+  '}' { PT _ (TS _ 37) }
   L_integ  { PT _ (TI $$) }
   L_doubl  { PT _ (TD $$) }
   L_quoted { PT _ (TL $$) }
@@ -91,13 +110,21 @@ Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariab
       | 'variable' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariable $4 }
       | 'constants' ':' '{' ListListConstantDecl '}' { AbsHashedLang.BlockConstant $4 }
       | 'constant' ':' '{' ListListConstantDecl '}' { AbsHashedLang.BlockConstant $4 }
+      | 'constraints' ':' '{' ListListConstraintDecl '}' { AbsHashedLang.BlockConstraint $4 }
+      | 'constraint' ':' '{' ListListConstraintDecl '}' { AbsHashedLang.BlockConstraint $4 }
       | 'let' ':' '{' ListListLetDecl '}' { AbsHashedLang.BlockLet $4 }
       | 'minimize' ':' '{' Exp '}' { AbsHashedLang.BlockMinimize $4 }
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
+Z :: { Z }
+Z : Integer { AbsHashedLang.Z $1 }
+  | '-' Integer { AbsHashedLang.Z $2 }
+R :: { R }
+R : Double { AbsHashedLang.R $1 }
+  | '-' Double { AbsHashedLang.R $2 }
 Number :: { Number }
-Number : Integer { AbsHashedLang.NumInt $1 }
-       | Double { AbsHashedLang.NumDouble $1 }
+Number : Z { AbsHashedLang.NumInt $1 }
+       | R { AbsHashedLang.NumDouble $1 }
 Val :: { Val }
 Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
     | 'Dataset' '(' String ',' String ')' { AbsHashedLang.ValDataset $3 $5 }
@@ -142,14 +169,37 @@ ListListLetDecl :: { [[LetDecl]] }
 ListListLetDecl : {- empty -} { [] }
                 | ListLetDecl { (:[]) $1 }
                 | ListLetDecl ';' ListListLetDecl { (:) $1 $3 }
+Bound :: { Bound }
+Bound : PIdent { AbsHashedLang.ConstantBound $1 }
+      | Number { AbsHashedLang.NumberBound $1 }
+ConstraintDecl :: { ConstraintDecl }
+ConstraintDecl : Exp '>=' Bound { AbsHashedLang.ConstraintLower $1 $3 }
+               | Exp '<=' Bound { AbsHashedLang.ConstraintUpper $1 $3 }
+ListConstraintDecl :: { [ConstraintDecl] }
+ListConstraintDecl : {- empty -} { [] }
+                   | ConstraintDecl { (:[]) $1 }
+                   | ConstraintDecl ',' ListConstraintDecl { (:) $1 $3 }
+ListListConstraintDecl :: { [[ConstraintDecl]] }
+ListListConstraintDecl : {- empty -} { [] }
+                       | ListConstraintDecl { (:[]) $1 }
+                       | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
 RotateAmount :: { RotateAmount }
 RotateAmount : Integer { AbsHashedLang.RA1D $1 }
              | '(' Integer ',' Integer ')' { AbsHashedLang.RA2D $2 $4 }
              | '(' Integer ',' Integer ',' Integer ')' { AbsHashedLang.RA3D $2 $4 $6 }
+PiecewiseCase :: { PiecewiseCase }
+PiecewiseCase : 'it' '<=' Number '->' Exp { AbsHashedLang.PiecewiseCase $3 $5 }
+              | 'otherwise' '->' Exp { AbsHashedLang.PiecewiseFinalCase $3 }
+ListPiecewiseCase :: { [PiecewiseCase] }
+ListPiecewiseCase : {- empty -} { [] }
+                  | PiecewiseCase { (:[]) $1 }
+                  | PiecewiseCase ';' ListPiecewiseCase { (:) $1 $3 }
 Exp :: { Exp }
 Exp : Exp '+' Exp1 { AbsHashedLang.EPlus $1 $3 }
+    | Exp '+:' Exp1 { AbsHashedLang.ERealImag $1 $3 }
     | Exp '-' Exp1 { AbsHashedLang.ESubtract $1 $3 }
     | Exp1 { $1 }
+    | 'case' Exp ':' '{' ListPiecewiseCase '}' { AbsHashedLang.EPiecewise $2 $5 }
 Exp1 :: { Exp }
 Exp1 : Exp1 '*' Exp2 { AbsHashedLang.EMul $1 $3 }
      | Exp1 '/' Exp2 { AbsHashedLang.EDiv $1 $3 }
@@ -159,11 +209,14 @@ Exp2 : Exp2 '*.' Exp3 { AbsHashedLang.EScale $1 $3 }
      | Exp2 '<.>' Exp3 { AbsHashedLang.EDot $1 $3 }
      | Exp3 { $1 }
 Exp3 :: { Exp }
-Exp3 : PIdent Exp4 { AbsHashedLang.EFun $1 $2 }
-     | 'rotate' RotateAmount Exp4 { AbsHashedLang.ERotate $2 $3 }
+Exp3 : Exp3 '^' Integer { AbsHashedLang.EPower $1 $3 }
      | Exp4 { $1 }
 Exp4 :: { Exp }
-Exp4 : '(' Exp ')' { $2 }
+Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
+     | 'rotate' RotateAmount Exp5 { AbsHashedLang.ERotate $2 $3 }
+     | Exp5 { $1 }
+Exp5 :: { Exp }
+Exp5 : '(' Exp ')' { $2 }
      | Number { AbsHashedLang.ENum $1 }
      | PIdent { AbsHashedLang.EIdent $1 }
 {

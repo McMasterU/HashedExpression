@@ -102,6 +102,7 @@ instance Print AbsHashedLang.Block where
   prt i e = case e of
     AbsHashedLang.BlockVariable variabledeclss -> prPrec i 0 (concatD [doc (showString "variables"), doc (showString ":"), doc (showString "{"), prt 0 variabledeclss, doc (showString "}")])
     AbsHashedLang.BlockConstant constantdeclss -> prPrec i 0 (concatD [doc (showString "constants"), doc (showString ":"), doc (showString "{"), prt 0 constantdeclss, doc (showString "}")])
+    AbsHashedLang.BlockConstraint constraintdeclss -> prPrec i 0 (concatD [doc (showString "constraints"), doc (showString ":"), doc (showString "{"), prt 0 constraintdeclss, doc (showString "}")])
     AbsHashedLang.BlockLet letdeclss -> prPrec i 0 (concatD [doc (showString "let"), doc (showString ":"), doc (showString "{"), prt 0 letdeclss, doc (showString "}")])
     AbsHashedLang.BlockMinimize exp -> prPrec i 0 (concatD [doc (showString "minimize"), doc (showString ":"), doc (showString "{"), prt 0 exp, doc (showString "}")])
   prtList _ [x] = concatD [prt 0 x]
@@ -110,10 +111,18 @@ instance Print AbsHashedLang.Block where
 instance Print [AbsHashedLang.Block] where
   prt = prtList
 
+instance Print AbsHashedLang.Z where
+  prt i e = case e of
+    AbsHashedLang.Z n -> prPrec i 0 (concatD [prt 0 n])
+
+instance Print AbsHashedLang.R where
+  prt i e = case e of
+    AbsHashedLang.R d -> prPrec i 0 (concatD [prt 0 d])
+
 instance Print AbsHashedLang.Number where
   prt i e = case e of
-    AbsHashedLang.NumInt n -> prPrec i 0 (concatD [prt 0 n])
-    AbsHashedLang.NumDouble d -> prPrec i 0 (concatD [prt 0 d])
+    AbsHashedLang.NumInt z -> prPrec i 0 (concatD [prt 0 z])
+    AbsHashedLang.NumDouble r -> prPrec i 0 (concatD [prt 0 r])
 
 instance Print AbsHashedLang.Val where
   prt i e = case e of
@@ -183,22 +192,58 @@ instance Print [AbsHashedLang.LetDecl] where
 instance Print [[AbsHashedLang.LetDecl]] where
   prt = prtList
 
+instance Print AbsHashedLang.Bound where
+  prt i e = case e of
+    AbsHashedLang.ConstantBound pident -> prPrec i 0 (concatD [prt 0 pident])
+    AbsHashedLang.NumberBound number -> prPrec i 0 (concatD [prt 0 number])
+
+instance Print AbsHashedLang.ConstraintDecl where
+  prt i e = case e of
+    AbsHashedLang.ConstraintLower exp bound -> prPrec i 0 (concatD [prt 0 exp, doc (showString ">="), prt 0 bound])
+    AbsHashedLang.ConstraintUpper exp bound -> prPrec i 0 (concatD [prt 0 exp, doc (showString "<="), prt 0 bound])
+  prtList _ [] = concatD []
+  prtList _ [x] = concatD [prt 0 x]
+  prtList _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
+
+instance Print [AbsHashedLang.ConstraintDecl] where
+  prt = prtList
+  prtList _ [] = concatD []
+  prtList _ [x] = concatD [prt 0 x]
+  prtList _ (x:xs) = concatD [prt 0 x, doc (showString ";"), prt 0 xs]
+
+instance Print [[AbsHashedLang.ConstraintDecl]] where
+  prt = prtList
+
 instance Print AbsHashedLang.RotateAmount where
   prt i e = case e of
     AbsHashedLang.RA1D n -> prPrec i 0 (concatD [prt 0 n])
     AbsHashedLang.RA2D n1 n2 -> prPrec i 0 (concatD [doc (showString "("), prt 0 n1, doc (showString ","), prt 0 n2, doc (showString ")")])
     AbsHashedLang.RA3D n1 n2 n3 -> prPrec i 0 (concatD [doc (showString "("), prt 0 n1, doc (showString ","), prt 0 n2, doc (showString ","), prt 0 n3, doc (showString ")")])
 
+instance Print AbsHashedLang.PiecewiseCase where
+  prt i e = case e of
+    AbsHashedLang.PiecewiseCase number exp -> prPrec i 0 (concatD [doc (showString "it"), doc (showString "<="), prt 0 number, doc (showString "->"), prt 0 exp])
+    AbsHashedLang.PiecewiseFinalCase exp -> prPrec i 0 (concatD [doc (showString "otherwise"), doc (showString "->"), prt 0 exp])
+  prtList _ [] = concatD []
+  prtList _ [x] = concatD [prt 0 x]
+  prtList _ (x:xs) = concatD [prt 0 x, doc (showString ";"), prt 0 xs]
+
+instance Print [AbsHashedLang.PiecewiseCase] where
+  prt = prtList
+
 instance Print AbsHashedLang.Exp where
   prt i e = case e of
     AbsHashedLang.EPlus exp1 exp2 -> prPrec i 0 (concatD [prt 0 exp1, doc (showString "+"), prt 1 exp2])
+    AbsHashedLang.ERealImag exp1 exp2 -> prPrec i 0 (concatD [prt 0 exp1, doc (showString "+:"), prt 1 exp2])
     AbsHashedLang.ESubtract exp1 exp2 -> prPrec i 0 (concatD [prt 0 exp1, doc (showString "-"), prt 1 exp2])
     AbsHashedLang.EMul exp1 exp2 -> prPrec i 1 (concatD [prt 1 exp1, doc (showString "*"), prt 2 exp2])
     AbsHashedLang.EDiv exp1 exp2 -> prPrec i 1 (concatD [prt 1 exp1, doc (showString "/"), prt 2 exp2])
     AbsHashedLang.EScale exp1 exp2 -> prPrec i 2 (concatD [prt 2 exp1, doc (showString "*."), prt 3 exp2])
     AbsHashedLang.EDot exp1 exp2 -> prPrec i 2 (concatD [prt 2 exp1, doc (showString "<.>"), prt 3 exp2])
-    AbsHashedLang.EFun pident exp -> prPrec i 3 (concatD [prt 0 pident, prt 4 exp])
-    AbsHashedLang.ERotate rotateamount exp -> prPrec i 3 (concatD [doc (showString "rotate"), prt 0 rotateamount, prt 4 exp])
-    AbsHashedLang.ENum number -> prPrec i 4 (concatD [prt 0 number])
-    AbsHashedLang.EIdent pident -> prPrec i 4 (concatD [prt 0 pident])
+    AbsHashedLang.EPower exp n -> prPrec i 3 (concatD [prt 3 exp, doc (showString "^"), prt 0 n])
+    AbsHashedLang.EFun pident exp -> prPrec i 4 (concatD [prt 0 pident, prt 5 exp])
+    AbsHashedLang.ERotate rotateamount exp -> prPrec i 4 (concatD [doc (showString "rotate"), prt 0 rotateamount, prt 5 exp])
+    AbsHashedLang.ENum number -> prPrec i 5 (concatD [prt 0 number])
+    AbsHashedLang.EIdent pident -> prPrec i 5 (concatD [prt 0 pident])
+    AbsHashedLang.EPiecewise exp piecewisecases -> prPrec i 0 (concatD [doc (showString "case"), prt 0 exp, doc (showString ":"), doc (showString "{"), prt 0 piecewisecases, doc (showString "}")])
 

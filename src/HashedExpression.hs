@@ -167,7 +167,7 @@ class RotateOp k a | a -> k where
 class FTOp a b | a -> b where
     ft :: a -> b
 
-infixl 6 +, -
+infixl 6 +, -, +:
 
 infixl 7 *, /
 

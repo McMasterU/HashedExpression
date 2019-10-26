@@ -221,28 +221,38 @@ sToken p s = PT p (TS s i)
       "*" -> 3
       "*." -> 4
       "+" -> 5
-      "," -> 6
-      "-" -> 7
-      "/" -> 8
-      ":" -> 9
-      ";" -> 10
-      "<.>" -> 11
-      "=" -> 12
-      "Dataset" -> 13
-      "File" -> 14
-      "Pattern" -> 15
-      "Random" -> 16
-      "[" -> 17
-      "]" -> 18
-      "constant" -> 19
-      "constants" -> 20
-      "let" -> 21
-      "minimize" -> 22
-      "rotate" -> 23
-      "variable" -> 24
-      "variables" -> 25
-      "{" -> 26
-      "}" -> 27
+      "+:" -> 6
+      "," -> 7
+      "-" -> 8
+      "->" -> 9
+      "/" -> 10
+      ":" -> 11
+      ";" -> 12
+      "<.>" -> 13
+      "<=" -> 14
+      "=" -> 15
+      ">=" -> 16
+      "Dataset" -> 17
+      "File" -> 18
+      "Pattern" -> 19
+      "Random" -> 20
+      "[" -> 21
+      "]" -> 22
+      "^" -> 23
+      "case" -> 24
+      "constant" -> 25
+      "constants" -> 26
+      "constraint" -> 27
+      "constraints" -> 28
+      "it" -> 29
+      "let" -> 30
+      "minimize" -> 31
+      "otherwise" -> 32
+      "rotate" -> 33
+      "variable" -> 34
+      "variables" -> 35
+      "{" -> 36
+      "}" -> 37
       _ -> error $ "not a reserved word: " ++ show s
 
 -- | Get the position of a token.
