@@ -241,6 +241,8 @@ prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
                     assertBool "Empty constraint ?" $ not (null sConstraints)
                     mapM_ isOk sConstraints
 
+-- | List of hand-written problems and the expected result whether this problem is valid
+--
 problemsRepo :: [(ProblemResult, Bool)]
 problemsRepo =
     [ ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
