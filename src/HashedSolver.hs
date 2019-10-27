@@ -75,7 +75,7 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
-        , boxConstraints :: [BoxConstraint] -- TODO: we can just check if list is empty and remove Maybe?
+        , boxConstraints :: [BoxConstraint] 
         , scalarConstraints :: [ScalarConstraint]
         }
 

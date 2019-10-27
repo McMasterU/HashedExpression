@@ -3,19 +3,21 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module HashedSolverSpec where
 
 import Commons
 import Control.Applicative (liftA2)
 import Control.Concurrent
-import Control.Monad (replicateM, replicateM_, unless, when)
+import Control.Monad (forM_, replicateM, replicateM_, unless, when)
 import Data.Array
 import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
+import Data.Map.Strict (fromList)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -27,25 +29,45 @@ import GHC.IO.Exception (ExitCode(..))
 import HashedCollect
 import HashedDerivative
 import HashedExpression
-    ( C
-    , DimensionType
-    , Expression(..)
-    , Node(..)
-    , NumType
-    , R
-    , Scalar
-    , Shape
-    )
 import HashedInner
 import HashedInterp
 import HashedNode
 import HashedNormalize (normalize)
+import HashedOperation
 import HashedOperation (var, var1d, var2d, var3d)
 import HashedPrettify (showExp, showExpDebug)
 import HashedSolver
 import HashedToC
 import HashedUtils
 import HashedVar
+import qualified Prelude
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , cos
+    , cosh
+    , exp
+    , log
+    , negate
+    , product
+    , sin
+    , sinh
+    , sqrt
+    , sum
+    , sum
+    , tan
+    , tanh
+    )
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
@@ -61,7 +83,7 @@ isOneAfterAnother memMap nIds = all isOk xs
         let (offsetCur, _, shapeCur) =
                 fromJust $ IM.lookup cur (entryMap memMap)
             (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
-         in offsetCur + product shapeCur == offsetNxt
+         in offsetCur + Prelude.product shapeCur == offsetNxt
 
 -- |
 --
@@ -219,9 +241,45 @@ prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
                     assertBool "Empty constraint ?" $ not (null sConstraints)
                     mapM_ isOk sConstraints
 
+problemsRepo :: [(ProblemResult, Bool)]
+problemsRepo =
+    [ ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
+            f = x <.> y + z <.> t
+            constraints =
+                Constraint
+                    [ x .>= V2DFile TXT "x_lb.txt"
+                    , y .<= V2DFile TXT "y_ub.txt"
+                    , x <.> z .>= VScalar 3
+                    ]
+            vars = ["x", "y", "z", "t"]
+         in constructProblem f vars constraints
+      , True)
+    , ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
+            f = x <.> y + z <.> t
+            constraints =
+                Constraint
+                    [ x .>= VScalar 5
+                    , y .<= V2DFile TXT "y_ub.txt"
+                    , x <.> z .>= VScalar 3
+                    ]
+            vars = ["x", "y", "z", "t"]
+         in constructProblem f vars constraints
+      , False)
+    ]
+
 spec :: Spec
 spec =
     describe "Hash Solver spec " $ do
+        specify "test hand-writeen problems" $
+            forM_ problemsRepo $ \(problemResult, expected) ->
+                case (problemResult, expected) of
+                    (ProblemInvalid _, True) ->
+                        assertFailure
+                            "This problem is valid but fail to construct"
+                    (ProblemValid _, False) ->
+                        assertFailure
+                            "This problem is invalid but success to construct"
+                    _ -> return ()
         specify "valid problem should be constructed successfully" $
             property prop_constructProblemNoConstraint
         specify
