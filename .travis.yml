@@ -54,6 +54,8 @@ jobs:
     if: NOT (branch = master OR (branch = develop && type = push)) AND commit_message =~ /(checkhaddock)/
 
   - script:
+    - stack --no-terminal install happy
+    - stack --no-terminal install alex
     - stack --no-terminal test
     addons: {apt: {packages: [libgmp-dev]}}
     env: CACHE_NAME=tes

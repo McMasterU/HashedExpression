@@ -76,13 +76,14 @@ smilingFaceProblem = do
     let xLowerBound = V2DFile HDF5 "x_lb.h5"
         xUpperBound = V2DFile HDF5 "x_ub.h5"
     let constraint =
-            IPOPTConstraint
+            Constraint
                 [ x .>= xLowerBound
                 , x .<= xUpperBound
                 , (x <.> x) .<= VScalar 1
                 , (x <.> (const 2 *. im)) .>= VScalar 15
                 ]
-    let (ProblemValid problem) = constructProblem objectiveFunction vars constraint
+    let (ProblemValid problem) =
+            constructProblem objectiveFunction vars constraint
     let valMap =
             fromList
                 [ ("mask", V2DFile HDF5 "mask.h5")
