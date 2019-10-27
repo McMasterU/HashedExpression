@@ -41,6 +41,31 @@ parse fileContent =
     r2c = Map.fromList . zip [1 ..] . map length . lines $ fileContent
     getNumColumn r = fromMaybe 0 $ Map.lookup r r2c
 
+-- | TODO:
+-- 1. Check if there is variables block
+-- 2. Check if variable block is valid (no name clash)
+-- 3. If there is a constant, check if it is valid (no name clash)
+-- 4. Check if all expressions (in constraints and objective) is valid (should be scalar, all operation should be valid),
+--        if yes construct Expression.
+-- 5. Gen code
+-- check constant block, check operation (shape and element type), ...
+--
+checkSemantic :: Problem -> Result HS.Problem
+checkSemantic problem = do
+    varDecls <- checkVariableBlockExist problem -- 1
+    vars <- checkVariableBlock varDecls -- 2
+    undefined
+
+checkVariableBlockExist :: Problem -> Result [VariableDecl]
+checkVariableBlockExist (Problem blocks) =
+    case filter isVariableBlock blocks of
+        [] -> Left $ GeneralError "No variale block"
+        [BlockVariable declss] -> Right $ concat declss
+        _ -> Left $ GeneralError "There are more than 1 variables block"
+  where
+    isVariableBlock (BlockVariable declss) = True
+    isVariableBlock _ = False
+
 -- | (name, shape, initialize value)
 --
 type Variable = (String, HE.Shape, Maybe HU.Val)
@@ -54,15 +79,3 @@ type Constant = (String, HE.Shape, HU.Val)
 
 checkConstantBlock :: [ConstantDecl] -> Result [Constant]
 checkConstantBlock constantDecls = undefined
-
--- | TODO: 
--- 1. Check if there is variables block
--- 2. Check if variable block is valid (no name clash)
--- 3. If there is a constant, check if it is valid (no name clash)
--- 4. Check if all expressions (in constraints and objective) is valid (should be scalar, all operation should be valid),
---        if yes construct Expression.
--- 5. Gen code
--- check constant block, check operation (shape and element type), ...
---
-checkSemantic :: Problem -> Result HS.Problem
-checkSemantic problem = undefined
