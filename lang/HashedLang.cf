@@ -9,7 +9,18 @@ token KWDataPattern
   | {"LAST_COLUMN_1"}
   | {"FIRST_SLICE_1"}
   | {"LAST_SLICE_1"};
-position token PIdent (letter (letter|digit|'_'|'\'')*) ;
+position token TokenSub {"-"};
+position token TokenPlus {"+"};
+position token TokenReIm {"+:"};
+position token TokenMul {"*"};
+position token TokenDiv {"/"};
+position token TokenScale {"*."};
+position token TokenDot {"<.>"};
+position token TokenPower {"^"};
+position token TokenRotate {"rotate"};
+position token TokenCase {"case"};
+position token PIdent (letter (letter|digit|'_'|'\'')*);
+
 
 -- Layout
 layout ":";
@@ -27,10 +38,10 @@ BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
 separator nonempty Block "";
 
 IntPos. TInt ::= Integer;
-IntNeg. TInt ::= "-" Integer;
+IntNeg. TInt ::= TokenSub Integer;
 
 DoublePos. TDouble ::= Double;
-DoubleNeg. TDouble ::= "-" Double;
+DoubleNeg. TDouble ::= TokenSub Double;
 
 -- Number
 NumInt. Number ::= TInt;
@@ -78,7 +89,7 @@ separator nonempty [ConstraintDecl] ";";
 
 -- Rotate Amount
 OffsetPos. Offset ::= Integer;
-OffsetNeg. Offset ::= "-" Integer;
+OffsetNeg. Offset ::= TokenSub Integer;
 RA1D. RotateAmount ::= "(" Offset ")";
 RA2D. RotateAmount ::= "(" Offset "," Offset ")";
 RA3D. RotateAmount ::= "(" Offset "," Offset "," Offset ")";
@@ -89,26 +100,26 @@ PiecewiseFinalCase. PiecewiseCase ::= "otherwise" "->" Exp;
 separator PiecewiseCase ";";
 
 -- Expression
-EPlus. Exp ::= Exp "+" Exp1;
-ERealImag. Exp ::= Exp "+:" Exp1;
-ESubtract. Exp ::= Exp "-" Exp1;
+EPlus. Exp ::= Exp TokenPlus Exp1;
+ERealImag. Exp ::= Exp TokenReIm Exp1;
+ESubtract. Exp ::= Exp TokenSub Exp1;
 _. Exp ::= Exp1;
 
-EMul. Exp1 ::= Exp1 "*" Exp2;
-EDiv. Exp1 ::= Exp1 "/" Exp2;
+EMul. Exp1 ::= Exp1 TokenMul Exp2;
+EDiv. Exp1 ::= Exp1 TokenDiv Exp2;
 _. Exp1 ::= Exp2;
 
-EScale. Exp2 ::= Exp2 "*." Exp3;
-EDot. Exp2 ::= Exp2 "<.>" Exp3;
+EScale. Exp2 ::= Exp2 TokenScale Exp3;
+EDot. Exp2 ::= Exp2 TokenDot Exp3;
 _. Exp2 ::= Exp3;
 
-EPower. Exp3 ::= Exp3 "^" TInt;
-EPower. Exp3 ::= Exp3 "^" "(" TInt ")";
+EPower. Exp3 ::= Exp3 TokenPower TInt;
+EPower. Exp3 ::= Exp3 TokenPower "(" TInt ")";
 _. Exp3 ::= Exp4;
 
 EFun. Exp4 ::= PIdent Exp5;
-ERotate. Exp4 ::= "rotate" RotateAmount Exp5;
-ENegate. Exp4 ::= "-" Exp5;
+ERotate. Exp4 ::= TokenRotate RotateAmount Exp5;
+ENegate. Exp4 ::= TokenSub Exp5;
 _. Exp4 ::= Exp5;
 
 _. Exp5 ::= "(" Exp ")";
@@ -116,4 +127,4 @@ ENumDouble. Exp5 ::= Double;
 ENumInteger. Exp5 ::= Integer;
 EIdent. Exp5 ::= PIdent;
 
-EPiecewise. Exp ::= "case" Exp ":" "{" [PiecewiseCase] "}";
+EPiecewise. Exp ::= TokenCase Exp ":" "{" [PiecewiseCase] "}";

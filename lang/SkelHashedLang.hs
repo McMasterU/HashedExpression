@@ -12,6 +12,36 @@ failure x = Bad $ "Undefined case: " ++ show x
 transKWDataPattern :: KWDataPattern -> Result
 transKWDataPattern x = case x of
   KWDataPattern string -> failure x
+transTokenSub :: TokenSub -> Result
+transTokenSub x = case x of
+  TokenSub string -> failure x
+transTokenPlus :: TokenPlus -> Result
+transTokenPlus x = case x of
+  TokenPlus string -> failure x
+transTokenReIm :: TokenReIm -> Result
+transTokenReIm x = case x of
+  TokenReIm string -> failure x
+transTokenMul :: TokenMul -> Result
+transTokenMul x = case x of
+  TokenMul string -> failure x
+transTokenDiv :: TokenDiv -> Result
+transTokenDiv x = case x of
+  TokenDiv string -> failure x
+transTokenScale :: TokenScale -> Result
+transTokenScale x = case x of
+  TokenScale string -> failure x
+transTokenDot :: TokenDot -> Result
+transTokenDot x = case x of
+  TokenDot string -> failure x
+transTokenPower :: TokenPower -> Result
+transTokenPower x = case x of
+  TokenPower string -> failure x
+transTokenRotate :: TokenRotate -> Result
+transTokenRotate x = case x of
+  TokenRotate string -> failure x
+transTokenCase :: TokenCase -> Result
+transTokenCase x = case x of
+  TokenCase string -> failure x
 transPIdent :: PIdent -> Result
 transPIdent x = case x of
   PIdent string -> failure x
@@ -28,11 +58,11 @@ transBlock x = case x of
 transTInt :: TInt -> Result
 transTInt x = case x of
   IntPos integer -> failure x
-  IntNeg integer -> failure x
+  IntNeg tokensub integer -> failure x
 transTDouble :: TDouble -> Result
 transTDouble x = case x of
   DoublePos double -> failure x
-  DoubleNeg double -> failure x
+  DoubleNeg tokensub double -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
   NumInt tint -> failure x
@@ -74,7 +104,7 @@ transConstraintDecl x = case x of
 transOffset :: Offset -> Result
 transOffset x = case x of
   OffsetPos integer -> failure x
-  OffsetNeg integer -> failure x
+  OffsetNeg tokensub integer -> failure x
 transRotateAmount :: RotateAmount -> Result
 transRotateAmount x = case x of
   RA1D offset -> failure x
@@ -86,19 +116,19 @@ transPiecewiseCase x = case x of
   PiecewiseFinalCase exp -> failure x
 transExp :: Exp -> Result
 transExp x = case x of
-  EPlus exp1 exp2 -> failure x
-  ERealImag exp1 exp2 -> failure x
-  ESubtract exp1 exp2 -> failure x
-  EMul exp1 exp2 -> failure x
-  EDiv exp1 exp2 -> failure x
-  EScale exp1 exp2 -> failure x
-  EDot exp1 exp2 -> failure x
-  EPower exp tint -> failure x
+  EPlus exp1 tokenplus exp2 -> failure x
+  ERealImag exp1 tokenreim exp2 -> failure x
+  ESubtract exp1 tokensub exp2 -> failure x
+  EMul exp1 tokenmul exp2 -> failure x
+  EDiv exp1 tokendiv exp2 -> failure x
+  EScale exp1 tokenscale exp2 -> failure x
+  EDot exp1 tokendot exp2 -> failure x
+  EPower exp tokenpower tint -> failure x
   EFun pident exp -> failure x
-  ERotate rotateamount exp -> failure x
-  ENegate exp -> failure x
+  ERotate tokenrotate rotateamount exp -> failure x
+  ENegate tokensub exp -> failure x
   ENumDouble double -> failure x
   ENumInteger integer -> failure x
   EIdent pident -> failure x
-  EPiecewise exp piecewisecases -> failure x
+  EPiecewise tokencase exp piecewisecases -> failure x
 

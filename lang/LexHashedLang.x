@@ -21,7 +21,7 @@ $i = [$l $d _ ']     -- identifier character
 $u = [. \n]          -- universal: any character
 
 @rsyms =    -- symbols and non-identifier-like reserved words
-   \: | \{ | \} | \- | \( | \) | \, | \[ | \] | \= | \; | \> \= | \< \= | \- \> | \+ | \+ \: | \* | \/ | \* \. | \< \. \> | \^
+   \: | \{ | \} | \( | \) | \, | \[ | \] | \= | \; | \> \= | \< \= | \- \>
 
 :-
 "//" [.]* ; -- Toss single line comments
@@ -32,6 +32,26 @@ $white+ ;
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
 F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
     { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
+\-
+    { tok (\p s -> PT p (eitherResIdent (T_TokenSub . share) s)) }
+\+
+    { tok (\p s -> PT p (eitherResIdent (T_TokenPlus . share) s)) }
+\+ \:
+    { tok (\p s -> PT p (eitherResIdent (T_TokenReIm . share) s)) }
+\*
+    { tok (\p s -> PT p (eitherResIdent (T_TokenMul . share) s)) }
+\/
+    { tok (\p s -> PT p (eitherResIdent (T_TokenDiv . share) s)) }
+\* \.
+    { tok (\p s -> PT p (eitherResIdent (T_TokenScale . share) s)) }
+\< \. \>
+    { tok (\p s -> PT p (eitherResIdent (T_TokenDot . share) s)) }
+\^
+    { tok (\p s -> PT p (eitherResIdent (T_TokenPower . share) s)) }
+r o t a t e
+    { tok (\p s -> PT p (eitherResIdent (T_TokenRotate . share) s)) }
+c a s e
+    { tok (\p s -> PT p (eitherResIdent (T_TokenCase . share) s)) }
 $l ($l | $d | \_ | \')*
     { tok (\p s -> PT p (eitherResIdent (T_PIdent . share) s)) }
 
@@ -61,6 +81,16 @@ data Tok =
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
  | T_KWDataPattern !String
+ | T_TokenSub !String
+ | T_TokenPlus !String
+ | T_TokenReIm !String
+ | T_TokenMul !String
+ | T_TokenDiv !String
+ | T_TokenScale !String
+ | T_TokenDot !String
+ | T_TokenPower !String
+ | T_TokenRotate !String
+ | T_TokenCase !String
  | T_PIdent !String
 
  deriving (Eq,Show,Ord)
@@ -100,6 +130,16 @@ prToken t = case t of
   PT _ (TC s)   -> s
   Err _         -> "#error"
   PT _ (T_KWDataPattern s) -> s
+  PT _ (T_TokenSub s) -> s
+  PT _ (T_TokenPlus s) -> s
+  PT _ (T_TokenReIm s) -> s
+  PT _ (T_TokenMul s) -> s
+  PT _ (T_TokenDiv s) -> s
+  PT _ (T_TokenScale s) -> s
+  PT _ (T_TokenDot s) -> s
+  PT _ (T_TokenPower s) -> s
+  PT _ (T_TokenRotate s) -> s
+  PT _ (T_TokenCase s) -> s
   PT _ (T_PIdent s) -> s
 
 
@@ -114,7 +154,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "Pattern" 19 (b "/" 10 (b "+" 5 (b "*" 3 (b ")" 2 (b "(" 1 N N) N) (b "*." 4 N N)) (b "-" 8 (b "," 7 (b "+:" 6 N N) N) (b "->" 9 N N))) (b "=" 15 (b "<.>" 13 (b ";" 12 (b ":" 11 N N) N) (b "<=" 14 N N)) (b "Dataset" 17 (b ">=" 16 N N) (b "File" 18 N N)))) (b "it" 29 (b "case" 24 (b "]" 22 (b "[" 21 (b "Random" 20 N N) N) (b "^" 23 N N)) (b "constraint" 27 (b "constants" 26 (b "constant" 25 N N) N) (b "constraints" 28 N N))) (b "variable" 34 (b "otherwise" 32 (b "minimize" 31 (b "let" 30 N N) N) (b "rotate" 33 N N)) (b "{" 36 (b "variables" 35 N N) (b "}" 37 N N))))
+resWords = b "[" 14 (b "<=" 7 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) N)) (b "File" 11 (b ">=" 9 (b "=" 8 N N) (b "Dataset" 10 N N)) (b "Random" 13 (b "Pattern" 12 N N) N))) (b "let" 21 (b "constraint" 18 (b "constant" 16 (b "]" 15 N N) (b "constants" 17 N N)) (b "it" 20 (b "constraints" 19 N N) N)) (b "variables" 25 (b "otherwise" 23 (b "minimize" 22 N N) (b "variable" 24 N N)) (b "}" 27 (b "{" 26 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

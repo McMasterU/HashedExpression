@@ -7,7 +7,9 @@ import Text.Regex.Posix
 
 import AbsHashedLang
 import ErrM
+import qualified HashedExpression as HE
 import qualified HashedSolver as HS
+import qualified HashedUtils as HU
 import LayoutHashedLang
 import LexHashedLang
 
@@ -36,5 +38,21 @@ parse fileContent =
     r2c = Map.fromList . zip [1 ..] . map length . lines $ fileContent
     getNumColumn r = fromMaybe 0 $ Map.lookup r r2c
 
+-- | (name, shape, initialize value)
+--
+type VariableBlockResult = [(String, HE.Shape, Maybe HU.Val)]
+
+checkVariableBlock :: [VariableDecl] -> Either CompileError VariableBlockResult
+checkVariableBlock variableDecls = undefined
+
+-- | (name, shape, value)
+--
+type ConstantBlockResult = [(String, HE.Shape, HU.Val)]
+
+checkConstantBlock :: [ConstantDecl] -> Either CompileError ConstantBlockResult
+checkConstantBlock constantDecls = undefined
+
+-- | TODO: Check variables block, check constant block, check operation (shape and element type), ...
+--
 checkSemantic :: Problem -> Either CompileError HS.Problem
 checkSemantic problem = undefined

@@ -46,45 +46,45 @@ import ErrM
 %token
   '(' { PT _ (TS _ 1) }
   ')' { PT _ (TS _ 2) }
-  '*' { PT _ (TS _ 3) }
-  '*.' { PT _ (TS _ 4) }
-  '+' { PT _ (TS _ 5) }
-  '+:' { PT _ (TS _ 6) }
-  ',' { PT _ (TS _ 7) }
-  '-' { PT _ (TS _ 8) }
-  '->' { PT _ (TS _ 9) }
-  '/' { PT _ (TS _ 10) }
-  ':' { PT _ (TS _ 11) }
-  ';' { PT _ (TS _ 12) }
-  '<.>' { PT _ (TS _ 13) }
-  '<=' { PT _ (TS _ 14) }
-  '=' { PT _ (TS _ 15) }
-  '>=' { PT _ (TS _ 16) }
-  'Dataset' { PT _ (TS _ 17) }
-  'File' { PT _ (TS _ 18) }
-  'Pattern' { PT _ (TS _ 19) }
-  'Random' { PT _ (TS _ 20) }
-  '[' { PT _ (TS _ 21) }
-  ']' { PT _ (TS _ 22) }
-  '^' { PT _ (TS _ 23) }
-  'case' { PT _ (TS _ 24) }
-  'constant' { PT _ (TS _ 25) }
-  'constants' { PT _ (TS _ 26) }
-  'constraint' { PT _ (TS _ 27) }
-  'constraints' { PT _ (TS _ 28) }
-  'it' { PT _ (TS _ 29) }
-  'let' { PT _ (TS _ 30) }
-  'minimize' { PT _ (TS _ 31) }
-  'otherwise' { PT _ (TS _ 32) }
-  'rotate' { PT _ (TS _ 33) }
-  'variable' { PT _ (TS _ 34) }
-  'variables' { PT _ (TS _ 35) }
-  '{' { PT _ (TS _ 36) }
-  '}' { PT _ (TS _ 37) }
+  ',' { PT _ (TS _ 3) }
+  '->' { PT _ (TS _ 4) }
+  ':' { PT _ (TS _ 5) }
+  ';' { PT _ (TS _ 6) }
+  '<=' { PT _ (TS _ 7) }
+  '=' { PT _ (TS _ 8) }
+  '>=' { PT _ (TS _ 9) }
+  'Dataset' { PT _ (TS _ 10) }
+  'File' { PT _ (TS _ 11) }
+  'Pattern' { PT _ (TS _ 12) }
+  'Random' { PT _ (TS _ 13) }
+  '[' { PT _ (TS _ 14) }
+  ']' { PT _ (TS _ 15) }
+  'constant' { PT _ (TS _ 16) }
+  'constants' { PT _ (TS _ 17) }
+  'constraint' { PT _ (TS _ 18) }
+  'constraints' { PT _ (TS _ 19) }
+  'it' { PT _ (TS _ 20) }
+  'let' { PT _ (TS _ 21) }
+  'minimize' { PT _ (TS _ 22) }
+  'otherwise' { PT _ (TS _ 23) }
+  'variable' { PT _ (TS _ 24) }
+  'variables' { PT _ (TS _ 25) }
+  '{' { PT _ (TS _ 26) }
+  '}' { PT _ (TS _ 27) }
   L_integ  { PT _ (TI $$) }
   L_doubl  { PT _ (TD $$) }
   L_quoted { PT _ (TL $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
+  L_TokenSub { PT _ (T_TokenSub _) }
+  L_TokenPlus { PT _ (T_TokenPlus _) }
+  L_TokenReIm { PT _ (T_TokenReIm _) }
+  L_TokenMul { PT _ (T_TokenMul _) }
+  L_TokenDiv { PT _ (T_TokenDiv _) }
+  L_TokenScale { PT _ (T_TokenScale _) }
+  L_TokenDot { PT _ (T_TokenDot _) }
+  L_TokenPower { PT _ (T_TokenPower _) }
+  L_TokenRotate { PT _ (T_TokenRotate _) }
+  L_TokenCase { PT _ (T_TokenCase _) }
   L_PIdent { PT _ (T_PIdent _) }
 
 %%
@@ -100,6 +100,36 @@ String   : L_quoted {  $1 }
 
 KWDataPattern :: { KWDataPattern}
 KWDataPattern  : L_KWDataPattern { KWDataPattern ($1)}
+
+TokenSub :: { TokenSub}
+TokenSub  : L_TokenSub { TokenSub (mkPosToken $1)}
+
+TokenPlus :: { TokenPlus}
+TokenPlus  : L_TokenPlus { TokenPlus (mkPosToken $1)}
+
+TokenReIm :: { TokenReIm}
+TokenReIm  : L_TokenReIm { TokenReIm (mkPosToken $1)}
+
+TokenMul :: { TokenMul}
+TokenMul  : L_TokenMul { TokenMul (mkPosToken $1)}
+
+TokenDiv :: { TokenDiv}
+TokenDiv  : L_TokenDiv { TokenDiv (mkPosToken $1)}
+
+TokenScale :: { TokenScale}
+TokenScale  : L_TokenScale { TokenScale (mkPosToken $1)}
+
+TokenDot :: { TokenDot}
+TokenDot  : L_TokenDot { TokenDot (mkPosToken $1)}
+
+TokenPower :: { TokenPower}
+TokenPower  : L_TokenPower { TokenPower (mkPosToken $1)}
+
+TokenRotate :: { TokenRotate}
+TokenRotate  : L_TokenRotate { TokenRotate (mkPosToken $1)}
+
+TokenCase :: { TokenCase}
+TokenCase  : L_TokenCase { TokenCase (mkPosToken $1)}
 
 PIdent :: { PIdent}
 PIdent  : L_PIdent { PIdent (mkPosToken $1)}
@@ -119,10 +149,10 @@ ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
 TInt :: { TInt }
 TInt : Integer { AbsHashedLang.IntPos $1 }
-     | '-' Integer { AbsHashedLang.IntNeg $2 }
+     | TokenSub Integer { AbsHashedLang.IntNeg $1 $2 }
 TDouble :: { TDouble }
 TDouble : Double { AbsHashedLang.DoublePos $1 }
-        | '-' Double { AbsHashedLang.DoubleNeg $2 }
+        | TokenSub Double { AbsHashedLang.DoubleNeg $1 $2 }
 Number :: { Number }
 Number : TInt { AbsHashedLang.NumInt $1 }
        | TDouble { AbsHashedLang.NumDouble $1 }
@@ -178,7 +208,7 @@ ListListConstraintDecl : ListConstraintDecl { (:[]) $1 }
                        | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
 Offset :: { Offset }
 Offset : Integer { AbsHashedLang.OffsetPos $1 }
-       | '-' Integer { AbsHashedLang.OffsetNeg $2 }
+       | TokenSub Integer { AbsHashedLang.OffsetNeg $1 $2 }
 RotateAmount :: { RotateAmount }
 RotateAmount : '(' Offset ')' { AbsHashedLang.RA1D $2 }
              | '(' Offset ',' Offset ')' { AbsHashedLang.RA2D $2 $4 }
@@ -191,27 +221,27 @@ ListPiecewiseCase : {- empty -} { [] }
                   | PiecewiseCase { (:[]) $1 }
                   | PiecewiseCase ';' ListPiecewiseCase { (:) $1 $3 }
 Exp :: { Exp }
-Exp : Exp '+' Exp1 { AbsHashedLang.EPlus $1 $3 }
-    | Exp '+:' Exp1 { AbsHashedLang.ERealImag $1 $3 }
-    | Exp '-' Exp1 { AbsHashedLang.ESubtract $1 $3 }
+Exp : Exp TokenPlus Exp1 { AbsHashedLang.EPlus $1 $2 $3 }
+    | Exp TokenReIm Exp1 { AbsHashedLang.ERealImag $1 $2 $3 }
+    | Exp TokenSub Exp1 { AbsHashedLang.ESubtract $1 $2 $3 }
     | Exp1 { $1 }
-    | 'case' Exp ':' '{' ListPiecewiseCase '}' { AbsHashedLang.EPiecewise $2 $5 }
+    | TokenCase Exp ':' '{' ListPiecewiseCase '}' { AbsHashedLang.EPiecewise $1 $2 $5 }
 Exp1 :: { Exp }
-Exp1 : Exp1 '*' Exp2 { AbsHashedLang.EMul $1 $3 }
-     | Exp1 '/' Exp2 { AbsHashedLang.EDiv $1 $3 }
+Exp1 : Exp1 TokenMul Exp2 { AbsHashedLang.EMul $1 $2 $3 }
+     | Exp1 TokenDiv Exp2 { AbsHashedLang.EDiv $1 $2 $3 }
      | Exp2 { $1 }
 Exp2 :: { Exp }
-Exp2 : Exp2 '*.' Exp3 { AbsHashedLang.EScale $1 $3 }
-     | Exp2 '<.>' Exp3 { AbsHashedLang.EDot $1 $3 }
+Exp2 : Exp2 TokenScale Exp3 { AbsHashedLang.EScale $1 $2 $3 }
+     | Exp2 TokenDot Exp3 { AbsHashedLang.EDot $1 $2 $3 }
      | Exp3 { $1 }
 Exp3 :: { Exp }
-Exp3 : Exp3 '^' TInt { AbsHashedLang.EPower $1 $3 }
-     | Exp3 '^' '(' TInt ')' { AbsHashedLang.EPower $1 $4 }
+Exp3 : Exp3 TokenPower TInt { AbsHashedLang.EPower $1 $2 $3 }
+     | Exp3 TokenPower '(' TInt ')' { AbsHashedLang.EPower $1 $2 $4 }
      | Exp4 { $1 }
 Exp4 :: { Exp }
 Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
-     | 'rotate' RotateAmount Exp5 { AbsHashedLang.ERotate $2 $3 }
-     | '-' Exp5 { AbsHashedLang.ENegate $2 }
+     | TokenRotate RotateAmount Exp5 { AbsHashedLang.ERotate $1 $2 $3 }
+     | TokenSub Exp5 { AbsHashedLang.ENegate $1 $2 }
      | Exp5 { $1 }
 Exp5 :: { Exp }
 Exp5 : '(' Exp ')' { $2 }

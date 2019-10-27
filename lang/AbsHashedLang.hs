@@ -6,6 +6,36 @@ module AbsHashedLang where
 newtype KWDataPattern = KWDataPattern String
   deriving (Eq, Ord, Show, Read)
 
+newtype TokenSub = TokenSub ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenPlus = TokenPlus ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenReIm = TokenReIm ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenMul = TokenMul ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenDiv = TokenDiv ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenScale = TokenScale ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenDot = TokenDot ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenPower = TokenPower ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenRotate = TokenRotate ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype TokenCase = TokenCase ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
 newtype PIdent = PIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
@@ -20,10 +50,10 @@ data Block
     | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
-data TInt = IntPos Integer | IntNeg Integer
+data TInt = IntPos Integer | IntNeg TokenSub Integer
   deriving (Eq, Ord, Show, Read)
 
-data TDouble = DoublePos Double | DoubleNeg Double
+data TDouble = DoublePos Double | DoubleNeg TokenSub Double
   deriving (Eq, Ord, Show, Read)
 
 data Number = NumInt TInt | NumDouble TDouble
@@ -61,7 +91,7 @@ data ConstraintDecl
     = ConstraintLower Exp Bound | ConstraintUpper Exp Bound
   deriving (Eq, Ord, Show, Read)
 
-data Offset = OffsetPos Integer | OffsetNeg Integer
+data Offset = OffsetPos Integer | OffsetNeg TokenSub Integer
   deriving (Eq, Ord, Show, Read)
 
 data RotateAmount
@@ -73,20 +103,20 @@ data PiecewiseCase
   deriving (Eq, Ord, Show, Read)
 
 data Exp
-    = EPlus Exp Exp
-    | ERealImag Exp Exp
-    | ESubtract Exp Exp
-    | EMul Exp Exp
-    | EDiv Exp Exp
-    | EScale Exp Exp
-    | EDot Exp Exp
-    | EPower Exp TInt
+    = EPlus Exp TokenPlus Exp
+    | ERealImag Exp TokenReIm Exp
+    | ESubtract Exp TokenSub Exp
+    | EMul Exp TokenMul Exp
+    | EDiv Exp TokenDiv Exp
+    | EScale Exp TokenScale Exp
+    | EDot Exp TokenDot Exp
+    | EPower Exp TokenPower TInt
     | EFun PIdent Exp
-    | ERotate RotateAmount Exp
-    | ENegate Exp
+    | ERotate TokenRotate RotateAmount Exp
+    | ENegate TokenSub Exp
     | ENumDouble Double
     | ENumInteger Integer
     | EIdent PIdent
-    | EPiecewise Exp [PiecewiseCase]
+    | EPiecewise TokenCase Exp [PiecewiseCase]
   deriving (Eq, Ord, Show, Read)
 
