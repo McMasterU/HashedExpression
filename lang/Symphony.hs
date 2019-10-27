@@ -19,7 +19,9 @@ myLLexer = resolveLayout True . myLexer
 data CompileError
     = SyntaxError Int Int
     | GeneralError String
-    deriving Show
+    deriving (Show)
+
+type Result a = Either CompileError a
 
 parse :: String -> Either CompileError Problem
 parse fileContent =
@@ -41,19 +43,26 @@ parse fileContent =
 
 -- | (name, shape, initialize value)
 --
-type VariableBlockResult = [(String, HE.Shape, Maybe HU.Val)]
+type Variable = (String, HE.Shape, Maybe HU.Val)
 
-checkVariableBlock :: [VariableDecl] -> Either CompileError VariableBlockResult
+checkVariableBlock :: [VariableDecl] -> Result [Variable]
 checkVariableBlock variableDecls = undefined
 
 -- | (name, shape, value)
 --
-type ConstantBlockResult = [(String, HE.Shape, HU.Val)]
+type Constant = (String, HE.Shape, HU.Val)
 
-checkConstantBlock :: [ConstantDecl] -> Either CompileError ConstantBlockResult
+checkConstantBlock :: [ConstantDecl] -> Result [Constant]
 checkConstantBlock constantDecls = undefined
 
--- | TODO: Check variables block, check constant block, check operation (shape and element type), ...
+-- | TODO: 
+-- 1. Check if there is variables block
+-- 2. Check if variable block is valid (no name clash)
+-- 3. If there is a constant, check if it is valid (no name clash)
+-- 4. Check if all expressions (in constraints and objective) is valid (should be scalar, all operation should be valid),
+--        if yes construct Expression.
+-- 5. Gen code
+-- check constant block, check operation (shape and element type), ...
 --
-checkSemantic :: Problem -> Either CompileError HS.Problem
+checkSemantic :: Problem -> Result HS.Problem
 checkSemantic problem = undefined
