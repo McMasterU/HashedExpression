@@ -160,10 +160,10 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
             assertBool "variables are not allocated consecutively" $
                 isOneAfterAnother memMap (map nodeId variables)
             case (sampled, boxConstraints) of
-                (_:_, Nothing) ->
+                (_:_, []) ->
                     assertFailure
                         "Valid box constraints but not appear in the problem"
-                (_, Just bs) -> length sampled `shouldBe` length bs
+                (_, bs) -> length sampled `shouldBe` length bs
 
 -- |
 --
@@ -209,10 +209,10 @@ prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
                 isOneAfterAnother memMap (map nodeId variables)
             case (scc, scalarConstraints) of
                 ([], _) -> return ()
-                (_:_, Nothing) ->
+                (_:_, []) ->
                     assertFailure
                         "Having scalar constraints but not present in problem"
-                (_, Just sConstraints) -> do
+                (_, sConstraints) -> do
                     let isOk sc =
                             length (constraintPartialDerivatives sc) `shouldBe`
                             length vars
