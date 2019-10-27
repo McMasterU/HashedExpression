@@ -6,7 +6,9 @@
 
 # Default goal.
 
+# rm TestHashedLang because we want Main.hs
 all : TestHashedLang
+	rm TestHashedLang.hs
 
 # Rules for building the parser.
 

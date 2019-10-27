@@ -19,6 +19,7 @@ myLLexer = resolveLayout True . myLexer
 data CompileError
     = SyntaxError Int Int
     | GeneralError String
+    deriving Show
 
 parse :: String -> Either CompileError Problem
 parse fileContent =
@@ -30,8 +31,8 @@ parse fileContent =
                                                                 , String
                                                                 , [String])) of
                 (_, _, _, [rs, cs]) ->
-                    let r = max (read rs) (length r2c) -- because layout parsing add dummy ';'
-                        c = max (read cs) (getNumColumn r) -- because layout parsing add dummy ';'
+                    let r = min (read rs) (length r2c) -- because layout parsing add dummy ';'
+                        c = min (read cs) (getNumColumn r) -- because layout parsing add dummy ';'
                      in Left $ SyntaxError r c
                 _ -> Left $ SyntaxError 1 1
   where

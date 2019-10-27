@@ -10,3 +10,7 @@ clean:
 	-git clean -f -x C/
 	-rm *.dat
 	-git clean -f -x plots/
+
+parse:
+	stack build --fast
+	stack exec HashedExpression-lang example.he

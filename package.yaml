@@ -55,7 +55,7 @@ executables:
       - HashedExpression
       - hspec
   HashedExpression-lang:
-    main:                TestHashedLang.hs
+    main:                Main.hs
     source-dirs:         lang
     ghc-options:
       - -threaded
