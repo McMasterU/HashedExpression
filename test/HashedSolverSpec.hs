@@ -142,7 +142,7 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
         varsWithShape = Map.toList $ Map.map (`retrieveShape` dfMp) pdMap
     bcs <- mapM makeValidBoxConstraint varsWithShape
     sampled <- generate $ sublistOf bcs
-    let constraints = BoxConstraint sampled
+    let constraints = Constraint sampled
     let constructResult = constructProblem exp names constraints
     case constructResult of
         NoVariables -> return () -- it is possible that the random expression doesn't have any variables

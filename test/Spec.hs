@@ -78,7 +78,7 @@ spec = do
     describe "Test2" Test2.spec
     describe "HashedInterpSpec" HashedInterpSpec.spec
     describe "HashedCollectSpec" HashedCollectSpec.spec
-    describe "SolverSpec" HashedSolverSpec.spec
+    describe "HashedSolverSpec" HashedSolverSpec.spec
     describe "HashedToCSpec" HashedToCSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
