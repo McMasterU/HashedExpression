@@ -75,7 +75,7 @@ data Problem =
         , objectiveId :: Int
         , expressionMap :: ExpressionMap
         , memMap :: MemMap
-        , boxConstraints :: [BoxConstraint] 
+        , boxConstraints :: [BoxConstraint]
         , scalarConstraints :: [ScalarConstraint]
         }
 
