@@ -76,7 +76,7 @@ smilingFaceProblem = do
     let xLowerBound = V2DFile HDF5 "x_lb.h5"
         xUpperBound = V2DFile HDF5 "x_ub.h5"
     let constraint =
-            IPOPTConstraint
+            Constraint
                 [ x .>= xLowerBound
                 , x .<= xUpperBound
                 , (x <.> x) .<= VScalar 1

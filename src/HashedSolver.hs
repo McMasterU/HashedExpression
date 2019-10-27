@@ -101,8 +101,7 @@ data ScalarConstraint =
 --
 data Constraint
     = NoConstraint
-    | BoxConstraint [ConstraintStatement]
-    | IPOPTConstraint [ConstraintStatement]
+    | Constraint [ConstraintStatement]
     deriving (Show, Eq, Ord)
 
 -- |
@@ -177,78 +176,9 @@ data ProblemResult
     | NoVariables -- TODO - what about feasibility problems given constraints?
     deriving (Show)
 
-extractBoxConstraint :: Constraint -> Maybe [BoxConstraint]
-extractBoxConstraint constraint =
-    case constraint of
-        NoConstraint -> Nothing
-        BoxConstraint css -> Just . map toBoxConstraint $ css
-        IPOPTConstraint css ->
-            Just . map toBoxConstraint . filter isBoxConstraint $ css
-  where
-    toBoxConstraint cs =
-        case cs of
-            Lower (mp, n) val ->
-                let Var name = retrieveNode n mp
-                 in BoxLower name val
-            Upper (mp, n) val ->
-                let Var name = retrieveNode n mp
-                 in BoxUpper name val
-            Between (mp, n) vals ->
-                let Var name = retrieveNode n mp
-                 in BoxBetween name vals
 
-extractScalarConstraint ::
-       [(String, Shape)]
-    -> Constraint
-    -> Maybe [(ScalarConstraint, ExpressionMap)]
-extractScalarConstraint varsWithShape constraint =
-    case constraint of
-        NoConstraint -> Nothing
-        BoxConstraint _ -> Nothing
-        IPOPTConstraint css ->
-            let scalarConstraints = filter (not . isBoxConstraint) css
-                listScalarExpressions =
-                    Set.toList . Set.fromList . map getExpressionCS $
-                    scalarConstraints
-                getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
-                  where
-                    update (lb, ub) cs
-                        | (mp, n) == getExpressionCS cs =
-                            case cs of
-                                Lower _ (VScalar val) -> (max lb val, ub)
-                                Upper _ (VScalar val) -> (lb, min ub val)
-                                Between _ (VScalar val1, VScalar val2) ->
-                                    (max lb val1, min ub val2)
-                        | otherwise = (lb, ub)
-                vars = map fst varsWithShape
-                toScalarConstraint (mp, n) =
-                    let exp = Expression @Scalar @R n mp
-                        g = normalize exp
-                        dg =
-                            introduceZeroPartialDerivatives varsWithShape .
-                            collectDifferentials .
-                            exteriorDerivative (Set.fromList vars) $
-                            g
-                        (lb, ub) = getBound (mp, n)
-                        name2PartialDerivativeId :: Map String Int
-                        name2PartialDerivativeId = partialDerivativeMaps dg
-                        constraintPartialDerivatives
-                            | Map.keys name2PartialDerivativeId == vars =
-                                Map.elems name2PartialDerivativeId
-                            | otherwise =
-                                error
-                                    "variables of objective and constraints should be the same, but is different here"
-                     in ( ScalarConstraint
-                              { constraintValueId = exIndex g
-                              , constraintPartialDerivatives =
-                                    constraintPartialDerivatives
-                              , constraintLowerBound = lb
-                              , constraintUpperBound = ub
-                              }
-                        , exMap g `IM.union` exMap dg)
-             in Just $ map toScalarConstraint listScalarExpressions
 
--- | Construct a Problem from given objective function
+-- | Construct a Problem from given objective function and constraints
 --
 constructProblem ::
        Expression Scalar R -> [String] -> Constraint -> ProblemResult
@@ -308,7 +238,7 @@ constructProblem objectiveFunction varList constraint
     -- list of all vars name in the expression, they can be variables or fixed values
     expressionVars = Set.fromList . map fst . expressionVarNodes $ f
     -- list of possible names that could be variables
-    -- just user says it is variable and it is var node doesn't mean it is actually
+    -- just because user says it is variable and it is var node doesn't mean it
     -- appears in the d: for example f = 0 * x, then this will just be 0 and dx doesn't appear
     -- when we take the derivative
     possibleVars = Set.intersection expressionVars userSpecifiedVars
@@ -348,22 +278,9 @@ constructProblem objectiveFunction varList constraint
     checkError =
         case constraint of
             NoConstraint -> Nothing
-            BoxConstraint cs -> firstJust checkBoxConstraint cs
-            IPOPTConstraint cs -> firstJust checkCombinedConstraint cs
-    checkBoxConstraint :: ConstraintStatement -> Maybe String
-    checkBoxConstraint cs =
-        case retrieveNode n mp of
-            Var var
-                | not (Set.member var vars) ->
-                    Just $ var ++ " is not a variable"
-                | any (not . compatible (variableShape var)) (getValCS cs) ->
-                    Just $ "Bound for " ++ var ++ " is not in the right shape"
-                | otherwise -> Nothing
-            _ -> Just "Box constraint only apply for stand-alone variable"
-      where
-        (mp, n) = getExpressionCS cs
-    checkCombinedConstraint :: ConstraintStatement -> Maybe String
-    checkCombinedConstraint cs =
+            Constraint cs -> firstJust checkConstraint cs
+    checkConstraint :: ConstraintStatement -> Maybe String
+    checkConstraint cs =
         case retrieveInternal n mp of
             (_, Var var) -- if it is a var, then should be box constraint
                 | not (Set.member var vars) ->
@@ -380,6 +297,73 @@ constructProblem objectiveFunction varList constraint
                     "Only scalar inequality and box constraint for variable are supported"
       where
         (mp, n) = getExpressionCS cs
+    extractBoxConstraint :: Constraint -> Maybe [BoxConstraint]
+    extractBoxConstraint constraint =
+        case constraint of
+            NoConstraint -> Nothing
+            Constraint css ->
+                Just . map toBoxConstraint . filter isBoxConstraint $ css
+      where
+        toBoxConstraint cs =
+            case cs of
+                Lower (mp, n) val ->
+                    let Var name = retrieveNode n mp
+                     in BoxLower name val
+                Upper (mp, n) val ->
+                    let Var name = retrieveNode n mp
+                     in BoxUpper name val
+                Between (mp, n) vals ->
+                    let Var name = retrieveNode n mp
+                     in BoxBetween name vals
+    extractScalarConstraint ::
+           [(String, Shape)]
+        -> Constraint
+        -> Maybe [(ScalarConstraint, ExpressionMap)]
+    extractScalarConstraint varsWithShape constraint =
+        case constraint of
+            NoConstraint -> Nothing
+            Constraint css ->
+                let scalarConstraints = filter (not . isBoxConstraint) css
+                    listScalarExpressions =
+                        Set.toList . Set.fromList . map getExpressionCS $
+                        scalarConstraints
+                    getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
+                      where
+                        update (lb, ub) cs
+                            | (mp, n) == getExpressionCS cs =
+                                case cs of
+                                    Lower _ (VScalar val) -> (max lb val, ub)
+                                    Upper _ (VScalar val) -> (lb, min ub val)
+                                    Between _ (VScalar val1, VScalar val2) ->
+                                        (max lb val1, min ub val2)
+                            | otherwise = (lb, ub)
+                    vars = map fst varsWithShape
+                    toScalarConstraint (mp, n) =
+                        let exp = Expression @Scalar @R n mp
+                            g = normalize exp
+                            dg =
+                                introduceZeroPartialDerivatives varsWithShape .
+                                collectDifferentials .
+                                exteriorDerivative (Set.fromList vars) $
+                                g
+                            (lb, ub) = getBound (mp, n)
+                            name2PartialDerivativeId :: Map String Int
+                            name2PartialDerivativeId = partialDerivativeMaps dg
+                            constraintPartialDerivatives
+                                | Map.keys name2PartialDerivativeId == vars =
+                                    Map.elems name2PartialDerivativeId
+                                | otherwise =
+                                    error
+                                        "variables of objective and constraints should be the same, but is different here"
+                         in ( ScalarConstraint
+                                  { constraintValueId = exIndex g
+                                  , constraintPartialDerivatives =
+                                        constraintPartialDerivatives
+                                  , constraintLowerBound = lb
+                                  , constraintUpperBound = ub
+                                  }
+                            , exMap g `IM.union` exMap dg)
+                 in Just $ map toScalarConstraint listScalarExpressions
 
 -- |
 --

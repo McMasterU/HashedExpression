@@ -190,7 +190,7 @@ prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
     -- scalar constraints
     numScalarConstraint <- generate $ elements [2 .. 4]
     scc <- replicateM numScalarConstraint makeValidScalarConstraint
-    let constraints = IPOPTConstraint $ sampled ++ scc
+    let constraints = Constraint $ sampled ++ scc
     let constructResult = constructProblem exp names constraints
     case constructResult of
         NoVariables -> return () -- it is possible that the random expression doesn't have any variables
