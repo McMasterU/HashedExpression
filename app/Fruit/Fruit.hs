@@ -212,9 +212,9 @@ easyFruitProblem = do
             const 1000000 * norm2square ((one - fruits) * y)
     let valMap =
             fromList
-                [ ("fruits", V2DFile HDF5 "fruits.h5")
-                , ("re", V2DFile HDF5 "re.h5")
-                , ("im", V2DFile HDF5 "im.h5")
+                [ ("fruits", V2DFile $ HDF5 "fruits.h5" "fruits")
+                , ("re", V2DFile $ HDF5 "re.h5" "re")
+                , ("im", V2DFile $ HDF5 "im.h5" "im")
                 , ("x", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 , ("y", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
@@ -237,9 +237,9 @@ anotherFruit = do
              norm2square (s - rotate (1, 0) s))
     let valMap =
             fromList
-                [ ("img", V2DFile HDF5 "img.h5")
-                , ("c", V2DFile HDF5 "c.h5")
-                , ("median", V2DFile HDF5 "median.h5")
+                [ ("img", V2DFile $ HDF5 "img.h5" "img")
+                , ("c", V2DFile $ HDF5 "c.h5" "c")
+                , ("median", V2DFile $ HDF5 "median.h5" "median")
                 , ("s", V2D $ listArray ((0, 0), (255, 255)) $ repeat 0)
                 ]
         vars = ["s"]

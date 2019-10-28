@@ -204,11 +204,13 @@ dVarWithShape shape name = (IM.fromList [(h, node)], h)
     node = (shape, DVar name)
     h = hash node
 
--- |
---
-data FileType
-    = TXT
-    | HDF5
+type Dataset = String
+
+data DataFile
+    = TXT FilePath
+    -- C support hdf5, we want npy too but haven't found any npy reader library for C
+    -- file path to the data file from your solver
+    | HDF5 FilePath Dataset -- HDF5 requires the name of the data set in the data file
     deriving (Eq, Show, Ord)
 
 data Val
@@ -216,26 +218,12 @@ data Val
     | V1D (Array Int Double)
     | V2D (Array (Int, Int) Double)
     | V3D (Array (Int, Int, Int) Double)
-    | V1DFile
-          FileType -- C support hdf5, we want npy too but haven't found any npy reader library for C
-          FilePath -- file path to the data file from your solver
-    | V2DFile
-          FileType -- C support hdf5, we want npy too but haven't found any npy reader library for C
-          FilePath -- file path to the data file from your solver
-    | V3DFile
-          FileType -- C support hdf5, we want npy too but haven't found any npy reader library for C
-          FilePath -- file path to the data file from your solver
+    | V1DFile DataFile
+    | V2DFile DataFile
+    | V3DFile DataFile
     deriving (Eq, Show, Ord)
 
 type ValMaps = Map String Val
-
--- | 
---
-getVal :: HasCallStack => ValMaps -> String -> Val
-getVal valMap name =
-    case Map.lookup name valMap of
-        Just val -> val
-        _ -> error "value is not on val map"
 
 -- | 
 --
@@ -247,6 +235,15 @@ valElems val =
         V2D vs -> elems vs
         V3D vs -> elems vs
         _ -> []
+
+valueFromHaskell :: Val -> Bool
+valueFromHaskell val =
+    case val of
+        VScalar v -> True
+        V1D vs -> True
+        V2D vs -> True
+        V3D vs -> True
+        _ -> False
 
 -- | Prelude version of * and +
 --

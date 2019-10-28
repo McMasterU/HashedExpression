@@ -13,7 +13,7 @@ import HashedDerivative
 import HashedExpression
 import HashedInterp
 import HashedNormalize
-import HashedOperation hiding (product, sum)
+import HashedOperation
 import qualified HashedOperation
 import HashedPrettify
 import Prelude hiding
@@ -61,11 +61,7 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
-reFT :: (DimensionType d) => Expression d R -> Expression d R
-reFT = xRe . ft
 
-imFT :: (DimensionType d) => Expression d R -> Expression d R
-imFT = xIm . ft
 
 --main = do
 --    let exp = const 2 * x
@@ -86,4 +82,19 @@ imFT = xIm . ft
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ problem
-main = smilingFaceProblem
+--main = smilingFaceProblem
+main = do
+    let [x, y] = map (variable2D @128 @128) ["x", "y"]
+        [zero, one] = map (constant2D @128 @128) [1, 0]
+    let objectiveFunction = x <.> y
+    let vars = ["x", "y"]
+    let constraint = Constraint []
+    let (ProblemValid problem) =
+            constructProblem objectiveFunction vars constraint
+    let valMap =
+            fromList
+                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
+                ]
+    case generateProblemCode valMap problem of
+        Invalid str -> putStrLn str
+        Success proceed -> proceed "algorithms/lbfgs-b"
