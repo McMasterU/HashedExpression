@@ -358,37 +358,37 @@ constructProblem objectiveFunction varList constraint
 -- |
 --
 generateReadValuesCode :: String -> Val -> String -> Int -> Code
-generateReadValuesCode dataset val address numDoubles =
+generateReadValuesCode name val address numDoubles =
     case val of
         VScalar value -> scoped ["*(" ++ address ++ ")" <<- show value]
-        V1D _ -> readFileText (dataset ++ ".txt")
-        V2D _ -> readFileText (dataset ++ ".txt")
-        V3D _ -> readFileText (dataset ++ ".txt")
-        V1DFile TXT fileName -> readFileText fileName
-        V2DFile TXT fileName -> readFileText fileName
-        V3DFile TXT fileName -> readFileText fileName
-        V1DFile HDF5 fileName -> readFileHD5 fileName
-        V2DFile HDF5 fileName -> readFileHD5 fileName
-        V3DFile HDF5 fileName -> readFileHD5 fileName
+        V1D _ -> readFileText (name ++ ".txt")
+        V2D _ -> readFileText (name ++ ".txt")
+        V3D _ -> readFileText (name ++ ".txt")
+        V1DFile (TXT filePath) -> readFileText filePath
+        V2DFile (TXT filePath) -> readFileText filePath
+        V3DFile (TXT filePath) -> readFileText filePath
+        V1DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
+        V2DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
+        V3DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
   where
-    readFileText fileName =
+    readFileText filePath =
         scoped
             [ "printf(\"Reading " ++
-              dataset ++ " from text file " ++ fileName ++ "....\\n\");"
-            , "FILE *fp = fopen(\"" ++ fileName ++ "\", \"r\");"
+              name ++ " from text file " ++ filePath ++ "....\\n\");"
+            , "FILE *fp = fopen(\"" ++ filePath ++ "\", \"r\");"
             , "int i;"
             , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
             , "  fscanf(fp, \"%lf\", " ++ address ++ " + i);"
             , "}"
             , "fclose(fp);"
             ]
-    readFileHD5 fileName =
+    readFileHD5 filePath dataset =
         scoped
             [ "printf(\"Reading " ++
-              dataset ++ " from HDF5 file " ++ fileName ++ "....\\n\");"
+              dataset ++ " from HDF5 file " ++ filePath ++ "....\\n\");"
             , "hid_t file, dset;"
             , "file = H5Fopen (\"" ++
-              fileName ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
+              filePath ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
             , "dset = H5Dopen (file, \"" ++ dataset ++ "\", H5P_DEFAULT);"
             , "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, " ++
               address ++ ");"
