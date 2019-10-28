@@ -225,13 +225,6 @@ data Val
 
 type ValMaps = Map String Val
 
--- | 
---
-getVal :: HasCallStack => ValMaps -> String -> Val
-getVal valMap name =
-    case Map.lookup name valMap of
-        Just val -> val
-        _ -> error "value is not on val map"
 
 -- | 
 --
@@ -243,6 +236,15 @@ valElems val =
         V2D vs -> elems vs
         V3D vs -> elems vs
         _ -> []
+
+valueFromHaskell :: Val -> Bool
+valueFromHaskell val = 
+    case val of
+        VScalar v -> True
+        V1D vs -> True
+        V2D vs -> True
+        V3D vs -> True
+        _ -> False
 
 -- | Prelude version of * and +
 --

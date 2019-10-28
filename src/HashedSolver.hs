@@ -8,10 +8,10 @@
 
 module HashedSolver where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Array (bounds)
 import qualified Data.IntMap as IM
-import Data.List (find, intercalate)
+import Data.List (find, intercalate, sortBy, sortOn)
 import Data.List.Extra (firstJust)
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -287,11 +287,57 @@ constructProblem objectiveFunction varList constraint
                     "Only scalar inequality and box constraint for variable are supported"
       where
         (mp, n) = getExpressionCS cs
+    extractScalarConstraint ::
+           [(String, Shape)]
+        -> Constraint
+        -> [(ScalarConstraint, ExpressionMap)]
+    extractScalarConstraint _ NoConstraint = []
+    extractScalarConstraint varsWithShape (Constraint css) =
+        let scalarConstraints = filter (not . isBoxConstraint) css
+            listScalarExpressions =
+                Set.toList . Set.fromList . map getExpressionCS $
+                scalarConstraints
+            getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
+              where
+                update (lb, ub) cs
+                    | (mp, n) == getExpressionCS cs =
+                        case cs of
+                            Lower _ (VScalar val) -> (max lb val, ub)
+                            Upper _ (VScalar val) -> (lb, min ub val)
+                            Between _ (VScalar val1, VScalar val2) ->
+                                (max lb val1, min ub val2)
+                    | otherwise = (lb, ub)
+            vars = map fst varsWithShape
+            toScalarConstraint (mp, n) =
+                let exp = Expression @Scalar @R n mp
+                    g = normalize exp
+                    dg =
+                        introduceZeroPartialDerivatives varsWithShape .
+                        collectDifferentials .
+                        exteriorDerivative (Set.fromList vars) $
+                        g
+                    (lb, ub) = getBound (mp, n)
+                    name2PartialDerivativeId :: Map String Int
+                    name2PartialDerivativeId = partialDerivativeMaps dg
+                    constraintPartialDerivatives
+                        | Map.keys name2PartialDerivativeId == vars =
+                            Map.elems name2PartialDerivativeId
+                        | otherwise =
+                            error
+                                "variables of objective and constraints should be the same, but is different here"
+                 in ( ScalarConstraint
+                          { constraintValueId = exIndex g
+                          , constraintPartialDerivatives =
+                                constraintPartialDerivatives
+                          , constraintLowerBound = lb
+                          , constraintUpperBound = ub
+                          }
+                    , exMap g `IM.union` exMap dg)
+         in map toScalarConstraint listScalarExpressions
     extractBoxConstraint :: Constraint -> [BoxConstraint]
-    extractBoxConstraint constraint =
-        case constraint of
-            NoConstraint -> []
-            Constraint css -> map toBoxConstraint . filter isBoxConstraint $ css
+    extractBoxConstraint NoConstraint = []
+    extractBoxConstraint (Constraint css) =
+        map toBoxConstraint . filter isBoxConstraint $ css
       where
         toBoxConstraint cs =
             case cs of
@@ -304,56 +350,6 @@ constructProblem objectiveFunction varList constraint
                 Between (mp, n) vals ->
                     let Var name = retrieveNode n mp
                      in BoxBetween name vals
-    extractScalarConstraint ::
-           [(String, Shape)]
-        -> Constraint
-        -> [(ScalarConstraint, ExpressionMap)]
-    extractScalarConstraint varsWithShape constraint =
-        case constraint of
-            NoConstraint -> []
-            Constraint css ->
-                let scalarConstraints = filter (not . isBoxConstraint) css
-                    listScalarExpressions =
-                        Set.toList . Set.fromList . map getExpressionCS $
-                        scalarConstraints
-                    getBound (mp, n) =
-                        foldl update (ninf, inf) scalarConstraints
-                      where
-                        update (lb, ub) cs
-                            | (mp, n) == getExpressionCS cs =
-                                case cs of
-                                    Lower _ (VScalar val) -> (max lb val, ub)
-                                    Upper _ (VScalar val) -> (lb, min ub val)
-                                    Between _ (VScalar val1, VScalar val2) ->
-                                        (max lb val1, min ub val2)
-                            | otherwise = (lb, ub)
-                    vars = map fst varsWithShape
-                    toScalarConstraint (mp, n) =
-                        let exp = Expression @Scalar @R n mp
-                            g = normalize exp
-                            dg =
-                                introduceZeroPartialDerivatives varsWithShape .
-                                collectDifferentials .
-                                exteriorDerivative (Set.fromList vars) $
-                                g
-                            (lb, ub) = getBound (mp, n)
-                            name2PartialDerivativeId :: Map String Int
-                            name2PartialDerivativeId = partialDerivativeMaps dg
-                            constraintPartialDerivatives
-                                | Map.keys name2PartialDerivativeId == vars =
-                                    Map.elems name2PartialDerivativeId
-                                | otherwise =
-                                    error
-                                        "variables of objective and constraints should be the same, but is different here"
-                         in ( ScalarConstraint
-                                  { constraintValueId = exIndex g
-                                  , constraintPartialDerivatives =
-                                        constraintPartialDerivatives
-                                  , constraintLowerBound = lb
-                                  , constraintUpperBound = ub
-                                  }
-                            , exMap g `IM.union` exMap dg)
-                 in map toScalarConstraint listScalarExpressions
 
 -- |
 --
@@ -419,16 +415,16 @@ generateProblemCode valMaps Problem {..}
                     evaluateScalarConstraints ++
                     evaluateScalarConstraintsJacobian
             let writeVal (var, val) =
-                    unless (null $ valElems val) $ do
+                    when (valueFromHaskell val) $ do
                         let str = unwords . map show . valElems $ val
                         writeFile (folder ++ "/" ++ var ++ ".txt") str
             let writeUpperBound var val =
-                    unless (null . valElems $ val) $ do
+                    when (valueFromHaskell val) $ do
                         let str = unwords . map show . valElems $ val
                             fileName = var ++ "_ub.txt"
                         writeFile (folder ++ "/" ++ fileName) str
             let writeLowerBound var val =
-                    unless (null . valElems $ val) $ do
+                    when (valueFromHaskell val) $ do
                         let str = unwords . map show . valElems $ val
                             fileName = var ++ "_lb.txt"
                         writeFile (folder ++ "/" ++ fileName) str
@@ -444,13 +440,16 @@ generateProblemCode valMaps Problem {..}
     -- var nodes, can be optimizing variables or fixed values
   where
     vs :: [(String, Int)]
-    vs = varNodesWithId expressionMap
+    vs = sortOn fst $ varNodesWithId expressionMap
     -- check if this name is optimizing variable or fixed value
     isVariable :: String -> Bool
     isVariable v = v `elem` map varName variables
     -- variables we're trying to optimize over
     vars :: [String]
     vars = map varName variables
+    -- values node
+    vals :: [String]
+    vals = filter (not . isVariable) . map fst $ vs
     -- get shape of an optimizing variable
     variableShape :: String -> Shape
     variableShape name =
@@ -468,16 +467,13 @@ generateProblemCode valMaps Problem {..}
     entries = entryMap memMap
     -- Check if is variable or a fixed value
     checkError
-        | Just var <-
-             find (not . (`Map.member` valMaps)) . map varName $ variables =
-            Just $ "No initial value for variable " ++ var
-        | Just var <- find (not . (`Map.member` valMaps)) . map fst $ vs =
-            Just $ "No value provided for fixed parameter " ++ var
+        | Just name <- find (not . (`Map.member` valMaps)) vals =
+            Just $ "No value provided for " ++ name
         | otherwise
-        , let isOk (var, nId) =
-                  compatible
-                      (retrieveShape nId expressionMap)
-                      (getVal valMaps var)
+        , let isOk (var, nId)
+                  | Just val <- Map.lookup var valMaps =
+                      compatible (retrieveShape nId expressionMap) val
+                  | otherwise = True
         , Just (var, shape) <- find (not . isOk) vs =
             Just $
             "variable " ++
@@ -489,13 +485,25 @@ generateProblemCode valMaps Problem {..}
     partialDerivativeOffsets =
         map (getMemOffsetReal memMap . partialDerivativeId) variables
     objectiveOffset = getMemOffsetReal memMap objectiveId
-    -- For both variables and fixed value
-    readValCodeEach (var, nId) =
-        generateReadValuesCode
-            var
-            (getVal valMaps var)
-            ("ptr + " ++ show offset)
-            (product shape)
+    -- For both variables and values
+    readValCodeEach (name, nId)
+        | Just val <- Map.lookup name valMaps =
+            generateReadValuesCode
+                name
+                val
+                ("ptr + " ++ show offset)
+                (product shape)
+        | otherwise =
+            scoped
+                [ "printf(\"Init value for " ++
+                  name ++
+                  " is not provided, generating random for " ++
+                  name ++ "....\\n\");"
+                , "int i;"
+                , "for (i = 0; i < " ++ show offset ++ "; i++) {"
+                , "  ptr[" ++ show offset ++ " + " ++ i ++ "]" <<- "((double) rand() / (RAND_MAX))"
+                , "}"
+                ]
       where
         offset = memOffset memMap nId LookupR
         shape = retrieveShape nId expressionMap
@@ -622,6 +630,7 @@ generateProblemCode valMaps Problem {..}
             ["}"]
     readVals =
         ["void read_values() {"] ++ --
+        ["  srand(time(NULL));"] ++
         space 2 (concatMap readValCodeEach vs) ++ --
         ["}"]
     evaluatingCodes =

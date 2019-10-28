@@ -98,7 +98,6 @@ main = do
     let valMap =
             fromList
                 [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
-                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
