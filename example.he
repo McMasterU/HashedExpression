@@ -9,11 +9,12 @@ constants:
   head[128][128] = Dataset("head.h5", "head")
   xLowerBound = Dataset("x_lb.h5", "x_lb")
   xUpperBound = Dataset("x_ub.h5", "x_ub")
+  a = 3
 
 
 constraints:
-  x >= -1,
-  x <= 1 + 1
+  x >= -1
+  x <= 1
 
 
 let:

@@ -1,19 +1,24 @@
 module Main where
 
-import Symphony
-import System.Environment (getArgs, getProgName)
+import AbsHashedLang
+import Control.Monad.Except (runExceptT)
+import LayoutHashedLang
 import LexHashedLang
 import ParHashedLang
-import SkelHashedLang
 import PrintHashedLang
-import AbsHashedLang
-import LayoutHashedLang
+import SkelHashedLang
+import Symphony
+import System.Environment (getArgs, getProgName)
 
 main :: IO ()
 main = do
     args <- getArgs
     case args of
-        [fileName] -> do 
+        [fileName] -> do
             content <- readFile fileName
-            print $ pProblem . myLLexer $ content
-            print $ parse content
+            res <- runExceptT $ parse content
+            case res of
+                Left error -> print error
+                Right ast -> do
+                    prob <- runExceptT $ checkSemantic ast
+                    print prob
