@@ -501,7 +501,9 @@ generateProblemCode valMaps Problem {..}
                   name ++ "....\\n\");"
                 , "int i;"
                 , "for (i = 0; i < " ++ show offset ++ "; i++) {"
-                , "  ptr[" ++ show offset ++ " + " ++ i ++ "]" <<- "((double) rand() / (RAND_MAX))"
+                , "  ptr[" ++
+                  show offset ++
+                  " + " ++ i ++ "]" <<- "((double) rand() / (RAND_MAX))"
                 , "}"
                 ]
       where

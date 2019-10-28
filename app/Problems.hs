@@ -60,11 +60,6 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
-reFT :: (DimensionType d) => Expression d R -> Expression d R
-reFT = xRe . ft
-
-imFT :: (DimensionType d) => Expression d R -> Expression d R
-imFT = xIm . ft
 
 bananaFunction :: IO ()
 bananaFunction = do

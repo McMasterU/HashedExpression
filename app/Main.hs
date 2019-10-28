@@ -13,7 +13,7 @@ import HashedDerivative
 import HashedExpression
 import HashedInterp
 import HashedNormalize
-import HashedOperation hiding (product, sum)
+import HashedOperation
 import qualified HashedOperation
 import HashedPrettify
 import Prelude hiding
@@ -61,11 +61,7 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
-reFT :: (DimensionType d) => Expression d R -> Expression d R
-reFT = xRe . ft
 
-imFT :: (DimensionType d) => Expression d R -> Expression d R
-imFT = xIm . ft
 
 --main = do
 --    let exp = const 2 * x

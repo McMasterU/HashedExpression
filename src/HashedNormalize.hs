@@ -246,6 +246,8 @@ fourierTransformRules =
     , imFT (x +: y) |.~~~~~~> imFT x + reFT y
     , reFT zero |.~~~~~~> zero
     , imFT zero |.~~~~~~> zero
+    , twiceImFT zero |.~~~~~~> zero
+    , twiceReFT zero |.~~~~~~> zero
     , reFT (sum xs) |.~~~~~~> sum (mapL reFT xs)
     , imFT (sum xs) |.~~~~~~> sum (mapL imFT xs)
     , imFT (reFT x) |. isReal x ~~~~~~> zero

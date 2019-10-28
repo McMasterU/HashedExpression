@@ -225,7 +225,6 @@ data Val
 
 type ValMaps = Map String Val
 
-
 -- | 
 --
 valElems :: Val -> [Double]
@@ -238,7 +237,7 @@ valElems val =
         _ -> []
 
 valueFromHaskell :: Val -> Bool
-valueFromHaskell val = 
+valueFromHaskell val =
     case val of
         VScalar v -> True
         V1D vs -> True
