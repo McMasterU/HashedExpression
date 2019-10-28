@@ -68,14 +68,14 @@ checkVariableBlockExist (Problem blocks) =
 
 -- | (name, shape, initialize value)
 --
-type Variable = (String, HE.Shape, Maybe HU.Val)
+type VarInfo = (String, HE.Shape, Maybe HU.Val)
 
-checkVariableBlock :: [VariableDecl] -> Result [Variable]
+checkVariableBlock :: [VariableDecl] -> Result [VarInfo]
 checkVariableBlock variableDecls = undefined
 
 -- | (name, shape, value)
 --
-type Constant = (String, HE.Shape, HU.Val)
+type ConstInfo = (String, HE.Shape, HU.Val)
 
-checkConstantBlock :: [ConstantDecl] -> Result [Constant]
+checkConstantBlock :: [ConstantDecl] -> Result [ConstInfo]
 checkConstantBlock constantDecls = undefined
