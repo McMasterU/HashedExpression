@@ -36,6 +36,12 @@ newtype TokenRotate = TokenRotate ((Int,Int),String)
 newtype TokenCase = TokenCase ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
+newtype PInteger = PInteger ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype PDouble = PDouble ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
 newtype PIdent = PIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
@@ -50,10 +56,10 @@ data Block
     | BlockMinimize Exp
   deriving (Eq, Ord, Show, Read)
 
-data TInt = IntPos Integer | IntNeg TokenSub Integer
+data TInt = IntPos PInteger | IntNeg TokenSub PInteger
   deriving (Eq, Ord, Show, Read)
 
-data TDouble = DoublePos Double | DoubleNeg TokenSub Double
+data TDouble = DoublePos PDouble | DoubleNeg TokenSub PDouble
   deriving (Eq, Ord, Show, Read)
 
 data Number = NumInt TInt | NumDouble TDouble
@@ -67,7 +73,7 @@ data Val
     | ValLiteral Number
   deriving (Eq, Ord, Show, Read)
 
-data Dim = Dim Integer
+data Dim = Dim PInteger
   deriving (Eq, Ord, Show, Read)
 
 data Shape
@@ -88,10 +94,12 @@ data Bound = ConstantBound PIdent | NumberBound Number
   deriving (Eq, Ord, Show, Read)
 
 data ConstraintDecl
-    = ConstraintLower Exp Bound | ConstraintUpper Exp Bound
+    = ConstraintLower Exp Bound
+    | ConstraintUpper Exp Bound
+    | ConstraintEqual Exp Bound
   deriving (Eq, Ord, Show, Read)
 
-data Offset = OffsetPos Integer | OffsetNeg TokenSub Integer
+data Offset = OffsetPos PInteger | OffsetNeg TokenSub PInteger
   deriving (Eq, Ord, Show, Read)
 
 data RotateAmount
@@ -114,8 +122,8 @@ data Exp
     | EFun PIdent Exp
     | ERotate TokenRotate RotateAmount Exp
     | ENegate TokenSub Exp
-    | ENumDouble Double
-    | ENumInteger Integer
+    | ENumDouble PDouble
+    | ENumInteger PInteger
     | EIdent PIdent
     | EPiecewise TokenCase Exp [PiecewiseCase]
   deriving (Eq, Ord, Show, Read)

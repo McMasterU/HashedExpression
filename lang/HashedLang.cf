@@ -19,6 +19,8 @@ position token TokenDot {"<.>"};
 position token TokenPower {"^"};
 position token TokenRotate {"rotate"};
 position token TokenCase {"case"};
+position token PInteger digit+;
+position token PDouble digit+ '.' digit+ ('e' '-'? digit+)?;
 position token PIdent (letter (letter|digit|'_'|'\'')*);
 
 
@@ -37,11 +39,11 @@ BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
 separator nonempty Block "";
 
-IntPos. TInt ::= Integer;
-IntNeg. TInt ::= TokenSub Integer;
+IntPos. TInt ::= PInteger;
+IntNeg. TInt ::= TokenSub PInteger;
 
-DoublePos. TDouble ::= Double;
-DoubleNeg. TDouble ::= TokenSub Double;
+DoublePos. TDouble ::= PDouble;
+DoubleNeg. TDouble ::= TokenSub PDouble;
 
 -- Number
 NumInt. Number ::= TInt;
@@ -56,7 +58,7 @@ ValLiteral. Val ::= Number;
 
 
 -- Shape
-Dim. Dim ::= "[" Integer "]";
+Dim. Dim ::= "[" PInteger "]";
 ShapeScalar. Shape ::= ;
 Shape1D. Shape ::= Dim;
 Shape2D. Shape ::= Dim Dim;
@@ -84,12 +86,13 @@ ConstantBound. Bound ::= PIdent;
 NumberBound. Bound ::= Number;
 ConstraintLower. ConstraintDecl ::= Exp ">=" Bound;
 ConstraintUpper. ConstraintDecl ::= Exp "<=" Bound;
+ConstraintEqual. ConstraintDecl ::= Exp "==" Bound;
 separator nonempty ConstraintDecl ",";
 separator nonempty [ConstraintDecl] ";";
 
 -- Rotate Amount
-OffsetPos. Offset ::= Integer;
-OffsetNeg. Offset ::= TokenSub Integer;
+OffsetPos. Offset ::= PInteger;
+OffsetNeg. Offset ::= TokenSub PInteger;
 RA1D. RotateAmount ::= "(" Offset ")";
 RA2D. RotateAmount ::= "(" Offset "," Offset ")";
 RA3D. RotateAmount ::= "(" Offset "," Offset "," Offset ")";
@@ -123,8 +126,8 @@ ENegate. Exp4 ::= TokenSub Exp5;
 _. Exp4 ::= Exp5;
 
 _. Exp5 ::= "(" Exp ")";
-ENumDouble. Exp5 ::= Double;
-ENumInteger. Exp5 ::= Integer;
+ENumDouble. Exp5 ::= PDouble;
+ENumInteger. Exp5 ::= PInteger;
 EIdent. Exp5 ::= PIdent;
 
 EPiecewise. Exp ::= TokenCase Exp ":" "{" [PiecewiseCase] "}";

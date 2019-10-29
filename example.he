@@ -15,6 +15,7 @@ constraints:
   x >= xLowerBound, x <= xUpperBound
   x <.> y >= 1
   x >= 3
+  a == 10
 
 
 let:

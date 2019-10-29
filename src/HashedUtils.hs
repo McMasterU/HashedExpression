@@ -128,6 +128,12 @@ constWithShape shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
+varWithShape :: Shape -> String -> (ExpressionMap, Int)
+varWithShape shape name = (IM.fromList [(h, node)], h)
+  where
+    node = (shape, Var name)
+    h = hash node
+
 -- |
 --
 isScalarShape :: Shape -> Bool

@@ -21,7 +21,7 @@ $i = [$l $d _ ']     -- identifier character
 $u = [. \n]          -- universal: any character
 
 @rsyms =    -- symbols and non-identifier-like reserved words
-   \: | \{ | \} | \( | \) | \, | \[ | \] | \= | \; | \> \= | \< \= | \- \>
+   \: | \{ | \} | \( | \) | \, | \[ | \] | \= | \; | \> \= | \< \= | \= \= | \- \>
 
 :-
 "//" [.]* ; -- Toss single line comments
@@ -52,6 +52,10 @@ r o t a t e
     { tok (\p s -> PT p (eitherResIdent (T_TokenRotate . share) s)) }
 c a s e
     { tok (\p s -> PT p (eitherResIdent (T_TokenCase . share) s)) }
+$d +
+    { tok (\p s -> PT p (eitherResIdent (T_PInteger . share) s)) }
+$d + \. $d + (e \- ? $d +)?
+    { tok (\p s -> PT p (eitherResIdent (T_PDouble . share) s)) }
 $l ($l | $d | \_ | \')*
     { tok (\p s -> PT p (eitherResIdent (T_PIdent . share) s)) }
 
@@ -60,10 +64,8 @@ $l $i*
 \" ([$u # [\" \\ \n]] | (\\ (\" | \\ | \' | n | t | r | f)))* \"
     { tok (\p s -> PT p (TL $ share $ unescapeInitTail s)) }
 
-$d+
-    { tok (\p s -> PT p (TI $ share s))    }
-$d+ \. $d+ (e (\-)? $d+)?
-    { tok (\p s -> PT p (TD $ share s)) }
+
+
 
 {
 
@@ -91,6 +93,8 @@ data Tok =
  | T_TokenPower !String
  | T_TokenRotate !String
  | T_TokenCase !String
+ | T_PInteger !String
+ | T_PDouble !String
  | T_PIdent !String
 
  deriving (Eq,Show,Ord)
@@ -140,6 +144,8 @@ prToken t = case t of
   PT _ (T_TokenPower s) -> s
   PT _ (T_TokenRotate s) -> s
   PT _ (T_TokenCase s) -> s
+  PT _ (T_PInteger s) -> s
+  PT _ (T_PDouble s) -> s
   PT _ (T_PIdent s) -> s
 
 
@@ -154,7 +160,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "[" 14 (b "<=" 7 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) N)) (b "File" 11 (b ">=" 9 (b "=" 8 N N) (b "Dataset" 10 N N)) (b "Random" 13 (b "Pattern" 12 N N) N))) (b "let" 21 (b "constraint" 18 (b "constant" 16 (b "]" 15 N N) (b "constants" 17 N N)) (b "it" 20 (b "constraints" 19 N N) N)) (b "variables" 25 (b "otherwise" 23 (b "minimize" 22 N N) (b "variable" 24 N N)) (b "}" 27 (b "{" 26 N N) N)))
+resWords = b "[" 15 (b "=" 8 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) (b "<=" 7 N N))) (b "File" 12 (b ">=" 10 (b "==" 9 N N) (b "Dataset" 11 N N)) (b "Random" 14 (b "Pattern" 13 N N) N))) (b "let" 22 (b "constraint" 19 (b "constant" 17 (b "]" 16 N N) (b "constants" 18 N N)) (b "it" 21 (b "constraints" 20 N N) N)) (b "variables" 26 (b "otherwise" 24 (b "minimize" 23 N N) (b "variable" 25 N N)) (b "}" 28 (b "{" 27 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 
