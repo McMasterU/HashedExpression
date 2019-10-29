@@ -239,11 +239,8 @@ checkExp context inferredShape exp =
             return (HU.varWithShape shape name)
         EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
             let sp =
-                    anyJust
-                        [ inferredShape
-                        , inferShape context exp1
-                        , inferShape context exp2
-                        ]
+                    inferredShape @> inferShape context exp1 @>
+                    inferShape context exp2
             operand1 <- checkExp context sp exp1
             operand2 <- checkExp context sp exp2
             checkSameShape
@@ -259,11 +256,8 @@ checkExp context inferredShape exp =
             return $ sumMany [operand1, operand2]
         ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
             let sp =
-                    anyJust
-                        [ inferredShape
-                        , inferShape context exp1
-                        , inferShape context exp2
-                        ]
+                    inferredShape @> inferShape context exp1 @>
+                    inferShape context exp2
             operand1 <- checkExp context sp exp1
             operand2 <- checkExp context sp exp2
             checkSameShape
@@ -271,13 +265,49 @@ checkExp context inferredShape exp =
                 operand2
                 "Shape mismatched: trying to form complex from 2 vectors with different shape"
                 opPos
-            when (getNT operand1 /= HE.R) $ 
-                throwError $ ErrorWithPosition "Numtype of operand 1 is not real" opPos
-            when (getNT operand2 /= HE.R) $ 
-                throwError $ ErrorWithPosition "Numtype of operand 2 is not real" opPos
+            when (getNT operand1 /= HE.R) $
+                throwError $
+                ErrorWithPosition "Numtype of operand 1 is not real" opPos
+            when (getNT operand2 /= HE.R) $
+                throwError $
+                ErrorWithPosition "Numtype of operand 2 is not real" opPos
             return $ apply (binary RealImag) [operand1, operand2]
-        ESubtract exp1 (TokenSub (opPos, _)) exp2 -> undefined
-        EMul exp1 (TokenMul (opPos, _)) exp2 -> undefined
+        ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
+            let sp =
+                    inferredShape @> inferShape context exp1 @>
+                    inferShape context exp2
+            operand1 <- checkExp context sp exp1
+            operand2 <- checkExp context sp exp2
+            checkSameShape
+                operand1
+                operand2
+                "Shape mismatched: trying to subtract 2 vectors with different shape"
+                opPos
+            checkSameNumType
+                operand1
+                operand2
+                "Numtype mismatched: trying to subtract 2 vectors with different numtype"
+                opPos
+            return $
+                sumMany
+                    [operand1, apply (unaryET Neg ElementDefault) [operand2]]
+        EMul exp1 (TokenMul (opPos, _)) exp2 -> do
+            let sp =
+                    inferredShape @> inferShape context exp1 @>
+                    inferShape context exp2
+            operand1 <- checkExp context sp exp1
+            operand2 <- checkExp context sp exp2
+            checkSameShape
+                operand1
+                operand2
+                "Shape mismatched: trying to multiply 2 vectors with different shape"
+                opPos
+            checkSameNumType
+                operand1
+                operand2
+                "Numtype mismatched: trying to multiply 2 vectors with different numtype"
+                opPos
+            return $ mulMany [operand1, operand2]
         EDiv exp1 (TokenDiv (opPos, _)) exp2 -> undefined
         EScale exp1 (TokenScale (opPos, _)) exp2 -> undefined
         EDot exp1 (TokenDot (opPos, _)) exp2 -> undefined
@@ -311,23 +341,6 @@ inferShape context@(vars, consts) exp =
         EPiecewise (TokenCase _) exp cases ->
             anyJust . map (inferShape context) $ [exp]
         EFun (PIdent _) exp -> anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
-
-anyJust :: [Maybe a] -> Maybe a
-anyJust = firstJust id
-
-getShape :: (HE.ExpressionMap, Int) -> HE.Shape
-getShape (mp, n) = HN.retrieveShape n mp
-
-getNT :: (HE.ExpressionMap, Int) -> HE.ET
-getNT (mp, n) = HN.retrieveElementType n mp
-
-toReadable :: HE.Shape -> String
-toReadable [] = "scalar"
-toReadable xs = intercalate "x" . map show $ xs
-
-toReadableNT :: HE.ET -> String
-toReadableNT HE.R = "real"
-toReadableNT HE.C = "complex"
 
 checkSameShape ::
        (HE.ExpressionMap, Int)
@@ -365,3 +378,29 @@ checkSameNumType operand1 operand2 errStr pos = do
              ", but the numtype of operand 2 is " ++ toReadableNT nt2)
             pos
 
+-- | Utils
+--
+anyJust :: [Maybe a] -> Maybe a
+anyJust = firstJust id
+
+getShape :: (HE.ExpressionMap, Int) -> HE.Shape
+getShape (mp, n) = HN.retrieveShape n mp
+
+getNT :: (HE.ExpressionMap, Int) -> HE.ET
+getNT (mp, n) = HN.retrieveElementType n mp
+
+toReadable :: HE.Shape -> String
+toReadable [] = "scalar"
+toReadable xs = intercalate "x" . map show $ xs
+
+toReadableNT :: HE.ET -> String
+toReadableNT HE.R = "real"
+toReadableNT HE.C = "complex"
+
+infixl 8 @>
+
+(@>) :: Maybe a -> Maybe a -> Maybe a
+x @> y =
+    case x of
+        Just _ -> x
+        Nothing -> y
