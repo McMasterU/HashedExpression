@@ -442,6 +442,9 @@ checkExp context shapeInfo exp =
             unless ((Set.toList . Set.fromList $ marks) == marks) $
                 throwError $
                 ErrorWithPosition "The bounds must be increasing" opPos
+            unless (getNT condition == HE.R) $
+                throwError $
+                ErrorWithPosition "Condition is not a real vector" opPos
             caseExps <- mapM (checkExp context (Just shape)) exps
             forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
                 unless (getShape e == shape) $
@@ -452,8 +455,89 @@ checkExp context shapeInfo exp =
                      ", but the shape of branch " ++
                      show idx ++ "is " ++ toReadable (getShape e))
                     opPos
-            return $ apply (conditionAry (Piecewise marks)) $ condition : caseExps
-        EFun (PIdent (opPos, funName)) exp -> undefined
+            unless (HU.allEqual $ map getNT caseExps) $
+                throwError $
+                ErrorWithPosition
+                    "vector branches of piecewise are not of same numtype"
+                    opPos
+            return $
+                apply (conditionAry (Piecewise marks)) $ condition : caseExps
+        EFun (PIdent (opPos, funName)) exp ->
+            let onlyForRealVector operand =
+                    unless (getNT operand == HE.R) $
+                    throwError $
+                    ErrorWithPosition "Operand must be a real vector" opPos
+             in case funName of
+                    "sqrt" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Sqrt) [operand]
+                    "sin" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Sin) [operand]
+                    "cos" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Cos) [operand]
+                    "tan" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Tan) [operand]
+                    "exp" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Exp) [operand]
+                    "log" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Log) [operand]
+                    "sinh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Sinh) [operand]
+                    "cosh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Cosh) [operand]
+                    "tanh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Tanh) [operand]
+                    "asin" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Asin) [operand]
+                    "acos" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Acos) [operand]
+                    "atan" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Atan) [operand]
+                    "asinh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Asinh) [operand]
+                    "acosh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Acosh) [operand]
+                    "atanh" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForRealVector operand
+                        return $ apply (unary Atanh) [operand]
+                    "ft" -> do
+                        operand <- checkExp context shapeInfo exp
+                        let reFT = apply (unary ReFT) [operand]
+                        let imFT = apply (unary ImFT) [operand]
+                        return $ apply (binary RealImag) [reFT, imFT]
+                    _ ->
+                        throwError $
+                        ErrorWithPosition
+                            ("Function " ++ funName ++ " not found")
+                            opPos
 
 inferShape :: Context -> Exp -> Maybe HE.Shape
 inferShape context@(vars, consts) exp =
