@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Symphony where
 
@@ -65,9 +66,12 @@ type Vars = Map String (HE.Shape, Maybe HU.Val)
 --
 type Consts = Map String (HE.Shape, HU.Val)
 
--- | 
---
-type Context = (Vars, Consts)
+data Context =
+    Context
+        { declarations :: Map String (ExpressionMap, Int)
+        , vars :: Vars
+        , consts :: Consts
+        }
 
 -- | TODO:
 -- 1. Check if there is variables block
@@ -84,15 +88,27 @@ checkSemantic problem = do
     vars <- checkVariableBlock varDecls -- 2
     constDecls <- getConstDecls problem
     consts <- checkConstantBlock vars constDecls
-    let context = (vars, consts)
+    let initContext =
+            Context
+                { declarations =
+                      Map.mapWithKey toExp vars `Map.union`
+                      Map.mapWithKey toExp consts
+                , vars = vars
+                , consts = consts
+                }
+    letDecls <- getLetDecls problem
+    finalContext <- foldM processLetDecl initContext letDecls
+    -- Complete processing context (variables, constants, declared values)
     constraintDecls <- getConstraintDecls problem
-    objectiveExp <- getMinizeBlock problem
-    constructedExp <- checkExp (vars, consts) (Just []) objectiveExp
+    css <- processConstraintBlock finalContext constraintDecls
+    objectiveExp <- getMinimizeBlock problem
+    constructedExp <- constructExp initContext (Just []) objectiveExp
     liftIO $ print $ debugPrint constructedExp
     throwError $ GeneralError "TODO: haven't completed yet"
   where
     isVariableBlock (BlockVariable declss) = True
     isVariableBlock _ = False
+    toExp name (shape, _) = HU.varWithShape shape name
 
 getVarDecls :: Problem -> Result [VariableDecl]
 getVarDecls (Problem blocks) =
@@ -134,12 +150,12 @@ getLetDecls (Problem blocks) =
     isLetBlock (BlockLet declss) = True
     isLetBlock _ = False
 
-getMinizeBlock :: Problem -> Result Exp
-getMinizeBlock (Problem blocks) =
+getMinimizeBlock :: Problem -> Result Exp
+getMinimizeBlock (Problem blocks) =
     case filter isMinimizeBlock blocks of
         [] -> throwError $ GeneralError "No minimize block"
         [BlockMinimize exp] -> return exp
-        _ -> throwError $ GeneralError "There are more than 1 let block"
+        _ -> throwError $ GeneralError "There are more than 1 minimize block"
   where
     isMinimizeBlock (BlockMinimize declss) = True
     isMinimizeBlock _ = False
@@ -180,10 +196,26 @@ checkConstantBlock vars = foldl f (return Map.empty)
         checkVal (toHEShape shape) val
         return $ Map.insert name (toHEShape shape, toHEVal val) accRes
 
-checkConstraintBlock ::
+processConstraintBlock ::
        Context -> [ConstraintDecl] -> Result [HS.ConstraintStatement]
-checkConstraintBlock context cDcls = undefined
+processConstraintBlock context cDcls = undefined
 
+processLetDecl :: Context -> LetDecl -> Result Context
+processLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
+    when (name `Map.member` consts) $
+        throwError $
+        ErrorWithPosition (name ++ " already defined as a constant") pos
+    when (name `Map.member` vars) $
+        throwError $
+        ErrorWithPosition (name ++ " already defined as a variable") pos
+    when (name `Map.member` declarations) $
+        throwError $
+        ErrorWithPosition (name ++ " already taken") pos
+    constructedExp <- constructExp context Nothing exp
+    let newDeclarations = Map.insert name constructedExp declarations
+    return $ context { declarations = newDeclarations }
+
+--    constructedExp <- checkExp
 pInteger2Int :: PInteger -> Int
 pInteger2Int (PInteger (_, val)) = read val
 
@@ -240,16 +272,15 @@ toHEVal v =
 checkVal :: HE.Shape -> Val -> Result ()
 checkVal shape val = return ()
 
-checkIdent :: Context -> ((Int, Int), String) -> Result (HE.Shape, Maybe HU.Val)
-checkIdent (vars, consts) (pos, name)
-    | Just (shape, maybeVal) <- Map.lookup name vars = return (shape, maybeVal)
-    | Just (shape, val) <- Map.lookup name consts = return (shape, Just val)
+retrieveExpFromIdent :: Context -> ((Int, Int), String) -> Result (ExpressionMap, Int)
+retrieveExpFromIdent context@Context {..} (pos, name)
+    | Just exp <- Map.lookup name declarations = return exp
     | otherwise = throwError $ ErrorWithPosition (name ++ " is undefined") pos
 
 -- | TODO: O(n^2) complexity, improve later
 --
-checkExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, Int)
-checkExp context shapeInfo exp =
+constructExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, Int)
+constructExp context shapeInfo exp =
     let add x y = sumMany [x, y]
         multiply x y = mulMany [x, y]
         reIm x y = apply (binary RealImag) [x, y]
@@ -275,17 +306,15 @@ checkExp context shapeInfo exp =
                     ErrorWithPosition
                         ("Ambiguous shape of literal " ++ valStr)
                         pos
-            EIdent (PIdent (idPos, name)) -> do
-                (shape, _) <- checkIdent context (idPos, name)
-                return (HU.varWithShape shape name)
+            EIdent (PIdent (idPos, name)) -> retrieveExpFromIdent context (idPos, name)
             EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
                 liftIO $ print inferredShape
-                operand1 <- checkExp context inferredShape exp1
+                operand1 <- constructExp context inferredShape exp1
                 liftIO $ print operand1
-                operand2 <- checkExp context inferredShape exp2
+                operand2 <- constructExp context inferredShape exp2
                 liftIO $ print operand2
                 checkSameShape
                     operand1
@@ -302,8 +331,8 @@ checkExp context shapeInfo exp =
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
-                operand1 <- checkExp context inferredShape exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context inferredShape exp1
+                operand2 <- constructExp context inferredShape exp2
                 checkSameShape
                     operand1
                     operand2
@@ -320,8 +349,8 @@ checkExp context shapeInfo exp =
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
-                operand1 <- checkExp context inferredShape exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context inferredShape exp1
+                operand2 <- constructExp context inferredShape exp2
                 checkSameShape
                     operand1
                     operand2
@@ -337,8 +366,8 @@ checkExp context shapeInfo exp =
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
-                operand1 <- checkExp context inferredShape exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context inferredShape exp1
+                operand2 <- constructExp context inferredShape exp2
                 checkSameShape
                     operand1
                     operand2
@@ -354,8 +383,8 @@ checkExp context shapeInfo exp =
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
-                operand1 <- checkExp context inferredShape exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context inferredShape exp1
+                operand2 <- constructExp context inferredShape exp2
                 checkSameShape
                     operand1
                     operand2
@@ -369,8 +398,8 @@ checkExp context shapeInfo exp =
                 return $ multiply operand1 (app (Power (-1)) operand2)
             EScale exp1 (TokenScale (opPos, _)) exp2 -> do
                 let inferredShape = inferShape context exp1 @> shapeInfo
-                operand1 <- checkExp context (Just []) exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context (Just []) exp1
+                operand2 <- constructExp context inferredShape exp2
                 when (getShape operand1 /= []) $
                     throwError $
                     ErrorWithPosition
@@ -385,8 +414,8 @@ checkExp context shapeInfo exp =
             EDot exp1 (TokenDot (opPos, _)) exp2 -> do
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2
-                operand1 <- checkExp context inferredShape exp1
-                operand2 <- checkExp context inferredShape exp2
+                operand1 <- constructExp context inferredShape exp1
+                operand2 <- constructExp context inferredShape exp2
                 checkSameShape
                     operand1
                     operand2
@@ -399,10 +428,10 @@ checkExp context shapeInfo exp =
                     opPos
                 return $ dot operand1 operand2
             EPower exp1 (TokenPower (opPos, _)) val -> do
-                operand1 <- checkExp context shapeInfo exp1
+                operand1 <- constructExp context shapeInfo exp1
                 return $ app (Power (toInt val)) operand1
             ERotate (TokenRotate (opPos, _)) raStr exp -> do
-                operand <- checkExp context shapeInfo exp
+                operand <- constructExp context shapeInfo exp
                 let rotateAmount = toRotateAmount raStr
                 let shape = getShape operand
                 when (null shape) $
@@ -417,10 +446,10 @@ checkExp context shapeInfo exp =
                         opPos
                 return $ app (Rotate rotateAmount) operand
             ENegate (TokenSub (opPos, _)) exp -> do
-                operand <- checkExp context shapeInfo exp
+                operand <- constructExp context shapeInfo exp
                 return $ scale (HU.aConst [] (-1)) operand
             EPiecewise (TokenCase (opPos, _)) exp cases -> do
-                condition <- checkExp context shapeInfo exp
+                condition <- constructExp context shapeInfo exp
                 let isLastCase pwcase =
                         case pwcase of
                             PiecewiseFinalCase {} -> True
@@ -447,7 +476,7 @@ checkExp context shapeInfo exp =
                 unless (getNT condition == HE.R) $
                     throwError $
                     ErrorWithPosition "Condition is not a real vector" opPos
-                caseExps <- mapM (checkExp context (Just shape)) exps
+                caseExps <- mapM (constructExp context (Just shape)) exps
                 forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
                     unless (getShape e == shape) $
                     throwError $
@@ -474,7 +503,7 @@ checkExp context shapeInfo exp =
                         ErrorWithPosition
                             "Operand must be a complex vector"
                             opPos
-                operand <- checkExp context shapeInfo exp
+                operand <- constructExp context shapeInfo exp
                 case funName of
                     "sqrt" -> do
                         onlyForRealVector operand
@@ -532,7 +561,7 @@ checkExp context shapeInfo exp =
                         let imFT = app ImFT operand
                         return $ reIm reFT imFT
                     "norm2square" -> do
-                        operand <- checkExp context shapeInfo exp
+                        operand <- constructExp context shapeInfo exp
                         if getNT operand == HE.R
                             then return $ dot operand operand
                             else do
@@ -546,7 +575,7 @@ checkExp context shapeInfo exp =
                             opPos
 
 inferShape :: Context -> Exp -> Maybe HE.Shape
-inferShape context@(vars, consts) exp =
+inferShape context@Context {..} exp =
     case exp of
         ENumDouble _ -> Nothing
         ENumInteger _ -> Nothing
