@@ -250,329 +250,295 @@ checkIdent (vars, consts) (pos, name)
 --
 checkExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, Int)
 checkExp context shapeInfo exp =
-    case exp of
-        ENumDouble (PDouble (pos, valStr))
-            | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
-            | otherwise ->
-                throwError $
-                ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
-        ENumInteger (PInteger (pos, valStr))
-            | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
-            | otherwise ->
-                throwError $
-                ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
-        EIdent (PIdent (idPos, name)) -> do
-            (shape, _) <- checkIdent context (idPos, name)
-            return (HU.varWithShape shape name)
-        EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2 @>
-                    shapeInfo
-            liftIO $ print inferredShape
-            operand1 <- checkExp context inferredShape exp1
-            liftIO $ print operand1
-            operand2 <- checkExp context inferredShape exp2
-            liftIO $ print operand2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to add 2 vectors with different shape"
-                opPos
-            checkSameNumType
-                operand1
-                operand2
-                "Numtype mismatched: trying to add 2 vectors with different numtype"
-                opPos
-            return $ sumMany [operand1, operand2] -- HERE
-        ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2 @>
-                    shapeInfo
-            operand1 <- checkExp context inferredShape exp1
-            operand2 <- checkExp context inferredShape exp2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to form complex from 2 vectors with different shape"
-                opPos
-            when (getNT operand1 /= HE.R) $
-                throwError $
-                ErrorWithPosition "Numtype of operand 1 is not real" opPos
-            when (getNT operand2 /= HE.R) $
-                throwError $
-                ErrorWithPosition "Numtype of operand 2 is not real" opPos
-            return $ apply (binary RealImag) [operand1, operand2] -- HERE
-        ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2 @>
-                    shapeInfo
-            operand1 <- checkExp context inferredShape exp1
-            operand2 <- checkExp context inferredShape exp2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to subtract 2 vectors with different shape"
-                opPos
-            checkSameNumType
-                operand1
-                operand2
-                "Numtype mismatched: trying to subtract 2 vectors with different numtype"
-                opPos
-            return $
-                sumMany
-                    [ operand1
-                    , apply
-                          (binaryET Scale ElementDefault) -- HERE
-                          [HU.aConst [] (-1), operand2]
-                    ]
-        EMul exp1 (TokenMul (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2 @>
-                    shapeInfo
-            operand1 <- checkExp context inferredShape exp1
-            operand2 <- checkExp context inferredShape exp2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to multiply 2 vectors with different shape"
-                opPos
-            checkSameNumType
-                operand1
-                operand2
-                "Numtype mismatched: trying to multiply 2 vectors with different numtype"
-                opPos
-            return $ mulMany [operand1, operand2] -- HERE
-        EDiv exp1 (TokenDiv (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2 @>
-                    shapeInfo
-            operand1 <- checkExp context inferredShape exp1
-            operand2 <- checkExp context inferredShape exp2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to divide 2 vectors with different shape"
-                opPos
-            checkSameNumType
-                operand1
-                operand2
-                "Numtype mismatched: trying to divide 2 vectors with different numtype"
-                opPos
-            return $ mulMany [operand1, apply (unary (Power (-1))) [operand2]] -- HERE
-        EScale exp1 (TokenScale (opPos, _)) exp2 -> do
-            let inferredShape = inferShape context exp1 @> shapeInfo
-            operand1 <- checkExp context (Just []) exp1
-            operand2 <- checkExp context inferredShape exp2
-            when (getShape operand1 /= []) $
-                throwError $
-                ErrorWithPosition
-                    "The first operand of scaling operator is not a scalar"
-                    opPos
-            when (getNT operand1 == HE.C && getNT operand2 == HE.R) $
-                throwError $
-                ErrorWithPosition
-                    "Can't scale a real vector by a complex scalar"
-                    opPos
-            return $ apply (binaryET Scale ElementDefault) [operand1, operand2]
-        EDot exp1 (TokenDot (opPos, _)) exp2 -> do
-            let inferredShape =
-                    inferShape context exp1 @> inferShape context exp2
-            operand1 <- checkExp context inferredShape exp1
-            operand2 <- checkExp context inferredShape exp2
-            checkSameShape
-                operand1
-                operand2
-                "Shape mismatched: trying to take inner product of 2 vectors with different shape"
-                opPos
-            checkSameNumType
-                operand1
-                operand2
-                "Numtype mismatched: trying to take inner product of 2 vectors with different numtype"
-                opPos
-            return $
-                apply
-                    (binaryET InnerProd ElementDefault `hasShape` [])
-                    [operand1, operand2]
-        EPower exp1 (TokenPower (opPos, _)) val -> do
-            operand1 <- checkExp context shapeInfo exp1
-            return $ apply (unary (Power (toInt val))) [operand1]
-        ERotate (TokenRotate (opPos, _)) raStr exp -> do
-            operand <- checkExp context shapeInfo exp
-            let rotateAmount = toRotateAmount raStr
-            let shape = getShape operand
-            when (null shape) $
-                throwError $ ErrorWithPosition "Can't rotate a scalar" opPos
-            when (length shape /= length rotateAmount) $
-                throwError $
-                ErrorWithPosition
-                    ("The rotate amount is for " ++
-                     show (length rotateAmount) ++
-                     "d vector, but the operand is " ++
-                     show (length shape) ++ "d vector")
-                    opPos
-            return $ apply (unary (Rotate rotateAmount)) [operand]
-        ENegate (TokenSub (opPos, _)) exp -> do
-            operand <- checkExp context shapeInfo exp
-            return $
-                apply
-                    (binaryET Scale ElementDefault) -- HERE
-                    [HU.aConst [] (-1), operand]
-        EPiecewise (TokenCase (opPos, _)) exp cases -> do
-            condition <- checkExp context shapeInfo exp
-            let isLastCase pwcase =
-                    case pwcase of
-                        PiecewiseFinalCase {} -> True
-                        _ -> False
-                extractMark pwcase =
-                    case pwcase of
-                        PiecewiseCase val _ -> [numToDouble val]
-                        PiecewiseFinalCase {} -> []
-                extractExp pwcase =
-                    case pwcase of
-                        PiecewiseCase _ exp -> exp
-                        PiecewiseFinalCase exp -> exp
-                marks = concatMap extractMark cases
-                exps = map extractExp cases
-                shape = getShape condition
-            unless (isLastCase (last cases)) $
-                throwError $
-                ErrorWithPosition
-                    "Piecewise must end with an otherwise case"
-                    opPos
-            unless ((Set.toList . Set.fromList $ marks) == marks) $
-                throwError $
-                ErrorWithPosition "The bounds must be increasing" opPos
-            unless (getNT condition == HE.R) $
-                throwError $
-                ErrorWithPosition "Condition is not a real vector" opPos
-            caseExps <- mapM (checkExp context (Just shape)) exps
-            forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
-                unless (getShape e == shape) $
-                throwError $
-                ErrorWithPosition
-                    (". The shape of condition is " ++
-                     toReadable shape ++
-                     ", but the shape of branch " ++
-                     show idx ++ " is " ++ toReadable (getShape e))
-                    opPos
-            unless (HU.allEqual $ map getNT caseExps) $
-                throwError $
-                ErrorWithPosition
-                    "vector branches of piecewise are not of same numtype"
-                    opPos
-            return $
-                apply (conditionAry (Piecewise marks)) $ condition : caseExps
-        EFun (PIdent (opPos, funName)) exp ->
-            let onlyForRealVector operand =
-                    unless (getNT operand == HE.R) $
+    let add x y = sumMany [x, y]
+        multiply x y = mulMany [x, y]
+        reIm x y = apply (binary RealImag) [x, y]
+        scale x y = apply (binaryET Scale ElementDefault) [x, y]
+        dot x y = apply (binaryET InnerProd ElementDefault `hasShape` []) [x, y]
+        app fun x = apply (unary fun) [x]
+        piecewise marks condition branches =
+            apply (conditionAry (Piecewise marks)) (condition : branches)
+     in case exp of
+            ENumDouble (PDouble (pos, valStr))
+                | Just shape <- shapeInfo ->
+                    return $ HU.aConst shape (read valStr)
+                | otherwise ->
                     throwError $
-                    ErrorWithPosition "Operand must be a real vector" opPos
-                onlyForComplexVector operand =
-                    unless (getNT operand == HE.R) $
+                    ErrorWithPosition
+                        ("Ambiguous shape of literal " ++ valStr)
+                        pos
+            ENumInteger (PInteger (pos, valStr))
+                | Just shape <- shapeInfo ->
+                    return $ HU.aConst shape (read valStr)
+                | otherwise ->
                     throwError $
-                    ErrorWithPosition "Operand must be a complex vector" opPos
-             in case funName of
+                    ErrorWithPosition
+                        ("Ambiguous shape of literal " ++ valStr)
+                        pos
+            EIdent (PIdent (idPos, name)) -> do
+                (shape, _) <- checkIdent context (idPos, name)
+                return (HU.varWithShape shape name)
+            EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2 @>
+                        shapeInfo
+                liftIO $ print inferredShape
+                operand1 <- checkExp context inferredShape exp1
+                liftIO $ print operand1
+                operand2 <- checkExp context inferredShape exp2
+                liftIO $ print operand2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to add 2 vectors with different shape"
+                    opPos
+                checkSameNumType
+                    operand1
+                    operand2
+                    "Numtype mismatched: trying to add 2 vectors with different numtype"
+                    opPos
+                return $ add operand1 operand2
+            ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2 @>
+                        shapeInfo
+                operand1 <- checkExp context inferredShape exp1
+                operand2 <- checkExp context inferredShape exp2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to form complex from 2 vectors with different shape"
+                    opPos
+                when (getNT operand1 /= HE.R) $
+                    throwError $
+                    ErrorWithPosition "Numtype of operand 1 is not real" opPos
+                when (getNT operand2 /= HE.R) $
+                    throwError $
+                    ErrorWithPosition "Numtype of operand 2 is not real" opPos
+                return $ reIm operand1 operand2
+            ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2 @>
+                        shapeInfo
+                operand1 <- checkExp context inferredShape exp1
+                operand2 <- checkExp context inferredShape exp2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to subtract 2 vectors with different shape"
+                    opPos
+                checkSameNumType
+                    operand1
+                    operand2
+                    "Numtype mismatched: trying to subtract 2 vectors with different numtype"
+                    opPos
+                return $ add operand1 (scale (HU.aConst [] (-1)) operand2)
+            EMul exp1 (TokenMul (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2 @>
+                        shapeInfo
+                operand1 <- checkExp context inferredShape exp1
+                operand2 <- checkExp context inferredShape exp2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to multiply 2 vectors with different shape"
+                    opPos
+                checkSameNumType
+                    operand1
+                    operand2
+                    "Numtype mismatched: trying to multiply 2 vectors with different numtype"
+                    opPos
+                return $ multiply operand1 operand2
+            EDiv exp1 (TokenDiv (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2 @>
+                        shapeInfo
+                operand1 <- checkExp context inferredShape exp1
+                operand2 <- checkExp context inferredShape exp2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to divide 2 vectors with different shape"
+                    opPos
+                checkSameNumType
+                    operand1
+                    operand2
+                    "Numtype mismatched: trying to divide 2 vectors with different numtype"
+                    opPos
+                return $ multiply operand1 (app (Power (-1)) operand2)
+            EScale exp1 (TokenScale (opPos, _)) exp2 -> do
+                let inferredShape = inferShape context exp1 @> shapeInfo
+                operand1 <- checkExp context (Just []) exp1
+                operand2 <- checkExp context inferredShape exp2
+                when (getShape operand1 /= []) $
+                    throwError $
+                    ErrorWithPosition
+                        "The first operand of scaling operator is not a scalar"
+                        opPos
+                when (getNT operand1 == HE.C && getNT operand2 == HE.R) $
+                    throwError $
+                    ErrorWithPosition
+                        "Can't scale a real vector by a complex scalar"
+                        opPos
+                return $ scale operand1 operand2
+            EDot exp1 (TokenDot (opPos, _)) exp2 -> do
+                let inferredShape =
+                        inferShape context exp1 @> inferShape context exp2
+                operand1 <- checkExp context inferredShape exp1
+                operand2 <- checkExp context inferredShape exp2
+                checkSameShape
+                    operand1
+                    operand2
+                    "Shape mismatched: trying to take inner product of 2 vectors with different shape"
+                    opPos
+                checkSameNumType
+                    operand1
+                    operand2
+                    "Numtype mismatched: trying to take inner product of 2 vectors with different numtype"
+                    opPos
+                return $ dot operand1 operand2
+            EPower exp1 (TokenPower (opPos, _)) val -> do
+                operand1 <- checkExp context shapeInfo exp1
+                return $ app (Power (toInt val)) operand1
+            ERotate (TokenRotate (opPos, _)) raStr exp -> do
+                operand <- checkExp context shapeInfo exp
+                let rotateAmount = toRotateAmount raStr
+                let shape = getShape operand
+                when (null shape) $
+                    throwError $ ErrorWithPosition "Can't rotate a scalar" opPos
+                when (length shape /= length rotateAmount) $
+                    throwError $
+                    ErrorWithPosition
+                        ("The rotate amount is for " ++
+                         show (length rotateAmount) ++
+                         "d vector, but the operand is " ++
+                         show (length shape) ++ "d vector")
+                        opPos
+                return $ app (Rotate rotateAmount) operand
+            ENegate (TokenSub (opPos, _)) exp -> do
+                operand <- checkExp context shapeInfo exp
+                return $ scale (HU.aConst [] (-1)) operand
+            EPiecewise (TokenCase (opPos, _)) exp cases -> do
+                condition <- checkExp context shapeInfo exp
+                let isLastCase pwcase =
+                        case pwcase of
+                            PiecewiseFinalCase {} -> True
+                            _ -> False
+                    extractMark pwcase =
+                        case pwcase of
+                            PiecewiseCase val _ -> [numToDouble val]
+                            PiecewiseFinalCase {} -> []
+                    extractExp pwcase =
+                        case pwcase of
+                            PiecewiseCase _ exp -> exp
+                            PiecewiseFinalCase exp -> exp
+                    marks = concatMap extractMark cases
+                    exps = map extractExp cases
+                    shape = getShape condition
+                unless (isLastCase (last cases)) $
+                    throwError $
+                    ErrorWithPosition
+                        "Piecewise must end with an otherwise case"
+                        opPos
+                unless ((Set.toList . Set.fromList $ marks) == marks) $
+                    throwError $
+                    ErrorWithPosition "The bounds must be increasing" opPos
+                unless (getNT condition == HE.R) $
+                    throwError $
+                    ErrorWithPosition "Condition is not a real vector" opPos
+                caseExps <- mapM (checkExp context (Just shape)) exps
+                forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
+                    unless (getShape e == shape) $
+                    throwError $
+                    ErrorWithPosition
+                        (". The shape of condition is " ++
+                         toReadable shape ++
+                         ", but the shape of branch " ++
+                         show idx ++ " is " ++ toReadable (getShape e))
+                        opPos
+                unless (HU.allEqual $ map getNT caseExps) $
+                    throwError $
+                    ErrorWithPosition
+                        "vector branches of piecewise are not of same numtype"
+                        opPos
+                return $ piecewise marks condition caseExps
+            EFun (PIdent (opPos, funName)) exp -> do
+                let onlyForRealVector operand =
+                        unless (getNT operand == HE.R) $
+                        throwError $
+                        ErrorWithPosition "Operand must be a real vector" opPos
+                    onlyForComplexVector operand =
+                        unless (getNT operand == HE.R) $
+                        throwError $
+                        ErrorWithPosition
+                            "Operand must be a complex vector"
+                            opPos
+                operand <- checkExp context shapeInfo exp
+                case funName of
                     "sqrt" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Sqrt) [operand]
+                        return $ app Sqrt operand
                     "sin" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Sin) [operand]
+                        return $ app Sin operand
                     "cos" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Cos) [operand]
+                        return $ app Cos operand
                     "tan" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Tan) [operand]
+                        return $ app Tan operand
                     "exp" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Exp) [operand]
+                        return $ app Exp operand
                     "log" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Log) [operand]
+                        return $ app Log operand
                     "sinh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Sinh) [operand]
+                        return $ app Sinh operand
                     "cosh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Cosh) [operand]
+                        return $ app Cosh operand
                     "tanh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Tanh) [operand]
+                        return $ app Tanh operand
                     "asin" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Asin) [operand]
+                        return $ app Asin operand
                     "acos" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Acos) [operand]
+                        return $ app Acos operand
                     "atan" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Atan) [operand]
+                        return $ app Atan operand
                     "asinh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Asinh) [operand]
+                        return $ app Asin operand
                     "acosh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Acosh) [operand]
+                        return $ app Acos operand
                     "atanh" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
-                        return $ apply (unary Atanh) [operand]
+                        return $ app Atan operand
                     "xRe" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForComplexVector operand
-                        return $ apply (unary RealPart) [operand]
+                        return $ app RealPart operand
                     "xIm" -> do
-                        operand <- checkExp context shapeInfo exp
                         onlyForComplexVector operand
-                        return $ apply (unary ImagPart) [operand]
+                        return $ app ImagPart operand
                     "ft" -> do
-                        operand <- checkExp context shapeInfo exp
-                        let reFT = apply (unary ReFT) [operand]
-                        let imFT = apply (unary ImFT) [operand]
-                        return $ apply (binary RealImag) [reFT, imFT]
+                        let reFT = app ReFT operand
+                        let imFT = app ImFT operand
+                        return $ reIm reFT imFT
                     "norm2square" -> do
-                        operand <- checkExp context (Just []) exp
-                        let res
-                                | getNT operand == HE.R =
-                                    apply
-                                        (binaryET InnerProd ElementDefault `hasShape`
-                                         [])
-                                        [operand, operand]
-                                | otherwise =
-                                    let rePart =
-                                            apply (unary RealPart) [operand]
-                                        imPart =
-                                            apply (unary ImagPart) [operand]
-                                     in sumMany
-                                            [ apply
-                                                  (binaryET
-                                                       InnerProd
-                                                       ElementDefault `hasShape`
-                                                   [])
-                                                  [rePart, rePart]
-                                            , apply
-                                                  (binaryET
-                                                       InnerProd
-                                                       ElementDefault `hasShape`
-                                                   [])
-                                                  [imPart, imPart]
-                                            ]
-                        return res
+                        operand <- checkExp context shapeInfo exp
+                        if getNT operand == HE.R
+                            then return $ dot operand operand
+                            else do
+                                let re = app RealPart operand
+                                    im = app ImagPart operand
+                                return $ dot re re `add` dot im im
                     _ ->
                         throwError $
                         ErrorWithPosition
@@ -587,6 +553,7 @@ inferShape context@(vars, consts) exp =
         EIdent (PIdent (_, name))
             | Just (shape, maybeVal) <- Map.lookup name vars -> Just shape
             | Just (shape, val) <- Map.lookup name consts -> Just shape
+            | otherwise -> Nothing
         EPlus exp1 _ exp2 -> anyJust . map (inferShape context) $ [exp1, exp2]
         ERealImag exp1 _ exp2 ->
             anyJust . map (inferShape context) $ [exp1, exp2]
