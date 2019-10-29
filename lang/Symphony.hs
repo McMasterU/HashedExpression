@@ -453,7 +453,7 @@ checkExp context shapeInfo exp =
                     (". The shape of condition is " ++
                      toReadable shape ++
                      ", but the shape of branch " ++
-                     show idx ++ "is " ++ toReadable (getShape e))
+                     show idx ++ " is " ++ toReadable (getShape e))
                     opPos
             unless (HU.allEqual $ map getNT caseExps) $
                 throwError $
@@ -467,6 +467,10 @@ checkExp context shapeInfo exp =
                     unless (getNT operand == HE.R) $
                     throwError $
                     ErrorWithPosition "Operand must be a real vector" opPos
+                onlyForComplexVector operand =
+                    unless (getNT operand == HE.R) $
+                    throwError $
+                    ErrorWithPosition "Operand must be a complex vector" opPos
              in case funName of
                     "sqrt" -> do
                         operand <- checkExp context shapeInfo exp
@@ -528,11 +532,47 @@ checkExp context shapeInfo exp =
                         operand <- checkExp context shapeInfo exp
                         onlyForRealVector operand
                         return $ apply (unary Atanh) [operand]
+                    "xRe" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForComplexVector operand
+                        return $ apply (unary RealPart) [operand]
+                    "xIm" -> do
+                        operand <- checkExp context shapeInfo exp
+                        onlyForComplexVector operand
+                        return $ apply (unary ImagPart) [operand]
                     "ft" -> do
                         operand <- checkExp context shapeInfo exp
                         let reFT = apply (unary ReFT) [operand]
                         let imFT = apply (unary ImFT) [operand]
                         return $ apply (binary RealImag) [reFT, imFT]
+                    "norm2square" -> do
+                        operand <- checkExp context (Just []) exp
+                        let res
+                                | getNT operand == HE.R =
+                                    apply
+                                        (binaryET InnerProd ElementDefault `hasShape`
+                                         [])
+                                        [operand, operand]
+                                | otherwise =
+                                    let rePart =
+                                            apply (unary RealPart) [operand]
+                                        imPart =
+                                            apply (unary ImagPart) [operand]
+                                     in sumMany
+                                            [ apply
+                                                  (binaryET
+                                                       InnerProd
+                                                       ElementDefault `hasShape`
+                                                   [])
+                                                  [rePart, rePart]
+                                            , apply
+                                                  (binaryET
+                                                       InnerProd
+                                                       ElementDefault `hasShape`
+                                                   [])
+                                                  [imPart, imPart]
+                                            ]
+                        return res
                     _ ->
                         throwError $
                         ErrorWithPosition

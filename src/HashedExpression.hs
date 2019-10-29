@@ -238,7 +238,7 @@ data Node
     | Neg ET Arg
     | Scale ET Arg Arg
     -- MARK: only apply to R
-    | Div Arg Arg -- TODO: Delete
+    | Div Arg Arg -- TODO: Delete?
     | Sqrt Arg
     | Sin Arg
     | Cos Arg
