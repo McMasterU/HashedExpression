@@ -108,15 +108,11 @@ transConstraintDecl x = case x of
   ConstraintLower exp bound -> failure x
   ConstraintUpper exp bound -> failure x
   ConstraintEqual exp bound -> failure x
-transOffset :: Offset -> Result
-transOffset x = case x of
-  OffsetPos pinteger -> failure x
-  OffsetNeg tokensub pinteger -> failure x
 transRotateAmount :: RotateAmount -> Result
 transRotateAmount x = case x of
-  RA1D offset -> failure x
-  RA2D offset1 offset2 -> failure x
-  RA3D offset1 offset2 offset3 -> failure x
+  RA1D tint -> failure x
+  RA2D tint1 tint2 -> failure x
+  RA3D tint1 tint2 tint3 -> failure x
 transPiecewiseCase :: PiecewiseCase -> Result
 transPiecewiseCase x = case x of
   PiecewiseCase number exp -> failure x

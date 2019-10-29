@@ -91,16 +91,14 @@ separator nonempty ConstraintDecl ",";
 separator nonempty [ConstraintDecl] ";";
 
 -- Rotate Amount
-OffsetPos. Offset ::= PInteger;
-OffsetNeg. Offset ::= TokenSub PInteger;
-RA1D. RotateAmount ::= "(" Offset ")";
-RA2D. RotateAmount ::= "(" Offset "," Offset ")";
-RA3D. RotateAmount ::= "(" Offset "," Offset "," Offset ")";
+RA1D. RotateAmount ::= "(" TInt ")";
+RA2D. RotateAmount ::= "(" TInt "," TInt ")";
+RA3D. RotateAmount ::= "(" TInt "," TInt "," TInt ")";
 
 -- Piecewise
 PiecewiseCase. PiecewiseCase ::= "it" "<=" Number "->" Exp;
 PiecewiseFinalCase. PiecewiseCase ::= "otherwise" "->" Exp;
-separator PiecewiseCase ";";
+separator nonempty PiecewiseCase ";";
 
 -- Expression
 EPlus. Exp ::= Exp TokenPlus Exp1;

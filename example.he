@@ -28,4 +28,5 @@ let:
   regularization = norm2square (head * smootherX) + norm2square (head * smootherY)
 
 minimize:
-  norm2square ((mask +: zero) * (ft x - (re +: im))) + 3000 * regularization
+//  norm2square ((mask +: zero) * (ft x - (re +: im))) + 3000 * regularization
+  x + 3

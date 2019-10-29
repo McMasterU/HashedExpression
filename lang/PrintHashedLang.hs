@@ -245,22 +245,16 @@ instance Print [AbsHashedLang.ConstraintDecl] where
 instance Print [[AbsHashedLang.ConstraintDecl]] where
   prt = prtList
 
-instance Print AbsHashedLang.Offset where
-  prt i e = case e of
-    AbsHashedLang.OffsetPos pinteger -> prPrec i 0 (concatD [prt 0 pinteger])
-    AbsHashedLang.OffsetNeg tokensub pinteger -> prPrec i 0 (concatD [prt 0 tokensub, prt 0 pinteger])
-
 instance Print AbsHashedLang.RotateAmount where
   prt i e = case e of
-    AbsHashedLang.RA1D offset -> prPrec i 0 (concatD [doc (showString "("), prt 0 offset, doc (showString ")")])
-    AbsHashedLang.RA2D offset1 offset2 -> prPrec i 0 (concatD [doc (showString "("), prt 0 offset1, doc (showString ","), prt 0 offset2, doc (showString ")")])
-    AbsHashedLang.RA3D offset1 offset2 offset3 -> prPrec i 0 (concatD [doc (showString "("), prt 0 offset1, doc (showString ","), prt 0 offset2, doc (showString ","), prt 0 offset3, doc (showString ")")])
+    AbsHashedLang.RA1D tint -> prPrec i 0 (concatD [doc (showString "("), prt 0 tint, doc (showString ")")])
+    AbsHashedLang.RA2D tint1 tint2 -> prPrec i 0 (concatD [doc (showString "("), prt 0 tint1, doc (showString ","), prt 0 tint2, doc (showString ")")])
+    AbsHashedLang.RA3D tint1 tint2 tint3 -> prPrec i 0 (concatD [doc (showString "("), prt 0 tint1, doc (showString ","), prt 0 tint2, doc (showString ","), prt 0 tint3, doc (showString ")")])
 
 instance Print AbsHashedLang.PiecewiseCase where
   prt i e = case e of
     AbsHashedLang.PiecewiseCase number exp -> prPrec i 0 (concatD [doc (showString "it"), doc (showString "<="), prt 0 number, doc (showString "->"), prt 0 exp])
     AbsHashedLang.PiecewiseFinalCase exp -> prPrec i 0 (concatD [doc (showString "otherwise"), doc (showString "->"), prt 0 exp])
-  prtList _ [] = concatD []
   prtList _ [x] = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, doc (showString ";"), prt 0 xs]
 

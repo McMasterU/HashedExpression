@@ -30,7 +30,6 @@ import ErrM
 %name pConstraintDecl ConstraintDecl
 %name pListConstraintDecl ListConstraintDecl
 %name pListListConstraintDecl ListListConstraintDecl
-%name pOffset Offset
 %name pRotateAmount RotateAmount
 %name pPiecewiseCase PiecewiseCase
 %name pListPiecewiseCase ListPiecewiseCase
@@ -208,19 +207,15 @@ ListConstraintDecl : ConstraintDecl { (:[]) $1 }
 ListListConstraintDecl :: { [[ConstraintDecl]] }
 ListListConstraintDecl : ListConstraintDecl { (:[]) $1 }
                        | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
-Offset :: { Offset }
-Offset : PInteger { AbsHashedLang.OffsetPos $1 }
-       | TokenSub PInteger { AbsHashedLang.OffsetNeg $1 $2 }
 RotateAmount :: { RotateAmount }
-RotateAmount : '(' Offset ')' { AbsHashedLang.RA1D $2 }
-             | '(' Offset ',' Offset ')' { AbsHashedLang.RA2D $2 $4 }
-             | '(' Offset ',' Offset ',' Offset ')' { AbsHashedLang.RA3D $2 $4 $6 }
+RotateAmount : '(' TInt ')' { AbsHashedLang.RA1D $2 }
+             | '(' TInt ',' TInt ')' { AbsHashedLang.RA2D $2 $4 }
+             | '(' TInt ',' TInt ',' TInt ')' { AbsHashedLang.RA3D $2 $4 $6 }
 PiecewiseCase :: { PiecewiseCase }
 PiecewiseCase : 'it' '<=' Number '->' Exp { AbsHashedLang.PiecewiseCase $3 $5 }
               | 'otherwise' '->' Exp { AbsHashedLang.PiecewiseFinalCase $3 }
 ListPiecewiseCase :: { [PiecewiseCase] }
-ListPiecewiseCase : {- empty -} { [] }
-                  | PiecewiseCase { (:[]) $1 }
+ListPiecewiseCase : PiecewiseCase { (:[]) $1 }
                   | PiecewiseCase ';' ListPiecewiseCase { (:) $1 $3 }
 Exp :: { Exp }
 Exp : Exp TokenPlus Exp1 { AbsHashedLang.EPlus $1 $2 $3 }

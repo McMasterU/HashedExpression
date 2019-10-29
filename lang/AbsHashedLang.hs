@@ -99,11 +99,8 @@ data ConstraintDecl
     | ConstraintEqual Exp Bound
   deriving (Eq, Ord, Show, Read)
 
-data Offset = OffsetPos PInteger | OffsetNeg TokenSub PInteger
-  deriving (Eq, Ord, Show, Read)
-
 data RotateAmount
-    = RA1D Offset | RA2D Offset Offset | RA3D Offset Offset Offset
+    = RA1D TInt | RA2D TInt TInt | RA3D TInt TInt TInt
   deriving (Eq, Ord, Show, Read)
 
 data PiecewiseCase

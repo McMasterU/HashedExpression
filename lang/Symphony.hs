@@ -18,10 +18,11 @@ import Data.Map (Map)
 import Data.Tuple.HT (fst3)
 import ErrM
 import qualified HashedExpression as HE
-import HashedExpression (Node(..))
+import HashedExpression (ExpressionMap, Node(..))
 import HashedInner
 import qualified HashedNode as HN
 import qualified HashedOperation as HO
+import HashedPrettify
 import qualified HashedSolver as HS
 import qualified HashedUtils as HU
 import LayoutHashedLang
@@ -85,6 +86,9 @@ checkSemantic problem = do
     consts <- checkConstantBlock vars constDecls
     let context = (vars, consts)
     constraintDecls <- getConstraintDecls problem
+    objectiveExp <- getMinizeBlock problem
+    constructedExp <- checkExp (vars, consts) (Just []) objectiveExp
+    liftIO $ print $ debugPrint constructedExp
     throwError $ GeneralError "TODO: haven't completed yet"
   where
     isVariableBlock (BlockVariable declss) = True
@@ -195,6 +199,19 @@ toHEShape s =
         Shape3D (Dim size1) (Dim size2) (Dim size3) ->
             [pInteger2Int size1, pInteger2Int size2, pInteger2Int size3]
 
+toInt :: TInt -> Int
+toInt i =
+    case i of
+        IntPos (PInteger (pos, strVal)) -> read strVal
+        IntNeg tokenSub (PInteger (pos, strVal)) -> -(read strVal)
+
+toRotateAmount :: RotateAmount -> [Int]
+toRotateAmount ra =
+    case ra of
+        RA1D i -> [toInt i]
+        RA2D i1 i2 -> [toInt i1, toInt i2]
+        RA3D i1 i2 i3 -> [toInt i1, toInt i2, toInt i3]
+
 -- |  TODO: To corresponding val
 --
 toHEVal :: Val -> HU.Val
@@ -219,18 +236,16 @@ checkIdent (vars, consts) (pos, name)
 
 -- | TODO: O(n^2) complexity, improve later
 --
-checkExp :: Context -> Maybe HE.Shape -> Exp -> Result (HE.ExpressionMap, Int)
-checkExp context inferredShape exp =
+checkExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, Int)
+checkExp context shapeInfo exp =
     case exp of
         ENumDouble (PDouble (pos, valStr))
-            | Just shape <- inferredShape ->
-                return $ HU.aConst shape (read valStr)
+            | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
             | otherwise ->
                 throwError $
                 ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
         ENumInteger (PInteger (pos, valStr))
-            | Just shape <- inferredShape ->
-                return $ HU.aConst shape (read valStr)
+            | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
             | otherwise ->
                 throwError $
                 ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
@@ -238,11 +253,14 @@ checkExp context inferredShape exp =
             (shape, _) <- checkIdent context (idPos, name)
             return (HU.varWithShape shape name)
         EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
-            let sp =
-                    inferredShape @> inferShape context exp1 @>
-                    inferShape context exp2
-            operand1 <- checkExp context sp exp1
-            operand2 <- checkExp context sp exp2
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2 @>
+                    shapeInfo
+            liftIO $ print inferredShape
+            operand1 <- checkExp context inferredShape exp1
+            liftIO $ print operand1
+            operand2 <- checkExp context inferredShape exp2
+            liftIO $ print operand2
             checkSameShape
                 operand1
                 operand2
@@ -253,13 +271,13 @@ checkExp context inferredShape exp =
                 operand2
                 "Numtype mismatched: trying to add 2 vectors with different numtype"
                 opPos
-            return $ sumMany [operand1, operand2]
+            return $ sumMany [operand1, operand2] -- HERE
         ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
-            let sp =
-                    inferredShape @> inferShape context exp1 @>
-                    inferShape context exp2
-            operand1 <- checkExp context sp exp1
-            operand2 <- checkExp context sp exp2
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2 @>
+                    shapeInfo
+            operand1 <- checkExp context inferredShape exp1
+            operand2 <- checkExp context inferredShape exp2
             checkSameShape
                 operand1
                 operand2
@@ -271,13 +289,13 @@ checkExp context inferredShape exp =
             when (getNT operand2 /= HE.R) $
                 throwError $
                 ErrorWithPosition "Numtype of operand 2 is not real" opPos
-            return $ apply (binary RealImag) [operand1, operand2]
+            return $ apply (binary RealImag) [operand1, operand2] -- HERE
         ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
-            let sp =
-                    inferredShape @> inferShape context exp1 @>
-                    inferShape context exp2
-            operand1 <- checkExp context sp exp1
-            operand2 <- checkExp context sp exp2
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2 @>
+                    shapeInfo
+            operand1 <- checkExp context inferredShape exp1
+            operand2 <- checkExp context inferredShape exp2
             checkSameShape
                 operand1
                 operand2
@@ -290,13 +308,17 @@ checkExp context inferredShape exp =
                 opPos
             return $
                 sumMany
-                    [operand1, apply (unaryET Neg ElementDefault) [operand2]]
+                    [ operand1
+                    , apply
+                          (binaryET Scale ElementDefault) -- HERE
+                          [HU.aConst [] (-1), operand2]
+                    ]
         EMul exp1 (TokenMul (opPos, _)) exp2 -> do
-            let sp =
-                    inferredShape @> inferShape context exp1 @>
-                    inferShape context exp2
-            operand1 <- checkExp context sp exp1
-            operand2 <- checkExp context sp exp2
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2 @>
+                    shapeInfo
+            operand1 <- checkExp context inferredShape exp1
+            operand2 <- checkExp context inferredShape exp2
             checkSameShape
                 operand1
                 operand2
@@ -307,13 +329,82 @@ checkExp context inferredShape exp =
                 operand2
                 "Numtype mismatched: trying to multiply 2 vectors with different numtype"
                 opPos
-            return $ mulMany [operand1, operand2]
-        EDiv exp1 (TokenDiv (opPos, _)) exp2 -> undefined
-        EScale exp1 (TokenScale (opPos, _)) exp2 -> undefined
-        EDot exp1 (TokenDot (opPos, _)) exp2 -> undefined
-        EPower exp1 (TokenPower (opPos, _)) val -> undefined
-        ERotate (TokenRotate (opPos, _)) rotateAmount exp -> undefined
-        ENegate (TokenSub (opPos, _)) exp -> undefined
+            return $ mulMany [operand1, operand2] -- HERE
+        EDiv exp1 (TokenDiv (opPos, _)) exp2 -> do
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2 @>
+                    shapeInfo
+            operand1 <- checkExp context inferredShape exp1
+            operand2 <- checkExp context inferredShape exp2
+            checkSameShape
+                operand1
+                operand2
+                "Shape mismatched: trying to divide 2 vectors with different shape"
+                opPos
+            checkSameNumType
+                operand1
+                operand2
+                "Numtype mismatched: trying to divide 2 vectors with different numtype"
+                opPos
+            return $ mulMany [operand1, apply (unary (Power (-1))) [operand2]] -- HERE
+        EScale exp1 (TokenScale (opPos, _)) exp2 -> do
+            let inferredShape = inferShape context exp1 @> shapeInfo
+            operand1 <- checkExp context (Just []) exp1
+            operand2 <- checkExp context inferredShape exp2
+            when (getShape operand1 /= []) $
+                throwError $
+                ErrorWithPosition
+                    "The first operand of scaling operator is not a scalar"
+                    opPos
+            when (getNT operand1 == HE.C && getNT operand2 == HE.R) $
+                throwError $
+                ErrorWithPosition
+                    "Can't scale a real vector by a complex scalar"
+                    opPos
+            return $ apply (binaryET Scale ElementDefault) [operand1, operand2]
+        EDot exp1 (TokenDot (opPos, _)) exp2 -> do
+            let inferredShape =
+                    inferShape context exp1 @> inferShape context exp2
+            operand1 <- checkExp context inferredShape exp1
+            operand2 <- checkExp context inferredShape exp2
+            checkSameShape
+                operand1
+                operand2
+                "Shape mismatched: trying to take inner product of 2 vectors with different shape"
+                opPos
+            checkSameNumType
+                operand1
+                operand2
+                "Numtype mismatched: trying to take inner product of 2 vectors with different numtype"
+                opPos
+            return $
+                apply
+                    (binaryET InnerProd ElementDefault `hasShape` [])
+                    [operand1, operand2]
+        EPower exp1 (TokenPower (opPos, _)) val -> do
+            operand1 <- checkExp context shapeInfo exp1
+            return $ apply (unary (Power (toInt val))) [operand1]
+        ERotate (TokenRotate (opPos, _)) raStr exp -> do
+            operand <- checkExp context shapeInfo exp
+            let rotateAmount = toRotateAmount raStr
+            let shape = getShape operand
+            when (null shape) $
+                throwError $ ErrorWithPosition "Can't rotate a scalar" opPos
+            when (length shape /= length rotateAmount) $
+                throwError $
+                ErrorWithPosition
+                    ("The rotate amount is for " ++
+                     show (length rotateAmount) ++
+                     "d vector, but the operand is " ++
+                     show (length shape) ++ "d vector")
+                    opPos
+            return $ apply (unary (Rotate rotateAmount)) [operand]
+        ENegate (TokenSub (opPos, _)) exp -> do
+            operand <- checkExp context shapeInfo exp
+            return $
+                apply
+                    (binaryET Scale ElementDefault) -- HERE
+                    [HU.aConst [] (-1), operand]
         EPiecewise (TokenCase (opPos, _)) exp cases -> undefined
         EFun (PIdent (opPos, _)) exp -> undefined
 
@@ -343,39 +434,39 @@ inferShape context@(vars, consts) exp =
         EFun (PIdent _) exp -> anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
 
 checkSameShape ::
-       (HE.ExpressionMap, Int)
-    -> (HE.ExpressionMap, Int)
+       (ExpressionMap, Int)
+    -> (ExpressionMap, Int)
     -> String
     -> (Int, Int)
     -> Result ()
 checkSameShape operand1 operand2 errStr pos = do
     let shape1 = getShape operand1
-        shape2 = getShape operand1
+        shape2 = getShape operand2
     unless (shape1 == shape2) $
         throwError $
         ErrorWithPosition
             (errStr ++
-             ". The shape of LHS is " ++
+             ". The shape of 1st operand is " ++
              toReadable shape1 ++
-             ", but the shape of RHS is " ++ toReadable shape2)
+             ", but the shape of 2nd operand 2 is " ++ toReadable shape2)
             pos
 
 checkSameNumType ::
-       (HE.ExpressionMap, Int)
-    -> (HE.ExpressionMap, Int)
+       (ExpressionMap, Int)
+    -> (ExpressionMap, Int)
     -> String
     -> (Int, Int)
     -> Result ()
 checkSameNumType operand1 operand2 errStr pos = do
     let nt1 = getNT operand1
-        nt2 = getNT operand1
+        nt2 = getNT operand2
     unless (nt1 == nt2) $
         throwError $
         ErrorWithPosition
             (errStr ++
-             ". The numtype of operand 1 is " ++
+             ". The numtype of 1st operand is " ++
              toReadableNT nt1 ++
-             ", but the numtype of operand 2 is " ++ toReadableNT nt2)
+             ", but the numtype of 2nd operand is " ++ toReadableNT nt2)
             pos
 
 -- | Utils
@@ -383,10 +474,10 @@ checkSameNumType operand1 operand2 errStr pos = do
 anyJust :: [Maybe a] -> Maybe a
 anyJust = firstJust id
 
-getShape :: (HE.ExpressionMap, Int) -> HE.Shape
+getShape :: (ExpressionMap, Int) -> HE.Shape
 getShape (mp, n) = HN.retrieveShape n mp
 
-getNT :: (HE.ExpressionMap, Int) -> HE.ET
+getNT :: (ExpressionMap, Int) -> HE.ET
 getNT (mp, n) = HN.retrieveElementType n mp
 
 toReadable :: HE.Shape -> String
