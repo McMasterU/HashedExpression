@@ -202,8 +202,20 @@ toHEShape s =
 toInt :: TInt -> Int
 toInt i =
     case i of
-        IntPos (PInteger (pos, strVal)) -> read strVal
-        IntNeg tokenSub (PInteger (pos, strVal)) -> -(read strVal)
+        IntPos (PInteger (_, strVal)) -> read strVal
+        IntNeg _ (PInteger (_, strVal)) -> -(read strVal)
+
+toDouble :: TDouble -> Double
+toDouble i =
+    case i of
+        DoublePos (PDouble (_, strVal)) -> read strVal
+        DoubleNeg _ (PDouble (_, strVal)) -> -(read strVal)
+
+numToDouble :: Number -> Double
+numToDouble number =
+    case number of
+        NumInt tInt -> fromIntegral $ toInt tInt
+        NumDouble tDouble -> toDouble tDouble
 
 toRotateAmount :: RotateAmount -> [Int]
 toRotateAmount ra =
@@ -405,8 +417,43 @@ checkExp context shapeInfo exp =
                 apply
                     (binaryET Scale ElementDefault) -- HERE
                     [HU.aConst [] (-1), operand]
-        EPiecewise (TokenCase (opPos, _)) exp cases -> undefined
-        EFun (PIdent (opPos, _)) exp -> undefined
+        EPiecewise (TokenCase (opPos, _)) exp cases -> do
+            condition <- checkExp context shapeInfo exp
+            let isLastCase pwcase =
+                    case pwcase of
+                        PiecewiseFinalCase {} -> True
+                        _ -> False
+                extractMark pwcase =
+                    case pwcase of
+                        PiecewiseCase val _ -> [numToDouble val]
+                        PiecewiseFinalCase {} -> []
+                extractExp pwcase =
+                    case pwcase of
+                        PiecewiseCase _ exp -> exp
+                        PiecewiseFinalCase exp -> exp
+                marks = concatMap extractMark cases
+                exps = map extractExp cases
+                shape = getShape condition
+            unless (isLastCase (last cases)) $
+                throwError $
+                ErrorWithPosition
+                    "Piecewise must end with an otherwise case"
+                    opPos
+            unless ((Set.toList . Set.fromList $ marks) == marks) $
+                throwError $
+                ErrorWithPosition "The bounds must be increasing" opPos
+            caseExps <- mapM (checkExp context (Just shape)) exps
+            forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
+                unless (getShape e == shape) $
+                throwError $
+                ErrorWithPosition
+                    (". The shape of condition is " ++
+                     toReadable shape ++
+                     ", but the shape of branch " ++
+                     show idx ++ "is " ++ toReadable (getShape e))
+                    opPos
+            return $ apply (conditionAry (Piecewise marks)) $ condition : caseExps
+        EFun (PIdent (opPos, funName)) exp -> undefined
 
 inferShape :: Context -> Exp -> Maybe HE.Shape
 inferShape context@(vars, consts) exp =
