@@ -16,9 +16,12 @@ main = do
     case args of
         [fileName] -> do
             content <- readFile fileName
-            res <- runExceptT $ parse content
+            putStrLn "Checking your optimization problem...."
+            res <- runExceptT $ parse content >>= checkSemanticAndGenCode
             case res of
                 Left error -> print error
-                Right ast -> do
-                    prob <- runExceptT $ checkSemantic ast
-                    print prob
+                Right proceed -> do
+                    putStrLn "Writing problem.c......"
+                    proceed "."
+                    putStrLn "Done"
+        _ -> putStrLn "Please specify a Symphony source file"

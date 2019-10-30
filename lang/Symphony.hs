@@ -4,7 +4,7 @@
 module Symphony where
 
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import ParHashedLang
 import Text.Regex.Posix
@@ -82,8 +82,8 @@ data Context =
 -- 5. Gen code
 -- check constant block, check operation (shape and element type), ...
 --
-checkSemantic :: Problem -> Result HS.Problem
-checkSemantic problem = do
+checkSemanticAndGenCode :: Problem -> Result (String -> IO ())
+checkSemanticAndGenCode problem = do
     varDecls <- getVarDecls problem -- 1
     vars <- foldM processVariableDecl Map.empty varDecls -- 2
     constDecls <- getConstDecls problem
@@ -103,12 +103,35 @@ checkSemantic problem = do
     constraintDecls <- getConstraintDecls problem
     css <- foldM (processConstraintDecl finalContext) [] constraintDecls
     -- Objective
-    objectiveExp <- getMinimizeBlock problem
-    constructedExp <- constructExp initContext (Just []) objectiveExp
-    liftIO $ print $ debugPrint constructedExp
-    throwError $ GeneralError "TODO: haven't completed yet"
+    parseObjectiveExp <- getMinimizeBlock problem
+    objectiveExp <- constructExp finalContext (Just []) parseObjectiveExp
+    let shape = getShape objectiveExp
+        nt = getNT objectiveExp
+    when (shape /= [] || nt /= HE.R) $
+        throwError $
+        ErrorWithPosition
+            ("Objective should be a real scalar, here it is " ++
+             show (toReadable shape, nt))
+            (getBeginningPosition parseObjectiveExp)
+    let problemGen =
+            HS.constructProblem
+                (wrap objectiveExp)
+                (Map.keys vars)
+                (HS.Constraint css)
+    case problemGen of
+        HS.ProblemValid heProblem -> do
+            let valMap =
+                    Map.mapMaybeWithKey varVal vars `Map.union`
+                    Map.mapMaybeWithKey constVal consts
+            case HS.generateProblemCode valMap heProblem of
+                HS.Invalid reason -> throwError $ GeneralError reason
+                HS.Success res -> return res
+        HS.ProblemInvalid reason -> throwError $ GeneralError reason
   where
     toExp name (shape, _) = HU.varWithShape shape name
+    varVal name (_, Just val) = Just val
+    varVal _ _ = Nothing
+    constVal name (_, val) = Just val
 
 -- | Get decls from blocks
 --
@@ -235,7 +258,8 @@ processConstraintDecl context@Context {..} acc decl = do
             case decl of
                 ConstraintLower {} -> HS.Lower constructedExp boundVal
                 ConstraintUpper {} -> HS.Upper constructedExp boundVal
-                ConstraintEqual {} -> HS.Between constructedExp (boundVal, boundVal)
+                ConstraintEqual {} ->
+                    HS.Between constructedExp (boundVal, boundVal)
     return $ acc ++ [newEntry]
   where
     (exp, bound) =
@@ -248,15 +272,7 @@ processConstraintDecl context@Context {..} acc decl = do
             EIdent (PIdent (_, name))
                 | Just constructedExp <- Map.lookup name declarations
                 , name `Map.member` vars -> Just constructedExp
-                | otherwise -> Nothing
-    boundToVal :: Result HU.Val
-    boundToVal =
-        case bound of
-            ConstantBound (PIdent (pos, name))
-                | Just (_, val) <- Map.lookup name consts -> return val
-                | otherwise ->
-                    throwError $ ErrorWithPosition (name ++ " not found") pos
-            NumberBound num -> return $ HU.VNum (numToDouble num)
+            _ -> Nothing
 
 processLetDecl :: Context -> LetDecl -> Result Context
 processLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
@@ -388,11 +404,8 @@ constructExp context shapeInfo exp =
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
                         shapeInfo
-                liftIO $ print inferredShape
                 operand1 <- constructExp context inferredShape exp1
-                liftIO $ print operand1
                 operand2 <- constructExp context inferredShape exp2
-                liftIO $ print operand2
                 checkSameShape
                     operand1
                     operand2

@@ -1,28 +1,24 @@
 variables:
-  x[128][128] = 0, y[10][10], z[10][10], t
-  a, b, c
+  x[128][128] = 0
 
 constants:
   mask[128][128] = Dataset("mask.h5", "mask")
   im[128][128] = Dataset("im.h5", "im")
   re[128][128] = Dataset("re.h5", "re")
   head[128][128] = Dataset("head.h5", "head")
-  xLowerBound = Dataset("x_lb.h5", "x_lb")
-  xUpperBound = Dataset("x_ub.h5", "x_ub")
+  xLowerBound[128][128] = Dataset("x_lb.h5", "x_lb")
+  xUpperBound[128][128] = Dataset("x_ub.h5", "x_ub")
 
 
 constraints:
   x >= xLowerBound, x <= xUpperBound
-  x <.> y >= 1
-  x >= 3
-  a == 10
 
 
 let:
-  a = case x:
+  hehe = case x <.> x:
     it <= 3 -> 10
     it <= 10 -> 14
-    otherwise -> x <.> y
+    otherwise -> x <.> x
   smootherX = rotate (0, 1) x + rotate (0, -1) x - 2 *. x
   smootherY = rotate (1, 0) x + rotate (-1, 0) x - 2 *. x
   regularization = norm2square (head * smootherX) + norm2square (head * smootherY)
