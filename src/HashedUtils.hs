@@ -225,9 +225,7 @@ data Val
     | V2D (Array (Int, Int) Double)
     | V3D (Array (Int, Int, Int) Double)
     -- MARK: These constructors are for making problems
-    | V1DFile DataFile
-    | V2DFile DataFile
-    | V3DFile DataFile
+    | VFile DataFile
     | VNum Double -- Work for all shape
     deriving (Eq, Show, Ord)
 

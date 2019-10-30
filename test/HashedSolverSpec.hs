@@ -249,8 +249,8 @@ problemsRepo =
             f = x <.> y + z <.> t
             constraints =
                 Constraint
-                    [ x .>= (V2DFile $ TXT "x_lb.txt")
-                    , y .<= (V2DFile $ TXT "y_ub.txt")
+                    [ x .>= (VFile $ TXT "x_lb.txt")
+                    , y .<= (VFile $ TXT "y_ub.txt")
                     , x <.> z .>= VScalar 3
                     ]
             vars = ["x", "y", "z", "t"]
@@ -261,7 +261,7 @@ problemsRepo =
             constraints =
                 Constraint
                     [ x .>= VScalar 5
-                    , y .<= (V2DFile $ TXT "y_ub.txt")
+                    , y .<= (VFile $ TXT "y_ub.txt")
                     , x <.> z .>= VScalar 3
                     ]
             vars = ["x", "y", "z", "t"]
