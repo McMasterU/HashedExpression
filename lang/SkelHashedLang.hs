@@ -42,6 +42,12 @@ transTokenRotate x = case x of
 transTokenCase :: TokenCase -> Result
 transTokenCase x = case x of
   TokenCase string -> failure x
+transPInteger :: PInteger -> Result
+transPInteger x = case x of
+  PInteger string -> failure x
+transPDouble :: PDouble -> Result
+transPDouble x = case x of
+  PDouble string -> failure x
 transPIdent :: PIdent -> Result
 transPIdent x = case x of
   PIdent string -> failure x
@@ -57,12 +63,12 @@ transBlock x = case x of
   BlockMinimize exp -> failure x
 transTInt :: TInt -> Result
 transTInt x = case x of
-  IntPos integer -> failure x
-  IntNeg tokensub integer -> failure x
+  IntPos pinteger -> failure x
+  IntNeg tokensub pinteger -> failure x
 transTDouble :: TDouble -> Result
 transTDouble x = case x of
-  DoublePos double -> failure x
-  DoubleNeg tokensub double -> failure x
+  DoublePos pdouble -> failure x
+  DoubleNeg tokensub pdouble -> failure x
 transNumber :: Number -> Result
 transNumber x = case x of
   NumInt tint -> failure x
@@ -76,7 +82,7 @@ transVal x = case x of
   ValLiteral number -> failure x
 transDim :: Dim -> Result
 transDim x = case x of
-  Dim integer -> failure x
+  Dim pinteger -> failure x
 transShape :: Shape -> Result
 transShape x = case x of
   ShapeScalar -> failure x
@@ -101,15 +107,12 @@ transConstraintDecl :: ConstraintDecl -> Result
 transConstraintDecl x = case x of
   ConstraintLower exp bound -> failure x
   ConstraintUpper exp bound -> failure x
-transOffset :: Offset -> Result
-transOffset x = case x of
-  OffsetPos integer -> failure x
-  OffsetNeg tokensub integer -> failure x
+  ConstraintEqual exp bound -> failure x
 transRotateAmount :: RotateAmount -> Result
 transRotateAmount x = case x of
-  RA1D offset -> failure x
-  RA2D offset1 offset2 -> failure x
-  RA3D offset1 offset2 offset3 -> failure x
+  RA1D tint -> failure x
+  RA2D tint1 tint2 -> failure x
+  RA3D tint1 tint2 tint3 -> failure x
 transPiecewiseCase :: PiecewiseCase -> Result
 transPiecewiseCase x = case x of
   PiecewiseCase number exp -> failure x
@@ -127,8 +130,8 @@ transExp x = case x of
   EFun pident exp -> failure x
   ERotate tokenrotate rotateamount exp -> failure x
   ENegate tokensub exp -> failure x
-  ENumDouble double -> failure x
-  ENumInteger integer -> failure x
+  ENumDouble pdouble -> failure x
+  ENumInteger pinteger -> failure x
   EIdent pident -> failure x
   EPiecewise tokencase exp piecewisecases -> failure x
 

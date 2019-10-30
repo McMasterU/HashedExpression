@@ -30,7 +30,6 @@ import ErrM
 %name pConstraintDecl ConstraintDecl
 %name pListConstraintDecl ListConstraintDecl
 %name pListListConstraintDecl ListListConstraintDecl
-%name pOffset Offset
 %name pRotateAmount RotateAmount
 %name pPiecewiseCase PiecewiseCase
 %name pListPiecewiseCase ListPiecewiseCase
@@ -52,27 +51,26 @@ import ErrM
   ';' { PT _ (TS _ 6) }
   '<=' { PT _ (TS _ 7) }
   '=' { PT _ (TS _ 8) }
-  '>=' { PT _ (TS _ 9) }
-  'Dataset' { PT _ (TS _ 10) }
-  'File' { PT _ (TS _ 11) }
-  'Pattern' { PT _ (TS _ 12) }
-  'Random' { PT _ (TS _ 13) }
-  '[' { PT _ (TS _ 14) }
-  ']' { PT _ (TS _ 15) }
-  'constant' { PT _ (TS _ 16) }
-  'constants' { PT _ (TS _ 17) }
-  'constraint' { PT _ (TS _ 18) }
-  'constraints' { PT _ (TS _ 19) }
-  'it' { PT _ (TS _ 20) }
-  'let' { PT _ (TS _ 21) }
-  'minimize' { PT _ (TS _ 22) }
-  'otherwise' { PT _ (TS _ 23) }
-  'variable' { PT _ (TS _ 24) }
-  'variables' { PT _ (TS _ 25) }
-  '{' { PT _ (TS _ 26) }
-  '}' { PT _ (TS _ 27) }
-  L_integ  { PT _ (TI $$) }
-  L_doubl  { PT _ (TD $$) }
+  '==' { PT _ (TS _ 9) }
+  '>=' { PT _ (TS _ 10) }
+  'Dataset' { PT _ (TS _ 11) }
+  'File' { PT _ (TS _ 12) }
+  'Pattern' { PT _ (TS _ 13) }
+  'Random' { PT _ (TS _ 14) }
+  '[' { PT _ (TS _ 15) }
+  ']' { PT _ (TS _ 16) }
+  'constant' { PT _ (TS _ 17) }
+  'constants' { PT _ (TS _ 18) }
+  'constraint' { PT _ (TS _ 19) }
+  'constraints' { PT _ (TS _ 20) }
+  'it' { PT _ (TS _ 21) }
+  'let' { PT _ (TS _ 22) }
+  'minimize' { PT _ (TS _ 23) }
+  'otherwise' { PT _ (TS _ 24) }
+  'variable' { PT _ (TS _ 25) }
+  'variables' { PT _ (TS _ 26) }
+  '{' { PT _ (TS _ 27) }
+  '}' { PT _ (TS _ 28) }
   L_quoted { PT _ (TL $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
   L_TokenSub { PT _ (T_TokenSub _) }
@@ -85,15 +83,11 @@ import ErrM
   L_TokenPower { PT _ (T_TokenPower _) }
   L_TokenRotate { PT _ (T_TokenRotate _) }
   L_TokenCase { PT _ (T_TokenCase _) }
+  L_PInteger { PT _ (T_PInteger _) }
+  L_PDouble { PT _ (T_PDouble _) }
   L_PIdent { PT _ (T_PIdent _) }
 
 %%
-
-Integer :: { Integer }
-Integer  : L_integ  { (read ( $1)) :: Integer }
-
-Double  :: { Double }
-Double   : L_doubl  { (read ( $1)) :: Double }
 
 String  :: { String }
 String   : L_quoted {  $1 }
@@ -131,6 +125,12 @@ TokenRotate  : L_TokenRotate { TokenRotate (mkPosToken $1)}
 TokenCase :: { TokenCase}
 TokenCase  : L_TokenCase { TokenCase (mkPosToken $1)}
 
+PInteger :: { PInteger}
+PInteger  : L_PInteger { PInteger (mkPosToken $1)}
+
+PDouble :: { PDouble}
+PDouble  : L_PDouble { PDouble (mkPosToken $1)}
+
 PIdent :: { PIdent}
 PIdent  : L_PIdent { PIdent (mkPosToken $1)}
 
@@ -148,11 +148,11 @@ Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariab
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
 TInt :: { TInt }
-TInt : Integer { AbsHashedLang.IntPos $1 }
-     | TokenSub Integer { AbsHashedLang.IntNeg $1 $2 }
+TInt : PInteger { AbsHashedLang.IntPos $1 }
+     | TokenSub PInteger { AbsHashedLang.IntNeg $1 $2 }
 TDouble :: { TDouble }
-TDouble : Double { AbsHashedLang.DoublePos $1 }
-        | TokenSub Double { AbsHashedLang.DoubleNeg $1 $2 }
+TDouble : PDouble { AbsHashedLang.DoublePos $1 }
+        | TokenSub PDouble { AbsHashedLang.DoubleNeg $1 $2 }
 Number :: { Number }
 Number : TInt { AbsHashedLang.NumInt $1 }
        | TDouble { AbsHashedLang.NumDouble $1 }
@@ -163,7 +163,7 @@ Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
     | 'Random' { AbsHashedLang.ValRandom }
     | Number { AbsHashedLang.ValLiteral $1 }
 Dim :: { Dim }
-Dim : '[' Integer ']' { AbsHashedLang.Dim $2 }
+Dim : '[' PInteger ']' { AbsHashedLang.Dim $2 }
 Shape :: { Shape }
 Shape : {- empty -} { AbsHashedLang.ShapeScalar }
       | Dim { AbsHashedLang.Shape1D $1 }
@@ -200,25 +200,22 @@ Bound : PIdent { AbsHashedLang.ConstantBound $1 }
 ConstraintDecl :: { ConstraintDecl }
 ConstraintDecl : Exp '>=' Bound { AbsHashedLang.ConstraintLower $1 $3 }
                | Exp '<=' Bound { AbsHashedLang.ConstraintUpper $1 $3 }
+               | Exp '==' Bound { AbsHashedLang.ConstraintEqual $1 $3 }
 ListConstraintDecl :: { [ConstraintDecl] }
 ListConstraintDecl : ConstraintDecl { (:[]) $1 }
                    | ConstraintDecl ',' ListConstraintDecl { (:) $1 $3 }
 ListListConstraintDecl :: { [[ConstraintDecl]] }
 ListListConstraintDecl : ListConstraintDecl { (:[]) $1 }
                        | ListConstraintDecl ';' ListListConstraintDecl { (:) $1 $3 }
-Offset :: { Offset }
-Offset : Integer { AbsHashedLang.OffsetPos $1 }
-       | TokenSub Integer { AbsHashedLang.OffsetNeg $1 $2 }
 RotateAmount :: { RotateAmount }
-RotateAmount : '(' Offset ')' { AbsHashedLang.RA1D $2 }
-             | '(' Offset ',' Offset ')' { AbsHashedLang.RA2D $2 $4 }
-             | '(' Offset ',' Offset ',' Offset ')' { AbsHashedLang.RA3D $2 $4 $6 }
+RotateAmount : '(' TInt ')' { AbsHashedLang.RA1D $2 }
+             | '(' TInt ',' TInt ')' { AbsHashedLang.RA2D $2 $4 }
+             | '(' TInt ',' TInt ',' TInt ')' { AbsHashedLang.RA3D $2 $4 $6 }
 PiecewiseCase :: { PiecewiseCase }
 PiecewiseCase : 'it' '<=' Number '->' Exp { AbsHashedLang.PiecewiseCase $3 $5 }
               | 'otherwise' '->' Exp { AbsHashedLang.PiecewiseFinalCase $3 }
 ListPiecewiseCase :: { [PiecewiseCase] }
-ListPiecewiseCase : {- empty -} { [] }
-                  | PiecewiseCase { (:[]) $1 }
+ListPiecewiseCase : PiecewiseCase { (:[]) $1 }
                   | PiecewiseCase ';' ListPiecewiseCase { (:) $1 $3 }
 Exp :: { Exp }
 Exp : Exp TokenPlus Exp1 { AbsHashedLang.EPlus $1 $2 $3 }
@@ -245,8 +242,8 @@ Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
      | Exp5 { $1 }
 Exp5 :: { Exp }
 Exp5 : '(' Exp ')' { $2 }
-     | Double { AbsHashedLang.ENumDouble $1 }
-     | Integer { AbsHashedLang.ENumInteger $1 }
+     | PDouble { AbsHashedLang.ENumDouble $1 }
+     | PInteger { AbsHashedLang.ENumInteger $1 }
      | PIdent { AbsHashedLang.EIdent $1 }
 {
 

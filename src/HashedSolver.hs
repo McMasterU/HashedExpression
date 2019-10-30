@@ -299,13 +299,20 @@ constructProblem objectiveFunction varList constraint
                 scalarConstraints
             getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
               where
+                getNum val =
+                    case val of
+                        VScalar num -> num
+                        VNum num -> num
+                        _ ->
+                            error
+                                "Why scalar constraint is bounded by non-scalar ?"
                 update (lb, ub) cs
                     | (mp, n) == getExpressionCS cs =
                         case cs of
-                            Lower _ (VScalar val) -> (max lb val, ub)
-                            Upper _ (VScalar val) -> (lb, min ub val)
-                            Between _ (VScalar val1, VScalar val2) ->
-                                (max lb val1, min ub val2)
+                            Lower _ val -> (max lb (getNum val), ub)
+                            Upper _ val -> (lb, min ub (getNum val))
+                            Between _ (val1, val2) ->
+                                (max lb (getNum val1), min ub (getNum val2))
                     | otherwise = (lb, ub)
             vars = map fst varsWithShape
             toScalarConstraint (mp, n) =
@@ -366,6 +373,13 @@ generateReadValuesCode name val address numDoubles =
         V1DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
         V2DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
         V3DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
+        VNum value ->
+            scoped
+                [ "int i;"
+                , "for (i = 0; i < " ++ show numDoubles ++ "; i++) { "
+                , "  *(" ++ address ++ " + i) = " ++ show value ++ ";"
+                , "}"
+                ]
   where
     readFileText filePath =
         scoped
@@ -381,7 +395,9 @@ generateReadValuesCode name val address numDoubles =
     readFileHD5 filePath dataset =
         scoped
             [ "printf(\"Reading " ++
-              dataset ++ " from HDF5 file " ++ filePath ++ "....\\n\");"
+              name ++
+              " from HDF5 file " ++
+              filePath ++ "in dataset " ++ dataset ++ "....\\n\");"
             , "hid_t file, dset;"
             , "file = H5Fopen (\"" ++
               filePath ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
@@ -678,6 +694,7 @@ generateProblemCode valMaps Problem {..}
 compatible :: Shape -> Val -> Bool
 compatible shape v =
     case (shape, v) of
+        (_, VNum val) -> True
         ([], VScalar val) -> True
         ([x], V1D arr1d)
             | bounds arr1d == (0, x - 1) -> True

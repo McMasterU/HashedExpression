@@ -234,11 +234,11 @@ data Node
     -- MARK: Basics
     | Sum ET Args -- element-wise sum
     | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-    | Power Int Arg -- TODO: Power for Complex or not ?
+    | Power Int Arg
     | Neg ET Arg
     | Scale ET Arg Arg
     -- MARK: only apply to R
-    | Div Arg Arg
+    | Div Arg Arg -- TODO: Delete?
     | Sqrt Arg
     | Sin Arg
     | Cos Arg

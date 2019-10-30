@@ -128,6 +128,12 @@ constWithShape shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
+varWithShape :: Shape -> String -> (ExpressionMap, Int)
+varWithShape shape name = (IM.fromList [(h, node)], h)
+  where
+    node = (shape, Var name)
+    h = hash node
+
 -- |
 --
 isScalarShape :: Shape -> Bool
@@ -218,9 +224,11 @@ data Val
     | V1D (Array Int Double)
     | V2D (Array (Int, Int) Double)
     | V3D (Array (Int, Int, Int) Double)
+    -- MARK: These constructors are for making problems
     | V1DFile DataFile
     | V2DFile DataFile
     | V3DFile DataFile
+    | VNum Double -- Work for all shape
     deriving (Eq, Show, Ord)
 
 type ValMaps = Map String Val

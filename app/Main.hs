@@ -61,8 +61,6 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
-
-
 --main = do
 --    let exp = const 2 * x
 --    showExp $ introduceZeroPartialDerivatives [("y", [2, 3])] . collectDifferentials . exteriorDerivative allVars $ exp
@@ -88,13 +86,10 @@ main = do
         [zero, one] = map (constant2D @128 @128) [1, 0]
     let objectiveFunction = x <.> y
     let vars = ["x", "y"]
-    let constraint = Constraint []
+    let constraint = Constraint [x .>= VNum 1, y .>= VNum 1]
     let (ProblemValid problem) =
             constructProblem objectiveFunction vars constraint
-    let valMap =
-            fromList
-                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
-                ]
+    let valMap = fromList [("x", VNum 4), ("y", VNum 5)]
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str
         Success proceed -> proceed "algorithms/lbfgs-b"

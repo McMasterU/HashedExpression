@@ -267,6 +267,13 @@ problemsRepo =
             vars = ["x", "y", "z", "t"]
          in constructProblem f vars constraints
       , False)
+    , ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
+            f = x <.> y + z <.> t
+            constraints =
+                Constraint [x .>= VNum 5, y .<= VNum 10, x <.> z .>= VNum 18]
+            vars = ["x", "y", "z", "t"]
+         in constructProblem f vars constraints
+      , True)
     ]
 
 spec :: Spec
