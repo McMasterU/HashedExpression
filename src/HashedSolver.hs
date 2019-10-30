@@ -367,12 +367,8 @@ generateReadValuesCode name val address numDoubles =
         V1D _ -> readFileText (name ++ ".txt")
         V2D _ -> readFileText (name ++ ".txt")
         V3D _ -> readFileText (name ++ ".txt")
-        V1DFile (TXT filePath) -> readFileText filePath
-        V2DFile (TXT filePath) -> readFileText filePath
-        V3DFile (TXT filePath) -> readFileText filePath
-        V1DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
-        V2DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
-        V3DFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
+        VFile (TXT filePath) -> readFileText filePath
+        VFile (HDF5 filePath dataset) -> readFileHD5 filePath dataset
         VNum value ->
             scoped
                 [ "int i;"
@@ -397,7 +393,7 @@ generateReadValuesCode name val address numDoubles =
             [ "printf(\"Reading " ++
               name ++
               " from HDF5 file " ++
-              filePath ++ "in dataset " ++ dataset ++ "....\\n\");"
+              filePath ++ " in dataset " ++ dataset ++ "....\\n\");"
             , "hid_t file, dset;"
             , "file = H5Fopen (\"" ++
               filePath ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);"
@@ -694,7 +690,8 @@ generateProblemCode valMaps Problem {..}
 compatible :: Shape -> Val -> Bool
 compatible shape v =
     case (shape, v) of
-        (_, VNum val) -> True
+        (_, VNum _) -> True
+        (_, VFile _) -> True
         ([], VScalar val) -> True
         ([x], V1D arr1d)
             | bounds arr1d == (0, x - 1) -> True
@@ -702,9 +699,6 @@ compatible shape v =
             | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
         ([x, y, z], V3D arr3d)
             | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
-        ([x], V1DFile {}) -> True
-        ([x, y], V2DFile {}) -> True
-        ([x, y, z], V3DFile {}) -> True
         _ -> False
 
 -- | 

@@ -73,8 +73,8 @@ smilingFaceProblem = do
                  (head * (rotate (0, 1) x + rotate (0, -1) x - const 2 *. x)) +
              norm2square
                  (head * (rotate (1, 0) x + rotate (-1, 0) x - const 2 *. x)))
-    let xLowerBound = V2DFile $ HDF5 "x_lb.h5" "x_lb"
-        xUpperBound = V2DFile $ HDF5 "x_ub.h5" "x_lb"
+    let xLowerBound = VFile $ HDF5 "x_lb.h5" "x_lb"
+        xUpperBound = VFile $ HDF5 "x_ub.h5" "x_lb"
     let constraint =
             Constraint
                 [ x .>= xLowerBound
@@ -86,10 +86,10 @@ smilingFaceProblem = do
             constructProblem objectiveFunction vars constraint
     let valMap =
             fromList
-                [ ("mask", V2DFile $ HDF5 "mask.h5" "mask")
-                , ("re", V2DFile $ HDF5 "re.h5" "re")
-                , ("head", V2DFile $ HDF5 "head.h5" "head")
-                , ("im", V2DFile $ HDF5 "im.h5" "im")
+                [ ("mask", VFile $ HDF5 "mask.h5" "mask")
+                , ("re", VFile $ HDF5 "re.h5" "re")
+                , ("head", VFile $ HDF5 "head.h5" "head")
+                , ("im", VFile $ HDF5 "im.h5" "im")
                 , ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
                 ]
     case generateProblemCode valMap problem of

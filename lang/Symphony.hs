@@ -3,6 +3,7 @@
 
 module Symphony where
 
+import qualified Data.Array as Array
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
@@ -200,8 +201,9 @@ processVariableDecl accRes decl = do
         VariableWithInit (PIdent (pos, name)) shape val -> do
             checkName name pos
             checkVal (toHEShape shape) val
-            return $
-                Map.insert name (toHEShape shape, Just (toHEVal val)) accRes
+            let heShape = toHEShape shape
+            heVal <- toHEVal heShape val
+            return $ Map.insert name (heShape, Just heVal) accRes
 
 processConstantDecl :: Vars -> Consts -> ConstantDecl -> Result Consts
 processConstantDecl vars accRes decl = do
@@ -211,8 +213,10 @@ processConstantDecl vars accRes decl = do
     when (name `Map.member` vars) $
         throwError $
         ErrorWithPosition (name ++ " already defined as variables") pos
-    checkVal (toHEShape shape) val
-    return $ Map.insert name (toHEShape shape, toHEVal val) accRes
+    let heShape = toHEShape shape
+    checkVal heShape val
+    heVal <- toHEVal heShape val
+    return $ Map.insert name (toHEShape shape, heVal) accRes
 
 processConstraintDecl ::
        Context
@@ -349,14 +353,36 @@ getBeginningPosition exp =
 
 -- |  TODO: 
 --
-toHEVal :: Val -> HU.Val
-toHEVal v =
+toHEVal :: HE.Shape -> Val -> Result HU.Val
+toHEVal shape v =
     case v of
-        ValFile _ -> HU.VNum 3
-        ValDataset _ _ -> HU.VNum 3
-        ValPattern _ -> HU.VNum 3
-        ValRandom -> HU.VNum 3
-        ValLiteral _ -> HU.VNum 3
+        ValFile filePath -> return $ HU.VFile $ HU.TXT filePath
+        ValDataset filePath dataset -> return $ HU.VFile $ HU.HDF5 filePath dataset
+        ValPattern (KWDataPattern pattern) ->
+            case (pattern, shape) of
+                ("FIRST_ROW_1", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    replicate size1 1 ++ repeat 0
+                ("LAST_ROW_1", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    replicate (size1 * (size2 - 1)) 0 ++ repeat 1
+                ("FIRST_COLUMN_1", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    concat $ replicate size1 $ 1 : replicate (size2 - 1) 0
+                ("LAST_COLUMN_1", [size1, size2]) -> 
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    concat $ replicate size1 $ replicate (size2 - 1) 0 ++ [1]
+                _ ->
+                    throwError $
+                    GeneralError $
+                    "Pattern " ++
+                    pattern ++ " is incompatible with the shape or not supported yet"
+        ValRandom -> return $ HU.VNum 3
+        ValLiteral num -> return $ HU.VNum (numToDouble num)
 
 -- |  TODO: Check if val is valid w.r.t shape
 --
