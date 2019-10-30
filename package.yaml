@@ -37,6 +37,9 @@ extra-source-files:
   - lang/*.hs
   - ChangeLog.md
 
+build-tools:
+  - alex
+  - happy
 
 
 library:

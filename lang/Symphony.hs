@@ -85,9 +85,9 @@ data Context =
 checkSemantic :: Problem -> Result HS.Problem
 checkSemantic problem = do
     varDecls <- getVarDecls problem -- 1
-    vars <- checkVariableBlock varDecls -- 2
+    vars <- foldM processVariableDecl Map.empty varDecls -- 2
     constDecls <- getConstDecls problem
-    consts <- checkConstantBlock vars constDecls
+    consts <- foldM (processConstantDecl vars) Map.empty constDecls
     let initContext =
             Context
                 { declarations =
@@ -99,17 +99,19 @@ checkSemantic problem = do
     letDecls <- getLetDecls problem
     finalContext <- foldM processLetDecl initContext letDecls
     -- Complete processing context (variables, constants, declared values)
+    -- Constraint
     constraintDecls <- getConstraintDecls problem
-    css <- processConstraintBlock finalContext constraintDecls
+    css <- foldM (processConstraintDecl finalContext) [] constraintDecls
+    -- Objective
     objectiveExp <- getMinimizeBlock problem
     constructedExp <- constructExp initContext (Just []) objectiveExp
     liftIO $ print $ debugPrint constructedExp
     throwError $ GeneralError "TODO: haven't completed yet"
   where
-    isVariableBlock (BlockVariable declss) = True
-    isVariableBlock _ = False
     toExp name (shape, _) = HU.varWithShape shape name
 
+-- | Get decls from blocks
+--
 getVarDecls :: Problem -> Result [VariableDecl]
 getVarDecls (Problem blocks) =
     case filter isVariableBlock blocks of
@@ -160,45 +162,101 @@ getMinimizeBlock (Problem blocks) =
     isMinimizeBlock (BlockMinimize declss) = True
     isMinimizeBlock _ = False
 
-checkVariableBlock :: [VariableDecl] -> Result Vars
-checkVariableBlock = foldl f (return Map.empty)
-  where
-    f :: Result Vars -> VariableDecl -> Result Vars
-    f acc decl = do
-        accRes <- acc
-        let checkName name pos =
-                when (name `Map.member` accRes) $
-                throwError $
-                ErrorWithPosition ("Duplicate declaration of " ++ name) pos
-        case decl of
-            VariableNoInit (PIdent (pos, name)) shape -> do
-                checkName name pos
-                return $ Map.insert name (toHEShape shape, Nothing) accRes
-            VariableWithInit (PIdent (pos, name)) shape val -> do
-                checkName name pos
-                checkVal (toHEShape shape) val
-                return $
-                    Map.insert name (toHEShape shape, Just (toHEVal val)) accRes
-
-checkConstantBlock :: Vars -> [ConstantDecl] -> Result Consts
-checkConstantBlock vars = foldl f (return Map.empty)
-  where
-    f :: Result Consts -> ConstantDecl -> Result Consts
-    f acc decl = do
-        accRes <- acc
-        let (ConstantDecl (PIdent (pos, name)) shape val) = decl
-        when (name `Map.member` accRes) $
+-- | Process declaration
+--
+processVariableDecl :: Vars -> VariableDecl -> Result Vars
+processVariableDecl accRes decl = do
+    let checkName name pos =
+            when (name `Map.member` accRes) $
             throwError $
             ErrorWithPosition ("Duplicate declaration of " ++ name) pos
-        when (name `Map.member` vars) $
-            throwError $
-            ErrorWithPosition (name ++ " already defined as variables") pos
-        checkVal (toHEShape shape) val
-        return $ Map.insert name (toHEShape shape, toHEVal val) accRes
+    case decl of
+        VariableNoInit (PIdent (pos, name)) shape -> do
+            checkName name pos
+            return $ Map.insert name (toHEShape shape, Nothing) accRes
+        VariableWithInit (PIdent (pos, name)) shape val -> do
+            checkName name pos
+            checkVal (toHEShape shape) val
+            return $
+                Map.insert name (toHEShape shape, Just (toHEVal val)) accRes
 
-processConstraintBlock ::
-       Context -> [ConstraintDecl] -> Result [HS.ConstraintStatement]
-processConstraintBlock context cDcls = undefined
+processConstantDecl :: Vars -> Consts -> ConstantDecl -> Result Consts
+processConstantDecl vars accRes decl = do
+    let (ConstantDecl (PIdent (pos, name)) shape val) = decl
+    when (name `Map.member` accRes) $
+        throwError $ ErrorWithPosition ("Duplicate declaration of " ++ name) pos
+    when (name `Map.member` vars) $
+        throwError $
+        ErrorWithPosition (name ++ " already defined as variables") pos
+    checkVal (toHEShape shape) val
+    return $ Map.insert name (toHEShape shape, toHEVal val) accRes
+
+processConstraintDecl ::
+       Context
+    -> [HS.ConstraintStatement]
+    -> ConstraintDecl
+    -> Result [HS.ConstraintStatement]
+processConstraintDecl context@Context {..} acc decl = do
+    (constructedExp, boundVal) <-
+        case (isVariable exp, bound) of
+            (Just varExp, ConstantBound (PIdent (pos, name)))
+                | Just (shape, val) <- Map.lookup name consts -> do
+                    when (shape /= getShape varExp) $
+                        throwError $
+                        ErrorWithPosition
+                            "Shape mismatched: the bound doesn't have same shape as the variable"
+                            pos
+                    return (varExp, val)
+                | otherwise ->
+                    throwError $ ErrorWithPosition (name ++ " not found") pos
+            (Just varExp, NumberBound num) ->
+                return (varExp, HU.VNum (numToDouble num))
+            _ -> do
+                scalarExp <- constructExp context Nothing exp
+                when (getShape scalarExp /= []) $
+                    throwError $
+                    ErrorWithPosition
+                        ("Higher-dimension (in)equality is not supported yet, here the expression has shape " ++
+                         toReadable (getShape scalarExp))
+                        (getBeginningPosition exp)
+                case bound of
+                    ConstantBound (PIdent (pos, name))
+                        | Just (shape, val) <- Map.lookup name consts -> do
+                            when (shape /= getShape scalarExp) $
+                                throwError $
+                                ErrorWithPosition "The bound must be scalar" pos
+                            return (scalarExp, val)
+                        | otherwise ->
+                            throwError $
+                            ErrorWithPosition (name ++ " not found") pos
+                    NumberBound num ->
+                        return (scalarExp, HU.VNum (numToDouble num))
+    let newEntry =
+            case decl of
+                ConstraintLower {} -> HS.Lower constructedExp boundVal
+                ConstraintUpper {} -> HS.Upper constructedExp boundVal
+                ConstraintEqual {} -> HS.Between constructedExp (boundVal, boundVal)
+    return $ acc ++ [newEntry]
+  where
+    (exp, bound) =
+        case decl of
+            ConstraintLower exp bound -> (exp, bound)
+            ConstraintUpper exp bound -> (exp, bound)
+            ConstraintEqual exp bound -> (exp, bound)
+    isVariable exp =
+        case exp of
+            EIdent (PIdent (_, name))
+                | Just constructedExp <- Map.lookup name declarations
+                , name `Map.member` vars -> Just constructedExp
+                | otherwise -> Nothing
+    boundToVal :: Result HU.Val
+    boundToVal =
+        case bound of
+            ConstantBound (PIdent (pos, name))
+                | Just (_, val) <- Map.lookup name consts -> return val
+                | otherwise ->
+                    throwError $ ErrorWithPosition (name ++ " not found") pos
+            NumberBound num -> return $ HU.VNum (numToDouble num)
 
 processLetDecl :: Context -> LetDecl -> Result Context
 processLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
@@ -209,18 +267,16 @@ processLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
         throwError $
         ErrorWithPosition (name ++ " already defined as a variable") pos
     when (name `Map.member` declarations) $
-        throwError $
-        ErrorWithPosition (name ++ " already taken") pos
+        throwError $ ErrorWithPosition (name ++ " already taken") pos
     constructedExp <- constructExp context Nothing exp
     let newDeclarations = Map.insert name constructedExp declarations
-    return $ context { declarations = newDeclarations }
+    return $ context {declarations = newDeclarations}
 
---    constructedExp <- checkExp
+-- | Helpers, convert between parse type and HashedExpression type
+--
 pInteger2Int :: PInteger -> Int
 pInteger2Int (PInteger (_, val)) = read val
 
--- | Helpers
---
 toHEShape :: Shape -> HE.Shape
 toHEShape s =
     case s of
@@ -256,7 +312,26 @@ toRotateAmount ra =
         RA2D i1 i2 -> [toInt i1, toInt i2]
         RA3D i1 i2 i3 -> [toInt i1, toInt i2, toInt i3]
 
--- |  TODO: To corresponding val
+getBeginningPosition :: Exp -> (Int, Int)
+getBeginningPosition exp =
+    case exp of
+        EPlus exp _ _ -> getBeginningPosition exp
+        ERealImag exp _ _ -> getBeginningPosition exp
+        ESubtract exp _ _ -> getBeginningPosition exp
+        EMul exp _ _ -> getBeginningPosition exp
+        EDiv exp _ _ -> getBeginningPosition exp
+        EScale exp _ _ -> getBeginningPosition exp
+        EDot exp _ _ -> getBeginningPosition exp
+        EPower exp _ _ -> getBeginningPosition exp
+        EFun (PIdent (pos, _)) _ -> pos
+        ERotate (TokenRotate (pos, _)) _ _ -> pos
+        ENegate (TokenSub (pos, _)) _ -> pos
+        ENumDouble (PDouble (pos, _)) -> pos
+        ENumInteger (PInteger (pos, _)) -> pos
+        EIdent (PIdent (pos, _)) -> pos
+        EPiecewise (TokenCase (pos, _)) exp _ -> pos
+
+-- |  TODO: 
 --
 toHEVal :: Val -> HU.Val
 toHEVal v =
@@ -272,7 +347,8 @@ toHEVal v =
 checkVal :: HE.Shape -> Val -> Result ()
 checkVal shape val = return ()
 
-retrieveExpFromIdent :: Context -> ((Int, Int), String) -> Result (ExpressionMap, Int)
+retrieveExpFromIdent ::
+       Context -> ((Int, Int), String) -> Result (ExpressionMap, Int)
 retrieveExpFromIdent context@Context {..} (pos, name)
     | Just exp <- Map.lookup name declarations = return exp
     | otherwise = throwError $ ErrorWithPosition (name ++ " is undefined") pos
@@ -306,7 +382,8 @@ constructExp context shapeInfo exp =
                     ErrorWithPosition
                         ("Ambiguous shape of literal " ++ valStr)
                         pos
-            EIdent (PIdent (idPos, name)) -> retrieveExpFromIdent context (idPos, name)
+            EIdent (PIdent (idPos, name)) ->
+                retrieveExpFromIdent context (idPos, name)
             EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
                 let inferredShape =
                         inferShape context exp1 @> inferShape context exp2 @>
