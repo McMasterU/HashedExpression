@@ -8,5 +8,6 @@
 !reconstructMRI.sp
 !*.c
 !*.pdf
+!*.md
 problem.c
 
