@@ -7,3 +7,5 @@
 !preprocess.py
 !reconstructMRI.sp
 !*.c
+problem.c
+
