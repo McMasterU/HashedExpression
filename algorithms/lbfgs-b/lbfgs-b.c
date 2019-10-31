@@ -10,6 +10,8 @@
 
 #define M 10
 
+#define WORKING_SPACE ((2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M)
+
 extern const char* var_name[NUM_VARIABLES];
 extern const int var_num_dim[NUM_VARIABLES];
 extern const int var_shape[NUM_VARIABLES][3];
@@ -78,7 +80,6 @@ int main() {
 
     // wa - working space
     // the size is at least (2mmax + 5)nmax + 12mmax^2 + 12mmax.
-    const int WORKING_SPACE = (2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M;
     static double wa[WORKING_SPACE + 5];
 
     // iwa is an INTEGER  array of length 3nmax used as
