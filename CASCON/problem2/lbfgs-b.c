@@ -50,40 +50,41 @@ void print_vars() {
   }
 }
 
+double dsave[29];
+integer isave[44];
+logical lsave[4];
+
+// f - objective, g - gradient
+double f, g[NUM_ACTUAL_VARIABLES];
+double* x = ptr + VARS_START_OFFSET;
+// l - lower bound, u - upper bound
+// nbd(i)= 0 if x(i) is unbounded,
+//         1 if x(i) has only a lower bound,
+//         2 if x(i) has both lower and upper bounds, and
+//         3 if x(i) has only an upper bound.
+double l[NUM_ACTUAL_VARIABLES], u[NUM_ACTUAL_VARIABLES];
+integer nbd[NUM_ACTUAL_VARIABLES];
+
+// m - number of gradient vectors use to approximate hessian
+// n - number of variables
+integer m = M, n = NUM_ACTUAL_VARIABLES;
+
+// wa - working space
+// the size is at least (2mmax + 5)nmax + 12mmax^2 + 12mmax.
+const int WORKING_SPACE = (2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M;
+double wa[WORKING_SPACE + 5];
+
+// iwa is an INTEGER  array of length 3nmax used as
+//   workspace. DON'T TOUCH
+integer iwa[3 * NUM_ACTUAL_VARIABLES + 5];
+
 int main() {
     int i, j;
     // Helpers, DON'T TOUCH
-    static double dsave[29];
-    static integer isave[44];
-    static logical lsave[4];
     static integer taskValue;
     static integer *task=&taskValue;
     static integer csaveValue;
     static integer *csave=&csaveValue;
-
-    // f - objective, g - gradient
-    static double f, g[NUM_ACTUAL_VARIABLES];
-    static double* x = ptr + VARS_START_OFFSET;
-    // l - lower bound, u - upper bound
-    // nbd(i)= 0 if x(i) is unbounded,
-    //         1 if x(i) has only a lower bound,
-    //         2 if x(i) has both lower and upper bounds, and
-    //         3 if x(i) has only an upper bound.
-    static double l[NUM_ACTUAL_VARIABLES], u[NUM_ACTUAL_VARIABLES];
-    static integer nbd[NUM_ACTUAL_VARIABLES];
-
-    // m - number of gradient vectors use to approximate hessian
-    // n - number of variables
-    static integer m = M, n = NUM_ACTUAL_VARIABLES;
-
-    // wa - working space
-    // the size is at least (2mmax + 5)nmax + 12mmax^2 + 12mmax.
-    const int WORKING_SPACE = (2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M;
-    static double wa[WORKING_SPACE + 5];
-
-    // iwa is an INTEGER  array of length 3nmax used as
-    //   workspace. DON'T TOUCH
-    static integer iwa[3 * NUM_ACTUAL_VARIABLES + 5];
 
 
     // MARK - STOPPING CRITERIA
