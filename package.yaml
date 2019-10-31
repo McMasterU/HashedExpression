@@ -57,7 +57,7 @@ executables:
     dependencies:
       - HashedExpression
       - hspec
-  HashedExpression-lang:
+  symphony:
     main:                Main.hs
     source-dirs:         lang
     ghc-options:

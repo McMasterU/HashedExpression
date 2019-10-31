@@ -1,7 +1,7 @@
 CC = gcc
 
 CFLAGS  = -Wall -std=c11 $(shell pkg-config --cflags ipopt)
-FAST_FLAGS  = -Wall -std=c11 -Ofast $(shell pkg-config --cflags ipopt)
+FAST_FLAGS  = $(CFLAGS) -Ofast
 
 LINK_LIBRARY = -lipopt -lm -lfftw3 -lhdf5
 

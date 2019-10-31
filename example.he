@@ -1,6 +1,5 @@
 variables:
-  x[128][128] = 0
-  y
+  x[128][128] = 0, y
 
 
 constants:

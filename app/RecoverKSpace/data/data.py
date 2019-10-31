@@ -7,7 +7,9 @@ import h5py
 
 np.set_printoptions(threshold=sys.maxsize)
 
-
+# ----------------------------------------------------
+# Helpers
+# ----------------------------------------------------
 def save_file_hdf5(numpy_data, var_name, path="."):
     numpy_data = numpy_data.astype('float64')
     hf = h5py.File(path + "/" + var_name + ".h5", "w")
@@ -18,15 +20,6 @@ def save_file_hdf5(numpy_data, var_name, path="."):
 def show_img(data):
     plt.imshow(data, cmap='gray')
     plt.show()
-
-
-# def show_many_imgs(row, column, imgs):
-#     i = 1
-#     for img in imgs:
-#         plt.subplot(row, column, i)
-#         plt.imshow(img, cmap='gray')
-#         i = i + 1
-#     plt.show()
 
 
 def rgb2gray(rgb):
@@ -46,40 +39,35 @@ def main():
     (r, c) = wanted_image.shape
 
     # noise image
-    noise_mean = 0;
-    noise_sigma = 10;
+    noise_mean = 0
+    noise_sigma = 10
     gaussian = np.random.normal(noise_mean, noise_sigma, (r, c))
-    img = wanted_image + gaussian
+    noised_imag = wanted_image + gaussian
 
-    show_img(img)
-
-    # show_img(img)
-
-    # get the region of head
-    median = normalize(ndimage.median_filter(img, 10));
-    head = median > 0.1
 
     # k-space of the data
-    img_fft = np.fft.fft2(img)
-    re = np.real(img_fft)
-    im = np.imag(img_fft)
+    noise_k_space = np.fft.fft2(noised_imag)
+    re = np.real(noise_k_space)
+    im = np.imag(noise_k_space)
     mask = np.ones((r, c))
 
     def skip_every(n):
         return [i for i in range(1, r) if (i % n == 0)]
 
-    for i in skip_every(4):
+    for i in skip_every(3):
         re[i] = 0
         im[i] = 0
         mask[i] = 0
 
     kspace = re + 1j * im
-    kspaceM = 20 * np.log(np.fft.fftshift(np.absolute(kspace)))
+    img = np.real(np.fft.ifft2(kspace))
+    show_img(img)
+    median = normalize(ndimage.median_filter(img, 10))
+    head = median > 0.1
+    show_img(head)
 
-    # show_img(np.abs(np.fft.ifft2(kspace)))
-    # show_img(kspaceM)
-    bound_noise = 1;
-
+    # get the region of head
+    bound_noise = 2
     x_ub = np.ones((r, c)) * np.PINF
     x_lb = np.ones((r, c)) * np.NINF
     for i in range(r):
@@ -90,6 +78,7 @@ def main():
             else:
                 x_lb[i, j] = 0
 
+    # Save file
     save_file_hdf5(re, "re")
     save_file_hdf5(im, "im")
     save_file_hdf5(head, "head")

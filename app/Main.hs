@@ -80,16 +80,16 @@ import ToF.VelocityGenerator
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ problem
---main = smilingFaceProblem
-main = do
-    let [x, y] = map (variable2D @128 @128) ["x", "y"]
-        [zero, one] = map (constant2D @128 @128) [1, 0]
-    let objectiveFunction = x <.> y
-    let vars = ["x", "y"]
-    let constraint = Constraint [x .>= VNum 1, y .>= VNum 1]
-    let (ProblemValid problem) =
-            constructProblem objectiveFunction vars constraint
-    let valMap = fromList [("x", VNum 4), ("y", VNum 5)]
-    case generateProblemCode valMap problem of
-        Invalid str -> putStrLn str
-        Success proceed -> proceed "algorithms/lbfgs-b"
+main = smilingFaceProblem
+--main = do
+--    let [x, y] = map (variable2D @128 @128) ["x", "y"]
+--        [zero, one] = map (constant2D @128 @128) [1, 0]
+--    let objectiveFunction = x <.> y
+--    let vars = ["x", "y"]
+--    let constraint = Constraint [x .>= VNum 1, y .>= VNum 1]
+--    let (ProblemValid problem) =
+--            constructProblem objectiveFunction vars constraint
+--    let valMap = fromList [("x", VNum 4), ("y", VNum 5)]
+--    case generateProblemCode valMap problem of
+--        Invalid str -> putStrLn str
+--        Success proceed -> proceed "algorithms/lbfgs-b"

@@ -13,4 +13,4 @@ clean:
 
 parse:
 	stack build --fast
-	stack exec HashedExpression-lang example.he
+	stack exec symphony example.he
