@@ -203,7 +203,7 @@ int main()
    read_values();
 
    /* variables are allocated sequentially in ptr memory */
-   x = sdata->data + VARS_START_OFFSET;
+   x = ptr + VARS_START_OFFSET;
 
    /* allocate space to store the bound multipliers at the solution */
    mult_g = (Number*) malloc(sizeof(Number) * NUM_SCALAR_CONSTRAINT);
@@ -276,8 +276,10 @@ Bool eval_f(
 {
   SharedData sdata = (SharedData)user_data;
 
+  memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES);
+
   evaluate_objective();
-  *obj_value = sdata->data[objective_offset];
+  *obj_value = ptr[objective_offset];
 
   return TRUE;
 }
@@ -292,6 +294,7 @@ Bool eval_grad_f(
 {
   SharedData sdata = (SharedData)user_data;
 
+  memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_partial_derivatives();
 
   /* copy partial derivatives from shared memory into grad_f
@@ -301,8 +304,8 @@ Bool eval_grad_f(
   int i;
   int acc = 0;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    int pOff = partial_derivative_offset[i]; 
-    memcpy(&grad_f[acc],&(sdata->data[pOff]),sizeof(Number)*var_size[i]);
+    int pOff = partial_derivative_offset[i];
+    memcpy(&grad_f[acc],&(ptr[pOff]),sizeof(double)*var_size[i]);
     acc += var_size[i];
   }
 
@@ -320,6 +323,7 @@ Bool eval_g(
 {
   SharedData sdata = (SharedData)user_data;
 
+  memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES); 
   evaluate_scalar_constraints();
 
   // TODO scalar constraints are always ... scalars right?
@@ -327,7 +331,7 @@ Bool eval_g(
   int i;
   for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
     int scOff = sc_offset[i];
-    g[i] = sdata->data[scOff];
+    g[i] = ptr[scOff];
   }
   return TRUE;
 }
@@ -361,6 +365,7 @@ Bool eval_jac_g(
    }
    else
    {
+     memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES); 
      /* evaluate jacobian of the constraints */
      evaluate_scalar_constraints_jacobian();
 
@@ -372,7 +377,7 @@ Bool eval_jac_g(
        for (j = 0; j < NUM_VARIABLES; j++) {
          int sc_off = sc_partial_derivative_offset[i][j];
          int var_sz = var_shape[j][0] * var_shape[j][1] * var_shape[j][2];
-         Number *p = sdata->data;
+         Number *p = ptr;
          memcpy(&values[acc],&p[sc_off],sizeof(Number)*var_sz);
          acc += var_sz;
        }
