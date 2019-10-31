@@ -17,10 +17,7 @@ TIMER   = lib/timer.c
 SRC = $(LBFGSB) $(LINPACK) $(BLAS) $(TIMER)
 
 all: lbfgs-b.c problem.c utils.c $(SRC)
-	$(CC) -o lbfgs-b $(CFLAGS) lbfgs-b.c $(SRC) $(LINK_LIBRARY)
-
-fast: lbfgs-b.c problem.c utils.c $(SRC)
 	$(CC) -o lbfgs-b $(FAST_FLAGS) lbfgs-b.c $(SRC) $(LINK_LIBRARY)
 
 clean:
-	rm mask.h5 x_ub.h5 x_lb.h5 problem.c
+	-rm signal.h5 x_ub.h5 x_lb.h5 problem.c x_out.h5

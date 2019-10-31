@@ -4,8 +4,9 @@
 !im.h5
 !re.h5
 !Makefile
-!preprocess.py
+!*.py
 !reconstructMRI.sp
 !*.c
+!*.pdf
 problem.c
 

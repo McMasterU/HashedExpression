@@ -87,6 +87,7 @@ smilingFaceProblem = do
                 [ ("mask", VFile $ HDF5 "mask.h5" "mask")
                 , ("re", VFile $ HDF5 "re.h5" "re")
                 , ("im", VFile $ HDF5 "im.h5" "im")
+                , ("x", VNum 0)
                 ]
     case generateProblemCode valMap problem of
         Invalid str -> putStrLn str

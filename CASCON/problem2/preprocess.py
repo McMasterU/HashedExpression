@@ -37,23 +37,23 @@ def main():
     re = re_file['re'][()]
     im = im_file['im'][()]
     (r, c) = re.shape
-#     show_img(np.log(np.abs(re) + 1))
-#     show_img(np.log(np.abs(im) + 1))
+    show_img(np.log(np.abs(re) + 1))
+    show_img(np.log(np.abs(im) + 1))
 
     # signal indicated if signal MRI is available: 1 means received, 0 means lost
     signal = abs(re) > 0.5
-#     show_img(signal.astype('float64'))
+    show_img(signal.astype('float64'))
 
 
     # Naively reconstruct the img
     kspace = re + 1j * im
     img = np.real(np.fft.ifft2(kspace))
-#     show_img(img)
+    show_img(img)
 
     # Use median filter to somewhat guess the head
     median = normalize(ndimage.median_filter(img, 10))
     head = median > 0.1
-#     show_img(head)
+    show_img(head)
 
     # Make lower bound and upper bound
     bound_noise = 1
