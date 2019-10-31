@@ -7,7 +7,7 @@
 
 #define NUM_VARIABLES 1
 #define NUM_ACTUAL_VARIABLES 16384
-#define MEM_SIZE 671774
+#define MEM_SIZE 393227
 
 // all the actual double variables are allocated
 // one after another, starts from here
@@ -19,8 +19,8 @@ const int var_num_dim[NUM_VARIABLES] = {2};
 const int var_shape[NUM_VARIABLES][3] = {{128, 128, 1}};
 const int var_size[NUM_VARIABLES] = {16384};
 const int var_offset[NUM_VARIABLES] = {0};
-const int partial_derivative_offset[NUM_VARIABLES] = {65543};
-const int objective_offset = 81927;
+const int partial_derivative_offset[NUM_VARIABLES] = {65538};
+const int objective_offset = 81922;
 double ptr[MEM_SIZE];
 
 
@@ -99,802 +99,297 @@ void read_values() {
   }
 }
 void evaluate_partial_derivatives_and_objective() {
-  (ptr[65540]) = 6000.0;
+  (ptr[65536]) = -2.0;
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 1 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[524318 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[163843 + i]) = (ptr[32768 + i]) * (ptr[49152 + i]);
     }
   }
+  dft_2d(128, 128, (ptr + 0), (ptr + 311307), REAL);
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 127 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[540702 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[180228 + i]) = (ptr[49152 + i]) * (ptr[311307 + i]);
     }
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[524318 + i]) * (ptr[540702 + i]);
+      acc += (ptr[163843 + i]) * (ptr[180228 + i]);
     }
-    (ptr[442391]) = acc;
+    (ptr[294917]) = acc;
   }
-  (ptr[114696]) = (ptr[65540]) * (ptr[442391]);
-  (ptr[65536]) = -12000.0;
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[524318 + i]);
-    }
-    (ptr[442388]) = acc;
-  }
-  (ptr[114697]) = (ptr[65536]) * (ptr[442388]);
-  (ptr[65541]) = -2.0;
+  (ptr[180227]) = (ptr[65536]) * (ptr[294917]);
+  dft_2d(128, 128, (ptr + 0), (ptr + 344075), IMAG);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[163850 + i]) = (ptr[32768 + i]) * (ptr[49152 + i]);
+      (ptr[81923 + i]) = (ptr[49152 + i]) * (ptr[344075 + i]);
     }
   }
-  dft_2d(128, 128, (ptr + 0), (ptr + 589854), REAL);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[180240 + i]) = (ptr[49152 + i]) * (ptr[589854 + i]);
+      (ptr[131075 + i]) = (ptr[16384 + i]) * (ptr[49152 + i]);
     }
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[163850 + i]) * (ptr[180240 + i]);
+      acc += (ptr[81923 + i]) * (ptr[131075 + i]);
     }
-    (ptr[442385]) = acc;
+    (ptr[294920]) = acc;
   }
-  (ptr[180234]) = (ptr[65541]) * (ptr[442385]);
-  (ptr[65539]) = 36000.0;
+  (ptr[196612]) = (ptr[65536]) * (ptr[294920]);
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[0 + i]);
+      acc += (ptr[180228 + i]) * (ptr[180228 + i]);
     }
-    (ptr[442389]) = acc;
-  }
-  (ptr[180235]) = (ptr[65539]) * (ptr[442389]);
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 1 + 128 ) % 128;
-          (ptr[557086 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
+    (ptr[294918]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[557086 + i]);
+      acc += (ptr[131075 + i]) * (ptr[131075 + i]);
     }
-    (ptr[442392]) = acc;
-  }
-  (ptr[180236]) = (ptr[65536]) * (ptr[442392]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[540702 + i]);
-    }
-    (ptr[442386]) = acc;
-  }
-  (ptr[180237]) = (ptr[65536]) * (ptr[442386]);
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 127 + 128 ) % 128;
-          (ptr[475166 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
+    (ptr[294919]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[475166 + i]) * (ptr[557086 + i]);
+      acc += (ptr[81923 + i]) * (ptr[81923 + i]);
     }
-    (ptr[442396]) = acc;
-  }
-  (ptr[180238]) = (ptr[65540]) * (ptr[442396]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[475166 + i]);
-    }
-    (ptr[442397]) = acc;
-  }
-  (ptr[180239]) = (ptr[65536]) * (ptr[442397]);
-  dft_2d(128, 128, (ptr + 0), (ptr + 622622), IMAG);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[81928 + i]) = (ptr[49152 + i]) * (ptr[622622 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[131082 + i]) = (ptr[16384 + i]) * (ptr[49152 + i]);
-    }
+    (ptr[294921]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[81928 + i]) * (ptr[131082 + i]);
+      acc += (ptr[163843 + i]) * (ptr[163843 + i]);
     }
-    (ptr[442393]) = acc;
+    (ptr[294922]) = acc;
   }
-  (ptr[196624]) = (ptr[65541]) * (ptr[442393]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[180240 + i]) * (ptr[180240 + i]);
-    }
-    (ptr[442387]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[131082 + i]) * (ptr[131082 + i]);
-    }
-    (ptr[442390]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[81928 + i]) * (ptr[81928 + i]);
-    }
-    (ptr[442394]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[163850 + i]) * (ptr[163850 + i]);
-    }
-    (ptr[442395]) = acc;
-  }
-  (ptr[81927]) = (ptr[114696]) + (ptr[114697]) + (ptr[180234]) + (ptr[180235]) + (ptr[180236]) + (ptr[180237]) + (ptr[180238]) + (ptr[180239]) + (ptr[196624]) + (ptr[442387]) + (ptr[442390]) + (ptr[442394]) + (ptr[442395]);
-  (ptr[65537]) = -24000.0;
+  (ptr[81922]) = (ptr[180227]) + (ptr[196612]) + (ptr[294918]) + (ptr[294919]) + (ptr[294921]) + (ptr[294922]);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[229393 + i]) = (ptr[65537])*(ptr[475166 + i]);
+      (ptr[212997 + i]) = pow((ptr[49152 + i]),2);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[245777 + i]) = (ptr[65537])*(ptr[557086 + i]);
+      (ptr[114691 + i]) = (ptr[16384 + i]) * (ptr[212997 + i]);
+    }
+  }
+  dft_2d(128, 128, (ptr + 114691), (ptr + 360459), IMAG);
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[229381 + i]) = (ptr[65536])*(ptr[360459 + i]);
+    }
+  }
+  (ptr[65537]) = 2.0;
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[196613 + i]) = (ptr[212997 + i]) * (ptr[311307 + i]);
+    }
+  }
+  dft_2d(128, 128, (ptr + 196613), (ptr + 294923), REAL);
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[245765 + i]) = (ptr[65537])*(ptr[294923 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[213009 + i]) = pow((ptr[49152 + i]),2);
+      (ptr[147459 + i]) = (ptr[32768 + i]) * (ptr[212997 + i]);
+    }
+  }
+  dft_2d(128, 128, (ptr + 147459), (ptr + 327691), REAL);
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[262149 + i]) = (ptr[65536])*(ptr[327691 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[114698 + i]) = (ptr[16384 + i]) * (ptr[213009 + i]);
+      (ptr[98307 + i]) = (ptr[212997 + i]) * (ptr[344075 + i]);
     }
   }
-  dft_2d(128, 128, (ptr + 114698), (ptr + 639006), IMAG);
+  dft_2d(128, 128, (ptr + 98307), (ptr + 376843), IMAG);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[262161 + i]) = (ptr[65541])*(ptr[639006 + i]);
-    }
-  }
-  (ptr[65538]) = 72000.0;
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[278545 + i]) = (ptr[65538])*(ptr[0 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 2 + 128 ) % 128;
-          (ptr[442398 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+      (ptr[278533 + i]) = (ptr[65537])*(ptr[376843 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[294929 + i]) = (ptr[65540])*(ptr[442398 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[311313 + i]) = (ptr[65537])*(ptr[524318 + i]);
-    }
-  }
-  (ptr[65542]) = 2.0;
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[196625 + i]) = (ptr[213009 + i]) * (ptr[589854 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 196625), (ptr + 573470), REAL);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[327697 + i]) = (ptr[65542])*(ptr[573470 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[147466 + i]) = (ptr[32768 + i]) * (ptr[213009 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 147466), (ptr + 606238), REAL);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[344081 + i]) = (ptr[65541])*(ptr[606238 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[98312 + i]) = (ptr[213009 + i]) * (ptr[622622 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 98312), (ptr + 655390), IMAG);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[360465 + i]) = (ptr[65542])*(ptr[655390 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[376849 + i]) = (ptr[65537])*(ptr[540702 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 2 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[458782 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[393233 + i]) = (ptr[65540])*(ptr[458782 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 126 + 128 ) % 128;
-          (ptr[491550 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[409617 + i]) = (ptr[65540])*(ptr[491550 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 126 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[507934 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[426001 + i]) = (ptr[65540])*(ptr[507934 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[65543 + i]) = (ptr[229393 + i]) + (ptr[245777 + i]) + (ptr[262161 + i]) + (ptr[278545 + i]) + (ptr[294929 + i]) + (ptr[311313 + i]) + (ptr[327697 + i]) + (ptr[344081 + i]) + (ptr[360465 + i]) + (ptr[376849 + i]) + (ptr[393233 + i]) + (ptr[409617 + i]) + (ptr[426001 + i]);
+      (ptr[65538 + i]) = (ptr[229381 + i]) + (ptr[245765 + i]) + (ptr[262149 + i]) + (ptr[278533 + i]);
     }
   }
 }
 void evaluate_objective() {
-  (ptr[65540]) = 6000.0;
+  (ptr[65536]) = -2.0;
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 1 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[524318 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[163843 + i]) = (ptr[32768 + i]) * (ptr[49152 + i]);
     }
   }
+  dft_2d(128, 128, (ptr + 0), (ptr + 311307), REAL);
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 127 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[540702 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[180228 + i]) = (ptr[49152 + i]) * (ptr[311307 + i]);
     }
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[524318 + i]) * (ptr[540702 + i]);
+      acc += (ptr[163843 + i]) * (ptr[180228 + i]);
     }
-    (ptr[442391]) = acc;
+    (ptr[294917]) = acc;
   }
-  (ptr[114696]) = (ptr[65540]) * (ptr[442391]);
-  (ptr[65536]) = -12000.0;
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[524318 + i]);
-    }
-    (ptr[442388]) = acc;
-  }
-  (ptr[114697]) = (ptr[65536]) * (ptr[442388]);
-  (ptr[65541]) = -2.0;
+  (ptr[180227]) = (ptr[65536]) * (ptr[294917]);
+  dft_2d(128, 128, (ptr + 0), (ptr + 344075), IMAG);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[163850 + i]) = (ptr[32768 + i]) * (ptr[49152 + i]);
+      (ptr[81923 + i]) = (ptr[49152 + i]) * (ptr[344075 + i]);
     }
   }
-  dft_2d(128, 128, (ptr + 0), (ptr + 589854), REAL);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[180240 + i]) = (ptr[49152 + i]) * (ptr[589854 + i]);
+      (ptr[131075 + i]) = (ptr[16384 + i]) * (ptr[49152 + i]);
     }
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[163850 + i]) * (ptr[180240 + i]);
+      acc += (ptr[81923 + i]) * (ptr[131075 + i]);
     }
-    (ptr[442385]) = acc;
+    (ptr[294920]) = acc;
   }
-  (ptr[180234]) = (ptr[65541]) * (ptr[442385]);
-  (ptr[65539]) = 36000.0;
+  (ptr[196612]) = (ptr[65536]) * (ptr[294920]);
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[0 + i]);
+      acc += (ptr[180228 + i]) * (ptr[180228 + i]);
     }
-    (ptr[442389]) = acc;
-  }
-  (ptr[180235]) = (ptr[65539]) * (ptr[442389]);
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 1 + 128 ) % 128;
-          (ptr[557086 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
+    (ptr[294918]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[557086 + i]);
+      acc += (ptr[131075 + i]) * (ptr[131075 + i]);
     }
-    (ptr[442392]) = acc;
-  }
-  (ptr[180236]) = (ptr[65536]) * (ptr[442392]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[540702 + i]);
-    }
-    (ptr[442386]) = acc;
-  }
-  (ptr[180237]) = (ptr[65536]) * (ptr[442386]);
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 127 + 128 ) % 128;
-          (ptr[475166 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
+    (ptr[294919]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[475166 + i]) * (ptr[557086 + i]);
+      acc += (ptr[81923 + i]) * (ptr[81923 + i]);
     }
-    (ptr[442396]) = acc;
-  }
-  (ptr[180238]) = (ptr[65540]) * (ptr[442396]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[0 + i]) * (ptr[475166 + i]);
-    }
-    (ptr[442397]) = acc;
-  }
-  (ptr[180239]) = (ptr[65536]) * (ptr[442397]);
-  dft_2d(128, 128, (ptr + 0), (ptr + 622622), IMAG);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[81928 + i]) = (ptr[49152 + i]) * (ptr[622622 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[131082 + i]) = (ptr[16384 + i]) * (ptr[49152 + i]);
-    }
+    (ptr[294921]) = acc;
   }
   {
     double acc = 0;
     int i;
     for (i = 0; i < 16384; i++) {
-      acc += (ptr[81928 + i]) * (ptr[131082 + i]);
+      acc += (ptr[163843 + i]) * (ptr[163843 + i]);
     }
-    (ptr[442393]) = acc;
+    (ptr[294922]) = acc;
   }
-  (ptr[196624]) = (ptr[65541]) * (ptr[442393]);
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[180240 + i]) * (ptr[180240 + i]);
-    }
-    (ptr[442387]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[131082 + i]) * (ptr[131082 + i]);
-    }
-    (ptr[442390]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[81928 + i]) * (ptr[81928 + i]);
-    }
-    (ptr[442394]) = acc;
-  }
-  {
-    double acc = 0;
-    int i;
-    for (i = 0; i < 16384; i++) {
-      acc += (ptr[163850 + i]) * (ptr[163850 + i]);
-    }
-    (ptr[442395]) = acc;
-  }
-  (ptr[81927]) = (ptr[114696]) + (ptr[114697]) + (ptr[180234]) + (ptr[180235]) + (ptr[180236]) + (ptr[180237]) + (ptr[180238]) + (ptr[180239]) + (ptr[196624]) + (ptr[442387]) + (ptr[442390]) + (ptr[442394]) + (ptr[442395]);
+  (ptr[81922]) = (ptr[180227]) + (ptr[196612]) + (ptr[294918]) + (ptr[294919]) + (ptr[294921]) + (ptr[294922]);
 }
 void evaluate_partial_derivatives() {
-  (ptr[65537]) = -24000.0;
+  (ptr[65536]) = -2.0;
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 127 + 128 ) % 128;
-          (ptr[475166 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[212997 + i]) = pow((ptr[49152 + i]),2);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[229393 + i]) = (ptr[65537])*(ptr[475166 + i]);
+      (ptr[114691 + i]) = (ptr[16384 + i]) * (ptr[212997 + i]);
     }
   }
+  dft_2d(128, 128, (ptr + 114691), (ptr + 360459), IMAG);
   {
     int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 1 + 128 ) % 128;
-          (ptr[557086 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+    for (i = 0; i < 16384; i++) {
+      (ptr[229381 + i]) = (ptr[65536])*(ptr[360459 + i]);
+    }
+  }
+  (ptr[65537]) = 2.0;
+  dft_2d(128, 128, (ptr + 0), (ptr + 311307), REAL);
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[196613 + i]) = (ptr[212997 + i]) * (ptr[311307 + i]);
+    }
+  }
+  dft_2d(128, 128, (ptr + 196613), (ptr + 294923), REAL);
+  {
+    int i;
+    for (i = 0; i < 16384; i++) {
+      (ptr[245765 + i]) = (ptr[65537])*(ptr[294923 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[245777 + i]) = (ptr[65537])*(ptr[557086 + i]);
+      (ptr[147459 + i]) = (ptr[32768 + i]) * (ptr[212997 + i]);
     }
   }
-  (ptr[65541]) = -2.0;
+  dft_2d(128, 128, (ptr + 147459), (ptr + 327691), REAL);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[213009 + i]) = pow((ptr[49152 + i]),2);
+      (ptr[262149 + i]) = (ptr[65536])*(ptr[327691 + i]);
     }
   }
+  dft_2d(128, 128, (ptr + 0), (ptr + 344075), IMAG);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[114698 + i]) = (ptr[16384 + i]) * (ptr[213009 + i]);
+      (ptr[98307 + i]) = (ptr[212997 + i]) * (ptr[344075 + i]);
     }
   }
-  dft_2d(128, 128, (ptr + 114698), (ptr + 639006), IMAG);
+  dft_2d(128, 128, (ptr + 98307), (ptr + 376843), IMAG);
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[262161 + i]) = (ptr[65541])*(ptr[639006 + i]);
-    }
-  }
-  (ptr[65538]) = 72000.0;
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[278545 + i]) = (ptr[65538])*(ptr[0 + i]);
-    }
-  }
-  (ptr[65540]) = 6000.0;
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 2 + 128 ) % 128;
-          (ptr[442398 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
+      (ptr[278533 + i]) = (ptr[65537])*(ptr[376843 + i]);
     }
   }
   {
     int i;
     for (i = 0; i < 16384; i++) {
-      (ptr[294929 + i]) = (ptr[65540])*(ptr[442398 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 1 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[524318 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[311313 + i]) = (ptr[65537])*(ptr[524318 + i]);
-    }
-  }
-  (ptr[65542]) = 2.0;
-  dft_2d(128, 128, (ptr + 0), (ptr + 589854), REAL);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[196625 + i]) = (ptr[213009 + i]) * (ptr[589854 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 196625), (ptr + 573470), REAL);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[327697 + i]) = (ptr[65542])*(ptr[573470 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[147466 + i]) = (ptr[32768 + i]) * (ptr[213009 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 147466), (ptr + 606238), REAL);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[344081 + i]) = (ptr[65541])*(ptr[606238 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 0), (ptr + 622622), IMAG);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[98312 + i]) = (ptr[213009 + i]) * (ptr[622622 + i]);
-    }
-  }
-  dft_2d(128, 128, (ptr + 98312), (ptr + 655390), IMAG);
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[360465 + i]) = (ptr[65542])*(ptr[655390 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 127 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[540702 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[376849 + i]) = (ptr[65537])*(ptr[540702 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 2 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[458782 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[393233 + i]) = (ptr[65540])*(ptr[458782 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 0 + 128 ) % 128;
-          int aj = (j - 126 + 128 ) % 128;
-          (ptr[491550 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[409617 + i]) = (ptr[65540])*(ptr[491550 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 128; i++) {
-      {
-        int j;
-        for (j = 0; j < 128; j++) {
-          int ai = (i - 126 + 128 ) % 128;
-          int aj = (j - 0 + 128 ) % 128;
-          (ptr[507934 + i * 128 + j]) = (ptr[0 + ai * 128 + aj]);
-        }
-      }
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[426001 + i]) = (ptr[65540])*(ptr[507934 + i]);
-    }
-  }
-  {
-    int i;
-    for (i = 0; i < 16384; i++) {
-      (ptr[65543 + i]) = (ptr[229393 + i]) + (ptr[245777 + i]) + (ptr[262161 + i]) + (ptr[278545 + i]) + (ptr[294929 + i]) + (ptr[311313 + i]) + (ptr[327697 + i]) + (ptr[344081 + i]) + (ptr[360465 + i]) + (ptr[376849 + i]) + (ptr[393233 + i]) + (ptr[409617 + i]) + (ptr[426001 + i]);
+      (ptr[65538 + i]) = (ptr[229381 + i]) + (ptr[245765 + i]) + (ptr[262149 + i]) + (ptr[278533 + i]);
     }
   }
 }

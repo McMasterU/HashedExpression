@@ -177,7 +177,7 @@ int main()
 
    /* set the number of nonzeros in the Jacobian and Hessian */
    nele_jac = NUM_ACTUAL_VARIABLES*NUM_SCALAR_CONSTRAINT;  // TODO use sparse jacobian?
-   nele_hess = NUM_ACTUAL_VARIABLES*NUM_ACTUAL_VARIABLES; // TODO use sparse hessian?
+   nele_hess = 0; // NUM_ACTUAL_VARIABLES*NUM_ACTUAL_VARIABLES; // TODO use sparse hessian?
 
    /* set the indexing style to C-style (start counting of rows and column indices at 0) */
    index_style = 0;
@@ -195,7 +195,7 @@ int main()
 
    /* Set ipopt options.
     */
-   AddIpoptNumOption(nlp, "tol", 1e-7);  // TODO adjust me?
+   AddIpoptNumOption(nlp, "tol", 1e-3);  // TODO adjust me?
    AddIpoptStrOption(nlp, "mu_strategy", "adaptive"); // TODO does this help?
    AddIpoptStrOption(nlp, "hessian_approximation","limited-memory"); // TODO add option to turn off/on?
 
@@ -225,26 +225,26 @@ int main()
     */
    if( status == Solve_Succeeded )
    {
-      printf("\n\nSolution of the primal variables, x\n");
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
-      {
-         printf("x[%d] = %e\n", i, x[i]);
-      }
+      /* printf("\n\nSolution of the primal variables, x\n"); */
+      /* for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ ) */
+      /* { */
+      /*    printf("x[%d] = %e\n", i, x[i]); */
+      /* } */
 
-      printf("\n\nSolution of the constraint multipliers, lambda\n");
-      for( i = 0; i < NUM_SCALAR_CONSTRAINT; i++ )
-      {
-         printf("lambda[%d] = %e\n", i, mult_g[i]);
-      }
-      printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
-      {
-         printf("z_L[%d] = %e\n", i, mult_x_L[i]);
-      }
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
-      {
-         printf("z_U[%d] = %e\n", i, mult_x_U[i]);
-      }
+      /* printf("\n\nSolution of the constraint multipliers, lambda\n"); */
+      /* for( i = 0; i < NUM_SCALAR_CONSTRAINT; i++ ) */
+      /* { */
+      /*    printf("lambda[%d] = %e\n", i, mult_g[i]); */
+      /* } */
+      /* printf("\n\nSolution of the bound multipliers, z_L and z_U\n"); */
+      /* for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ ) */
+      /* { */
+      /*    printf("z_L[%d] = %e\n", i, mult_x_L[i]); */
+      /* } */
+      /* for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ ) */
+      /* { */
+      /*    printf("z_U[%d] = %e\n", i, mult_x_U[i]); */
+      /* } */
 
       printf("\n\nObjective value\nf(x*) = %e\n", obj);
 
