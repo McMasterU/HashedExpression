@@ -1,2 +1,9 @@
+*
+!lib
+!lib/*
 !im.h5
 !re.h5
+!Makefile
+!preprocess.py
+!reconstructMRI.sp
+!*.c
