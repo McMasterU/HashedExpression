@@ -351,8 +351,6 @@ getBeginningPosition exp =
         EIdent (PIdent (pos, _)) -> pos
         EPiecewise (TokenCase (pos, _)) exp _ -> pos
 
--- |  TODO: 
---
 toHEVal :: HE.Shape -> Val -> Result HU.Val
 toHEVal shape v =
     case v of
@@ -696,8 +694,7 @@ inferShape context@Context {..} exp =
         ENumDouble _ -> Nothing
         ENumInteger _ -> Nothing
         EIdent (PIdent (_, name))
-            | Just (shape, maybeVal) <- Map.lookup name vars -> Just shape
-            | Just (shape, val) <- Map.lookup name consts -> Just shape
+            | Just exp <- Map.lookup name declarations -> Just $ getShape exp
             | otherwise -> Nothing
         EPlus exp1 _ exp2 -> anyJust . map (inferShape context) $ [exp1, exp2]
         ERealImag exp1 _ exp2 ->

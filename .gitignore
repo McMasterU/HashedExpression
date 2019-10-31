@@ -11,3 +11,4 @@ out/
 *.dat
 *.npz
 *.npy
+problem.c

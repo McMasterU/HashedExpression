@@ -1,0 +1,12 @@
+*
+!lib
+!lib/*
+!im.h5
+!re.h5
+!Makefile
+!*.py
+!reconstructMRI.sp
+!*.c
+!*.pdf
+problem.c
+
