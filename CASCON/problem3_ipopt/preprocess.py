@@ -27,7 +27,7 @@ def normalize(img):
     if (np.max(img) == 0):
         return img
     else:
-        return img / np.max(img)
+        return 255 * (img / np.max(img))
 
 # ----------------------------------------------------
 # Preprocess
@@ -37,8 +37,15 @@ def main():
     dataFiles = dataDict.files
     refDat = dataDict['ref']
 
-    coil0 = np.fft.fft2(refDat[:,:,0,0])
-    coil1 = np.fft.fft2(refDat[:,:,0,1])
+    coil0 = normalize(np.fft.fft2(refDat[:,:,0,0]))
+    coil1 = normalize(np.fft.fft2(refDat[:,:,0,2]))
+    coil2 = normalize(np.fft.fft2(refDat[:,:,0,4]))
+    coil3 = normalize(np.fft.fft2(refDat[:,:,0,6]))
+    coil4 = normalize(np.fft.fft2(refDat[:,:,0,8]))
+    coil5 = normalize(np.fft.fft2(refDat[:,:,0,10]))
+    coil6 = normalize(np.fft.fft2(refDat[:,:,0,12]))
+    coil7 = normalize(np.fft.fft2(refDat[:,:,0,14]))
+
 
     radius = 20
     filt = np.zeros(shape=(256,256))
@@ -46,7 +53,24 @@ def main():
         filt[i,j] = math.sqrt( (128-i)**2 + (128-j)**2 ) < radius
 
 
-    save_file_hdf5([coil0.imag,coil0.real,coil1.imag,coil1.real,filt],'fruit',
-                   ['im0','re0','im1','re1','filter'])
+    save_file_hdf5([coil0.imag,coil0.real,
+                    coil1.imag,coil1.real,
+                    coil2.imag,coil2.real,
+                    coil3.imag,coil3.real,
+                    coil4.imag,coil4.real,
+                    coil5.imag,coil5.real,
+                    coil6.imag,coil6.real,
+                    coil7.imag,coil7.real,
+                    filt],
+                   'fruit',
+                   ['im0','re0'
+                    ,'im1','re1'
+                    ,'im2','re2'
+                    ,'im3','re3'
+                    ,'im4','re4'
+                    ,'im5','re5'
+                    ,'im6','re6'
+                    ,'im7','re7'
+                    ,'filter'])
 
 main()
