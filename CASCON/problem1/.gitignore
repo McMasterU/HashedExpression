@@ -1,10 +1,12 @@
-# Created by .ignore support plugin (hsz.mobi)
 *
 !*.c
+!lib
+!lib/*
 problem.c
 .gitignore
 *.sp
 x.h5
 y.h5
-
 !*.py
+!vx.txt
+!vy.txt

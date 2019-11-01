@@ -7,6 +7,10 @@ token KWDataPattern
   | {"LAST_ROW_1"}
   | {"FIRST_COLUMN_1"}
   | {"LAST_COLUMN_1"}
+  | {"FIRST_ROW_0"}
+  | {"LAST_ROW_0"}
+  | {"FIRST_COLUMN_0"}
+  | {"LAST_COLUMN_0"}
   | {"FIRST_SLICE_1"}
   | {"LAST_SLICE_1"};
 position token TokenSub {"-"};
