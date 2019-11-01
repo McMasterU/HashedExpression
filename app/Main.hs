@@ -80,7 +80,10 @@ import ToF.VelocityGenerator
 --        Invalid str -> putStrLn str
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ problem
-main = smilingFaceProblem
+main = do
+    let (vx, vy) = quarterCircleFlow (50, 50) 25 10 0.2
+    writeFile "vx.txt" $ unwords . map show . elems $ vx
+    writeFile "vy.txt" $ unwords . map show . elems $ vy
 --main = do
 --    let [x, y] = map (variable2D @128 @128) ["x", "y"]
 --        [zero, one] = map (constant2D @128 @128) [1, 0]

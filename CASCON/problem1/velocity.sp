@@ -9,6 +9,7 @@ constants:
   vy[50][50] = File("vy.txt")
   maskUp[50][50] = Pattern(LAST_ROW_0)
   maskRight[50][50] = Pattern(FIRST_COLUMN_0)
+  maskT[50][50] = Pattern(LAST_ROW_1)
 
 let:
   tUp = rotate (-1, 0) t
@@ -21,8 +22,9 @@ let:
       ((t - tUp) * (vxUp * vxUp + vyUp * vyUp) - vyUp) * vyUp
   matchRight =
       ((t - tRight) * (vxRight * vxRight + vyRight * vyRight) - vxRight) * vxRight
+  tZeroOnBottom = maskT <.> (t * t)
 
 
 minimize:
-  (matchUp <.> matchUp) + (matchRight <.> matchRight)
+  maskUp <.> (matchUp * matchUp) + maskRight <.> (matchRight * matchRight) + tZeroOnBottom
 
