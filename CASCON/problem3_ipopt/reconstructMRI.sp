@@ -1,23 +1,23 @@
 
 
 variables:
-  x[128][128] = 0
-
+  x[256][256] = 0
+  y[256][256] = 0
 
 constants:
-  im[128][128] = Dataset("im.h5", "im")
-  re[128][128] = Dataset("re.h5", "re")
-  signal[128][128] = Dataset("signal.h5", "signal")
-  xLowerBound[128][128] = Dataset("x_lb.h5", "x_lb")
-  xUpperBound[128][128] = Dataset("x_ub.h5", "x_ub")
-
-constraints:
-  x >= xLowerBound, x <= xUpperBound
+  im0[256][256] = Dataset("fruit.h5", "im0")
+  re0[256][256] = Dataset("fruit.h5", "re0")
+  im1[256][256] = Dataset("fruit.h5", "im1")
+  re1[256][256] = Dataset("fruit.h5", "re1")
+  filter[256][256] = Dataset("fruit.h5", "filter")
 
 let:
-  smootherX = rotate (0, 1) x + rotate (0, -1) x - 2 *. x
-  smootherY = rotate (1, 0) x + rotate (-1, 0) x - 2 *. x
-  regularization = norm2square smootherX + norm2square smootherY
+  kspace = ft (x +: y)
+  magn   = (xRe kspace) * (xRe kspace) + (xIm kspace) * (xIm kspace)
+
+constraints:
+  magn <.> filter <= 3000
 
 minimize:
-  norm2square ((signal +: 0) * (ft x - (re +: im))) 
+  norm2square ((ft (x +: y) - (re0 +: im0))) +
+   norm2square ((ft (x +: y) - (re1 +: im1)))
