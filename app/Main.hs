@@ -81,7 +81,7 @@ import ToF.VelocityGenerator
 --        Success proceed -> proceed "algorithms/lbfgs-b"
 --    print $ problem
 main = do
-    let (vx, vy) = quarterCircleFlow (50, 50) 25 15 0.2
+    let (vx, vy) = quarterCircleFlow (50, 50) 25 10 0.2
     writeFile "vx.txt" $ unwords . map show . elems $ vx
     writeFile "vy.txt" $ unwords . map show . elems $ vy
 --main = do

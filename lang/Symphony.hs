@@ -114,6 +114,8 @@ checkSemanticAndGenCode problem = do
             ("Objective should be a real scalar, here it is " ++
              show (toReadable shape, nt))
             (getBeginningPosition parseObjectiveExp)
+    liftIO $ putStrLn "Syntax is correct"
+    liftIO $ putStrLn "Now compute gradient, simplify, eliminate common subexpressions and generate code..."
     let problemGen =
             HS.constructProblem
                 (wrap objectiveExp)

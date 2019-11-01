@@ -1,6 +1,7 @@
-# Created by .ignore support plugin (hsz.mobi)
 *
 !*.c
+!lib
+!lib/*
 problem.c
 .gitignore
 *.sp
