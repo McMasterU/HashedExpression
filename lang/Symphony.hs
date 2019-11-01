@@ -361,11 +361,11 @@ toHEVal shape v =
                 ("FIRST_ROW_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                    replicate size1 1 ++ repeat 0
+                    replicate size2 1 ++ repeat 0
                 ("LAST_ROW_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                    replicate (size1 * (size2 - 1)) 0 ++ repeat 1
+                    replicate (size2 * (size1 - 1)) 0 ++ repeat 1
                 ("FIRST_COLUMN_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $

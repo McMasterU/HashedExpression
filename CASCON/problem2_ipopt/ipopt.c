@@ -159,7 +159,6 @@ int main()
   Number* mult_x_L = NULL;             /* lower bound multipliers at the solution */
   Number* mult_x_U = NULL;             /* upper bound multipliers at the solution */
   Number obj;                          /* objective value */
-  Index i;                             /* generic counter */
   SharedData sdata;
   // TODO remove unnecessary declerations above
 
@@ -274,8 +273,6 @@ Bool eval_f(
    UserDataPtr user_data
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
   memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES);
 
   evaluate_objective();
@@ -292,8 +289,6 @@ Bool eval_grad_f(
    UserDataPtr user_data
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
   memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_partial_derivatives();
 
@@ -321,9 +316,7 @@ Bool eval_g(
    UserDataPtr user_data
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
-  memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES); 
+  memcpy(ptr + VARS_START_OFFSET,x,sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_scalar_constraints();
 
   // TODO scalar constraints are always ... scalars right?
@@ -348,7 +341,6 @@ Bool eval_jac_g(
    UserDataPtr user_data
 )
 {
-   SharedData sdata = (SharedData)user_data;
 
    if( values == NULL )
    {
