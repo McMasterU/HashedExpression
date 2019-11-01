@@ -630,7 +630,7 @@ constructExp context shapeInfo exp =
                         throwError $
                         ErrorWithPosition "Operand must be a real vector" opPos
                     onlyForComplexVector operand =
-                        unless (getNT operand == HE.R) $
+                        unless (getNT operand == HE.C) $
                         throwError $
                         ErrorWithPosition
                             "Operand must be a complex vector"
