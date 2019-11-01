@@ -114,6 +114,8 @@ checkSemanticAndGenCode problem = do
             ("Objective should be a real scalar, here it is " ++
              show (toReadable shape, nt))
             (getBeginningPosition parseObjectiveExp)
+    liftIO $ putStrLn "Syntax is correct"
+    liftIO $ putStrLn "Now compute gradient, simplify, eliminate common subexpressions and generate code..."
     let problemGen =
             HS.constructProblem
                 (wrap objectiveExp)
@@ -361,11 +363,11 @@ toHEVal shape v =
                 ("FIRST_ROW_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                    replicate size1 1 ++ repeat 0
+                    replicate size2 1 ++ repeat 0
                 ("LAST_ROW_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
-                    replicate (size1 * (size2 - 1)) 0 ++ repeat 1
+                    replicate (size2 * (size1 - 1)) 0 ++ repeat 1
                 ("FIRST_COLUMN_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
@@ -374,6 +376,22 @@ toHEVal shape v =
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
                     concat $ replicate size1 $ replicate (size2 - 1) 0 ++ [1]
+                ("FIRST_ROW_0", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    replicate size2 0 ++ repeat 1
+                ("LAST_ROW_0", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    replicate (size2 * (size1 - 1)) 1 ++ repeat 0
+                ("FIRST_COLUMN_0", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    concat $ replicate size1 $ 0 : replicate (size2 - 1) 1
+                ("LAST_COLUMN_0", [size1, size2]) ->
+                    return .
+                    HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
+                    concat $ replicate size1 $ replicate (size2 - 1) 1 ++ [0]
                 _ ->
                     throwError $
                     GeneralError $

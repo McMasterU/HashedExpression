@@ -523,7 +523,7 @@ evaluateIfPossibleRules exp@(mp, n) =
         (Neg R _, Just [val])
             | val /= 0 -> res (-val)
             | otherwise -> res 0
-        (Power x _, Just [val]) -> res $ val ^ x
+        (Power x _, Just [val]) -> res $ val ** fromIntegral x
         (InnerProd R arg1 arg2, Just [val1, val2]) ->
             res $
             val1 * val2 *
