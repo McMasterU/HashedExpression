@@ -8,7 +8,7 @@
 #include <lbfgs.h>
 #include <string.h>
 
-#define M 10
+#define M 60
 
 #define WORKING_SPACE ((2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M)
 
