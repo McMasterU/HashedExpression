@@ -30,7 +30,7 @@ $u = [. \n]          -- universal: any character
 $white+ ;
 @rsyms
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
-F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
+F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ R O W \_ 0 | L A S T \_ R O W \_ 0 | F I R S T \_ C O L U M N \_ 0 | L A S T \_ C O L U M N \_ 0 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
     { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
 \-
     { tok (\p s -> PT p (eitherResIdent (T_TokenSub . share) s)) }
