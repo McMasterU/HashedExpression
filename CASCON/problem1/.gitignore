@@ -6,3 +6,5 @@ problem.c
 *.sp
 x.h5
 y.h5
+
+!*.py
