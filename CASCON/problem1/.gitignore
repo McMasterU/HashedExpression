@@ -1,1 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
+*
+!*.c
+problem.c
+.gitignore
+*.sp
+x.h5
+y.h5
