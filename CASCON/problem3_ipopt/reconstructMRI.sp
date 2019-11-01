@@ -47,4 +47,4 @@ let:
 
 minimize:
   norm2square (ft (a +: b) - coilSum)
-    + 1000*regularization
+    + 1.0e5*regularization
