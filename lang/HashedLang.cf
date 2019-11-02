@@ -13,6 +13,30 @@ token KWDataPattern
   | {"LAST_COLUMN_0"}
   | {"FIRST_SLICE_1"}
   | {"LAST_SLICE_1"};
+position token PDoubleFun
+    {"huber"}
+  | {"normHuber"};
+position token PUnaryFun
+    {"sqrt"}
+  | {"sin"}
+  | {"cos"}
+  | {"tan"}
+  | {"exp"}
+  | {"log"}
+  | {"sinh"}
+  | {"cosh"}
+  | {"tanh"}
+  | {"asin"}
+  | {"acos"}
+  | {"atan"}
+  | {"asinh"}
+  | {"acosh"}
+  | {"atanh"}
+  | {"xRe"}
+  | {"xIm"}
+  | {"ft"}
+  | {"norm2square"}
+  | {"sumElements"};
 position token TokenSub {"-"};
 position token TokenPlus {"+"};
 position token TokenReIm {"+:"};
@@ -25,13 +49,14 @@ position token TokenRotate {"rotate"};
 position token TokenCase {"case"};
 position token PInteger digit+;
 position token PDouble digit+ '.' digit+ ('e' '-'? digit+)?;
+
 position token PIdent (letter (letter|digit|'_'|'\'')*);
 
 
 -- Layout
 layout ":";
 
--- Problem - main entry
+-- Problem - main entr
 Problem. Problem ::= [Block];
 BlockVariable. Block ::= "variables" ":" "{" [[VariableDecl]] "}";
 BlockVariable. Block ::= "variable" ":" "{" [[VariableDecl]] "}";
@@ -122,7 +147,9 @@ EPower. Exp3 ::= Exp3 TokenPower TInt;
 EPower. Exp3 ::= Exp3 TokenPower "(" TInt ")";
 _. Exp3 ::= Exp4;
 
-EFun. Exp4 ::= PIdent Exp5;
+EDoubleFun. Exp4 ::= PDoubleFun Number Exp5;
+EDoubleFun. Exp4 ::= PDoubleFun "(" Number ")" Exp5;
+EUnaryFun. Exp4 ::= PUnaryFun Exp5;
 ERotate. Exp4 ::= TokenRotate RotateAmount Exp5;
 ENegate. Exp4 ::= TokenSub Exp5;
 _. Exp4 ::= Exp5;

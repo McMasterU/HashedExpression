@@ -12,6 +12,12 @@ failure x = Bad $ "Undefined case: " ++ show x
 transKWDataPattern :: KWDataPattern -> Result
 transKWDataPattern x = case x of
   KWDataPattern string -> failure x
+transPDoubleFun :: PDoubleFun -> Result
+transPDoubleFun x = case x of
+  PDoubleFun string -> failure x
+transPUnaryFun :: PUnaryFun -> Result
+transPUnaryFun x = case x of
+  PUnaryFun string -> failure x
 transTokenSub :: TokenSub -> Result
 transTokenSub x = case x of
   TokenSub string -> failure x
@@ -127,7 +133,8 @@ transExp x = case x of
   EScale exp1 tokenscale exp2 -> failure x
   EDot exp1 tokendot exp2 -> failure x
   EPower exp tokenpower tint -> failure x
-  EFun pident exp -> failure x
+  EDoubleFun pdoublefun number exp -> failure x
+  EUnaryFun punaryfun exp -> failure x
   ERotate tokenrotate rotateamount exp -> failure x
   ENegate tokensub exp -> failure x
   ENumDouble pdouble -> failure x

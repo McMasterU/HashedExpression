@@ -32,6 +32,10 @@ $white+ ;
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
 F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ R O W \_ 0 | L A S T \_ R O W \_ 0 | F I R S T \_ C O L U M N \_ 0 | L A S T \_ C O L U M N \_ 0 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
     { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
+h u b e r | n o r m H u b e r
+    { tok (\p s -> PT p (eitherResIdent (T_PDoubleFun . share) s)) }
+s q r t | s i n | c o s | t a n | e x p | l o g | s i n h | c o s h | t a n h | a s i n | a c o s | a t a n | a s i n h | a c o s h | a t a n h | x R e | x I m | f t | n o r m 2 s q u a r e | s u m E l e m e n t s
+    { tok (\p s -> PT p (eitherResIdent (T_PUnaryFun . share) s)) }
 \-
     { tok (\p s -> PT p (eitherResIdent (T_TokenSub . share) s)) }
 \+
@@ -83,6 +87,8 @@ data Tok =
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
  | T_KWDataPattern !String
+ | T_PDoubleFun !String
+ | T_PUnaryFun !String
  | T_TokenSub !String
  | T_TokenPlus !String
  | T_TokenReIm !String
@@ -134,6 +140,8 @@ prToken t = case t of
   PT _ (TC s)   -> s
   Err _         -> "#error"
   PT _ (T_KWDataPattern s) -> s
+  PT _ (T_PDoubleFun s) -> s
+  PT _ (T_PUnaryFun s) -> s
   PT _ (T_TokenSub s) -> s
   PT _ (T_TokenPlus s) -> s
   PT _ (T_TokenReIm s) -> s
