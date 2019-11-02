@@ -91,6 +91,12 @@ instance Print Double where
 instance Print AbsHashedLang.KWDataPattern where
   prt _ (AbsHashedLang.KWDataPattern i) = doc (showString i)
 
+instance Print AbsHashedLang.PDoubleFun where
+  prt _ (AbsHashedLang.PDoubleFun (_,i)) = doc (showString i)
+
+instance Print AbsHashedLang.PUnaryFun where
+  prt _ (AbsHashedLang.PUnaryFun (_,i)) = doc (showString i)
+
 instance Print AbsHashedLang.TokenSub where
   prt _ (AbsHashedLang.TokenSub (_,i)) = doc (showString i)
 
@@ -126,12 +132,6 @@ instance Print AbsHashedLang.PInteger where
 
 instance Print AbsHashedLang.PDouble where
   prt _ (AbsHashedLang.PDouble (_,i)) = doc (showString i)
-
-instance Print AbsHashedLang.PUnaryFun where
-  prt _ (AbsHashedLang.PUnaryFun (_,i)) = doc (showString i)
-
-instance Print AbsHashedLang.PDoubleFun where
-  prt _ (AbsHashedLang.PDoubleFun (_,i)) = doc (showString i)
 
 instance Print AbsHashedLang.PIdent where
   prt _ (AbsHashedLang.PIdent (_,i)) = doc (showString i)
@@ -277,8 +277,8 @@ instance Print AbsHashedLang.Exp where
     AbsHashedLang.EScale exp1 tokenscale exp2 -> prPrec i 2 (concatD [prt 2 exp1, prt 0 tokenscale, prt 3 exp2])
     AbsHashedLang.EDot exp1 tokendot exp2 -> prPrec i 2 (concatD [prt 2 exp1, prt 0 tokendot, prt 3 exp2])
     AbsHashedLang.EPower exp tokenpower tint -> prPrec i 3 (concatD [prt 3 exp, prt 0 tokenpower, prt 0 tint])
-    AbsHashedLang.EUnaryFun punaryfun exp -> prPrec i 4 (concatD [prt 0 punaryfun, prt 5 exp])
     AbsHashedLang.EDoubleFun pdoublefun number exp -> prPrec i 4 (concatD [prt 0 pdoublefun, prt 0 number, prt 5 exp])
+    AbsHashedLang.EUnaryFun punaryfun exp -> prPrec i 4 (concatD [prt 0 punaryfun, prt 5 exp])
     AbsHashedLang.ERotate tokenrotate rotateamount exp -> prPrec i 4 (concatD [prt 0 tokenrotate, prt 0 rotateamount, prt 5 exp])
     AbsHashedLang.ENegate tokensub exp -> prPrec i 4 (concatD [prt 0 tokensub, prt 5 exp])
     AbsHashedLang.ENumDouble pdouble -> prPrec i 5 (concatD [prt 0 pdouble])

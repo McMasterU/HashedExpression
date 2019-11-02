@@ -73,6 +73,8 @@ import ErrM
   '}' { PT _ (TS _ 28) }
   L_quoted { PT _ (TL $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
+  L_PDoubleFun { PT _ (T_PDoubleFun _) }
+  L_PUnaryFun { PT _ (T_PUnaryFun _) }
   L_TokenSub { PT _ (T_TokenSub _) }
   L_TokenPlus { PT _ (T_TokenPlus _) }
   L_TokenReIm { PT _ (T_TokenReIm _) }
@@ -85,8 +87,6 @@ import ErrM
   L_TokenCase { PT _ (T_TokenCase _) }
   L_PInteger { PT _ (T_PInteger _) }
   L_PDouble { PT _ (T_PDouble _) }
-  L_PUnaryFun { PT _ (T_PUnaryFun _) }
-  L_PDoubleFun { PT _ (T_PDoubleFun _) }
   L_PIdent { PT _ (T_PIdent _) }
 
 %%
@@ -96,6 +96,12 @@ String   : L_quoted {  $1 }
 
 KWDataPattern :: { KWDataPattern}
 KWDataPattern  : L_KWDataPattern { KWDataPattern ($1)}
+
+PDoubleFun :: { PDoubleFun}
+PDoubleFun  : L_PDoubleFun { PDoubleFun (mkPosToken $1)}
+
+PUnaryFun :: { PUnaryFun}
+PUnaryFun  : L_PUnaryFun { PUnaryFun (mkPosToken $1)}
 
 TokenSub :: { TokenSub}
 TokenSub  : L_TokenSub { TokenSub (mkPosToken $1)}
@@ -132,12 +138,6 @@ PInteger  : L_PInteger { PInteger (mkPosToken $1)}
 
 PDouble :: { PDouble}
 PDouble  : L_PDouble { PDouble (mkPosToken $1)}
-
-PUnaryFun :: { PUnaryFun}
-PUnaryFun  : L_PUnaryFun { PUnaryFun (mkPosToken $1)}
-
-PDoubleFun :: { PDoubleFun}
-PDoubleFun  : L_PDoubleFun { PDoubleFun (mkPosToken $1)}
 
 PIdent :: { PIdent}
 PIdent  : L_PIdent { PIdent (mkPosToken $1)}
@@ -244,8 +244,9 @@ Exp3 : Exp3 TokenPower TInt { AbsHashedLang.EPower $1 $2 $3 }
      | Exp3 TokenPower '(' TInt ')' { AbsHashedLang.EPower $1 $2 $4 }
      | Exp4 { $1 }
 Exp4 :: { Exp }
-Exp4 : PUnaryFun Exp5 { AbsHashedLang.EUnaryFun $1 $2 }
-     | PDoubleFun Number Exp5 { AbsHashedLang.EDoubleFun $1 $2 $3 }
+Exp4 : PDoubleFun Number Exp5 { AbsHashedLang.EDoubleFun $1 $2 $3 }
+     | PDoubleFun '(' Number ')' Exp5 { AbsHashedLang.EDoubleFun $1 $3 $5 }
+     | PUnaryFun Exp5 { AbsHashedLang.EUnaryFun $1 $2 }
      | TokenRotate RotateAmount Exp5 { AbsHashedLang.ERotate $1 $2 $3 }
      | TokenSub Exp5 { AbsHashedLang.ENegate $1 $2 }
      | Exp5 { $1 }

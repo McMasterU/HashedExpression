@@ -13,19 +13,9 @@ token KWDataPattern
   | {"LAST_COLUMN_0"}
   | {"FIRST_SLICE_1"}
   | {"LAST_SLICE_1"};
-position token TokenSub {"-"};
-position token TokenPlus {"+"};
-position token TokenReIm {"+:"};
-position token TokenMul {"*"};
-position token TokenDiv {"/"};
-position token TokenScale {"*."};
-position token TokenDot {"<.>"};
-position token TokenPower {"^"};
-position token TokenRotate {"rotate"};
-position token TokenCase {"case"};
-position token PInteger digit+;
-position token PDouble digit+ '.' digit+ ('e' '-'? digit+)?;
--- Unary functions
+position token PDoubleFun
+    {"huber"}
+  | {"normHuber"};
 position token PUnaryFun
     {"sqrt"}
   | {"sin"}
@@ -47,9 +37,18 @@ position token PUnaryFun
   | {"ft"}
   | {"norm2square"}
   | {"sumElements"};
-position token PDoubleFun
-    {"huber"}
-  | {"huberNorm"};
+position token TokenSub {"-"};
+position token TokenPlus {"+"};
+position token TokenReIm {"+:"};
+position token TokenMul {"*"};
+position token TokenDiv {"/"};
+position token TokenScale {"*."};
+position token TokenDot {"<.>"};
+position token TokenPower {"^"};
+position token TokenRotate {"rotate"};
+position token TokenCase {"case"};
+position token PInteger digit+;
+position token PDouble digit+ '.' digit+ ('e' '-'? digit+)?;
 
 position token PIdent (letter (letter|digit|'_'|'\'')*);
 
@@ -148,8 +147,9 @@ EPower. Exp3 ::= Exp3 TokenPower TInt;
 EPower. Exp3 ::= Exp3 TokenPower "(" TInt ")";
 _. Exp3 ::= Exp4;
 
-EUnaryFun. Exp4 ::= PUnaryFun Exp5;
 EDoubleFun. Exp4 ::= PDoubleFun Number Exp5;
+EDoubleFun. Exp4 ::= PDoubleFun "(" Number ")" Exp5;
+EUnaryFun. Exp4 ::= PUnaryFun Exp5;
 ERotate. Exp4 ::= TokenRotate RotateAmount Exp5;
 ENegate. Exp4 ::= TokenSub Exp5;
 _. Exp4 ::= Exp5;

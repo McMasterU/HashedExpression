@@ -111,8 +111,8 @@ checkSemanticAndGenCode problem = do
     when (shape /= [] || nt /= HE.R) $
         throwError $
         ErrorWithPosition
-            ("Objective should be a real scalar, here it is " ++
-             show (toReadable shape, nt))
+            ("Objective should be a real scalar, here it is (" ++
+             toReadable shape ++ ", " ++ show nt ++ ")")
             (getBeginningPosition parseObjectiveExp)
     liftIO $ putStrLn "Syntax is correct"
     liftIO $
@@ -347,13 +347,14 @@ getBeginningPosition exp =
         EScale exp _ _ -> getBeginningPosition exp
         EDot exp _ _ -> getBeginningPosition exp
         EPower exp _ _ -> getBeginningPosition exp
-        EUnaryFun (PUnaryFun (pos, _)) _ -> pos
         ERotate (TokenRotate (pos, _)) _ _ -> pos
         ENegate (TokenSub (pos, _)) _ -> pos
         ENumDouble (PDouble (pos, _)) -> pos
         ENumInteger (PInteger (pos, _)) -> pos
         EIdent (PIdent (pos, _)) -> pos
         EPiecewise (TokenCase (pos, _)) exp _ -> pos
+        EUnaryFun (PUnaryFun (pos, _)) _ -> pos
+        EDoubleFun (PDoubleFun (pos, _)) _ _ -> pos
 
 toHEVal :: HE.Shape -> Val -> Result HU.Val
 toHEVal shape v =
@@ -713,7 +714,7 @@ constructExp context shapeInfo exp =
                         ErrorWithPosition
                             ("Function " ++ funName ++ " not found")
                             opPos
-            EDoubleFun (PDoubleFun (funPos, name)) num operand -> do
+            EDoubleFun (PDoubleFun (funPos, name)) num exp -> do
                 let onlyForRealVector operand =
                         unless (getNT operand == HE.R) $
                         throwError $
@@ -745,7 +746,7 @@ constructExp context shapeInfo exp =
                     "huber" -> do
                         onlyForRealVector operand
                         return $ huber delta operand
-                    "huberNorm" -> do
+                    "normHuber" -> do
                         onlyForRealVector operand
                         return $ dot (huber delta operand) (HU.aConst (getShape operand) 1)
 
@@ -773,6 +774,8 @@ inferShape context@Context {..} exp =
         EPiecewise (TokenCase _) exp cases ->
             anyJust . map (inferShape context) $ [exp]
         EUnaryFun (PUnaryFun _) exp ->
+            anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
+        EDoubleFun (PDoubleFun _) _ exp ->
             anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
 
 checkSameShape ::
