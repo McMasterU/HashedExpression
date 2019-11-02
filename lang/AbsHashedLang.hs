@@ -42,6 +42,12 @@ newtype PInteger = PInteger ((Int,Int),String)
 newtype PDouble = PDouble ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
+newtype PUnaryFun = PUnaryFun ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
+newtype PDoubleFun = PDoubleFun ((Int,Int),String)
+  deriving (Eq, Ord, Show, Read)
+
 newtype PIdent = PIdent ((Int,Int),String)
   deriving (Eq, Ord, Show, Read)
 
@@ -116,7 +122,8 @@ data Exp
     | EScale Exp TokenScale Exp
     | EDot Exp TokenDot Exp
     | EPower Exp TokenPower TInt
-    | EFun PIdent Exp
+    | EUnaryFun PUnaryFun Exp
+    | EDoubleFun PDoubleFun Number Exp
     | ERotate TokenRotate RotateAmount Exp
     | ENegate TokenSub Exp
     | ENumDouble PDouble

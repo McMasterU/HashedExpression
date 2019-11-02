@@ -85,6 +85,8 @@ import ErrM
   L_TokenCase { PT _ (T_TokenCase _) }
   L_PInteger { PT _ (T_PInteger _) }
   L_PDouble { PT _ (T_PDouble _) }
+  L_PUnaryFun { PT _ (T_PUnaryFun _) }
+  L_PDoubleFun { PT _ (T_PDoubleFun _) }
   L_PIdent { PT _ (T_PIdent _) }
 
 %%
@@ -130,6 +132,12 @@ PInteger  : L_PInteger { PInteger (mkPosToken $1)}
 
 PDouble :: { PDouble}
 PDouble  : L_PDouble { PDouble (mkPosToken $1)}
+
+PUnaryFun :: { PUnaryFun}
+PUnaryFun  : L_PUnaryFun { PUnaryFun (mkPosToken $1)}
+
+PDoubleFun :: { PDoubleFun}
+PDoubleFun  : L_PDoubleFun { PDoubleFun (mkPosToken $1)}
 
 PIdent :: { PIdent}
 PIdent  : L_PIdent { PIdent (mkPosToken $1)}
@@ -236,7 +244,8 @@ Exp3 : Exp3 TokenPower TInt { AbsHashedLang.EPower $1 $2 $3 }
      | Exp3 TokenPower '(' TInt ')' { AbsHashedLang.EPower $1 $2 $4 }
      | Exp4 { $1 }
 Exp4 :: { Exp }
-Exp4 : PIdent Exp5 { AbsHashedLang.EFun $1 $2 }
+Exp4 : PUnaryFun Exp5 { AbsHashedLang.EUnaryFun $1 $2 }
+     | PDoubleFun Number Exp5 { AbsHashedLang.EDoubleFun $1 $2 $3 }
      | TokenRotate RotateAmount Exp5 { AbsHashedLang.ERotate $1 $2 $3 }
      | TokenSub Exp5 { AbsHashedLang.ENegate $1 $2 }
      | Exp5 { $1 }

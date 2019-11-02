@@ -115,7 +115,9 @@ checkSemanticAndGenCode problem = do
              show (toReadable shape, nt))
             (getBeginningPosition parseObjectiveExp)
     liftIO $ putStrLn "Syntax is correct"
-    liftIO $ putStrLn "Now compute gradient, simplify, eliminate common subexpressions and generate code..."
+    liftIO $
+        putStrLn
+            "Now compute gradient, simplify, eliminate common subexpressions and generate code..."
     let problemGen =
             HS.constructProblem
                 (wrap objectiveExp)
@@ -345,7 +347,7 @@ getBeginningPosition exp =
         EScale exp _ _ -> getBeginningPosition exp
         EDot exp _ _ -> getBeginningPosition exp
         EPower exp _ _ -> getBeginningPosition exp
-        EFun (PIdent (pos, _)) _ -> pos
+        EUnaryFun (PUnaryFun (pos, _)) _ -> pos
         ERotate (TokenRotate (pos, _)) _ _ -> pos
         ENegate (TokenSub (pos, _)) _ -> pos
         ENumDouble (PDouble (pos, _)) -> pos
@@ -357,7 +359,8 @@ toHEVal :: HE.Shape -> Val -> Result HU.Val
 toHEVal shape v =
     case v of
         ValFile filePath -> return $ HU.VFile $ HU.TXT filePath
-        ValDataset filePath dataset -> return $ HU.VFile $ HU.HDF5 filePath dataset
+        ValDataset filePath dataset ->
+            return $ HU.VFile $ HU.HDF5 filePath dataset
         ValPattern (KWDataPattern pattern) ->
             case (pattern, shape) of
                 ("FIRST_ROW_1", [size1, size2]) ->
@@ -372,7 +375,7 @@ toHEVal shape v =
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
                     concat $ replicate size1 $ 1 : replicate (size2 - 1) 0
-                ("LAST_COLUMN_1", [size1, size2]) -> 
+                ("LAST_COLUMN_1", [size1, size2]) ->
                     return .
                     HU.V2D . Array.listArray ((0, 0), (size1 - 1, size2 - 1)) $
                     concat $ replicate size1 $ replicate (size2 - 1) 0 ++ [1]
@@ -396,7 +399,8 @@ toHEVal shape v =
                     throwError $
                     GeneralError $
                     "Pattern " ++
-                    pattern ++ " is incompatible with the shape or not supported yet"
+                    pattern ++
+                    " is incompatible with the shape or not supported yet"
         ValRandom -> return $ HU.VNum 3
         ValLiteral num -> return $ HU.VNum (numToDouble num)
 
@@ -419,6 +423,7 @@ constructExp context shapeInfo exp =
         multiply x y = mulMany [x, y]
         reIm x y = apply (binary RealImag) [x, y]
         scale x y = apply (binaryET Scale ElementDefault) [x, y]
+        subtract x y = sumMany [x, scale (HU.aConst [] (-1)) y]
         dot x y = apply (binaryET InnerProd ElementDefault `hasShape` []) [x, y]
         app fun x = apply (unary fun) [x]
         piecewise marks condition branches =
@@ -624,7 +629,7 @@ constructExp context shapeInfo exp =
                         "vector branches of piecewise are not of same numtype"
                         opPos
                 return $ piecewise marks condition caseExps
-            EFun (PIdent (opPos, funName)) exp -> do
+            EUnaryFun (PUnaryFun (opPos, funName)) exp -> do
                 let onlyForRealVector operand =
                         unless (getNT operand == HE.R) $
                         throwError $
@@ -692,6 +697,9 @@ constructExp context shapeInfo exp =
                         let reFT = app ReFT operand
                         let imFT = app ImFT operand
                         return $ reIm reFT imFT
+                    "sumElements" -> do
+                        onlyForRealVector operand
+                        return $ dot operand (HU.aConst (getShape operand) 1)
                     "norm2square" -> do
                         operand <- constructExp context shapeInfo exp
                         if getNT operand == HE.R
@@ -705,6 +713,41 @@ constructExp context shapeInfo exp =
                         ErrorWithPosition
                             ("Function " ++ funName ++ " not found")
                             opPos
+            EDoubleFun (PDoubleFun (funPos, name)) num operand -> do
+                let onlyForRealVector operand =
+                        unless (getNT operand == HE.R) $
+                        throwError $
+                        ErrorWithPosition "Operand must be a real vector" funPos
+                    onlyForComplexVector operand =
+                        unless (getNT operand == HE.C) $
+                        throwError $
+                        ErrorWithPosition
+                            "Operand must be a complex vector"
+                            funPos
+                operand <- constructExp context shapeInfo exp
+                let delta = numToDouble num
+                let huber delta operand =
+                        let one = HU.aConst (getShape operand) 1
+                            const val = HU.aConst [] val
+                            inner =
+                                const 0.5 `scale` (operand `multiply` operand)
+                            outerLeft =
+                                (const (-delta) `scale` operand) `subtract`
+                                (const (delta * delta / 2) `scale` one)
+                            outerRight =
+                                (const delta `scale` operand) `subtract`
+                                (const (delta * delta / 2) `scale` one)
+                         in piecewise
+                                [-delta, delta]
+                                operand
+                                [outerLeft, inner, outerRight]
+                case name of
+                    "huber" -> do
+                        onlyForRealVector operand
+                        return $ huber delta operand
+                    "huberNorm" -> do
+                        onlyForRealVector operand
+                        return $ dot (huber delta operand) (HU.aConst (getShape operand) 1)
 
 inferShape :: Context -> Exp -> Maybe HE.Shape
 inferShape context@Context {..} exp =
@@ -729,7 +772,8 @@ inferShape context@Context {..} exp =
         ENegate (TokenSub _) exp -> anyJust . map (inferShape context) $ [exp]
         EPiecewise (TokenCase _) exp cases ->
             anyJust . map (inferShape context) $ [exp]
-        EFun (PIdent _) exp -> anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
+        EUnaryFun (PUnaryFun _) exp ->
+            anyJust . map (inferShape context) $ [exp] -- TODO: depends on PIdent
 
 checkSameShape ::
        (ExpressionMap, Int)
