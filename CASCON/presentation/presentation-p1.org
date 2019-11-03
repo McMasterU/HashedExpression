@@ -11,9 +11,14 @@
 #+LATEX_HEADER: \bibliography{References}
 
 * Model Driven Development
+** Model Driven Development
 * Non-Linear Programming
-* AMPL
-* Ipopt Problem
+** Non-Linear Programming
+** MRI Trajectory Design
+* Sample Problem
+** Optimizing A Simple Parabola
+** AMPL / NEOS Server
+** C / IPOPT Code
 * Hashed Expression - Symphony's Backend
 ** Hashed Expression - Symphony's Backend
   - Embedded Language in *Haskell*

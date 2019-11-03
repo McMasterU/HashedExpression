@@ -18,43 +18,14 @@
   - Generates performance oriented c code
   - Solver Agnostic (plug into your solver of choice)
 * Sample Problem 1
-* Sample Problem 2 (Bounded Parameters)
-* Sample Problem 3 (Constraint Programming)
-* Instruction Scheduling Intro
-** Instruction Scheduling
-*** Problem
-    Given a set of instructions and dependencies, designate an order 
-    (find a *schedule*) satisfying the dependencies and optimizing performance
-*** Known NP-Complete 
-    Practically solved by
-    - *Heuristics*
-    - *Approximation Algorithms*
-
-** Example Instruction Dependency DAG
-   #+BEGIN_LATEX
-   \begin{figure}
-   \includegraphics[scale=0.085]{figures/graph}
-   \caption{Vector Instruction Dep. Graph}
-   \end{figure}
-   #+END_LATEX
-
-** Types of Scheduling Algorithms
-   - *Basic Block:* break code into blocks within branches (most commonly performed scheduling)
-	 - *Global Scheduling:* schedule across basic block boundaries
-	 - *Modulo Scheduling:* schedules basic blocks inside of a loop, seeking to
-     optimize by interleaving iterations
-	 - *Trace Scheduling:* tries to optimize control flow by predicting routes
-     taken on branches
-
-** Graph Colouring
-   #+BEGIN_LATEX
-   \begin{figure}
-   \includegraphics[scale=0.5]{figures/nshape}
-   \caption{Register Allocation via Graph Coloring}
-   \end{figure}
-   #+END_LATEX
-   Find a *k-Colouring* for the dependency graph, where *$k = \#Registers$*
-
+** Velocity Problem
+* Sample Problem 2
+** (Brain Problem)
+** Play with generating HDF5
+* Sample Problem 3 
+** (Multi-Coil MRI / Constraint Programming)
+** Play with Scaling Factor
+** Play With L2-Norm / Hubar Penalty
 * Hashed Expression - Symphony's Backend
 ** Hashed Expression - Symphony's Backend
   - Embedded Language in *Haskell*
