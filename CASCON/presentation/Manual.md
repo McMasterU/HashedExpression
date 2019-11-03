@@ -7,7 +7,7 @@
     - 2D(m x n) variable is a 2D array of m x n numbers, useful for problems in image processing, ...
     - 3D(m x n x p) variable is a 3D array of m x n x p numbers, useful for problems in topology, image processing with voxels, ...
   - Numtype: can be real (R) or complex (C)
-- We can manipulate vectors like adding, multiplying, doing inner product, ... to form new expressions
+- We can manipulate vectors like adding, multiplying, doing inner product, ... to form new vectors (expressions).
 
 ### Forming expression
 - (+) Add (point-wise) two vectors having same shape and same numtype
