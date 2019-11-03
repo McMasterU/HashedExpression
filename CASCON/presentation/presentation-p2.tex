@@ -1,0 +1,115 @@
+% Created 2019-11-03 Sun 01:17
+% Intended LaTeX compiler: pdflatex
+\documentclass[presentation]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{minted}
+\usepackage[backend=bibtex]{biblatex}
+\bibliography{References}
+\usepackage{amsmath, amssymb}
+\usetheme{Boadilla}
+\author{TODO add list of authors}
+\date{November 6, 2019}
+\title{Two Functional MDD's for the Price of One - Part 2}
+\hypersetup{
+ pdfauthor={TODO add list of authors},
+ pdftitle={Two Functional MDD's for the Price of One - Part 2},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.2 (Org mode 9.2.5)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+
+\section{Symphony - Modeling Language for Non-Linear Optimization}
+\label{sec:orgb57e87e}
+\begin{frame}[label={sec:org30df36c}]{Symphony - Modeling Language for Non-Linear Optimization}
+\begin{itemize}
+\item Models linear and non-linear programming problems
+\item Simple declarative language
+\item Support for bounded parameters and constraint programming
+\item Generates performance oriented c code
+\item Solver Agnostic (plug into your solver of choice)
+\end{itemize}
+\end{frame}
+\section{Sample Problem 1}
+\label{sec:orgc7632c9}
+\section{Sample Problem 2 (Bounded Parameters)}
+\label{sec:orgcc8e741}
+\section{Sample Problem 3 (Constraint Programming)}
+\label{sec:orgf34d00a}
+\section{Instruction Scheduling Intro}
+\label{sec:orgec9afbc}
+\begin{frame}[label={sec:org2f7d8cc}]{Instruction Scheduling}
+\begin{block}{Problem}
+Given a set of instructions and dependencies, designate an order 
+(find a \alert{schedule}) satisfying the dependencies and optimizing performance
+\end{block}
+\begin{block}{Known NP-Complete}
+Practically solved by
+\begin{itemize}
+\item \alert{Heuristics}
+\item \alert{Approximation Algorithms}
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}[label={sec:org167302b}]{Example Instruction Dependency DAG}
+\begin{LATEX}
+\begin{figure}
+\includegraphics[scale=0.085]{figures/graph}
+\caption{Vector Instruction Dep. Graph}
+\end{figure}
+\end{LATEX}
+\end{frame}
+
+\begin{frame}[label={sec:org9a8ca8f}]{Types of Scheduling Algorithms}
+\begin{itemize}
+\item \alert{Basic Block:} break code into blocks within branches (most commonly performed scheduling)
+\item \alert{Global Scheduling:} schedule across basic block boundaries
+\item \alert{Modulo Scheduling:} schedules basic blocks inside of a loop, seeking to
+optimize by interleaving iterations
+\item \alert{Trace Scheduling:} tries to optimize control flow by predicting routes
+taken on branches
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:orgce9bae7}]{Graph Colouring}
+\begin{LATEX}
+\begin{figure}
+\includegraphics[scale=0.5]{figures/nshape}
+\caption{Register Allocation via Graph Coloring}
+\end{figure}
+\end{LATEX}
+Find a \alert{k-Colouring} for the dependency graph, where \alert{\(k = \#Registers\)}
+\end{frame}
+
+\section{Hashed Expression - Symphony's Backend}
+\label{sec:org6f0721a}
+\begin{frame}[label={sec:org2f7d608}]{Hashed Expression - Symphony's Backend}
+\begin{itemize}
+\item Embedded Language in \alert{Haskell}
+\end{itemize}
+\end{frame}
+\section{References}
+\label{sec:orgbbea773}
+\begin{frame}[label={sec:orge3f83fa}]{References}
+\printbibliography[heading=none]
+\end{frame}
+\end{document}

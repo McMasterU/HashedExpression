@@ -1,0 +1,23 @@
+#+TITLE: Two Functional MDD's for the Price of One - Part 1
+#+AUTHOR: TODO add list of authors
+#+DATE: November 6, 2019
+#+OPTIONS: H:2 toc:t num:t
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [presentation]
+#+BEAMER_THEME: Boadilla
+#+COLUMNS: %45ITEM %10BEAMER_ENV(Env) %10BEAMER_ACT(Act) %4BEAMER_COL(Col)
+#+LATEX_HEADER_EXTRA: \usepackage{amsmath, amssymb}
+#+LATEX_HEADER: \usepackage[backend=bibtex]{biblatex}
+#+LATEX_HEADER: \bibliography{References}
+
+* Model Driven Development
+* Non-Linear Programming
+* AMPL
+* Ipopt Problem
+* Hashed Expression - Symphony's Backend
+** Hashed Expression - Symphony's Backend
+  - Embedded Language in *Haskell*
+* References
+** References
+
+  \printbibliography[heading=none]

@@ -1,0 +1,64 @@
+#+TITLE: Two Functional MDD's for the Price of One - Part 2
+#+AUTHOR: TODO add list of authors
+#+DATE: November 6, 2019
+#+OPTIONS: H:2 toc:t num:t
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [presentation]
+#+BEAMER_THEME: Boadilla
+#+COLUMNS: %45ITEM %10BEAMER_ENV(Env) %10BEAMER_ACT(Act) %4BEAMER_COL(Col)
+#+LATEX_HEADER_EXTRA: \usepackage{amsmath, amssymb}
+#+LATEX_HEADER: \usepackage[backend=bibtex]{biblatex}
+#+LATEX_HEADER: \bibliography{References}
+
+* Symphony - Modeling Language for Non-Linear Optimization  
+** Symphony - Modeling Language for Non-Linear Optimization
+  - Models linear and non-linear programming problems
+  - Simple declarative language
+  - Support for bounded parameters and constraint programming
+  - Generates performance oriented c code
+  - Solver Agnostic (plug into your solver of choice)
+* Sample Problem 1
+* Sample Problem 2 (Bounded Parameters)
+* Sample Problem 3 (Constraint Programming)
+* Instruction Scheduling Intro
+** Instruction Scheduling
+*** Problem
+    Given a set of instructions and dependencies, designate an order 
+    (find a *schedule*) satisfying the dependencies and optimizing performance
+*** Known NP-Complete 
+    Practically solved by
+    - *Heuristics*
+    - *Approximation Algorithms*
+
+** Example Instruction Dependency DAG
+   #+BEGIN_LATEX
+   \begin{figure}
+   \includegraphics[scale=0.085]{figures/graph}
+   \caption{Vector Instruction Dep. Graph}
+   \end{figure}
+   #+END_LATEX
+
+** Types of Scheduling Algorithms
+   - *Basic Block:* break code into blocks within branches (most commonly performed scheduling)
+	 - *Global Scheduling:* schedule across basic block boundaries
+	 - *Modulo Scheduling:* schedules basic blocks inside of a loop, seeking to
+     optimize by interleaving iterations
+	 - *Trace Scheduling:* tries to optimize control flow by predicting routes
+     taken on branches
+
+** Graph Colouring
+   #+BEGIN_LATEX
+   \begin{figure}
+   \includegraphics[scale=0.5]{figures/nshape}
+   \caption{Register Allocation via Graph Coloring}
+   \end{figure}
+   #+END_LATEX
+   Find a *k-Colouring* for the dependency graph, where *$k = \#Registers$*
+
+* Hashed Expression - Symphony's Backend
+** Hashed Expression - Symphony's Backend
+  - Embedded Language in *Haskell*
+* References
+** References
+
+  \printbibliography[heading=none]
