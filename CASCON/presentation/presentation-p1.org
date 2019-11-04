@@ -8,12 +8,24 @@
 #+COLUMNS: %45ITEM %10BEAMER_ENV(Env) %10BEAMER_ACT(Act) %4BEAMER_COL(Col)
 #+LATEX_HEADER_EXTRA: \usepackage{amsmath, amssymb}
 #+LATEX_HEADER: \usepackage[backend=bibtex]{biblatex}
+#+LATEX_HEADER: \usepackage{minted}
+
 #+LATEX_HEADER: \bibliography{References}
 
 * Model Driven Development
 ** Model Driven Development
-* Non-Linear Programming
+* Linear and Non-Linear Programming
+** Linear Programming
+\begin{align}
+\textsc{Minimize} \qquad & \sum_{i=0}^{n} c_i x_i \\
+\textsc{Subject to} \qquad &  Ax \leq b 
+\end{align}
+** AMPL Example - Linear Programming
+#+BEGIN_EXAMPLE
+main = putStrLn "Hello World"
+#+BEGIN_EXAMPLE
 ** Non-Linear Programming
+** AMPL Example - Non Linear Programming
 ** MRI Trajectory Design
 * Sample Problem
 ** Optimizing A Simple Parabola
