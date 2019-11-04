@@ -29,8 +29,8 @@ constraints:
 
 let:
 
-    regularization = 100*(t101 + t112) + 100*(t201 + t212)
+    regularization = (t101 - t112) + (t201 - t212)
 
 minimize:
 
-  -((c1 * x11) + (c2 * x12) + (c3 * x21) + (c4 * x22) - regularization)
+  -((c1 * x11) + (c2 * x12) + (c3 * x21) + (c4 * x22) + regularization)
