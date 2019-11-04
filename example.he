@@ -1,7 +1,6 @@
 variables:
   x11, x12, x21, x22
-  t101, t112
-  t201, t212
+
 
 constants:
 
@@ -19,7 +18,6 @@ constants:
 
 constraints:
   x11>= 0,  x12>= 0,   x21>= 0,    x22>= 0
-  t101>= 0, t112>= 0, t201>=0, t212>=0
   x11+x21>=DemandCompany1
   x12+x22>=DemandCompany2
   x11+x12<=CapacityFactory1
