@@ -27,10 +27,8 @@ constraints:
 
 
 
-let:
 
-    regularization= (t101 - t112 +1) + (t201 - t212 +1)
 
 minimize:
 
-  -((c1 * x11) + (c2 * x12) + (c3 * x21) + (c4 * x22) + regularization)
+  -((c1 * x11) + (c2 * x12) + (c3 * x21) + (c4 * x22))
