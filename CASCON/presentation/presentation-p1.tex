@@ -151,13 +151,62 @@
     \end{tabular}
 \end{frame}
 
-\section{Non-Linear Programming}
+
+\section{Optimization}
 \label{sec:org49ebdff}
-\begin{frame}[label={sec:orgd027c63}]{Non-Linear Programming}
+\begin{frame}[label={sec:orgd027c63}]{Optimization}
+  \begin{itemize}
+  \item maximize benefit
+  \item minimize cost
+  \item satisfy constraints
+  \item make anything better!
+  \item not just instruction scheduling
+  \end{itemize}
 \end{frame}
-\begin{frame}[label={sec:org4debd30}]{MRI Trajectory Design}
+
+\begin{frame}{Optimization - MRI}
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{figs/BeforeAfterMRI.png}
+\end{figure}
+  \begin{itemize}
+  \item big and little magnets manipulate proton spins
+  \item antenna picks up signal
+  \item little magnets controlled by ``gradient waveforms''
+  \item common designs (left) are not realizable
+  \item reformulate as an optimization problem (producing right)
+  \end{itemize}
 \end{frame}
-\section{Sample Problem}
+
+\begin{frame}{Optimization - MRI}
+  \begin{itemize}
+  \item key insight:  important waveforms are periodic
+  \item Fourier Transform is discrete
+  \item optimize over finite set of coefficients
+  \end{itemize}
+\begin{align}
+ \operatorname{min}_{\{h_f:f\in F\}}\quad & \delta \\
+   \text{subject to}\quad & \left| \mu - g(t) \right| \le \delta, \qquad \forall t \in S \\
+   & \left| g(t) \right| \le g_{\text{peak}}, \qquad \forall t \\
+   & \left| \partial g / \partial t (t) \right| \le g_{\text{slew}}, \qquad \forall t \\
+   & \int_{ t \in S } g(t) = A \\
+   \text{where}\quad & g(t) = \sum_{f\in F} h_f \sin(2\pi t f)
+\end{align}
+\end{frame}
+
+\begin{frame}[label={sec:orgd027c63}]{Optimization - MRI}
+  \begin{itemize}
+  \item developed with AMPL/neos
+  \item needed parametrized family for production
+  \item reimplement in Python
+  \item want one tool for development and deployment
+  \end{itemize}
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{figs/GradPatent.png}
+\end{figure}
+\end{frame}
+
+
+\section{Example:  Parabola}
 \label{sec:org6765f95}
 \begin{frame}[label={sec:org0a594b7}]{Optimizing A Simple Parabola}
 \end{frame}
@@ -165,13 +214,28 @@
 \end{frame}
 \begin{frame}[label={sec:org07fda49}]{C / IPOPT Code}
 \end{frame}
-\section{Hashed Expression - Symphony's Backend}
-\label{sec:orga3e3bfb}
-\begin{frame}[label={sec:org3131e28}]{Hashed Expression - Symphony's Backend}
-\begin{itemize}
-\item Embedded Language in \alert{Haskell}
-\end{itemize}
+
+\begin{frame}{Parts II and III}
+  \begin{itemize}
+  \item more optimization: TODO
+  \begin{itemize}
+  \item example: Integrating Blood Flow from PCA-MRI
+  \item example: MRI Image Reconstruction with Mask
+  \item example: Parallel MRI
+  \item example: Logistics
+  \item Hashed Expression (Symphony's Backend)
+  \end{itemize}
+  \item PAL:  Petri App Land
+  \begin{itemize}
+  \item State Diagrams can model user interaction (grade 5+)
+  \item PALDraw:  graphical modelling tool for State Diagrams
+  \item make a working app
+  \item Petri Nets can model multi-user interaction in web apps
+  \item PALDraw:  graphical modelling tool for Petri App Land
+  \end{itemize}
+  \end{itemize}
 \end{frame}
+
 \section{References}
 \label{sec:org51a8b04}
 \begin{frame}[label={sec:org2b02857}]{References}
