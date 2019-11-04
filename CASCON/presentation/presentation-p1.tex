@@ -14,16 +14,15 @@
 \usepackage{amssymb}
 \usepackage{capt-of}
 \usepackage{hyperref}
-\usepackage{minted}
 \usepackage[backend=bibtex]{biblatex}
 \bibliography{References}
 \usepackage{amsmath, amssymb}
 \usetheme{Boadilla}
-\author{TODO add list of authors}
+\author{Curtis d'Alves, Nhan Thai, Nassim Khoonkari, \\ Padma Pasupathi, Tanya Bouman, Christopher Anand}
 \date{November 6, 2019}
 \title{Two Functional MDD's for the Price of One - Part 1}
 \hypersetup{
- pdfauthor={TODO add list of authors},
+ pdfauthor={Curtis d'Alves, Nhan Thai, Nassim Khoonkari,\\ Padma Pasupathi, Tanya Bouman, Christopher Anand},
  pdftitle={Two Functional MDD's for the Price of One - Part 1},
  pdfkeywords={},
  pdfsubject={},
@@ -39,8 +38,119 @@
 
 \section{Model Driven Development}
 \label{sec:orgf064032}
-\begin{frame}[label={sec:org9c2735a}]{Model Driven Development}
+\begin{frame}[label={sec:org9c2735a}]{Proto Model Driven Development}
+\begin{itemize}
+\item Computer-aided software engineering (CASE) is the domain of software tools used to design and implement applications.
+\item ISDOS project started in 1968 at the University of Michigan
+\item Lots of tools.
+  \begin{itemize}
+  \item DB-centric tools (e.g., Object Relation Mapping tools)
+  \item OO-oriented tools (e.g., Eclipse Modeling Framework)
+  \end{itemize}
+\item UML, standardized 1997
+  \begin{itemize}
+  \item large-scale processes
+  \item documenting user interaction
+  \end{itemize}
+\item skeleton generation    
+\end{itemize}
 \end{frame}
+\begin{frame}{Model Driven Development for Numerical Computation}
+\begin{itemize}
+\item linear algebra
+  \begin{itemize}
+  \item VOP - vector-oriented programming
+  \item APL - Array Programming Language, 1966
+  \item Matlab - ``mathematics for engineering''
+  \item Maple - symbolic computation, symbolic code generation
+  \end{itemize}
+\item optimization
+  \begin{itemize}
+  \item AMPL, 1985
+  \item GAMS
+  \end{itemize}
+\item mathematical interface to some very powerful software
+\item great for design exploration
+\end{itemize}
+\end{frame}
+\begin{frame}{Model Driven Development}
+\begin{itemize}
+\item some problems with CASE tools
+  \begin{itemize}
+  \item generating skeletons, makes it hard to regenerate
+  \item suffers same problem as documentation
+  \item people who can update model are too busy to do so
+  \item easier to hack on generated code
+  \end{itemize}
+\item new vision (e.g. Selic, 2003)
+  \begin{itemize}
+  \item primary focus and products are models rather than computer programs
+  \item technology-independent specifications
+  \item requires
+  \begin{itemize}
+  \item generating complete programs from models
+  \item verifying models on a computer
+  \end{itemize}
+  \item looking at code should be as rare as looking at assembly
+  \end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}{MDD - Coconut}
+\begin{itemize}
+\item COde CONstruction User Tool, 2004
+  \begin{itemize}
+  \item nested Domain-Specific Languages
+  \item functional assembly language
+  \item higher-level patterns
+  \item principled graph transformations
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{MDD - Coconut}
+\begin{figure}
+\includegraphics[width=0.6\textwidth]{figs/Coconut.pdf}
+\end{figure}
+\end{frame}
+
+\begin{frame}{MDD - Coconut}
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{figs/CoconutFaster.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}{MDD - Coconut}
+\begin{itemize}
+\item COde CONstruction User Tool
+  \begin{itemize}
+  \item used to generate MASS for all IBM platforms since Cell/B.E.
+  \item but not used by users outside McMaster / OCA
+  \item why?
+    \begin{itemize}
+    \item have to learn Haskell
+    \item too many interfaces geared to abandoned research projects
+    \end{itemize}
+  \item fix = fix up the code
+    \begin{itemize}
+    \item open source!
+    \item potential embarrassment will motivate clean up
+    \end{itemize}
+  \item open Coconut in pieces
+  \end{itemize}
+\end{itemize}
+    \begin{tabular}{|l|l|l|}
+    \hline
+     today &  HashedExpression & calculus used for continuous optimization \\
+    \hline
+     later &  CodeGraph library & Intermediate Lanugage \\
+    \hline
+     later &  DSLs + interpreters &  front-ends \\
+    \hline
+     later &  scheduler + simulator & back-end \\
+    \hline
+    \end{tabular}
+\end{frame}
+
 \section{Non-Linear Programming}
 \label{sec:org49ebdff}
 \begin{frame}[label={sec:orgd027c63}]{Non-Linear Programming}
