@@ -10,6 +10,7 @@ constants:
   m = 0
 
 constraints:
+  x   <= n
   x^2 <= m
 
 minimize:

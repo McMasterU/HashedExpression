@@ -388,11 +388,21 @@ void evaluate_scalar_constraints_jacobian() {
       m = 0
 
     constraints:
+      x <= n
       x^2 <= m
 
     minimize:
       a * x^2 + b * x + c   
   \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Why Symphony?}
+  \begin{itemize}
+  \item no need to break out your Calculus 101 textbook
+  \item generates just the auxiliary methods
+  \item solver agnostic, plug into whatever c code you want
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Parts II and III}
