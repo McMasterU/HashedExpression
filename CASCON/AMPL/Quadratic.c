@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "utils.c"
+#include "hdf5.h"
 
 #define MEM_SIZE 10
 
-#define VAR_START_OFFSET 5
+#define VARS_START_OFFSET 5
 #define NUM_VARIABLES 1
 #define NUM_ACTUAL_VARIABLES 1
 
