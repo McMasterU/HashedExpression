@@ -17,6 +17,7 @@
 \usepackage[backend=bibtex]{biblatex}
 \bibliography{References}
 \usepackage{amsmath, amssymb}
+\usepackage{xcolor}
 \usepackage{listings}
 \usetheme{Boadilla}
 \author{Curtis d'Alves, Nhan Thai, Nassim Khoonkari, \\ Padma Pasupathi, Tanya Bouman, Christopher Anand}
@@ -32,7 +33,49 @@
 \lstdefinelanguage{AMPL}{keywords={set,param,var,arc,integer,minimize,maximize,subject,to,node,sum,in,Current,complements,integer,solve_result_num,IN,contains,less,suffix,INOUT,default,logical,sum,Infinity,dimen,max,symbolic
     ,Initial,div,min,table,LOCAL,else,option,then,OUT,environ,setof ,union,all,exists,shell_exitcodeuntil,binary,forall,solve_exitcodewhile ,by,if,solve_messagewithin,check,in,solve_result
   },sensitive=true,comment=[l]{\#}}
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
 
+\lstdefinestyle{CStyle}{
+  backgroundcolor=\color{backgroundColour},   
+  commentstyle=\color{mGreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{mGray},
+  stringstyle=\color{mPurple},
+  basicstyle=\footnotesize,
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=5pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2,
+  language=C
+}
+\lstdefinestyle{Haskell}{
+  backgroundcolor=\color{backgroundColour},   
+  commentstyle=\color{mGreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{mGray},
+  stringstyle=\color{mPurple},
+  basicstyle=\footnotesize,
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=5pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2,
+  language=haskell 
+}
 \begin{document}
 
 \maketitle
@@ -232,7 +275,7 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{AMPL}
+  \frametitle{AMPL - MDD Solution for Optimization}
   \lstset{frame=tb,language=AMPL,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\ttfamily},numbers=none,numberstyle=\tiny\color{gray},keywordstyle=\bfseries,commentstyle=\textit,stringstyle=\color{mauve},breaklines=true,breakatwhitespace=true,tabsize=3}
   \begin{columns}
     \begin{column}{0.5\textwidth}
@@ -272,7 +315,84 @@
    \end{columns}
 \end{frame}
 
-\begin{frame}[label={sec:org07fda49}]{C / IPOPT Code}
+\begin{frame}
+  \frametitle{Categories of Optimization Problems / Solvers}
+
+  \begin{itemize}
+  \item Many different categories of optimization
+    \begin{itemize}
+    \item Linear / Non-Linear
+    \item Constrained / Un-Constrained
+    \item Integer / Mixed Integer
+    \item Semidefinite, stochastic, ...
+    \end{itemize}
+  \item Many, many different solvers to choose from
+  \item No one to rule them all! (Optimization is not Lord of the Rings)
+  \item NEOS Server: fantastic resource for running AMPL models on a variety of
+    different solvers
+    \url{https://neos-server.org/neos/solvers/index.html}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Optimization Without MDD}
+
+  \begin{itemize}
+  \item Variety of solvers provide implemented in C / Java / Python
+  \item however require you to supply auxiliary functions manually
+  \item commonly required auxillary functions include:
+    \begin{itemize}
+    \item objective function
+    \item gradient of the objective function
+    \item hessian of the objective function
+    \item constraint function(s)
+    \item jacobian of the constraint function(s)
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Optimization Without MDD - C Example}
+
+\begin{lstlisting}[style=CStyle]
+void evaluate_partial_derivatives_and_objective() {
+  ptr[OBJ] = ptr[A]*ptr[X]*ptr[X] + ptr[B]*ptr[X] + ptr[C];
+  ptr[DERIVATIVE] = 2.0 *ptr[A]*ptr[X] + ptr[B];
+}
+void evaluate_objective() {
+  ptr[OBJ] = ptr[A]*ptr[X]*ptr[X] + ptr[B]*ptr[X] + ptr[C];
+}
+void evaluate_partial_derivatives() {
+  ptr[DERIVATIVE] = 2.0*ptr[A]*ptr[X] + ptr[B];
+}
+void evaluate_scalar_constraints() {
+  ptr[CONSTRAINT] = pow(ptr[X],2);
+}
+void evaluate_scalar_constraints_jacobian() {
+  ptr[CONSTRAINT_DERIVATIVE] = 2.0*ptr[X];
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Symphony - Middleground MDD}
+  \begin{lstlisting}[style=CStyle]
+    variables:
+      x = 0
+
+    constants:
+      a = 1
+      b = 0
+      c = 5
+      n = -10
+      m = 0
+
+    constraints:
+      x^2 <= m
+
+    minimize:
+      a * x^2 + b * x + c   
+  \end{lstlisting}
 \end{frame}
 
 \begin{frame}{Parts II and III}
