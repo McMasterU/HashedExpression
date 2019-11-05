@@ -17,6 +17,7 @@
 \usepackage[backend=bibtex]{biblatex}
 \bibliography{References}
 \usepackage{amsmath, amssymb}
+\usepackage{listings}
 \usetheme{Boadilla}
 \author{Curtis d'Alves, Nhan Thai, Nassim Khoonkari, \\ Padma Pasupathi, Tanya Bouman, Christopher Anand}
 \date{November 6, 2019}
@@ -28,6 +29,10 @@
  pdfsubject={},
  pdfcreator={Emacs 26.2 (Org mode 9.2.5)}, 
  pdflang={English}}
+\lstdefinelanguage{AMPL}{keywords={set,param,var,arc,integer,minimize,maximize,subject,to,node,sum,in,Current,complements,integer,solve_result_num,IN,contains,less,suffix,INOUT,default,logical,sum,Infinity,dimen,max,symbolic
+    ,Initial,div,min,table,LOCAL,else,option,then,OUT,environ,setof ,union,all,exists,shell_exitcodeuntil,binary,forall,solve_exitcodewhile ,by,if,solve_messagewithin,check,in,solve_result
+  },sensitive=true,comment=[l]{\#}}
+
 \begin{document}
 
 \maketitle
@@ -209,9 +214,64 @@
 \section{Example:  Parabola}
 \label{sec:org6765f95}
 \begin{frame}[label={sec:org0a594b7}]{Optimizing A Simple Parabola}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{figure}
+       \includegraphics[scale=0.5]{figs/parabola.png}
+       \caption{Example Parabola's: Solve for Vertex}
+      \end{figure}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \begin{align}
+        \min_x \quad & a x^2 + b x + c  \\
+        \textsc{subject to } & x \leq n & \\
+        & g(x) \leq m
+      \end{align}
+    \end{column}
+  \end{columns}
 \end{frame}
-\begin{frame}[label={sec:orgb450ab6}]{AMPL / NEOS Server}
+
+\begin{frame}[fragile]
+  \frametitle{AMPL}
+  \lstset{frame=tb,language=AMPL,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\ttfamily},numbers=none,numberstyle=\tiny\color{gray},keywordstyle=\bfseries,commentstyle=\textit,stringstyle=\color{mauve},breaklines=true,breakatwhitespace=true,tabsize=3}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{figure}
+\begin{lstlisting}
+  param a;
+  param b;
+  param c;
+  param n;
+  param m;
+
+  var x >= n;
+
+  minimize Obj:
+     a * x*x + b * x + c;
+
+  subject to G:
+     x * x <= m;
+   \end{lstlisting}
+   \caption{file: Quadratic.mod}
+   \end{figure}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{figure}
+      \begin{lstlisting}
+        data;
+
+        param a := 1 ;
+        param b := 0 ;
+        param c := 5 ;
+        param n := -10 ;
+        param m := 0 ;
+      \end{lstlisting}
+      \caption{file: Quadratic.dat}
+      \end{figure}
+    \end{column}
+   \end{columns}
 \end{frame}
+
 \begin{frame}[label={sec:org07fda49}]{C / IPOPT Code}
 \end{frame}
 

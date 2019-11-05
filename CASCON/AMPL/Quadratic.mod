@@ -1,7 +1,12 @@
+param a;
+param b;
 param c;
+param n;
+param m;
 
-var X1 >= 0;
-var X2 >= 0;
+var x >= n;
 
-minimize Obj:  c[1] * X1 + c[2] * X2;
+minimize Obj:  a * x*x + b * x + c;
 
+subject to G:
+  x * x <= m;
