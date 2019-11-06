@@ -405,9 +405,98 @@ void evaluate_scalar_constraints_jacobian() {
   \end{itemize}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% User Manual (move to Part 2?)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Symphony: User Manual}
+
+\begin{frame}
+  \frametitle{Vectors and dimension}
+  \begin{itemize}
+    \item In Symphony, everything is vector.
+    \item Vectors
+      \begin{itemize}
+    \item Dimension (Shape): can be scalar, 1D, 2D, 3D, ...
+      \begin{itemize}
+      \item Scalar is just a single number 
+      \item 1D(n) variable is an array of n number, useful for problems in signal processing, sound processing, ..
+      \item 2D(m x n) variable is a 2D array of m x n numbers, useful for problems in image processing, ...
+      \item 3D(m x n x p) variable is a 3D array of m x n x p numbers, useful for
+        problems in topology, image processing with voxels, ...
+      \end{itemize}
+    \item Numtype: can be real (R) or complex (C)
+      \end{itemize}
+    \item We can manipulate vectors like adding, multiplying, doing inner product, ... to form new vectors (expressions).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Forming An Expression}
+
+  \begin{itemize}
+    \item $(+),(-),(*),(/)$ Add/Subtract/Multiply/Divide (point-wise) two vectors having same shape and same numtype
+    \item $(*.)$ Scale a vector with a scalar (if they form a vector space in Mathematics, i.e, real number can scale anything, 
+    but complex can only scale complex)
+    \item $(\textsc{<.>})$ Inner product (dot product) of two vectors 
+    \item (\^{}) Power a vector with an integer
+    \item Piecewise:
+    \begin{lstlisting}[style=Haskell]
+    case x:
+      x <= 0    -> -x
+      otherwise -> x
+    \end{lstlisting} 
+    \item sumElements, norm2square, normHuber
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Structure}
+  A valid symphony problem consists of:
+  \begin{itemize}
+  \item Variables 
+  \item Objective function 
+  \item Constants (optional)
+  \item Constraints (optional)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Variable Declaration}
+
+  \begin{itemize}
+  \item Variables are declared in a {\color{red} variable} block
+  \item For example:
+  \begin{lstlisting}[style=Haskell]
+  variables:
+    x[100][100] = 10
+    y[20][20][20]
+    a, b = 2, c
+  \end{lstlisting}
+  \item Assignment denotes an initial value
+  \item Unassigned variables will be randomly iniatlized witha number between (0,1)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Objective Function}
+
+  \begin{itemize}
+  \item Declared in a {\color{red} minimize} block
+  \item For example:
+  \begin{lstlisting}[style=Haskell]
+  minimize:
+    (x - y)^2
+  \end{lstlisting}
+  \item Must evaluate to a scalar (one dimensional value)
+  \end{itemize}
+\end{frame}
+
+\section{Parts II and III}
+
 \begin{frame}{Parts II and III}
   \begin{itemize}
-  \item more optimization: TODO
+  \item More Optimization: 
   \begin{itemize}
   \item example: Integrating Blood Flow from PCA-MRI
   \item example: MRI Image Reconstruction with Mask
@@ -426,9 +515,4 @@ void evaluate_scalar_constraints_jacobian() {
   \end{itemize}
 \end{frame}
 
-\section{References}
-\label{sec:org51a8b04}
-\begin{frame}[label={sec:org2b02857}]{References}
-\printbibliography[heading=none]
-\end{frame}
 \end{document}
