@@ -374,21 +374,29 @@ t_{(x,y)} \quad & \textsc{time in x,y direction}
  \begin{itemize} 
   \item we want to Maximize the revenue.\\
   \begin{center}
-    $Max f(x) =  Min - f(x)$
+  \begin{equation}
+    \max f(x) =  \min - f(x)
+  \end{equation}
   \end{center}
 
   \item So we will have:\\
-  \begin{center}
-    $Min  -((c_{11} * x_{11}) + (c_{12} * x_{12}) + (c_{21} * x_{21}) + (c_{22} * x_{22}) )$\\
+  \begin{equation}
+  \begin{align*}
+    \min \quad&  -((c_{11} * x_{11}) + (c_{12} * x_{12}) + (c_{21} * x_{21}) + (c_{22} * x_{22}) )\\
+     
+    subject to: \quad&\\
 
-    subject to:\\
-
-    $x_{11} \geq 0$, $ x_{12} \geq 0$,  $ x_{21} \geq 0$,   $ x_{22} \geq 0$\\
-    $x_{11}+x_{21} \geq$ DemandCompany1\\
-    $x_{12}+x_{22} \geq$ DemandCompany2\\
-    $x_{11}+x_{12} \leq$ CapacityFactory1\\
-    $x_{21}+x_{22} \leq$ CapacityFactory2\\
-  \end{center}
+    &x_{11} \geq 0,\\  
+    &x_{12} \geq 0,\\   
+    &x_{21} \geq 0,\\   
+    & x_{22} \geq 0\\
+    &x_{11}+x_{21} \geq \text{DemandCompany1}\\
+    &x_{12}+x_{22} \geq \text{DemandCompany2}\\
+    &x_{11}+x_{12} \leq \text{CapacityFactory1}\\
+    &x_{21}+x_{22} \leq \text{CapacityFactory2}\\
+    \end{align*}
+  \end{equation}
+  
   \end{itemize}
 \end{frame}
 
@@ -396,18 +404,19 @@ t_{(x,y)} \quad & \textsc{time in x,y direction}
   \frametitle{Logistics Problem}
   variables here are the the products which are sent from each factory to each company.\\
  
-  \begin{center}
-    CapacityFactory1 = 600000\\
-    CapacityFactory2 = 600000\\
+  \begin{equation}
+    \text{CapacityFactory1} &= 600000\\
+    \text{CapacityFactory2} &= 600000\\
 
-    DemandCompany1 = 30000\\
-    DemandCompany2 = 23000\\
-    $c_{11} \rightarrow$  revenue of $x_{11} = 1.75$\\
-    $c_{12}  \rightarrow$  revenue of $x_{12} = 2.25$\\
-    $c_{21} \rightarrow$  revenue of $x_{21} = 2$\\
-    $c_{22} \rightarrow$ revenue of $x_{22} = 2.50$
-
-  \end{center} 
+    \text{DemandCompany1} &= 30000\\
+    \text{DemandCompany2} &= 23000\\
+    \begin{align*} 
+    c_{11} &\rightarrow  \text{revenue of} x_{11} = 1.75\\
+    c_{12} &\rightarrow  \text{revenue of} x_{12} = 2.25\\
+    c_{21} &\rightarrow  \text{revenue of} x_{21} = 2\\
+    c_{22} &\rightarrow \text{revenue of} x_{22} = 2.50
+    \end{align*}
+  \end{equatin} 
 \end{frame}
 % \begin{frame}[label={sec:orgff6ee47}]{Play With L2-Norm / Hubar Penalty}
 % \end{frame}
