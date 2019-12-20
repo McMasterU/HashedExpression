@@ -1,0 +1,25 @@
+\frametitle{Logistics Problem}
+  \begin{itemize}
+    \item In most logistic problems we want to Maximize the benefits or Minimize the costs.
+      \item This table is for defining the revenue of sending products from factories to companies.
+
+  \begin{center}
+    \begin{tabular}{ c | c | c }
+      & Company1 & Company2 \\ \hline
+      Factory1 & 1.75 & 2.25 \\
+      Factory2 & 2.00 & 2.50
+    \end{tabular}
+  \end{center}
+
+  \item the below table shows the demand of companies. Also the capacity of each factory for producing is 60000.
+
+
+  \begin{center}
+    \begin{tabular}{ c | c | c }
+      & Company1 & Company2 \\ \hline
+      Factory1 & $x_{11}$ & $x_{12}$ \\
+      Factory2 & $x_{21}$ & $x_{22}$ \\
+      &23000 & 30000
+    \end{tabular}
+  \end{center}
+  \end{itemize}

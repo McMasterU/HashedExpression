@@ -1,0 +1,162 @@
+-- Comment
+comment "//" ;
+comment "{*" "*/" ;
+-- Token
+token KWDataPattern
+    {"FIRST_ROW_1"}
+  | {"LAST_ROW_1"}
+  | {"FIRST_COLUMN_1"}
+  | {"LAST_COLUMN_1"}
+  | {"FIRST_ROW_0"}
+  | {"LAST_ROW_0"}
+  | {"FIRST_COLUMN_0"}
+  | {"LAST_COLUMN_0"}
+  | {"FIRST_SLICE_1"}
+  | {"LAST_SLICE_1"};
+position token PDoubleFun
+    {"huber"}
+  | {"normHuber"};
+position token PUnaryFun
+    {"sqrt"}
+  | {"sin"}
+  | {"cos"}
+  | {"tan"}
+  | {"exp"}
+  | {"log"}
+  | {"sinh"}
+  | {"cosh"}
+  | {"tanh"}
+  | {"asin"}
+  | {"acos"}
+  | {"atan"}
+  | {"asinh"}
+  | {"acosh"}
+  | {"atanh"}
+  | {"xRe"}
+  | {"xIm"}
+  | {"ft"}
+  | {"norm2square"}
+  | {"sumElements"};
+position token TokenSub {"-"};
+position token TokenPlus {"+"};
+position token TokenReIm {"+:"};
+position token TokenMul {"*"};
+position token TokenDiv {"/"};
+position token TokenScale {"*."};
+position token TokenDot {"<.>"};
+position token TokenPower {"^"};
+position token TokenRotate {"rotate"};
+position token TokenCase {"case"};
+position token PInteger digit+;
+position token PDouble digit+ '.' digit+ ('e' '-'? digit+)?;
+
+position token PIdent (letter (letter|digit|'_'|'\'')*);
+
+
+-- Layout
+layout ":";
+
+-- Problem - main entr
+Problem. Problem ::= [Block];
+BlockVariable. Block ::= "variables" ":" "{" [[VariableDecl]] "}";
+BlockVariable. Block ::= "variable" ":" "{" [[VariableDecl]] "}";
+BlockConstant. Block ::= "constants" ":" "{" [[ConstantDecl]] "}";
+BlockConstant. Block ::= "constant" ":" "{" [[ConstantDecl]] "}";
+BlockConstraint. Block ::= "constraints" ":" "{" [[ConstraintDecl]] "}";
+BlockConstraint. Block ::= "constraint" ":" "{" [[ConstraintDecl]] "}";
+BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
+BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
+separator nonempty Block "";
+
+IntPos. TInt ::= PInteger;
+IntNeg. TInt ::= TokenSub PInteger;
+
+DoublePos. TDouble ::= PDouble;
+DoubleNeg. TDouble ::= TokenSub PDouble;
+
+-- Number
+NumInt. Number ::= TInt;
+NumDouble. Number ::= TDouble;
+
+-- Value
+ValFile. Val ::= "File" "(" String ")";
+ValDataset. Val ::= "Dataset" "(" String "," String ")";
+ValPattern. Val ::= "Pattern" "(" KWDataPattern ")";
+ValRandom. Val ::= "Random";
+ValLiteral. Val ::= Number;
+
+
+-- Shape
+Dim. Dim ::= "[" PInteger "]";
+ShapeScalar. Shape ::= ;
+Shape1D. Shape ::= Dim;
+Shape2D. Shape ::= Dim Dim;
+Shape3D. Shape ::= Dim Dim Dim;
+
+
+-- Variable
+VariableNoInit. VariableDecl ::= PIdent Shape;
+VariableWithInit. VariableDecl ::= PIdent Shape "=" Val;
+separator nonempty VariableDecl ",";
+separator nonempty [VariableDecl] ";";
+
+-- Constant
+ConstantDecl. ConstantDecl ::= PIdent Shape "=" Val;
+separator nonempty ConstantDecl ",";
+separator nonempty [ConstantDecl] ";";
+
+-- Let
+LetDecl. LetDecl ::= PIdent "=" Exp;
+separator nonempty LetDecl ",";
+separator nonempty [LetDecl] ";";
+
+-- Constraint
+ConstantBound. Bound ::= PIdent;
+NumberBound. Bound ::= Number;
+ConstraintLower. ConstraintDecl ::= Exp ">=" Bound;
+ConstraintUpper. ConstraintDecl ::= Exp "<=" Bound;
+ConstraintEqual. ConstraintDecl ::= Exp "==" Bound;
+separator nonempty ConstraintDecl ",";
+separator nonempty [ConstraintDecl] ";";
+
+-- Rotate Amount
+RA1D. RotateAmount ::= "(" TInt ")";
+RA2D. RotateAmount ::= "(" TInt "," TInt ")";
+RA3D. RotateAmount ::= "(" TInt "," TInt "," TInt ")";
+
+-- Piecewise
+PiecewiseCase. PiecewiseCase ::= "it" "<=" Number "->" Exp;
+PiecewiseFinalCase. PiecewiseCase ::= "otherwise" "->" Exp;
+separator nonempty PiecewiseCase ";";
+
+-- Expression
+EPlus. Exp ::= Exp TokenPlus Exp1;
+ERealImag. Exp ::= Exp TokenReIm Exp1;
+ESubtract. Exp ::= Exp TokenSub Exp1;
+_. Exp ::= Exp1;
+
+EMul. Exp1 ::= Exp1 TokenMul Exp2;
+EDiv. Exp1 ::= Exp1 TokenDiv Exp2;
+_. Exp1 ::= Exp2;
+
+EScale. Exp2 ::= Exp2 TokenScale Exp3;
+EDot. Exp2 ::= Exp2 TokenDot Exp3;
+_. Exp2 ::= Exp3;
+
+EPower. Exp3 ::= Exp3 TokenPower TInt;
+EPower. Exp3 ::= Exp3 TokenPower "(" TInt ")";
+_. Exp3 ::= Exp4;
+
+EDoubleFun. Exp4 ::= PDoubleFun Number Exp5;
+EDoubleFun. Exp4 ::= PDoubleFun "(" Number ")" Exp5;
+EUnaryFun. Exp4 ::= PUnaryFun Exp5;
+ERotate. Exp4 ::= TokenRotate RotateAmount Exp5;
+ENegate. Exp4 ::= TokenSub Exp5;
+_. Exp4 ::= Exp5;
+
+_. Exp5 ::= "(" Exp ")";
+ENumDouble. Exp5 ::= PDouble;
+ENumInteger. Exp5 ::= PInteger;
+EIdent. Exp5 ::= PIdent;
+
+EPiecewise. Exp ::= TokenCase Exp ":" "{" [PiecewiseCase] "}";

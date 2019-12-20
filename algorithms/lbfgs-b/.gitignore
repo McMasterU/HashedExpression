@@ -1,0 +1,11 @@
+*
+!lib
+!lib/*
+!*.c
+!*.cpp
+!Makefile
+!*.h
+!.gitignore
+problem.c
+!README.md
+!*.py

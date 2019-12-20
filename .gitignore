@@ -1,3 +1,14 @@
 .stack-work
 dist-newstyle
 *.cabal
+.idea
+.DS_Store
+*.iml
+out/
+*.txt
+*.h5
+
+*.dat
+*.npz
+*.npy
+problem.c
