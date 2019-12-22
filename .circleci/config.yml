@@ -25,5 +25,5 @@ jobs:
           name: Cache Dependencies
           key: stack-cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
           paths:
-            - "/root/.stack"
+            - "~/.stack"
             - ".stack-work"
