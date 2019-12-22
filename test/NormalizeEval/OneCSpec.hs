@@ -5,10 +5,10 @@ import Data.Map.Strict
 import Data.Maybe (fromJust)
 import HashedExpression
 import HashedInterp
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -44,6 +44,7 @@ import Test.QuickCheck
 prop_NormalizeThenEval :: SuiteOneC -> Bool
 prop_NormalizeThenEval (SuiteOneC exp valMaps) =
     eval valMaps exp ~= eval valMaps (normalize exp)
+
 -- |
 --
 prop_Add :: SuiteOneC -> SuiteOneC -> (Bool, Bool, Bool) -> Bool
@@ -68,7 +69,11 @@ prop_Multiply (SuiteOneC exp1 valMaps1) (SuiteOneC exp2 valMaps2) (normalize1, n
         else error
                  (prettify exp1' ++
                   " * " ++
-                  prettify exp2' ++ " not ~= " ++ prettify expMul' ++ " ----- " ++ show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
+                  prettify exp2' ++
+                  " not ~= " ++
+                  prettify expMul' ++
+                  " ----- " ++
+                  show lhs ++ " " ++ show rhs ++ " " ++ show valMaps)
   where
     valMaps = union valMaps1 valMaps2
     exp1'
