@@ -1,6 +1,6 @@
 format:
-	hindent src/*.hs
-	hindent test/*.hs
+	find src -type f -name '*.hs' | xargs hindent
+	find test -type f -name '*.hs' | xargs hindent
 
 check_exhaustive:
 	stack clean
