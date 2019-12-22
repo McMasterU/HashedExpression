@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: hashexpression/base
+      - image: hashexpression/base:0.0.1
     steps:
       - checkout
       - restore_cache:
