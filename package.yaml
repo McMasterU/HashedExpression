@@ -41,10 +41,41 @@ build-tools:
   - alex
   - happy
 
+default-extensions:
+  - FlexibleContexts
+  - RecordWildCards
 
 library:
   source-dirs:
     - src
+  default-extensions:
+    - OverloadedStrings
+    - GADTs
+    - OverloadedStrings
+    - FlexibleContexts
+    - FlexibleInstances
+    - TypeFamilies
+    - TypeApplications
+    - StandaloneDeriving
+    - TypeSynonymInstances
+    - FunctionalDependencies
+    - AllowAmbiguousTypes
+    - RoleAnnotations
+    - UndecidableInstances
+    - ExtendedDefaultRules
+    - MultiParamTypeClasses
+    - TemplateHaskell
+    - DeriveAnyClass
+    - QuasiQuotes
+    - ScopedTypeVariables
+    - TupleSections
+    - DataKinds
+    - InstanceSigs
+    - RecordWildCards
+    - LambdaCase
+    - PolyKinds
+
+
 
 executables:
   HashedExpression-exe:
