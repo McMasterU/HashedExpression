@@ -10,10 +10,10 @@ import Debug.Trace (traceShow, traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression
 import HashedInterp
+import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedNormalize
 import HashedUtils
 import Prelude hiding
     ( (*)
@@ -58,7 +58,7 @@ prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (normalize1, 
   where
     valMaps = union valMaps1 valMaps2
     exp1'
-        |normalize1 = normalize exp1
+        | normalize1 = normalize exp1
         | otherwise = exp1
     exp2'
         | normalize2 = normalize exp2
@@ -71,8 +71,13 @@ prop_Multiply :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
 prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(normalize1, normalize2, normalizeMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
-        else error $ prettifyDebug exp1' ++ "\n-----------\n" ++ prettifyDebug exp2' ++ "\n-----------\n" ++ show valMaps ++ "\n-----------n"
-            ++ show lhs ++ " not equals " ++ show rhs
+        else error $
+             prettifyDebug exp1' ++
+             "\n-----------\n" ++
+             prettifyDebug exp2' ++
+             "\n-----------\n" ++
+             show valMaps ++
+             "\n-----------n" ++ show lhs ++ " not equals " ++ show rhs
   where
     lhs = eval valMaps exp1' * eval valMaps exp2'
     rhs = eval valMaps expMul'
@@ -95,7 +100,8 @@ prop_AddMultiply (SuiteScalarC exp valMaps) =
 spec :: Spec
 spec =
     describe "normalize & eval property for Scalar C" $ do
-        specify "evaluate must equals normalize then evaluate " $ property prop_NormalizeThenEval
+        specify "evaluate must equals normalize then evaluate " $
+            property prop_NormalizeThenEval
         specify "prop_Add" $ property prop_Add
         specify "prop_Multiply" $ property prop_Multiply
         specify "prop_AddMultiply" $ property prop_AddMultiply
