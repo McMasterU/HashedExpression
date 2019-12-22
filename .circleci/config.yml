@@ -9,8 +9,8 @@ jobs:
           # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           name: Restore Cached Dependencies
           keys:
-            - cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
-            - cache-{{ checksum "stack.yaml" }}
+            - cache-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+            - cache-v1-{{ checksum "stack.yaml" }}
       - run:
           name: Build
           command: stack --no-terminal build
@@ -19,7 +19,7 @@ jobs:
           command: stack --no-terminal test
       - save_cache:
           name: Cache Dependencies
-          key: cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+          key: cache-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
           paths:
             - "~/.stack"
             - ".stack-work"
