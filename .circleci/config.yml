@@ -12,8 +12,12 @@ jobs:
             - stack-cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
             - stack-cache-{{ checksum "stack.yaml" }}
       - run:
-          name: Build
-          command: stack --no-terminal build
+          name: Test FFTW3
+          command: |
+            cd haha && gcc main.c -o main -lfftw3
+#      - run:
+#          name: Build
+#          command: stack --no-terminal build
 #      - run:
 #          name: Run tests
 #          command: stack --no-terminal test
