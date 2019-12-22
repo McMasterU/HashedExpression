@@ -1,0 +1,25 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: hashexpression/base:0.0.1
+    steps:
+      - checkout
+      - restore_cache:
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          name: Restore Cached Dependencies
+          keys:
+            - cache-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+            - cache-v1-{{ checksum "stack.yaml" }}
+      - run:
+          name: Build
+          command: stack --no-terminal build
+      - run:
+          name: Run tests
+          command: stack --no-terminal test
+      - save_cache:
+          name: Cache Dependencies
+          key: cache-v1-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+          paths:
+            - "~/.stack"
+            - ".stack-work"
