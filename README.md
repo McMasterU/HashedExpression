@@ -1,4 +1,4 @@
-# HashedExpression [![Build Status](https://travis-ci.org/dalvescb/HashedExpression.svg?branch=master)](https://travis-ci.org/dalvescb/HashedExpression)
+# HashedExpression & Symphony
 
 ## Quick code walk through
 - Main:
