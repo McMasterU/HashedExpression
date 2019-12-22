@@ -9,8 +9,8 @@ jobs:
           # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           name: Restore Cached Dependencies
           keys:
-            - stack-cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
-            - stack-cache-{{ checksum "stack.yaml" }}
+            - cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+            - cache-{{ checksum "stack.yaml" }}
       - run:
           name: Test FFTW3
           command: |
@@ -24,7 +24,7 @@ jobs:
 #          command: stack --no-terminal test
       - save_cache:
           name: Cache Dependencies
-          key: stack-cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+          key: cache-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
           paths:
             - "~/.stack"
             - ".stack-work"
