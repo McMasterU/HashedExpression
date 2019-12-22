@@ -52,8 +52,8 @@ import Prelude hiding
 --
 exteriorDerivative ::
        (DimensionType d)
-    => Set String
-    -> Expression d R
+    => Set String -- ^ Variables
+    -> Expression d R  -- ^ Expression
     -> Expression d Covector
 exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 
