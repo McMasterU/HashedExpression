@@ -7,7 +7,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <lbfgs.h>
 #include <string.h>
 
 typedef enum complex_part {
