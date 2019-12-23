@@ -4,11 +4,6 @@
 --
 --
 -------------------------------------------------------------------------------
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveAnyClass #-}
-
 module HashedInner where
 
 import Control.Monad (forM, forM_, unless, when)

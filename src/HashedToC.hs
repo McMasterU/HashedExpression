@@ -1,5 +1,3 @@
-{-# LANGUAGE PolyKinds #-}
-
 module HashedToC where
 
 import Data.Array

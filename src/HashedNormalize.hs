@@ -1,6 +1,3 @@
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE GADTs #-}
-
 -------------------------------------------------------------------------------
 -- | For normalizeing expressions
 --
