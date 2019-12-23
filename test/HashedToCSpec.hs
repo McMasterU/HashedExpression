@@ -43,7 +43,6 @@ import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
 
-
 hasFFTW :: IO Bool
 hasFFTW = do
     fileName <- fmap (toString . fromJust) nextUUID

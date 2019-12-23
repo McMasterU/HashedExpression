@@ -6,7 +6,6 @@ import Data.Array
 import Data.Graph (buildG, topSort)
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
-import Text.RawString.QQ
 import Data.List (foldl', intercalate, intersperse, tails)
 import Data.List.HT (splitLast)
 import qualified Data.Map.Strict as Map
@@ -14,6 +13,7 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
+import FFTW
 import GHC.Stack (HasCallStack)
 import HashedExpression
     ( DimensionType
@@ -213,7 +213,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
-    -- | 
+    -- |
     --
     addressOf :: Int -> String
     addressOf nId = "(ptr + " ++ show (memOffset memMap nId LookupR) ++ ")"
@@ -328,7 +328,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                      in for i n $
                         if_
                             (condition `at` i ++ " <= " ++ m)
-                            [n `at` i <<- b `at` i] ++ -- 
+                            [n `at` i <<- b `at` i] ++ --
                         concatMap eachMiddle (zip ms bs) ++
                         else_ --
                             [n `at` i <<- lst `at` i]
@@ -523,7 +523,9 @@ singleExpressionCProgram valMaps expr =
     [ "#include <math.h>" --
     , "#include <stdio.h>"
     , "#include <stdlib.h>"
-    , if containsFTNode $ exMap expr then fftUtils else ""
+    , if containsFTNode $ exMap expr
+          then fftUtils
+          else ""
     , "int main(){" --
     ] ++
     space 2 (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory) ++
@@ -563,111 +565,3 @@ singleExpressionCProgram valMaps expr =
             ["printf(\"\\n\");"] ++
             for i n ["printf(\"%f \"," ++ n `imAt` i ++ ");"]
     releaseMemory = ["free(ptr);"]
-
--- | For computing fourier transform
---
-fftUtils :: String
-fftUtils = [r|
-/**
-* ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
-* ---------------------------------------START-----------------------------------------
-**/
-#include <fftw3.h>
-
-typedef enum complex_part {
-  REAL = 0, IMAG
-} complex_part;
-
-// For simplicity, just use the dft for complex by adding 0 to the input complex part
-// We will use the special version for computing dft real later
-void dft_1d(int N, double *in, double *out, complex_part part) {
-  fftw_complex *aux;
-  fftw_plan p;
-  int i;
-  aux = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-  p = fftw_plan_dft_1d(N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
-  for (i = 0; i < N; i++) {
-    aux[i][0] = in[i];
-    aux[i][1] = 0;
-  }
-  fftw_execute(p); /* repeat as needed */
-
-
-  for (i = 0; i < N; i++) {
-    out[i] = aux[i][part];
-  }
-
-  fftw_destroy_plan(p);
-  fftw_free(aux);
-}
-
-// For simplicity, just use the dft for complex by adding 0 to the input complex part
-// We will use the special version for computing dft real later
-void dft_2d(int ROW, int COLUMN, double *in, double *out, complex_part part) {
-  fftw_complex *aux;
-  fftw_plan p;
-  int i, j;
-  aux = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * ROW * COLUMN);
-  p = fftw_plan_dft_2d(ROW, COLUMN, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
-  for (i = 0; i < ROW; i++) {
-    for (j = 0; j < COLUMN; j++) {
-      aux[i * COLUMN + j][0] = in[i * COLUMN + j];
-      aux[i * COLUMN + j][1] = 0;
-    }
-  }
-  fftw_execute(p); /* repeat as needed */
-
-  for (i = 0; i < ROW; i++) {
-    for (j = 0; j < COLUMN; j++) {
-      out[i * COLUMN + j] = aux[i * COLUMN + j][part];
-    }
-  }
-
-  fftw_destroy_plan(p);
-  fftw_free(aux);
-}
-
-
-// apply (real part . DFT) twice 1d
-void re_dft_twice_1d(int N, double *in, double *out) {
-  int i;
-  for (i = 0; i < N; i++) {
-    out[i] = in[i] + in[i == 0 ? 0 : N - i];
-    out[i] *= N / 2;
-  }
-}
-
-// apply (real part . DFT) twice 2d
-void re_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
-  int i, j;
-  for (i = 0; i < ROW; i++) {
-    for (j = 0; j < COLUMN; j++) {
-      out[i * COLUMN + j] = in[i * COLUMN + j] + in[(i == 0 ? 0 : (ROW - i)) * COLUMN + (j == 0 ? 0 : (COLUMN - j))];
-      out[i * COLUMN + j] *= ROW * COLUMN / 2;
-    }
-  }
-}
-
-// apply (imag part . DFT) twice 1d. Only take linear time
-void im_dft_twice_1d(int N, double *in, double *out) {
-  int i;
-  for (i = 0; i < N; i++) {
-    out[i] = in[i] - in[i == 0 ? 0 : (N - i)];
-    out[i] *= N / 2;
-  }
-}
-
-// apply (imag part . DFT) twice 2d. Only take linear time
-void im_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
-  int i, j;
-  for (i = 0; i < ROW; i++) {
-    for (j = 0; j < COLUMN; j++) {
-      out[i * COLUMN + j] = in[i * COLUMN + j] - in[(i == 0 ? 0 : ROW - i) * COLUMN + (j == 0 ? 0 : COLUMN - j)];
-      out[i * COLUMN + j] *= ROW * COLUMN / 2;
-    }
-  }
-}
-/**
-* ---------------------------------------END-------------------------------------------
-**/
-|]
