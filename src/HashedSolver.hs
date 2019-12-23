@@ -1,11 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module HashedSolver where
 
 import Control.Monad (unless, when)

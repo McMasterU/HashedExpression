@@ -1,11 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-
 module HashedInterp where
 
 import Data.Array

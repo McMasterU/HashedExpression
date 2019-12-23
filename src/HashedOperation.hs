@@ -1,16 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FunctionalDependencies #-} --
-
 module HashedOperation where
 
 import Data.Array

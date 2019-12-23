@@ -1,9 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module HashedUtils where
 
 import Data.Array
