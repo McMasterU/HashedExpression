@@ -1,4 +1,4 @@
-# HashedExpression & Symphony
+# HashedExpression & Symphony   [![CircleCI](https://circleci.com/gh/dalvescb/HashedExpression/tree/master.svg?style=svg)](https://circleci.com/gh/dalvescb/HashedExpression/tree/master)
 
 ## Quick code walk through
 - Main:
