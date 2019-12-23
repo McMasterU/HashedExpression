@@ -5,10 +5,10 @@ FAST_FLAGS  = $(CFLAGS) -Ofast
 
 LINK_LIBRARY = -lipopt -lm -lfftw3 -lhdf5
 
-all: ipopt.c problem.c utils.c $(SRC)
+all: ipopt.c problem.c $(SRC)
 	$(CC) -o ipopt $(CFLAGS) ipopt.c $(SRC) $(LINK_LIBRARY)
 
-fast: ipopt.c problem.c utils.c $(SRC)
+fast: ipopt.c problem.c $(SRC)
 	$(CC) -o ipopt $(FAST_FLAGS) ipopt.c $(SRC) $(LINK_LIBRARY)
 
 clean:

@@ -1,13 +1,11 @@
-#ifndef UTILS_C
-#define UTILS_C
+module FFTW where
+import Data.String.Quote
 
-#include <stdio.h>
-#include <time.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-
+-- | For computing fourier transform
+--
+fftUtils :: String
+fftUtils =
+    [s|
 /**
 * ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
 * ---------------------------------------START-----------------------------------------
@@ -110,5 +108,4 @@ void im_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
 /**
 * ---------------------------------------END-------------------------------------------
 **/
-
-#endif /* UTILS_C */
+|]

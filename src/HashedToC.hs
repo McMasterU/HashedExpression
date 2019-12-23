@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE PolyKinds #-}
 
 module HashedToC where
@@ -14,6 +13,7 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
+import FFTW
 import GHC.Stack (HasCallStack)
 import HashedExpression
     ( DimensionType
@@ -213,7 +213,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
   where
     getShape :: Int -> Shape
     getShape nId = retrieveShape nId mp
-    -- | 
+    -- |
     --
     addressOf :: Int -> String
     addressOf nId = "(ptr + " ++ show (memOffset memMap nId LookupR) ++ ")"
@@ -328,7 +328,7 @@ generateEvaluatingCodes memMap (mp, rootIds) =
                      in for i n $
                         if_
                             (condition `at` i ++ " <= " ++ m)
-                            [n `at` i <<- b `at` i] ++ -- 
+                            [n `at` i <<- b `at` i] ++ --
                         concatMap eachMiddle (zip ms bs) ++
                         else_ --
                             [n `at` i <<- lst `at` i]
@@ -523,6 +523,9 @@ singleExpressionCProgram valMaps expr =
     [ "#include <math.h>" --
     , "#include <stdio.h>"
     , "#include <stdlib.h>"
+    , if containsFTNode $ exMap expr
+          then fftUtils
+          else ""
     , "int main(){" --
     ] ++
     space 2 (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory) ++

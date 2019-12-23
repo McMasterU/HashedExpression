@@ -456,3 +456,14 @@ varNodesWithId mp = mapMaybe collect . IM.keys $ mp
     collect nId
         | Var varName <- retrieveNode nId mp = Just (varName, nId)
         | otherwise = Nothing
+
+-- | If expression map contains any FT node
+--
+containsFTNode :: ExpressionMap -> Bool
+containsFTNode mp = any isFT $ IM.elems mp
+  where
+    isFT (_, node) =
+        case node of
+            ReFT _ -> True
+            ImFT _ -> True
+            _ -> False

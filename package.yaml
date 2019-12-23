@@ -31,6 +31,7 @@ dependencies:
   - split
   - extra
   - easyplot
+  - string-quote
   - mtl
 
 extra-source-files:
@@ -48,6 +49,7 @@ default-extensions:
 library:
   source-dirs:
     - src
+    - embed
   default-extensions:
     - OverloadedStrings
     - GADTs

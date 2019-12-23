@@ -43,17 +43,6 @@ import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
 
--- | Since we haven't generate C code for fourierTransform, we need this temporarily, otherwise tests will fail
---
-containsFT :: (DimensionType d, NumType et) => Expression d et -> Bool
-containsFT (Expression n mp) = any isFT $ IM.elems mp
-  where
-    isFT (_, node) =
-        case node of
-            ReFT _ -> True
-            ImFT _ -> True
-            _ -> False
-
 hasFFTW :: IO Bool
 hasFFTW = do
     fileName <- fmap (toString . fromJust) nextUUID
@@ -83,10 +72,7 @@ evaluateCodeC withFT exp valMaps = do
     readProcessWithExitCode "mkdir" ["C"] ""
     fileName <- fmap (toString . fromJust) nextUUID
     let fullFileName = "C/" ++ fileName ++ ".c"
-    let header
-            | withFT = "#include \"utils.c\""
-            | otherwise = ""
-    let program = header : singleExpressionCProgram valMaps exp
+    let program = singleExpressionCProgram valMaps exp
     let libs
             | withFT = ["-lm", "-lfftw3"]
             | otherwise = ["-lm"]
@@ -114,7 +100,7 @@ readC str = (readR rePart, readR imPart)
 --
 prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
 prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True
@@ -130,7 +116,7 @@ prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) =
 --
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
 prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True
@@ -150,7 +136,7 @@ prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) =
 --
 prop_CEqualInterpOneR :: SuiteOneR -> Expectation
 prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True
@@ -167,7 +153,7 @@ prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
 --
 prop_CEqualInterpOneC :: SuiteOneC -> Expectation
 prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True
@@ -188,7 +174,7 @@ prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
 --
 prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
 prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True
@@ -206,7 +192,7 @@ prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) =
 --
 prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
 prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) =
-    if containsFT exp
+    if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
             when hasFTLib $ proceed True

@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import Debug.Trace (traceShowId)
+import FFTW
 import HashedCollect
 import HashedDerivative
 import HashedExpression
@@ -527,8 +528,11 @@ generateProblemCode valMaps Problem {..}
         [ "#include <math.h>"
         , "#include <stdio.h>"
         , "#include <stdlib.h>"
-        , "#include \"utils.c\""
+        , "#include <time.h>"
         , "#include \"hdf5.h\""
+        , if containsFTNode expressionMap
+              then fftUtils
+              else ""
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)
