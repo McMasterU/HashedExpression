@@ -527,8 +527,9 @@ generateProblemCode valMaps Problem {..}
         [ "#include <math.h>"
         , "#include <stdio.h>"
         , "#include <stdlib.h>"
-        , "#include \"utils.c\""
+        , "#include <time.h>"
         , "#include \"hdf5.h\""
+        , if containsFTNode expressionMap then fftUtils else ""
         , ""
         , ""
         , "#define NUM_VARIABLES " ++ show (length variables)

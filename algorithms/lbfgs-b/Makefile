@@ -16,10 +16,10 @@ TIMER   = lib/timer.c
 
 SRC = $(LBFGSB) $(LINPACK) $(BLAS) $(TIMER)
 
-all: lbfgs-b.c problem.c utils.c $(SRC)
+all: lbfgs-b.c problem.c $(SRC)
 	$(CC) -o lbfgs-b $(CFLAGS) lbfgs-b.c $(SRC) $(LINK_LIBRARY)
 
-fast: lbfgs-b.c problem.c utils.c $(SRC)
+fast: lbfgs-b.c problem.c $(SRC)
 	$(CC) -o lbfgs-b $(FAST_FLAGS) lbfgs-b.c $(SRC) $(LINK_LIBRARY)
 
 clean:

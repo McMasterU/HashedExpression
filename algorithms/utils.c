@@ -1,13 +1,18 @@
 #ifndef UTILS_C
 #define UTILS_C
 
-#include <fftw3.h>
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+
+/**
+* ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
+* ---------------------------------------START-----------------------------------------
+**/
+#include <fftw3.h>
 
 typedef enum complex_part {
   REAL = 0, IMAG
@@ -102,5 +107,8 @@ void im_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
     }
   }
 }
+/**
+* ---------------------------------------END-------------------------------------------
+**/
 
 #endif /* UTILS_C */

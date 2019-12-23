@@ -31,6 +31,7 @@ dependencies:
   - split
   - extra
   - easyplot
+  - raw-strings-qq
   - mtl
 
 extra-source-files:
