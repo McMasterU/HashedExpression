@@ -75,7 +75,7 @@ spec =
         x / x / y `shouldNormalizeTo` y ^ (-1)
         (x * y) ^ 3 `shouldNormalizeTo` (x ^ 3) * (y ^ 3)
         ((x * y) ^ 3) * x / y `shouldNormalizeTo` (y ^ 2) * (x ^ 4)
-        ((x * y) ^ 3) * x + y `shouldNormalizeTo` y + ((y ^ 3) * (x ^ 4)) --Without Paranthesis
+        ((x * y) ^ 3) * x + y `shouldNormalizeTo` y + ((y ^ 3) * (x ^ 4))
         ((x * y) ^ 3) * (x + y) `shouldNormalizeTo` ((y ^ 3) * (x ^ 4)) +
             ((x ^ 3) * (y ^ 4)) -- With paranthesis
         x / (x ^ 3) `shouldNormalizeTo` x ^ (-2) --FIXED

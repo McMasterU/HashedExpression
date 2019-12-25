@@ -437,7 +437,7 @@ combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
-        withContext mp $ just innerVal ^ (outerVal * innerVal)
+        withContext mp $ just innerN ^ (outerVal * innerVal)
     | otherwise = withContext mp $ just n
 
 -- | Rules for power of Sum and power of RealImag
