@@ -197,25 +197,6 @@ instance (InnerProductSpace d s) =>
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss
 --
-huberC ::
-       forall d. (DimensionType d)
-    => Double
-    -> Expression d C
-    -> Expression d R
-huberC delta e = piecewise [delta] square [inner, outer]
-  where
-    one = constWithShape (expressionShape e) 1 :: Expression d R
-    epsilon = 0.001
-    epsilonC = const epsilon
-    inner = square + epsilonC *. one
-    square = (xRe e) * (xRe e) + (xIm e) * (xIm e)
-    outer =
-        const delta *. (sqrt inner) -
-        (const
-             (delta * delta + epsilon -
-              2 * delta * sqrt (delta * delta + epsilon))) *.
-        one
-
 huber ::
        forall d. (DimensionType d)
     => Double
@@ -223,7 +204,7 @@ huber ::
     -> Expression d R
 huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
-    one = constWithShape (expressionShape e) 1 :: Expression d R
+    one = constWithShape @d (expressionShape e) 1 
     inner = const 0.5 *. (e * e)
     outerLeft = const (-delta) *. e - const (delta * delta / 2) *. one
     outerRight = const delta *. e - const (delta * delta / 2) *. one

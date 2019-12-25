@@ -7,6 +7,7 @@
 module HashedInner where
 
 import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
 import Data.Array.MArray
 import Data.Array.ST
@@ -27,7 +28,33 @@ import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
-import Prelude hiding ((+), (-))
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , const
+    , cos
+    , cosh
+    , exp
+    , log
+    , negate
+    , product
+    , sin
+    , sinh
+    , sqrt
+    , sum
+    , tan
+    , tanh
+    )
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -268,6 +295,78 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 -- the new index of the root expression) between the modified and original expression
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
+
+type Diff = ExpressionMap -> ExpressionDiff
+
+-- | 
+--
+instance AddableOp Diff where
+    (+) x y mp =
+        let diff1 = x mp
+            diff2 = y mp
+         in sumManyDiff mp [diff1, diff2]
+
+instance NegateOp Diff where
+    negate x mp =
+        let diff = x mp
+         in applyDiff mp (unaryET Neg ElementDefault) [diff]
+
+instance MultiplyOp Diff where
+    (*) x y mp =
+        let diff1 = x mp
+            diff2 = y mp
+         in mulManyDiff mp [diff1, diff2]
+
+instance PowerOp Diff Int where
+    (^) x alpha mp =
+        let diff = x mp
+         in applyDiff mp (unary (Power alpha)) [diff]
+
+instance VectorSpaceOp Diff Diff where
+    scale x y mp =
+        let diff1 = x mp
+            diff2 = y mp
+         in applyDiff mp (binaryET Scale ElementDefault) [diff1, diff2]
+
+instance ComplexRealOp Diff Diff where
+    (+:) x y mp =
+        let diff1 = x mp
+            diff2 = y mp
+         in applyDiff mp (binary RealImag) [diff1, diff2]
+    xRe x mp =
+        let diff = x mp
+         in applyDiff mp (unary RealPart) [diff]
+    xIm x mp =
+        let diff = x mp
+         in applyDiff mp (unary ImagPart) [diff]
+
+instance (DimensionType d) => NumOp Diff where
+    sqrt x mp = applyDiff mp (unary Sqrt) [x mp]
+    exp x mp = applyDiff mp (unary Exp) [x mp]
+    log x mp = applyDiff mp (unary Log) [x mp]
+    sin x mp = applyDiff mp (unary Sin) [x mp]
+    cos x mp = applyDiff mp (unary Cos) [x mp]
+    tan x mp = applyDiff mp (unary Tan) [x mp]
+    asin x mp = applyDiff mp (unary Asin) [x mp]
+    acos x mp = applyDiff mp (unary Acos) [x mp]
+    atan x mp = applyDiff mp (unary Atan) [x mp]
+    sinh x mp = applyDiff mp (unary Sinh) [x mp]
+    cosh x mp = applyDiff mp (unary Cosh) [x mp]
+    tanh x mp = applyDiff mp (unary Tanh) [x mp]
+    asinh x mp = applyDiff mp (unary Asinh) [x mp]
+    acosh x mp = applyDiff mp (unary Acosh) [x mp]
+    atanh x mp = applyDiff mp (unary Atanh) [x mp]
+    (/) x y = x * (y ^ (-1))
+
+instance InnerProductSpaceOp Diff Diff Diff where
+    (<.>) x y mp =
+        let diff1 = x mp
+            diff2 = y mp
+         in applyDiff
+                mp
+                (binaryET InnerProd ElementDefault `hasShape` [])
+                [diff1, diff2]
+
 
 -- |
 --
