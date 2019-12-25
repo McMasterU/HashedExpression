@@ -237,6 +237,11 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
 
+
+const_ :: Shape -> Double -> MakeDiff
+const_ shape val mp = ExpressionDiff mp n
+  where
+    (mp, n) = aConst shape val
 -- |
 --
 diffConst :: Shape -> Double -> ExpressionDiff
@@ -296,77 +301,74 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
-type Diff = ExpressionMap -> ExpressionDiff
+type MakeDiff = ExpressionMap -> ExpressionDiff
+
+-- |
+--
+withContext :: ExpressionMap -> MakeDiff -> ExpressionDiff
+withContext = flip ($)
+
+-- |
+--
+just :: Int -> MakeDiff
+just nId _ = ExpressionDiff IM.empty nId
 
 -- | 
 --
-instance AddableOp Diff where
-    (+) x y mp =
-        let diff1 = x mp
-            diff2 = y mp
-         in sumManyDiff mp [diff1, diff2]
+instance AddableOp MakeDiff where
+    (+) mkDiff1 mkDiff2 mp = sumManyDiff mp [mkDiff1 mp, mkDiff2 mp]
 
-instance NegateOp Diff where
-    negate x mp =
-        let diff = x mp
-         in applyDiff mp (unaryET Neg ElementDefault) [diff]
 
-instance MultiplyOp Diff where
-    (*) x y mp =
-        let diff1 = x mp
-            diff2 = y mp
-         in mulManyDiff mp [diff1, diff2]
+sum_ :: [MakeDiff] -> MakeDiff
+sum_ mkDiffs mp = sumManyDiff mp . map ($ mp) $ mkDiffs
 
-instance PowerOp Diff Int where
-    (^) x alpha mp =
-        let diff = x mp
-         in applyDiff mp (unary (Power alpha)) [diff]
 
-instance VectorSpaceOp Diff Diff where
-    scale x y mp =
-        let diff1 = x mp
-            diff2 = y mp
-         in applyDiff mp (binaryET Scale ElementDefault) [diff1, diff2]
+instance NegateOp MakeDiff where
+    negate mkDiff1 mp = applyDiff mp (unaryET Neg ElementDefault) [mkDiff1 mp]
 
-instance ComplexRealOp Diff Diff where
-    (+:) x y mp =
-        let diff1 = x mp
-            diff2 = y mp
-         in applyDiff mp (binary RealImag) [diff1, diff2]
-    xRe x mp =
-        let diff = x mp
-         in applyDiff mp (unary RealPart) [diff]
-    xIm x mp =
-        let diff = x mp
-         in applyDiff mp (unary ImagPart) [diff]
+instance MultiplyOp MakeDiff where
+    (*) mkDiff1 mkDiff2 mp = mulManyDiff mp [mkDiff1 mp, mkDiff2 mp]
 
-instance (DimensionType d) => NumOp Diff where
-    sqrt x mp = applyDiff mp (unary Sqrt) [x mp]
-    exp x mp = applyDiff mp (unary Exp) [x mp]
-    log x mp = applyDiff mp (unary Log) [x mp]
-    sin x mp = applyDiff mp (unary Sin) [x mp]
-    cos x mp = applyDiff mp (unary Cos) [x mp]
-    tan x mp = applyDiff mp (unary Tan) [x mp]
-    asin x mp = applyDiff mp (unary Asin) [x mp]
-    acos x mp = applyDiff mp (unary Acos) [x mp]
-    atan x mp = applyDiff mp (unary Atan) [x mp]
-    sinh x mp = applyDiff mp (unary Sinh) [x mp]
-    cosh x mp = applyDiff mp (unary Cosh) [x mp]
-    tanh x mp = applyDiff mp (unary Tanh) [x mp]
-    asinh x mp = applyDiff mp (unary Asinh) [x mp]
-    acosh x mp = applyDiff mp (unary Acosh) [x mp]
-    atanh x mp = applyDiff mp (unary Atanh) [x mp]
-    (/) x y = x * (y ^ (-1))
+product_ :: [MakeDiff] -> MakeDiff
+product_ mkDiffs mp = mulManyDiff mp . map ($ mp) $ mkDiffs
 
-instance InnerProductSpaceOp Diff Diff Diff where
-    (<.>) x y mp =
-        let diff1 = x mp
-            diff2 = y mp
-         in applyDiff
-                mp
-                (binaryET InnerProd ElementDefault `hasShape` [])
-                [diff1, diff2]
+instance PowerOp MakeDiff Int where
+    (^) mkDiff1 alpha mp = applyDiff mp (unary (Power alpha)) [mkDiff1 mp]
 
+instance VectorSpaceOp MakeDiff MakeDiff where
+    scale mkDiff1 mkDiff2 mp =
+        applyDiff mp (binaryET Scale ElementDefault) [mkDiff1 mp, mkDiff2 mp]
+
+instance ComplexRealOp MakeDiff MakeDiff where
+    (+:) mkDiff1 mkDiff2 mp =
+        applyDiff mp (binary RealImag) [mkDiff1 mp, mkDiff2 mp]
+    xRe mkDiff1 mp = applyDiff mp (unary RealPart) [mkDiff1 mp]
+    xIm mkDiff1 mp = applyDiff mp (unary ImagPart) [mkDiff1 mp]
+
+instance (DimensionType d) => NumOp MakeDiff where
+    sqrt mkDiff1 mp = applyDiff mp (unary Sqrt) [mkDiff1 mp]
+    exp mkDiff1 mp = applyDiff mp (unary Exp) [mkDiff1 mp]
+    log mkDiff1 mp = applyDiff mp (unary Log) [mkDiff1 mp]
+    sin mkDiff1 mp = applyDiff mp (unary Sin) [mkDiff1 mp]
+    cos mkDiff1 mp = applyDiff mp (unary Cos) [mkDiff1 mp]
+    tan mkDiff1 mp = applyDiff mp (unary Tan) [mkDiff1 mp]
+    asin mkDiff1 mp = applyDiff mp (unary Asin) [mkDiff1 mp]
+    acos mkDiff1 mp = applyDiff mp (unary Acos) [mkDiff1 mp]
+    atan mkDiff1 mp = applyDiff mp (unary Atan) [mkDiff1 mp]
+    sinh mkDiff1 mp = applyDiff mp (unary Sinh) [mkDiff1 mp]
+    cosh mkDiff1 mp = applyDiff mp (unary Cosh) [mkDiff1 mp]
+    tanh mkDiff1 mp = applyDiff mp (unary Tanh) [mkDiff1 mp]
+    asinh mkDiff1 mp = applyDiff mp (unary Asinh) [mkDiff1 mp]
+    acosh mkDiff1 mp = applyDiff mp (unary Acosh) [mkDiff1 mp]
+    atanh mkDiff1 mp = applyDiff mp (unary Atanh) [mkDiff1 mp]
+    (/) mkDiff1 mkDiff2 = mkDiff1 * (mkDiff2 ^ (-1))
+
+instance InnerProductSpaceOp MakeDiff MakeDiff MakeDiff where
+    (<.>) mkDiff1 mkDiff2 mp =
+        applyDiff
+            mp
+            (binaryET InnerProd ElementDefault `hasShape` [])
+            [mkDiff1 mp, mkDiff2 mp]
 
 -- |
 --

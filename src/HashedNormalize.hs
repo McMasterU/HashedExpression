@@ -300,79 +300,81 @@ rotateRules =
 --
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
+    withContext mp $
     case retrieveNode n mp of
         Sum _ ns
                 -- to make sure filter (not . isZero mp) ns is not empty
-            | all (isZero mp) ns -> noChange $ head ns
+            | all (isZero mp) ns -> just $ head ns
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
             | any (isZero mp) ns ->
-                sumManyDiff mp . map noChange . filter (not . isZero mp) $ ns
+                sum_ . map just . filter (not . isZero mp) $ ns
         Mul _ ns
                 -- to make sure filter (not . isOne mp) ns is not empty
-            | all (isOne mp) ns -> noChange $ head ns
+            | all (isOne mp) ns -> just $ head ns
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
             | any (isOne mp) ns ->
-                mulManyDiff mp . map noChange . filter (not . isOne mp) $ ns
+                product_ . map just . filter (not . isOne mp) $ ns
                 -- if any is zero, collapse to zero
                 -- product(x, y, z, 0, t, u, v) = 0
-            | nId:_ <- filter (isZero mp) ns -> noChange nId
+            | nId:_ <- filter (isZero mp) ns -> just nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-        _ -> noChange n
+        _ -> just n
 
 -- |
 --
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
+    withContext mp $
     case retrieveNode n mp of
         Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
-            | length ns == 1 -> noChange $ head ns
+            | length ns == 1 -> just $ head ns
         Mul _ ns
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
-            | length ns == 1 -> noChange $ head ns
-        _ -> noChange n
+            | length ns == 1 -> just $ head ns
+        _ -> just n
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
 flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
+    withContext mp $
     case retrieveNode n mp of
         Sum _ ns
         -- if the sum contains any sum, just flatten them out
         -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
-         -> sumManyDiff mp . map noChange . concatMap (pullSumOperands mp) $ ns
+         -> sum_ . map just . concatMap (pullSumOperands mp) $ ns
         Mul _ ns
         -- if the prod contains any prod, just flatten them out
         -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-         -> mulManyDiff mp . map noChange . concatMap (pullProdOperands mp) $ ns
-        _ -> noChange n
+         -> product_ . map just . concatMap (pullProdOperands mp) $ ns
+        _ -> just n
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
+    withContext mp $
     let shape = retrieveShape n mp
      in case retrieveNode n mp of
             Sum _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
-                , let diffNewConst = diffConst shape . Prelude.sum $ cs ->
-                    sumManyDiff mp $
-                    diffNewConst :
-                    (map noChange . filter (not . isConstant mp) $ ns)
+                , let total = const_ shape . Prelude.sum $ cs ->
+                    sum_ $
+                    total : (map just . filter (not . isConstant mp) $ ns)
             Mul _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
-                , let diffNewConst = diffConst shape . Prelude.product $ cs ->
-                    mulManyDiff mp $
-                    diffNewConst :
-                    (map noChange . filter (not . isConstant mp) $ ns)
-            _ -> noChange n
+                , let total = const_ shape . Prelude.product $ cs ->
+                    product_ $
+                    total : (map just . filter (not . isConstant mp) $ ns)
+            _ -> just n
 
 -- |
 --
@@ -382,10 +384,10 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
-        sumManyDiff mp .
-        map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
+        withContext mp $
+        sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = noChange n
+    | otherwise = withContext mp $ just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -395,13 +397,10 @@ combineTermsRules exp@(mp, n)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
-    toDiff :: (Int, Double) -> ExpressionDiff
+    toDiff :: (Int, Double) -> MakeDiff
     toDiff (nId, val)
-        | val == 1 = noChange nId
-        | otherwise =
-            applyDiff'
-                (binaryET Scale ElementDefault)
-                [diffConst [] val, noChange nId]
+        | val == 1 = just nId
+        | otherwise = const_ [] val *. just nId
 
 -- |
 --
@@ -410,10 +409,11 @@ combineTermsRules exp@(mp, n)
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
-        mulManyDiff mp .
+        withContext mp $
+        product_ .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = noChange n
+    | otherwise = withContext mp $ just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -427,8 +427,8 @@ combineTermsRulesProd exp@(mp, n)
         | C <- retrieveElementType y mp = False
         | otherwise = x == y
     toDiff (nId, val)
-        | val == 1 = noChange nId
-        | otherwise = applyDiff' (unary (Power val)) [noChange nId]
+        | val == 1 = just nId
+        | otherwise = just nId ^ val
 
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
@@ -437,8 +437,8 @@ combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
-        applyDiff mp (unary (Power (outerVal * innerVal))) [noChange innerN]
-    | otherwise = noChange n
+        withContext mp $ just innerVal ^ (outerVal * innerVal)
+    | otherwise = withContext mp $ just n
 
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
@@ -446,30 +446,26 @@ combinePowerRules exp@(mp, n)
 powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , isSumOrRealImag nId = replicateMul val nId
-    | otherwise = noChange n
+    , isSumOrRealImag nId = withContext mp $ replicateMul val nId
+    | otherwise = withContext mp $ just n
   where
-    inverse diff = applyDiff mp (unary $ Power (-1)) [diff]
     isSumOrRealImag nId
         | Sum _ _ <- retrieveNode nId mp = True
         | RealImag _ _ <- retrieveNode nId mp = True
         | otherwise = False
     replicateMul val nId
-        | val > 1 = mulManyDiff mp . replicate val $ noChange nId
+        | val > 1 = product_ . replicate val $ just nId
         | val < -1 =
-            inverse . mulManyDiff mp . replicate (-val) . noChange $ nId
-        | otherwise = noChange n
+            (^ (-1)) . product_ . replicate (-val) . just $ nId
+        | otherwise = just nId
 
 -- | Rules for power product
 -- (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , Mul _ args <- retrieveNode nId mp =
-        let powerEach nodeId =
-                applyDiff mp (unary (Power val)) [noChange nodeId]
-         in mulManyDiff mp . map powerEach $ args
-    | otherwise = noChange n
+    , Mul _ args <- retrieveNode nId mp = withContext mp $ product_ . map ((^ val) . just) $ args
+    | otherwise = withContext mp $ just n
 
 -- | Rules for power scale
 -- (a*.b)^2 should be a^2 *. b^2
