@@ -91,7 +91,7 @@ restructure =
     multipleTimes 1000 $
     chain
         [ toMultiplyIfPossible --
-        , toRecursiveCollecting flattenSumProdRules
+        , toRecursiveCollecting $ helper flattenSumProdRules
         ]
 
 -- | x * y * covector * z --> (x * y * z) * covector

@@ -237,11 +237,11 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
 
-
 const_ :: Shape -> Double -> MakeDiff
 const_ shape val mp = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
+
 -- |
 --
 diffConst :: Shape -> Double -> ExpressionDiff
@@ -301,6 +301,8 @@ type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 --
 type Modification = (ExpressionMap, Int) -> ExpressionDiff
 
+type Modification1 = (ExpressionMap, Int) -> MakeDiff
+
 type MakeDiff = ExpressionMap -> ExpressionDiff
 
 -- |
@@ -318,10 +320,8 @@ just nId _ = ExpressionDiff IM.empty nId
 instance AddableOp MakeDiff where
     (+) mkDiff1 mkDiff2 mp = sumManyDiff mp [mkDiff1 mp, mkDiff2 mp]
 
-
 sum_ :: [MakeDiff] -> MakeDiff
 sum_ mkDiffs mp = sumManyDiff mp . map ($ mp) $ mkDiffs
-
 
 instance NegateOp MakeDiff where
     negate mkDiff1 mp = applyDiff mp (unaryET Neg ElementDefault) [mkDiff1 mp]
@@ -369,6 +369,9 @@ instance InnerProductSpaceOp MakeDiff MakeDiff MakeDiff where
             mp
             (binaryET InnerProd ElementDefault `hasShape` [])
             [mkDiff1 mp, mkDiff2 mp]
+
+instance RotateOp RotateAmount MakeDiff where
+    rotate ra mkDiff mp = applyDiff mp (unary (Rotate ra)) [mkDiff mp]
 
 -- |
 --
