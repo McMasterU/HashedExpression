@@ -61,38 +61,18 @@ import RecoverKSpace.RecoverKSpace
 import Test.Hspec
 import ToF.VelocityGenerator
 
---main = do
---    let exp = const 2 * x
---    showExp $ introduceZeroPartialDerivatives [("y", [2, 3])] . collectDifferentials . exteriorDerivative allVars $ exp
---main = do
---    let [x, y] = map (variable2D @128 @128) ["x", "y"]
---        [zero, one] = map (constant2D @128 @128) [1, 0]
---    let objectiveFunction = piecewise [1] x [zero, one] <.> one
---    let vars = ["x", "y"]
---    let constraint = IPOPTConstraint [const 2 * (x <.> x) .>= VScalar 1]
-----    let (ProblemValid problem) =
---    print $ constructProblem objectiveFunction vars constraint --    let valMap =
---            fromList
---                [ ("x", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
---                , ("y", V2D $ listArray ((0, 0), (127, 127)) $ repeat 0)
---                ]
---    case generateProblemCode valMap problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs-b"
---    print $ problem
+main :: IO ()
 main = do
-    let (vx, vy) = quarterCircleFlow (50, 50) 25 10 0.2
-    writeFile "vx.txt" $ unwords . map show . elems $ vx
-    writeFile "vy.txt" $ unwords . map show . elems $ vy
---main = do
---    let [x, y] = map (variable2D @128 @128) ["x", "y"]
---        [zero, one] = map (constant2D @128 @128) [1, 0]
---    let objectiveFunction = x <.> y
---    let vars = ["x", "y"]
---    let constraint = Constraint [x .>= VNum 1, y .>= VNum 1]
---    let (ProblemValid problem) =
---            constructProblem objectiveFunction vars constraint
---    let valMap = fromList [("x", VNum 4), ("y", VNum 5)]
---    case generateProblemCode valMap problem of
---        Invalid str -> putStrLn str
---        Success proceed -> proceed "algorithms/lbfgs-b"
+    let exp =
+            Expression @Scalar @R 902483289149750 $
+            IM.fromList
+                [ (4116, ([], Var "a"))
+                , (5942, ([], Var "w"))
+                , (902483289149750, ([], Sum R [5942, 1523609918601139]))
+                , (1523609918601139, ([], Neg R 4116))
+                ]
+    showExp exp
+    showExp $ exteriorDerivative allVars exp
+    showExp . collectDifferentials $ exteriorDerivative allVars exp
+    
+    print "Helelele"

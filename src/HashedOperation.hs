@@ -204,7 +204,7 @@ huber ::
     -> Expression d R
 huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
-    one = constWithShape @d (expressionShape e) 1 
+    one = constWithShape @d (expressionShape e) 1
     inner = const 0.5 *. (e * e)
     outerLeft = const (-delta) *. e - const (delta * delta / 2) *. one
     outerRight = const delta *. e - const (delta * delta / 2) *. one
@@ -255,29 +255,31 @@ sumElements expr = expr <.> one
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
-piecewise ::
-       (DimensionType d, HasCallStack)
-    => [Double]
-    -> Expression d R
-    -> [Expression d et]
-    -> Expression d et
-piecewise marks conditionExp branchExps
-    | not (null marks)
-    , (Set.toList . Set.fromList $ marks) == marks
-    , length marks + 1 == length branchExps =
-        guard $
-        applyConditionAry
-            (conditionAry (Piecewise marks))
-            conditionExp
-            branchExps
-    | otherwise =
-        error $
-        "Must satisfy number of marks = number of branches - 1, and marks are increasing " ++
-        show marks
-  where
-    guard =
-        ensureSameShapeList branchExps .
-        ensureSameShape conditionExp (head branchExps)
+instance (DimensionType d, ElementType et) =>
+         PiecewiseOp (Expression d R) (Expression d et) where
+    piecewise ::
+           HasCallStack
+        => [Double]
+        -> Expression d R
+        -> [Expression d et]
+        -> Expression d et
+    piecewise marks conditionExp branchExps
+        | not (null marks)
+        , (Set.toList . Set.fromList $ marks) == marks
+        , length marks + 1 == length branchExps =
+            guard $
+            applyConditionAry
+                (conditionAry (Piecewise marks))
+                conditionExp
+                branchExps
+        | otherwise =
+            error $
+            "Must satisfy number of marks = number of branches - 1, and marks are increasing " ++
+            show marks
+      where
+        guard =
+            ensureSameShapeList branchExps .
+            ensureSameShape conditionExp (head branchExps)
 
 instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
     ft :: Expression d C -> Expression d C

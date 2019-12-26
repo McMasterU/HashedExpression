@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module HashedCollect where
 
 import Data.Function.HT (nest)
@@ -67,10 +65,15 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
     applyRules =
         chain
             [ restructure
-            , toRecursiveCollecting splitCovectorProdRules
+            , inspect
+            , toRecursiveCollecting $ fromModification splitCovectorProdRules
+            , inspect
             , separateDVarAlone
-            , toTransformation groupByDVar
+            , inspect
+            , toTransformation $ fromModification groupByDVar
+            , inspect
             , aggregateByDVar
+            , inspect
             , normalizeEachPartialDerivative
             , removeUnreachable
             ]
@@ -80,8 +83,8 @@ inspect exp = traceShow (debugPrint exp) exp
 
 -- |
 --
-toRecursiveCollecting :: Modification -> Transformation
-toRecursiveCollecting = toTransformation . toRecursiveModification NoReorder
+toRecursiveCollecting :: ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
 -- Also move covector to the right hand side of dot product
@@ -91,7 +94,7 @@ restructure =
     multipleTimes 1000 $
     chain
         [ toMultiplyIfPossible --
-        , toRecursiveCollecting $ helper flattenSumProdRules
+        , toRecursiveCollecting $ fromModification flattenSumProdRules
         ]
 
 -- | x * y * covector * z --> (x * y * z) * covector
@@ -100,11 +103,11 @@ splitCovectorProdRules :: Modification
 splitCovectorProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Mul Covector ns ->
-            let (covectorPart, realPart) =
+            let ([differential], reals) =
                     partition ((== Covector) . flip retrieveElementType mp) ns
-                prodRealPart = mulManyDiff mp . map noChange $ realPart
-             in mulManyDiff mp $ prodRealPart : map noChange covectorPart
-        _ -> noChange n
+                prodRest = product_ . map just $ reals
+             in prodRest * just differential
+        _ -> just n
 
 -- |
 --
@@ -140,8 +143,7 @@ groupByDVar exp@(mp, n) =
                     groupBy sameDVar .
                     sortWith getDVar . filter (not . isZero mp) $
                     ns
-             in sumManyDiff mp . map (sumManyDiff mp . map mulOneIfAlone) $
-                groups
+             in sum_ . map (sum_ . map mulOneIfAlone) $ groups
         _ -> mulOneIfAlone n
   where
     getDVar :: Int -> String
@@ -155,9 +157,8 @@ groupByDVar exp@(mp, n) =
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId
-        | DVar _ <- retrieveNode nId mp =
-            mulManyDiff mp [diffConst [] 1, noChange nId]
-        | otherwise = noChange nId
+        | DVar _ <- retrieveNode nId mp = const_ [] 1 *. just nId
+        | otherwise = just nId
 
 -- | After group Dvar to groups, we aggregate result in each group
 --   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
@@ -175,7 +176,7 @@ aggregateByDVar =
 normalizeEachPartialDerivative :: Transformation
 normalizeEachPartialDerivative exp@(mp, n) =
     case retrieveNode n mp of
-        Sum Covector ns -> sumMany $ map normalizeEach ns
+        Sum Covector ns -> traceShow "Here" $ sumMany $ map normalizeEach ns
         InnerProd Covector _ _ -> normalizeEach n
         Mul Covector _ -> normalizeEach n
         _ -> (mp, n)
@@ -189,31 +190,4 @@ normalizeEachPartialDerivative exp@(mp, n) =
                 apply
                     (binaryET InnerProd ElementDefault `hasShape` [])
                     [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
-
--- | A function might be treated as function of variables that not appears in the function itself (like constraint of
--- optimization problem, so we want to pad zero partial derivative)
--- (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
---
-introduceZeroPartialDerivatives ::
-       [(String, Shape)]
-    -> Expression Scalar Covector
-    -> Expression Scalar Covector
-introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
-    let isD name nId
-            | DVar varName <- retrieveNode nId mp
-            , varName == name = True
-            | otherwise = False
-        alreadyExist name = any (isD name) . IM.keys $ mp
-        makePart (name, shape)
-            | isScalarShape shape =
-                mulMany [aConst shape 0, dVarWithShape shape name]
-            | otherwise =
-                apply
-                    (binaryET InnerProd ElementDefault `hasShape` [])
-                    [aConst shape 0, dVarWithShape shape name]
-        listToInsert =
-            map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
-     in wrap $
-        case retrieveNode n mp of
-            Sum Covector ns -> sumMany $ map (mp, ) ns ++ listToInsert
-            _ -> sumMany $ (mp, n) : listToInsert
+            a -> error $ show a

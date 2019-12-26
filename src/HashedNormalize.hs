@@ -86,22 +86,21 @@ normalizingTransformation = secondPass . firstPass
     firstPass =
         multipleTimes 100 . chain $
         map
-            toRecursiveSimplification
-            [ helper evaluateIfPossibleRules
-            , helper groupConstantsRules
-            , helper combineTermsRules
-            , helper combineTermsRulesProd
-            , helper powerProdRules
-            , helper powerScaleRules
-            , helper combinePowerRules
-            , helper powerSumRealImagRules
-            , helper combineRealScalarRules
-            , helper flattenSumProdRules
-            , helper zeroOneSumProdRules
-            , helper collapseSumProdRules
-            , helper normalizeRotateRules
-            , helper negativeZeroRules
-            
+            (toRecursiveSimplification . fromModification)
+            [ evaluateIfPossibleRules
+            , groupConstantsRules
+            , combineTermsRules
+            , combineTermsRulesProd
+            , powerProdRules
+            , powerScaleRules
+            , combinePowerRules
+            , powerSumRealImagRules
+            , combineRealScalarRules
+            , flattenSumProdRules
+            , zeroOneSumProdRules
+            , collapseSumProdRules
+            , normalizeRotateRules
+            , negativeZeroRules
             , pullOutPiecewiseRules
             , expandPiecewiseRealImag
             , twiceReFTAndImFTRules
@@ -111,30 +110,29 @@ normalizingTransformation = secondPass . firstPass
         ]
     secondPass = toMultiplyIfPossible
 
-helper :: Modification1 -> Modification
-helper mkDiff exp@(mp, n) = mkDiff exp mp
-
 -- | Turn a modification to a recursive transformation
 --
-toRecursiveSimplification :: Modification -> Transformation
-toRecursiveSimplification = toTransformation . toRecursiveModification Reorder
+toRecursiveSimplification ::
+       ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
 --
 toMultiplyIfPossible :: Transformation
-toMultiplyIfPossible = toRecursiveSimplification rule
+toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
   where
     rule exp@(mp, n)
         | Scale et scalar scalee <- retrieveNode n mp
         , et /= C
         , isScalarShape (retrieveShape scalee mp) =
-            mulManyDiff mp [noChange scalar, noChange scalee]
+            just scalar * just scalee
         | InnerProd et arg1 arg2 <- retrieveNode n mp
         , isScalarShape (retrieveShape arg1 mp)
         , isScalarShape (retrieveShape arg2 mp)
-        , et /= C = mulManyDiff mp [noChange arg1, noChange arg2]
-        | otherwise = noChange n
+        , et /= C = 
+            just arg1 * just arg2
+        | otherwise = just n
 
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
 --
@@ -267,7 +265,9 @@ fourierTransformRules =
 --
 piecewiseRules :: [Substitution]
 piecewiseRules =
-    [piecewise condition branches |. allTheSame branches ~~~~~~> headL branches]
+    [ piecewise_ condition branches |. allTheSame branches ~~~~~~>
+      headL branches
+    ]
 
 -- | Rules of exponent and log
 --
@@ -302,7 +302,7 @@ rotateRules =
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands
 --
-zeroOneSumProdRules :: Modification1
+zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
@@ -328,7 +328,7 @@ zeroOneSumProdRules exp@(mp, n) =
 
 -- |
 --
-collapseSumProdRules :: Modification1
+collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
@@ -343,7 +343,7 @@ collapseSumProdRules exp@(mp, n) =
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
-flattenSumProdRules :: Modification1
+flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
@@ -358,7 +358,7 @@ flattenSumProdRules exp@(mp, n) =
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
-groupConstantsRules :: Modification1
+groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
     let shape = retrieveShape n mp
      in case retrieveNode n mp of
@@ -381,7 +381,7 @@ groupConstantsRules exp@(mp, n) =
 -- Sum(x,(-1) *. x,y) -> Sum(y)
 -- Sum(2 *. x, (-1) *. x,y) -> Sum(x,y)
 -- Sum(x,x,y) -> Sum(2 *. x,y)
-combineTermsRules :: Modification1
+combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
         sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
@@ -396,7 +396,7 @@ combineTermsRules exp@(mp, n)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
-    toDiff :: (Int, Double) -> MakeDiff
+    toDiff :: (Int, Double) -> Change
     toDiff (nId, val)
         | val == 1 = just nId
         | otherwise = const_ [] val *. just nId
@@ -405,7 +405,7 @@ combineTermsRules exp@(mp, n)
 --
 -- Mul(x^(-1) * x,y) -> y
 -- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
-combineTermsRulesProd :: Modification1
+combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
         product_ .
@@ -431,7 +431,7 @@ combineTermsRulesProd exp@(mp, n)
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
 -- (x^2)^-1 -> x^-2
-combinePowerRules :: Modification1
+combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
@@ -441,7 +441,7 @@ combinePowerRules exp@(mp, n)
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
 -- (a +: b) ^ 2 should be (a +: b) * (a +: b)
-powerSumRealImagRules :: Modification1
+powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , isSumOrRealImag nId = replicateMul val nId
@@ -458,7 +458,7 @@ powerSumRealImagRules exp@(mp, n)
 
 -- | Rules for power product
 -- (a*b*c)^k should be a^k * b^k * c^k
-powerProdRules :: Modification1
+powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Mul _ args <- retrieveNode nId mp = product_ . map ((^ val) . just) $ args
@@ -466,7 +466,7 @@ powerProdRules exp@(mp, n)
 
 -- | Rules for power scale
 -- (a*.b)^2 should be a^2 *. b^2
-powerScaleRules :: Modification1
+powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Scale et scalar scalee <- retrieveNode nId mp
@@ -476,7 +476,7 @@ powerScaleRules exp@(mp, n)
 -- | Rules for combining scalar
 -- (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
 --
-combineRealScalarRules :: Modification1
+combineRealScalarRules :: Modification
 combineRealScalarRules exp@(mp, n)
     | Mul R ns <- retrieveNode n mp
     , let extracted = map extract ns
@@ -495,7 +495,7 @@ combineRealScalarRules exp@(mp, n)
 
 -- |
 --
-evaluateIfPossibleRules :: Modification1
+evaluateIfPossibleRules :: Modification
 evaluateIfPossibleRules exp@(mp, n) =
     case (node, pulledVals) of
         (Sum R _, Just vals) -> res $ Prelude.sum vals
@@ -522,7 +522,7 @@ evaluateIfPossibleRules exp@(mp, n) =
 
 -- | rotateAmount in each direction always lie within (0, dim - 1)
 --
-normalizeRotateRules :: Modification1
+normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
     | (shape, Rotate amount arg) <- retrieveInternal n mp =
         rotate (zipWith mod amount shape) $ just arg
@@ -531,7 +531,7 @@ normalizeRotateRules exp@(mp, n)
 -- | Because sometimes we got both Const (-0.0) and Const (0.0) which are different, so we turn them
 -- to Const (0.0)
 --
-negativeZeroRules :: Modification1
+negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
     | (shape, Const val) <- retrieveInternal n mp
     , val == 0.0 || val == (-0.0) = const_ shape 0
@@ -544,15 +544,12 @@ expandPiecewiseRealImag :: Modification
 expandPiecewiseRealImag exp@(mp, n)
     | Piecewise marks condition branches <- retrieveNode n mp
     , Just reIms <- mapM extract branches =
-        let (res, ims) = unzip reIms
-            rePart =
-                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
-                condition : res
-            imPart =
-                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
-                condition : ims
-         in applyDiff mp (binary RealImag) [rePart, imPart]
-    | otherwise = noChange n
+        let (reIds, imIds) = unzip reIms
+            cdt = just condition
+            res = map just reIds
+            ims = map just imIds
+         in piecewise marks cdt res +: piecewise marks cdt ims
+    | otherwise = just n
   where
     extract nId
         | RealImag re im <- retrieveNode nId mp = Just (re, im)
@@ -566,19 +563,16 @@ pullOutPiecewiseRules exp@(mp, n)
     | Piecewise marks condition branches <- retrieveNode n mp
     , et /= C
     , not (isAllZeroExceptOne branches) =
-        let branchWithPiecewise (idx, branch) =
+        let branchWithPiecewise idx branch =
                 let newPiecewiseBranches -- [1, 0, 0 .. ]
                      =
                         replicate idx zero ++
                         [one] ++ replicate (length branches - idx - 1) zero
                     allZerosOneOne -- piecewise marks condition [1, 0, 0, ..]
-                     =
-                        applyDiff mp (conditionAry (Piecewise marks)) $
-                        noChange condition : newPiecewiseBranches
-                 in mulManyDiff mp [noChange branch, allZerosOneOne]
-         in sumManyDiff mp . zipWith (curry branchWithPiecewise) [0 ..] $
-            branches
-    | otherwise = noChange n
+                     = piecewise marks (just condition) newPiecewiseBranches
+                 in just branch * allZerosOneOne
+         in sum_ . zipWith branchWithPiecewise [0 ..] $ branches
+    | otherwise = just n
   where
     isAllZeroExceptOne branches
         | [shouldBeOne] <- filter (not . isZero mp) branches
@@ -586,31 +580,26 @@ pullOutPiecewiseRules exp@(mp, n)
         | otherwise = False
     et = retrieveElementType n mp
     shape = retrieveShape n mp
-    one = diffConst shape 1
-    zero = diffConst shape 0
+    one = const_ shape 1
+    zero = const_ shape 0
 
 -- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
 --
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
-    | Sum R args <- retrieveNode n mp
-    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT args
-    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) args =
+    | Sum R sumands <- retrieveNode n mp
+    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands
+    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
         let rest =
-                map noChange .
-                filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
-                args
+                map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
+                sumands
             totalScaleFactor =
                 scaleFactor *
                 fromIntegral (Prelude.product $ retrieveShape innerArg mp)
-            scalar = diffConst [] totalScaleFactor
-            scaled =
-                applyDiff
-                    mp
-                    (binaryET Scale ElementDefault)
-                    [scalar, noChange innerArg]
-         in sumManyDiff mp $ scaled : rest
-    | otherwise = noChange n
+            scalar = const_ [] totalScaleFactor
+            scaled = scalar *. just innerArg
+         in sum_ $ scaled : rest
+    | otherwise = just n
   where
     isTwiceReFT nId
         | TwiceReFT inner <- retrieveNode nId mp = Just (1, nId, inner)

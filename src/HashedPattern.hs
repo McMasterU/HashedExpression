@@ -242,7 +242,7 @@ type Substitution = (GuardedPattern, Pattern)
 
 -- | Turn HashedPattern to a normalizier
 --
-fromSubstitution :: Substitution -> Modification
+fromSubstitution :: Substitution -> (ExpressionMap, Int) -> ExpressionDiff
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
     | Just match <- match exp pattern
     , condition exp match = buildFromPattern exp match replacementPattern
@@ -422,8 +422,8 @@ product = PMulList
 
 -- |
 --
-piecewise :: Pattern -> PatternList -> Pattern
-piecewise = PPiecewise
+piecewise_ :: Pattern -> PatternList -> Pattern
+piecewise_ = PPiecewise
 
 branches :: PatternList
 branches = PListHole id 2
