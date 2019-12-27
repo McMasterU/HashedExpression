@@ -69,19 +69,19 @@ import Test.Hspec.Runner
 --    print vals
 --    showExp exp
 main :: IO ()
-main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 30} spec
+main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
 
 spec :: Spec
 spec = do
---    describe "HashedSolverSpec" HashedSolverSpec.spec
---    describe "NormalizeSpec" HashedNormalizeSpec.spec
---    describe "Test1" Test1.spec
---    describe "Test2" Test2.spec
---    describe "HashedInterpSpec" HashedInterpSpec.spec
+    describe "HashedSolverSpec" HashedSolverSpec.spec
+    describe "NormalizeSpec" HashedNormalizeSpec.spec
+    describe "Test1" Test1.spec
+    describe "Test2" Test2.spec
+    describe "HashedInterpSpec" HashedInterpSpec.spec
     describe "HashedCollectSpec" HashedCollectSpec.spec
---    describe "HashedToCSpec" HashedToCSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
---    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
---    describe "NormalizeEval.OneRSpec" OneRSpec.spec
---    describe "NormalizeEval.OneCSpec" OneCSpec.spec
+    describe "HashedToCSpec" HashedToCSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+    describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
+    describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+    describe "NormalizeEval.OneRSpec" OneRSpec.spec
+    describe "NormalizeEval.OneCSpec" OneCSpec.spec

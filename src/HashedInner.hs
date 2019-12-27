@@ -237,10 +237,17 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
 
+-- |
+--
 const_ :: Shape -> Double -> Change
 const_ shape val mp = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
+
+-- |
+--
+num_ :: Double -> Change
+num_ = num_
 
 -- |
 --
@@ -415,8 +422,7 @@ toRecursive ::
        OperandOrder
     -> ((ExpressionMap, Int) -> ExpressionDiff)
     -> ((ExpressionMap, Int) -> ExpressionDiff)
-toRecursive operandOrder smp exp@(mp, headN) =
-    fromJust $ IM.lookup headN diffs
+toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff

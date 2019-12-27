@@ -65,15 +65,10 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
     applyRules =
         chain
             [ restructure
-            , inspect
             , toRecursiveCollecting $ fromModification splitCovectorProdRules
-            , inspect
             , separateDVarAlone
-            , inspect
             , toTransformation $ fromModification groupByDVar
-            , inspect
             , aggregateByDVar
-            , inspect
             , normalizeEachPartialDerivative
             , removeUnreachable
             ]
@@ -83,7 +78,8 @@ inspect exp = traceShow (debugPrint exp) exp
 
 -- |
 --
-toRecursiveCollecting :: ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveCollecting ::
+       ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
 toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
@@ -157,7 +153,7 @@ groupByDVar exp@(mp, n) =
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId
-        | DVar _ <- retrieveNode nId mp = const_ [] 1 *. just nId
+        | DVar _ <- retrieveNode nId mp = num_ 1 * just nId
         | otherwise = just nId
 
 -- | After group Dvar to groups, we aggregate result in each group

@@ -125,13 +125,11 @@ toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
     rule exp@(mp, n)
         | Scale et scalar scalee <- retrieveNode n mp
         , et /= C
-        , isScalarShape (retrieveShape scalee mp) =
-            just scalar * just scalee
+        , isScalarShape (retrieveShape scalee mp) = just scalar * just scalee
         | InnerProd et arg1 arg2 <- retrieveNode n mp
         , isScalarShape (retrieveShape arg1 mp)
         , isScalarShape (retrieveShape arg2 mp)
-        , et /= C = 
-            just arg1 * just arg2
+        , et /= C = just arg1 * just arg2
         | otherwise = just n
 
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
@@ -399,7 +397,7 @@ combineTermsRules exp@(mp, n)
     toDiff :: (Int, Double) -> Change
     toDiff (nId, val)
         | val == 1 = just nId
-        | otherwise = const_ [] val *. just nId
+        | otherwise = num_ val *. just nId
 
 -- |
 --
@@ -490,7 +488,7 @@ combineRealScalarRules exp@(mp, n)
         | Scale _ scalar scalee <- retrieveNode nId mp =
             (just scalee, Just $ just scalar)
         | Neg R negatee <- retrieveNode nId mp =
-            (just negatee, Just $ const_ [] (-1))
+            (just negatee, Just $ num_ (-1))
         | otherwise = (just nId, Nothing)
 
 -- |
@@ -596,7 +594,7 @@ twiceReFTAndImFTRules exp@(mp, n)
             totalScaleFactor =
                 scaleFactor *
                 fromIntegral (Prelude.product $ retrieveShape innerArg mp)
-            scalar = const_ [] totalScaleFactor
+            scalar = num_ totalScaleFactor
             scaled = scalar *. just innerArg
          in sum_ $ scaled : rest
     | otherwise = just n
