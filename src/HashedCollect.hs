@@ -172,7 +172,7 @@ aggregateByDVar =
 normalizeEachPartialDerivative :: Transformation
 normalizeEachPartialDerivative exp@(mp, n) =
     case retrieveNode n mp of
-        Sum Covector ns -> traceShow "Here" $ sumMany $ map normalizeEach ns
+        Sum Covector ns -> sumMany $ map normalizeEach ns
         InnerProd Covector _ _ -> normalizeEach n
         Mul Covector _ -> normalizeEach n
         _ -> (mp, n)
