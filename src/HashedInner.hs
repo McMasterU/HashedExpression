@@ -247,7 +247,7 @@ const_ shape val mp = ExpressionDiff mp n
 -- |
 --
 num_ :: Double -> Change
-num_ = num_
+num_ = const_ []
 
 -- |
 --
