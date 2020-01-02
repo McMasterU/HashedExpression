@@ -197,25 +197,6 @@ instance (InnerProductSpace d s) =>
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss
 --
-huberC ::
-       forall d. (DimensionType d)
-    => Double
-    -> Expression d C
-    -> Expression d R
-huberC delta e = piecewise [delta] square [inner, outer]
-  where
-    one = constWithShape (expressionShape e) 1 :: Expression d R
-    epsilon = 0.001
-    epsilonC = const epsilon
-    inner = square + epsilonC *. one
-    square = (xRe e) * (xRe e) + (xIm e) * (xIm e)
-    outer =
-        const delta *. (sqrt inner) -
-        (const
-             (delta * delta + epsilon -
-              2 * delta * sqrt (delta * delta + epsilon))) *.
-        one
-
 huber ::
        forall d. (DimensionType d)
     => Double
@@ -223,7 +204,7 @@ huber ::
     -> Expression d R
 huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
-    one = constWithShape (expressionShape e) 1 :: Expression d R
+    one = constWithShape @d (expressionShape e) 1
     inner = const 0.5 *. (e * e)
     outerLeft = const (-delta) *. e - const (delta * delta / 2) *. one
     outerRight = const delta *. e - const (delta * delta / 2) *. one
@@ -274,29 +255,31 @@ sumElements expr = expr <.> one
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 --
-piecewise ::
-       (DimensionType d, HasCallStack)
-    => [Double]
-    -> Expression d R
-    -> [Expression d et]
-    -> Expression d et
-piecewise marks conditionExp branchExps
-    | not (null marks)
-    , (Set.toList . Set.fromList $ marks) == marks
-    , length marks + 1 == length branchExps =
-        guard $
-        applyConditionAry
-            (conditionAry (Piecewise marks))
-            conditionExp
-            branchExps
-    | otherwise =
-        error $
-        "Must satisfy number of marks = number of branches - 1, and marks are increasing " ++
-        show marks
-  where
-    guard =
-        ensureSameShapeList branchExps .
-        ensureSameShape conditionExp (head branchExps)
+instance (DimensionType d, ElementType et) =>
+         PiecewiseOp (Expression d R) (Expression d et) where
+    piecewise ::
+           HasCallStack
+        => [Double]
+        -> Expression d R
+        -> [Expression d et]
+        -> Expression d et
+    piecewise marks conditionExp branchExps
+        | not (null marks)
+        , (Set.toList . Set.fromList $ marks) == marks
+        , length marks + 1 == length branchExps =
+            guard $
+            applyConditionAry
+                (conditionAry (Piecewise marks))
+                conditionExp
+                branchExps
+        | otherwise =
+            error $
+            "Must satisfy number of marks = number of branches - 1, and marks are increasing " ++
+            show marks
+      where
+        guard =
+            ensureSameShapeList branchExps .
+            ensureSameShape conditionExp (head branchExps)
 
 instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
     ft :: Expression d C -> Expression d C

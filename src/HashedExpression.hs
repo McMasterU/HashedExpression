@@ -150,6 +150,9 @@ class InnerProductSpaceOp a b c | a b -> c where
 class RotateOp k a | a -> k where
     rotate :: k -> a -> a
 
+class PiecewiseOp a b where
+    piecewise :: [Double] -> a -> [b] -> b
+
 class FTOp a b | a -> b where
     ft :: a -> b
 

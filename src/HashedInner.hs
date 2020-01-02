@@ -7,6 +7,7 @@
 module HashedInner where
 
 import Control.Monad (forM, forM_, unless, when)
+import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
 import Data.Array.MArray
 import Data.Array.ST
@@ -27,7 +28,33 @@ import HashedExpression
 import HashedHash
 import HashedNode
 import HashedUtils
-import Prelude hiding ((+), (-))
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , const
+    , cos
+    , cosh
+    , exp
+    , log
+    , negate
+    , product
+    , sin
+    , sinh
+    , sqrt
+    , sum
+    , tan
+    , tanh
+    )
 
 -- | Enable this when we want to check for conflict when merging two expressions
 -- Different node of two maps could have the same hash (which we hope never happens)
@@ -212,6 +239,18 @@ conditionAry = Condition
 
 -- |
 --
+const_ :: Shape -> Double -> Change
+const_ shape val mp = ExpressionDiff mp n
+  where
+    (mp, n) = aConst shape val
+
+-- |
+--
+num_ :: Double -> Change
+num_ = num_
+
+-- |
+--
 diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
   where
@@ -264,14 +303,96 @@ data ExpressionDiff =
 --
 type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
 
+-- | Change w.r.t original expression map
+--
+type Change = ExpressionMap -> ExpressionDiff
+
 -- | Modification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
 -- the new index of the root expression) between the modified and original expression
 --
-type Modification = (ExpressionMap, Int) -> ExpressionDiff
+type Modification = (ExpressionMap, Int) -> Change
 
 -- |
 --
-toTransformation :: Modification -> Transformation
+fromModification :: Modification -> ((ExpressionMap, Int) -> ExpressionDiff)
+fromModification mkDiff exp@(mp, n) = mkDiff exp mp
+
+-- |
+--
+withContext :: ExpressionMap -> Change -> ExpressionDiff
+withContext = flip ($)
+
+-- |
+--
+just :: Int -> Change
+just nId _ = ExpressionDiff IM.empty nId
+
+-- | 
+--
+instance AddableOp Change where
+    (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
+
+sum_ :: [Change] -> Change
+sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
+
+instance NegateOp Change where
+    negate change mp = applyDiff mp (unaryET Neg ElementDefault) [change mp]
+
+instance MultiplyOp Change where
+    (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
+
+product_ :: [Change] -> Change
+product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
+
+instance PowerOp Change Int where
+    (^) change alpha mp = applyDiff mp (unary (Power alpha)) [change mp]
+
+instance VectorSpaceOp Change Change where
+    scale change1 change2 mp =
+        applyDiff mp (binaryET Scale ElementDefault) [change1 mp, change2 mp]
+
+instance ComplexRealOp Change Change where
+    (+:) change1 change2 mp =
+        applyDiff mp (binary RealImag) [change1 mp, change2 mp]
+    xRe change1 mp = applyDiff mp (unary RealPart) [change1 mp]
+    xIm change1 mp = applyDiff mp (unary ImagPart) [change1 mp]
+
+instance (DimensionType d) => NumOp Change where
+    sqrt change mp = applyDiff mp (unary Sqrt) [change mp]
+    exp change mp = applyDiff mp (unary Exp) [change mp]
+    log change mp = applyDiff mp (unary Log) [change mp]
+    sin change mp = applyDiff mp (unary Sin) [change mp]
+    cos change mp = applyDiff mp (unary Cos) [change mp]
+    tan change mp = applyDiff mp (unary Tan) [change mp]
+    asin change mp = applyDiff mp (unary Asin) [change mp]
+    acos change mp = applyDiff mp (unary Acos) [change mp]
+    atan change mp = applyDiff mp (unary Atan) [change mp]
+    sinh change mp = applyDiff mp (unary Sinh) [change mp]
+    cosh change mp = applyDiff mp (unary Cosh) [change mp]
+    tanh change mp = applyDiff mp (unary Tanh) [change mp]
+    asinh change mp = applyDiff mp (unary Asinh) [change mp]
+    acosh change mp = applyDiff mp (unary Acosh) [change mp]
+    atanh change mp = applyDiff mp (unary Atanh) [change mp]
+    (/) change1 change2 = change1 * (change2 ^ (-1))
+
+instance InnerProductSpaceOp Change Change Change where
+    (<.>) change1 change2 mp =
+        applyDiff
+            mp
+            (binaryET InnerProd ElementDefault `hasShape` [])
+            [change1 mp, change2 mp]
+
+instance RotateOp RotateAmount Change where
+    rotate ra change mp = applyDiff mp (unary (Rotate ra)) [change mp]
+
+instance PiecewiseOp Change Change where
+    piecewise marks condition branches mp =
+        applyDiff mp (conditionAry (Piecewise marks)) . map ($ mp) $
+        condition : branches
+
+-- |
+--
+toTransformation :: ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
 toTransformation normalizer exp@(mp, n) =
     let diff = normalizer exp
         newMp = IM.union mp (extraEntries diff)
@@ -295,11 +416,13 @@ data OperandOrder
     | NoReorder
     deriving (Eq)
 
--- | Turn a Modification to a recursive one, i.e, apply rules to every node in the expression bottom up
+-- | Turn a a recursive one, i.e, apply rules to every node in the expression bottom up
 --
-toRecursiveModification :: OperandOrder -> Modification -> Modification
-toRecursiveModification operandOrder smp exp@(mp, headN) =
-    fromJust $ IM.lookup headN diffs
+toRecursive ::
+       OperandOrder
+    -> ((ExpressionMap, Int) -> ExpressionDiff)
+    -> ((ExpressionMap, Int) -> ExpressionDiff)
+toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
@@ -462,3 +585,31 @@ containsFTNode mp = any isFT $ IM.elems mp
             ReFT _ -> True
             ImFT _ -> True
             _ -> False
+
+-- | A function might be treated as function of variables that not appears in the function itself (like constraint of
+-- optimization problem, so we want to pad zero partial derivative)
+-- (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
+--
+introduceZeroPartialDerivatives ::
+       [(String, Shape)]
+    -> Expression Scalar Covector
+    -> Expression Scalar Covector
+introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
+    let isD name nId
+            | DVar varName <- retrieveNode nId mp
+            , varName == name = True
+            | otherwise = False
+        alreadyExist name = any (isD name) . IM.keys $ mp
+        makePart (name, shape)
+            | isScalarShape shape =
+                mulMany [aConst shape 0, dVarWithShape shape name]
+            | otherwise =
+                apply
+                    (binaryET InnerProd ElementDefault `hasShape` [])
+                    [aConst shape 0, dVarWithShape shape name]
+        listToInsert =
+            map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
+     in wrap $
+        case retrieveNode n mp of
+            Sum Covector ns -> sumMany $ map (mp, ) ns ++ listToInsert
+            _ -> sumMany $ (mp, n) : listToInsert

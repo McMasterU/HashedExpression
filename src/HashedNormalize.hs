@@ -86,7 +86,7 @@ normalizingTransformation = secondPass . firstPass
     firstPass =
         multipleTimes 100 . chain $
         map
-            toRecursiveSimplification
+            (toRecursiveSimplification . fromModification)
             [ evaluateIfPossibleRules
             , groupConstantsRules
             , combineTermsRules
@@ -112,25 +112,25 @@ normalizingTransformation = secondPass . firstPass
 
 -- | Turn a modification to a recursive transformation
 --
-toRecursiveSimplification :: Modification -> Transformation
-toRecursiveSimplification = toTransformation . toRecursiveModification Reorder
+toRecursiveSimplification ::
+       ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
 --
 toMultiplyIfPossible :: Transformation
-toMultiplyIfPossible = toRecursiveSimplification rule
+toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
   where
     rule exp@(mp, n)
         | Scale et scalar scalee <- retrieveNode n mp
         , et /= C
-        , isScalarShape (retrieveShape scalee mp) =
-            mulManyDiff mp [noChange scalar, noChange scalee]
+        , isScalarShape (retrieveShape scalee mp) = just scalar * just scalee
         | InnerProd et arg1 arg2 <- retrieveNode n mp
         , isScalarShape (retrieveShape arg1 mp)
         , isScalarShape (retrieveShape arg2 mp)
-        , et /= C = mulManyDiff mp [noChange arg1, noChange arg2]
-        | otherwise = noChange n
+        , et /= C = just arg1 * just arg2
+        | otherwise = just n
 
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
 --
@@ -263,7 +263,9 @@ fourierTransformRules =
 --
 piecewiseRules :: [Substitution]
 piecewiseRules =
-    [piecewise condition branches |. allTheSame branches ~~~~~~> headL branches]
+    [ piecewise_ condition branches |. allTheSame branches ~~~~~~>
+      headL branches
+    ]
 
 -- | Rules of exponent and log
 --
@@ -303,24 +305,24 @@ zeroOneSumProdRules exp@(mp, n) =
     case retrieveNode n mp of
         Sum _ ns
                 -- to make sure filter (not . isZero mp) ns is not empty
-            | all (isZero mp) ns -> noChange $ head ns
+            | all (isZero mp) ns -> just $ head ns
                 -- if the sum has any zero, remove them
                 -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
             | any (isZero mp) ns ->
-                sumManyDiff mp . map noChange . filter (not . isZero mp) $ ns
+                sum_ . map just . filter (not . isZero mp) $ ns
         Mul _ ns
                 -- to make sure filter (not . isOne mp) ns is not empty
-            | all (isOne mp) ns -> noChange $ head ns
+            | all (isOne mp) ns -> just $ head ns
                 -- if the product has any one, remove them
                 -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
             | any (isOne mp) ns ->
-                mulManyDiff mp . map noChange . filter (not . isOne mp) $ ns
+                product_ . map just . filter (not . isOne mp) $ ns
                 -- if any is zero, collapse to zero
                 -- product(x, y, z, 0, t, u, v) = 0
-            | nId:_ <- filter (isZero mp) ns -> noChange nId
+            | nId:_ <- filter (isZero mp) ns -> just nId
                 -- if the prod contains any prod, just flatten them out
                 -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-        _ -> noChange n
+        _ -> just n
 
 -- |
 --
@@ -330,12 +332,12 @@ collapseSumProdRules exp@(mp, n) =
         Sum _ ns
                 -- if the sum has only one, collapse it
                 -- sum(x) -> x
-            | length ns == 1 -> noChange $ head ns
+            | length ns == 1 -> just $ head ns
         Mul _ ns
                 -- if the mul has only one, collapse it
                 -- product(x) -> x
-            | length ns == 1 -> noChange $ head ns
-        _ -> noChange n
+            | length ns == 1 -> just $ head ns
+        _ -> just n
 
 -- | If sum or product contains sub-sum or sub-product, flatten them out
 --
@@ -345,12 +347,12 @@ flattenSumProdRules exp@(mp, n) =
         Sum _ ns
         -- if the sum contains any sum, just flatten them out
         -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
-         -> sumManyDiff mp . map noChange . concatMap (pullSumOperands mp) $ ns
+         -> sum_ . map just . concatMap (pullSumOperands mp) $ ns
         Mul _ ns
         -- if the prod contains any prod, just flatten them out
         -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
-         -> mulManyDiff mp . map noChange . concatMap (pullProdOperands mp) $ ns
-        _ -> noChange n
+         -> product_ . map just . concatMap (pullProdOperands mp) $ ns
+        _ -> just n
 
 -- | If there are more than one constant in a sum or a product, group them together
 --
@@ -361,18 +363,16 @@ groupConstantsRules exp@(mp, n) =
             Sum _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
-                , let diffNewConst = diffConst shape . Prelude.sum $ cs ->
-                    sumManyDiff mp $
-                    diffNewConst :
-                    (map noChange . filter (not . isConstant mp) $ ns)
+                , let total = const_ shape . Prelude.sum $ cs ->
+                    sum_ $
+                    total : (map just . filter (not . isConstant mp) $ ns)
             Mul _ ns
                 | Just (_, cs) <- pullConstants mp ns
                 , length cs > 1
-                , let diffNewConst = diffConst shape . Prelude.product $ cs ->
-                    mulManyDiff mp $
-                    diffNewConst :
-                    (map noChange . filter (not . isConstant mp) $ ns)
-            _ -> noChange n
+                , let total = const_ shape . Prelude.product $ cs ->
+                    product_ $
+                    total : (map just . filter (not . isConstant mp) $ ns)
+            _ -> just n
 
 -- |
 --
@@ -382,10 +382,9 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
     | Sum _ ns <- retrieveNode n mp =
-        sumManyDiff mp .
-        map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
+        sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = noChange n
+    | otherwise = just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -395,13 +394,10 @@ combineTermsRules exp@(mp, n)
         | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
-    toDiff :: (Int, Double) -> ExpressionDiff
+    toDiff :: (Int, Double) -> Change
     toDiff (nId, val)
-        | val == 1 = noChange nId
-        | otherwise =
-            applyDiff'
-                (binaryET Scale ElementDefault)
-                [diffConst [] val, noChange nId]
+        | val == 1 = just nId
+        | otherwise = num_ val *. just nId
 
 -- |
 --
@@ -410,10 +406,10 @@ combineTermsRules exp@(mp, n)
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
     | Mul _ ns <- retrieveNode n mp =
-        mulManyDiff mp .
+        product_ .
         map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
         ns
-    | otherwise = noChange n
+    | otherwise = just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
@@ -427,8 +423,8 @@ combineTermsRulesProd exp@(mp, n)
         | C <- retrieveElementType y mp = False
         | otherwise = x == y
     toDiff (nId, val)
-        | val == 1 = noChange nId
-        | otherwise = applyDiff' (unary (Power val)) [noChange nId]
+        | val == 1 = just nId
+        | otherwise = just nId ^ val
 
 -- | Rules for combining powers of power
 -- (x^2)^3 -> x^6
@@ -437,8 +433,8 @@ combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
     | Power outerVal outerN <- retrieveNode n mp
     , Power innerVal innerN <- retrieveNode outerN mp =
-        applyDiff mp (unary (Power (outerVal * innerVal))) [noChange innerN]
-    | otherwise = noChange n
+        just innerN ^ (outerVal * innerVal)
+    | otherwise = just n
 
 -- | Rules for power of Sum and power of RealImag
 -- (a+b)^2 should be (a+b)*(a+b)
@@ -447,29 +443,24 @@ powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , isSumOrRealImag nId = replicateMul val nId
-    | otherwise = noChange n
+    | otherwise = just n
   where
-    inverse diff = applyDiff mp (unary $ Power (-1)) [diff]
     isSumOrRealImag nId
         | Sum _ _ <- retrieveNode nId mp = True
         | RealImag _ _ <- retrieveNode nId mp = True
         | otherwise = False
     replicateMul val nId
-        | val > 1 = mulManyDiff mp . replicate val $ noChange nId
-        | val < -1 =
-            inverse . mulManyDiff mp . replicate (-val) . noChange $ nId
-        | otherwise = noChange n
+        | val > 1 = product_ . replicate val $ just nId
+        | val < -1 = (^ (-1)) . product_ . replicate (-val) . just $ nId
+        | otherwise = just nId
 
 -- | Rules for power product
 -- (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
-    , Mul _ args <- retrieveNode nId mp =
-        let powerEach nodeId =
-                applyDiff mp (unary (Power val)) [noChange nodeId]
-         in mulManyDiff mp . map powerEach $ args
-    | otherwise = noChange n
+    , Mul _ args <- retrieveNode nId mp = product_ . map ((^ val) . just) $ args
+    | otherwise = just n
 
 -- | Rules for power scale
 -- (a*.b)^2 should be a^2 *. b^2
@@ -477,14 +468,8 @@ powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
     | Power val nId <- retrieveNode n mp
     , Scale et scalar scalee <- retrieveNode nId mp
-    , val > 0 =
-        let powerScalar = applyDiff mp (unary (Power val)) [noChange scalar]
-            powerScalee = applyDiff mp (unary (Power val)) [noChange scalee]
-         in applyDiff
-                mp
-                (binaryET Scale (ElementSpecific et))
-                [powerScalar, powerScalee]
-    | otherwise = noChange n
+    , val > 0 = (just scalar ^ val) *. (just scalee ^ val)
+    | otherwise = just n
 
 -- | Rules for combining scalar
 -- (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
@@ -494,20 +479,17 @@ combineRealScalarRules exp@(mp, n)
     | Mul R ns <- retrieveNode n mp
     , let extracted = map extract ns
     , any isJust . map snd $ extracted =
-        let combinedScalars = mulManyDiff mp . catMaybes $ map snd extracted
-            combinedScalees = mulManyDiff mp $ map fst extracted
-         in applyDiff
-                mp
-                (binaryET Scale ElementDefault)
-                [combinedScalars, combinedScalees]
-    | otherwise = noChange n
+        let combinedScalars = product_ . catMaybes $ map snd extracted
+            combinedScalees = product_ $ map fst extracted
+         in combinedScalars *. combinedScalees
+    | otherwise = just n
   where
     extract nId
         | Scale _ scalar scalee <- retrieveNode nId mp =
-            (noChange scalee, Just $ noChange scalar)
+            (just scalee, Just $ just scalar)
         | Neg R negatee <- retrieveNode nId mp =
-            (noChange negatee, Just $ diffConst [] (-1))
-        | otherwise = (noChange nId, Nothing)
+            (just negatee, Just $ num_ (-1))
+        | otherwise = (just nId, Nothing)
 
 -- |
 --
@@ -527,22 +509,22 @@ evaluateIfPossibleRules exp@(mp, n) =
             (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
         (Rotate _ _, Just [val]) -> res val
         -- TODO: sin, sos, ...
-        _ -> noChange n
+        _ -> just n
   where
     (shape, node) = retrieveInternal n mp
     getVal nId
         | Const val <- retrieveNode nId mp = Just val
         | otherwise = Nothing
     pulledVals = mapM getVal . nodeArgs $ node
-    res = diffConst shape
+    res = const_ shape
 
 -- | rotateAmount in each direction always lie within (0, dim - 1)
 --
 normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
     | (shape, Rotate amount arg) <- retrieveInternal n mp =
-        applyDiff mp (unary (Rotate (zipWith mod amount shape))) [noChange arg]
-    | otherwise = noChange n
+        rotate (zipWith mod amount shape) $ just arg
+    | otherwise = just n
 
 -- | Because sometimes we got both Const (-0.0) and Const (0.0) which are different, so we turn them
 -- to Const (0.0)
@@ -550,8 +532,8 @@ normalizeRotateRules exp@(mp, n)
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
     | (shape, Const val) <- retrieveInternal n mp
-    , val == 0.0 || val == (-0.0) = diffConst shape 0
-    | otherwise = noChange n
+    , val == 0.0 || val == (-0.0) = const_ shape 0
+    | otherwise = just n
 
 -- | Piecewise of RealImag -> RealImag of piecewises
 -- if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
@@ -560,15 +542,12 @@ expandPiecewiseRealImag :: Modification
 expandPiecewiseRealImag exp@(mp, n)
     | Piecewise marks condition branches <- retrieveNode n mp
     , Just reIms <- mapM extract branches =
-        let (res, ims) = unzip reIms
-            rePart =
-                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
-                condition : res
-            imPart =
-                applyDiff mp (conditionAry (Piecewise marks)) . map noChange $
-                condition : ims
-         in applyDiff mp (binary RealImag) [rePart, imPart]
-    | otherwise = noChange n
+        let (reIds, imIds) = unzip reIms
+            cdt = just condition
+            res = map just reIds
+            ims = map just imIds
+         in piecewise marks cdt res +: piecewise marks cdt ims
+    | otherwise = just n
   where
     extract nId
         | RealImag re im <- retrieveNode nId mp = Just (re, im)
@@ -582,19 +561,16 @@ pullOutPiecewiseRules exp@(mp, n)
     | Piecewise marks condition branches <- retrieveNode n mp
     , et /= C
     , not (isAllZeroExceptOne branches) =
-        let branchWithPiecewise (idx, branch) =
+        let branchWithPiecewise idx branch =
                 let newPiecewiseBranches -- [1, 0, 0 .. ]
                      =
                         replicate idx zero ++
                         [one] ++ replicate (length branches - idx - 1) zero
                     allZerosOneOne -- piecewise marks condition [1, 0, 0, ..]
-                     =
-                        applyDiff mp (conditionAry (Piecewise marks)) $
-                        noChange condition : newPiecewiseBranches
-                 in mulManyDiff mp [noChange branch, allZerosOneOne]
-         in sumManyDiff mp . zipWith (curry branchWithPiecewise) [0 ..] $
-            branches
-    | otherwise = noChange n
+                     = piecewise marks (just condition) newPiecewiseBranches
+                 in just branch * allZerosOneOne
+         in sum_ . zipWith branchWithPiecewise [0 ..] $ branches
+    | otherwise = just n
   where
     isAllZeroExceptOne branches
         | [shouldBeOne] <- filter (not . isZero mp) branches
@@ -602,31 +578,26 @@ pullOutPiecewiseRules exp@(mp, n)
         | otherwise = False
     et = retrieveElementType n mp
     shape = retrieveShape n mp
-    one = diffConst shape 1
-    zero = diffConst shape 0
+    one = const_ shape 1
+    zero = const_ shape 0
 
 -- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
 --
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
-    | Sum R args <- retrieveNode n mp
-    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT args
-    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) args =
+    | Sum R sumands <- retrieveNode n mp
+    , Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands
+    , Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
         let rest =
-                map noChange .
-                filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
-                args
+                map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
+                sumands
             totalScaleFactor =
                 scaleFactor *
                 fromIntegral (Prelude.product $ retrieveShape innerArg mp)
-            scalar = diffConst [] totalScaleFactor
-            scaled =
-                applyDiff
-                    mp
-                    (binaryET Scale ElementDefault)
-                    [scalar, noChange innerArg]
-         in sumManyDiff mp $ scaled : rest
-    | otherwise = noChange n
+            scalar = num_ totalScaleFactor
+            scaled = scalar *. just innerArg
+         in sum_ $ scaled : rest
+    | otherwise = just n
   where
     isTwiceReFT nId
         | TwiceReFT inner <- retrieveNode nId mp = Just (1, nId, inner)
