@@ -584,6 +584,8 @@ containsFTNode mp = any isFT $ IM.elems mp
         case node of
             ReFT _ -> True
             ImFT _ -> True
+            TwiceImFT _ -> True
+            TwiceReFT _ -> True
             _ -> False
 
 -- | A function might be treated as function of variables that not appears in the function itself (like constraint of
