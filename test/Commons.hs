@@ -165,7 +165,7 @@ primitiveScalarR = do
         ]
 
 operandScalarR :: Gen (Expression Scalar R, Vars)
-operandScalarR = oneof . withRatio $ [(8, primitiveScalarR), (2, genScalarR)]
+operandScalarR = oneof . withRatio $ [(8, primitiveScalarR), (1, genScalarR)]
 
 genScalarR :: Gen (Expression Scalar R, Vars)
 genScalarR =
@@ -383,7 +383,7 @@ primitiveOneR = do
         ]
 
 operandOneR :: Gen (Expression One R, Vars)
-operandOneR = oneof . withRatio $ [(8, primitiveOneR), (2, genOneR)]
+operandOneR = oneof . withRatio $ [(8, primitiveOneR), (1, genOneR)]
 
 genOneR :: Gen (Expression One R, Vars)
 genOneR =
@@ -629,7 +629,7 @@ primitiveTwoR = do
         ]
 
 operandTwoR :: Gen (Expression Two R, Vars)
-operandTwoR = oneof . withRatio $ [(8, primitiveTwoR), (2, genTwoR)]
+operandTwoR = oneof . withRatio $ [(8, primitiveTwoR), (1, genTwoR)]
 
 genTwoR :: Gen (Expression Two R, Vars)
 genTwoR =
@@ -749,7 +749,7 @@ primitiveTwoC = do
         ]
 
 operandTwoC :: Gen (Expression Two C, Vars)
-operandTwoC = oneof . withRatio $ [(9, primitiveTwoC), (1, genTwoC)]
+operandTwoC = oneof . withRatio $ [(8, primitiveTwoC), (1, genTwoC)]
 
 genTwoC :: Gen (Expression Two C, Vars)
 genTwoC =

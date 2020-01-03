@@ -69,7 +69,7 @@ import Test.Hspec.Runner
 --    print vals
 --    showExp exp
 main :: IO ()
-main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} spec
+main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 50} spec
 
 spec :: Spec
 spec = do
