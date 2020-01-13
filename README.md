@@ -1,5 +1,5 @@
 # HashedExpression & Symphony   [![CircleCI](https://circleci.com/gh/dalvescb/HashedExpression/tree/master.svg?style=svg)](https://circleci.com/gh/dalvescb/HashedExpression/tree/master)
-Tensor-aware symbolic computing, code generation optimization problems, and more.
+Tensor-aware symbolic computing, code generation for optimization problems, and more.
 
 ## Overview
 This project contains:
@@ -104,9 +104,7 @@ Please read `Contributing.md`. PRs are welcome.
 
 
 ## About
-The project is developed and maintained by  
-[Dr. Christopher Anand](https://github.com/christopheranand)'s research group,  
-Computing and Software department, McMaster University.
+The project is developed and maintained by [Dr. Christopher Anand](https://github.com/christopheranand)'s research group, Computing and Software department, McMaster University.
 
 List of contributors:
 - [Nhan Thai](https://github.com/dandoh)
