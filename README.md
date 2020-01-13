@@ -33,7 +33,7 @@ $ stack install --ghc-options -O2
 
 ### Usage
 Below is an example of an optimization problem to reconstruct image from loss MRI signal:
-```haskell
+```javascript
 variables:
   x[128][128] = 0
 
