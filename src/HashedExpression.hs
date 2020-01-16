@@ -1,4 +1,41 @@
-module HashedExpression where
+module HashedExpression
+    ( R
+    , C
+    , Covector
+    , ET(..)
+    , Node(..)
+    , Internal
+    , ExpressionMap
+    , Expression(..)
+    , Scalar
+    , DimensionType
+    , ElementType
+    , NumType
+    , Addable
+    , One
+    , Two
+    , Three
+    , VectorSpace
+    , InnerProductSpace
+    , AddableOp(..)
+    , NegateOp(..)
+    , MultiplyOp(..)
+    , (-)
+    , PowerOp(..)
+    , PiecewiseOp(..)
+    , VectorSpaceOp(..)
+    , NumOp(..)
+    , FTOp(..)
+    , ComplexRealOp(..)
+    , RotateOp(..)
+    , Shape
+    , RotateAmount
+    , Arg
+    , Args
+    , BranchArg
+    , ConditionArg
+    , InnerProductSpaceOp(..)
+    ) where
 
 import Data.Array
 import qualified Data.Complex as DC
@@ -85,10 +122,9 @@ class VectorSpace d s s =>
 
 
 instance (ElementType et, Addable et, DimensionType d) =>
-                              VectorSpace d et R
+         VectorSpace d et R
 
 instance (DimensionType d) => VectorSpace d C C
-
 
 instance VectorSpace d s s => InnerProductSpace d s
 

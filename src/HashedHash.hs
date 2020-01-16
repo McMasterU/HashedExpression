@@ -1,4 +1,8 @@
-module HashedHash where
+module HashedHash
+    ( hash
+    , addInternal
+    , fromNode
+    ) where
 
 import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
