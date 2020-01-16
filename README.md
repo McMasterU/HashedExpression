@@ -32,8 +32,10 @@ $ stack install --ghc-options -O2
 ```
 
 ### Usage
-Below is an example of an optimization problem to reconstruct image from loss MRI signal:
-```javascript
+Below is an example of an optimization problem to reconstruct image from loss MRI signal, details about the problem can be found at
+[MRI-Image-Reconstruction](examples/MRI-Image-Reconstruction.pdf).
+
+```haskell
 variables:
   x[128][128] = 0
 
@@ -55,6 +57,7 @@ let:
 minimize:
   norm2square ((signal +: 0) * (ft x - (re +: im))) + 3000 *. regularization
 ```
+
 
 Running:
 
@@ -97,6 +100,7 @@ void evaluate_partial_derivatives() { .. } ;
 Which you can plug to your favorite optimization solver. Examples of
 optimization solvers (LBFGS, LBFGS-b, Ipopt) using HashedExpression generated `problem.c` can be found
 in `algorithms` directory, e.g: [LBFGS-b](https://github.com/dalvescb/HashedExpression/blob/master/algorithms/lbfgs-b/lbfgs-b.c).
+
 
 
 ## Contributing
