@@ -1,4 +1,25 @@
-module HashedOperation where
+module HashedOperation
+    ( var
+    , var1d
+    , var2d
+    , var3d
+    , const
+    , const1d
+    , const2d
+    , const3d
+    , constant1D
+    , constant2D
+    , constant3D
+    , variable1D, variable2D, variable3D
+    , norm2square
+    , sum
+    , product
+    , huber
+    , huberNorm
+    , norm1
+    , norm2
+    , sumElements
+    ) where
 
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
@@ -28,6 +49,7 @@ import Prelude hiding
     , cos
     , cosh
     , exp
+    , sum, product
     , negate
     , sin
     , sinh

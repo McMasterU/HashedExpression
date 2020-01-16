@@ -1,4 +1,17 @@
-module HashedNode where
+module HashedNode
+    ( nodeElementType
+    , nodeTypeWeight
+    , sameNodeType
+    , nodeArgs
+    , retrieveElementType
+    , retrieveInternal
+    , retrieveNode
+    , retrieveShape
+    , expressionElementType
+    , expressionInternal
+    , expressionNode
+    , expressionShape
+    ) where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort)
