@@ -14,6 +14,7 @@ module HashedToC
     , (<<-)
     , i
     , singleExpressionCProgram
+    , localOffset
     ) where
 
 import Data.Array
