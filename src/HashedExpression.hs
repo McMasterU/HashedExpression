@@ -84,18 +84,11 @@ class VectorSpace d s s =>
       InnerProductSpace d s
 
 
--- | Instances
--- Set language pragma {-# OVERLAPPABLE #-} because GHC looks at the head first (e.g VectorSpace d et R) and check
--- the constraints later, therefore it will show overlap instances error if we declare more instances of VectorSpace if
--- if the arguments don't satisfy the constraints
---
---instance {-# OVERLAPPABLE #-} ElementType et => Addable et
-instance {-# OVERLAPPABLE #-} (ElementType et, Addable et, DimensionType d) =>
+instance (ElementType et, Addable et, DimensionType d) =>
                               VectorSpace d et R
 
 instance (DimensionType d) => VectorSpace d C C
 
-instance (DimensionType d) => VectorSpace d Covector R
 
 instance VectorSpace d s s => InnerProductSpace d s
 
