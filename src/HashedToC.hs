@@ -1,4 +1,20 @@
-module HashedToC where
+module HashedToC
+    ( MemMap(..)
+    , MemMapEntry
+    , Code
+    , makeMemMap
+    , makeProblemMemMap
+    , memOffset
+    , generateAssignValueCodes
+    , generateEvaluatingCodes
+    , scoped
+    , space
+    , getMemOffsetReal
+    , LookupPart(..)
+    , (<<-)
+    , i
+    , singleExpressionCProgram
+    ) where
 
 import Data.Array
 import Data.Graph (buildG, topSort)

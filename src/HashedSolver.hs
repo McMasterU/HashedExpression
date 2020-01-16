@@ -1,4 +1,17 @@
-module HashedSolver where
+module HashedSolver
+    ( Problem(..)
+    , Variable(..)
+    , Constraint(..)
+    , (.>=)
+    , (.==)
+    , (.<=)
+    , between
+    , ProblemResult(..)
+    , constructProblem
+    , generateProblemCode
+    , GenResult(..)
+    , ConstraintStatement(..)
+    ) where
 
 import Control.Monad (unless, when)
 import Data.Array (bounds)
