@@ -4,7 +4,43 @@
 --
 --
 -------------------------------------------------------------------------------
-module HashedInner where
+module HashedInner
+    ( D_
+    , ET_
+    , unwrap
+    , wrap
+    , apply
+    , mulMany
+    , sumMany
+    , hasShape
+    , applyBinary
+    , applyNary
+    , applyConditionAry
+    , binary
+    , binaryET
+    , conditionAry
+    , applyUnary
+    , unary
+    , unaryET
+    , naryET
+    , ElementOutcome(..)
+    , const_
+    , num_
+    , sum_
+    , product_
+    , diffConst
+    , topologicalSort
+    , topologicalSortManyRoots
+    , ExpressionDiff(..)
+    , Transformation, Change, Modification, fromModification, withContext, just, sum_
+    , toTransformation, multipleTimes, OperandOrder(..), toRecursive, combineChildrenDiffs
+    , removeUnreachable, mulManyDiff, sumManyDiff, applyDiff,
+    noChange, expressionVarNodes, varNodesWithId, containsFTNode, introduceZeroPartialDerivatives
+
+
+
+
+    ) where
 
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Reader (Reader, ask, runReader)
@@ -55,12 +91,6 @@ import Prelude hiding
     , tan
     , tanh
     )
-
--- | Enable this when we want to check for conflict when merging two expressions
--- Different node of two maps could have the same hash (which we hope never happens)
---
-checkMergeConflict :: Bool
-checkMergeConflict = False
 
 -- | TODO: Check if 2 different nodes from 2 maps have the same hash
 --

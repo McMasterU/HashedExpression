@@ -2,7 +2,12 @@
 -- | For normalizeing expressions
 --
 -------------------------------------------------------------------------------
-module HashedNormalize where
+module HashedNormalize
+    ( normalize
+    , normalizingTransformation
+    , flattenSumProdRules
+    , toMultiplyIfPossible
+    ) where
 
 import Data.Eq.HT (equating)
 import Data.Function.HT (nest)
