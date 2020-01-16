@@ -1,4 +1,4 @@
-module HashedCollect where
+module HashedCollect (collectDifferentials) where
 
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
