@@ -10,7 +10,9 @@ module HashedOperation
     , constant1D
     , constant2D
     , constant3D
-    , variable1D, variable2D, variable3D
+    , variable1D
+    , variable2D
+    , variable3D
     , norm2square
     , sum
     , product
@@ -49,11 +51,12 @@ import Prelude hiding
     , cos
     , cosh
     , exp
-    , sum, product
     , negate
+    , product
     , sin
     , sinh
     , sqrt
+    , sum
     , tan
     , tanh
     )

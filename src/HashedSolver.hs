@@ -11,6 +11,8 @@ module HashedSolver
     , generateProblemCode
     , GenResult(..)
     , ConstraintStatement(..)
+    , partialDerivativeMaps
+    , constraintPartialDerivatives
     ) where
 
 import Control.Monad (unless, when)

@@ -32,14 +32,27 @@ module HashedInner
     , topologicalSort
     , topologicalSortManyRoots
     , ExpressionDiff(..)
-    , Transformation, Change, Modification, fromModification, withContext, just, sum_
-    , toTransformation, multipleTimes, OperandOrder(..), toRecursive, combineChildrenDiffs
-    , removeUnreachable, mulManyDiff, sumManyDiff, applyDiff,
-    noChange, expressionVarNodes, varNodesWithId, containsFTNode, introduceZeroPartialDerivatives
-
-
-
-
+    , Transformation
+    , Change
+    , Modification
+    , fromModification
+    , withContext
+    , just
+    , sum_
+    , toTransformation
+    , multipleTimes
+    , OperandOrder(..)
+    , toRecursive
+    , combineChildrenDiffs
+    , removeUnreachable
+    , mulManyDiff
+    , sumManyDiff
+    , applyDiff
+    , noChange
+    , expressionVarNodes
+    , varNodesWithId
+    , containsFTNode
+    , introduceZeroPartialDerivatives
     ) where
 
 import Control.Monad (forM, forM_, unless, when)

@@ -1,4 +1,7 @@
-module HashedInterp (Evaluable(..)) where
+module HashedInterp
+    ( Evaluable(..)
+    , Approximable(..)
+    ) where
 
 import Data.Array
 import Data.Complex
