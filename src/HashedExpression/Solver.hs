@@ -33,7 +33,6 @@ import FFTW
 import HashedExpression.CollectDifferential
 import HashedExpression.Derivative
 import HashedExpression.Expression
-
     ( Covector
     , DimensionType
     , ET(..)

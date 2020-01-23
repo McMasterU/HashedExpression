@@ -1,26 +1,24 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 
+import qualified CollectSpec
 import Data.Array.Unboxed as U
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
-import qualified CollectSpec
 import HashedExpression.Derivative
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import qualified InterpSpec
 import HashedExpression.Normalize
-import qualified NormalizeSpec
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import qualified SolverSpec
-import qualified ToCSpec
+import qualified InterpSpec
 import qualified NormalizeEval.OneCSpec as OneCSpec
 import qualified NormalizeEval.OneRSpec as OneRSpec
 import qualified NormalizeEval.ScalarCSpec as ScalarCSpec
 import qualified NormalizeEval.ScalarRSpec as ScalarRSpec
+import qualified NormalizeSpec
 import Prelude hiding
     ( (*)
     , (+)
@@ -47,9 +45,11 @@ import Prelude hiding
     , tan
     , tanh
     )
+import qualified SolverSpec
 import qualified StructureSpec
 import qualified Test1
 import qualified Test2
+import qualified ToCSpec
 
 import Commons
 import Data.Maybe (fromJust)

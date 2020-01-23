@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 -------------------------------------------------------------------------------
 -- | Inner Hashed functions, there are functions as
 -- how to combine expression with options

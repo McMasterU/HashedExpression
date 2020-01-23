@@ -23,7 +23,6 @@ import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
 import HashedExpression.Expression
-
     ( C
     , DimensionType
     , Expression(..)

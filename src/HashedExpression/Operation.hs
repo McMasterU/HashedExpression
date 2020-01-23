@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module HashedExpression.Operation
     ( var
     , var1d

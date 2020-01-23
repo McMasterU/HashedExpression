@@ -12,7 +12,6 @@ import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Expression
-
     ( C
     , ET(..)
     , Expression(..)

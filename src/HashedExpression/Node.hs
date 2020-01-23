@@ -18,7 +18,6 @@ import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Expression
 
-
 -- | Helpers functions for Expression nodes
 --
 nodeElementType :: HasCallStack => Node -> ExpressionMap -> ET

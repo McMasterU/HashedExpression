@@ -10,10 +10,8 @@ import qualified Data.IntMap.Strict as IM
 import Data.Map (empty, fromList, union)
 import qualified Data.Set as Set
 import HashedExpression.Derivative
-import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedExpression.Normalize
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
@@ -44,36 +42,13 @@ import Prelude hiding
     , tan
     , tanh
     )
-import ToF.ToF
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
-import Fruit.Fruit
 import Graphics.EasyPlot
-import HashedExpression.CollectDifferential
 import HashedExpression.Plot
 import HashedExpression.Solver
-import HashedExpression.ToC (singleExpressionCProgram)
-import HashedExpression.Utils
-import HashedExpression.Var
-import Problems
-import RecoverKSpace.RecoverKSpace
-import Test.Hspec
-import ToF.VelocityGenerator
 
 main :: IO ()
-main = do
-    let exp =
-            Expression @Scalar @R 902483289149750 $
-            IM.fromList
-                [ (4116, ([], Var "a"))
-                , (5942, ([], Var "w"))
-                , (902483289149750, ([], Sum R [5942, 1523609918601139]))
-                , (1523609918601139, ([], Neg R 4116))
-                ]
-    showExp exp
-    showExp $ exteriorDerivative allVars exp
-    showExp . collectDifferentials $ exteriorDerivative allVars exp
-    
-    print "Helelele"
+main = print "hello world"

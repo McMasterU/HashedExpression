@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Symphony where
 
@@ -719,12 +720,6 @@ constructExp context shapeInfo exp =
                         unless (getNT operand == HE.R) $
                         throwError $
                         ErrorWithPosition "Operand must be a real vector" funPos
-                    onlyForComplexVector operand =
-                        unless (getNT operand == HE.C) $
-                        throwError $
-                        ErrorWithPosition
-                            "Operand must be a complex vector"
-                            funPos
                 operand <- constructExp context shapeInfo exp
                 let delta = numToDouble num
                 let huber delta operand =

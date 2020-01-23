@@ -1,6 +1,5 @@
 module HashedExpression.Expression
-    ( 
-    R
+    ( R
     , C
     , Covector
     , ET(..)

@@ -11,7 +11,13 @@ import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import HashedExpression.Expression
 
-import HashedExpression.Inner (D_, ET_, topologicalSort, topologicalSortManyRoots, unwrap)
+import HashedExpression.Inner
+    ( D_
+    , ET_
+    , topologicalSort
+    , topologicalSortManyRoots
+    , unwrap
+    )
 import HashedExpression.Interp
 import HashedExpression.Node
 import HashedExpression.Normalize

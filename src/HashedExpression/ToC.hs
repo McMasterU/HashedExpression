@@ -1,4 +1,4 @@
-module HashedExpression.ToC 
+module HashedExpression.ToC
     ( MemMap(..)
     , MemMapEntry
     , Code

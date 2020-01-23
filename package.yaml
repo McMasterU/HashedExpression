@@ -77,23 +77,13 @@ library:
     - LambdaCase
     - PolyKinds
   exposed-modules:
-    - HashedExpression.CollectDifferential
     - HashedExpression.Derivative
-    - HashedExpression.Expression
-    - HashedExpression.Hash
-    - HashedExpression.Inner
     - HashedExpression.Interp
-    - HashedExpression.Node
-    - HashedExpression.Normalize
     - HashedExpression.Operation
-    - HashedExpression.Pattern
     - HashedExpression.Plot
     - HashedExpression.Prettify
     - HashedExpression.Solver
-    - HashedExpression.ToC
-    - HashedExpression.Utils
-    - HashedExpression.Var
-    - FFTW
+    - HashedExpression
 
 
 
@@ -110,14 +100,41 @@ executables:
       - hspec
   symphony:
     main:                Main.hs
-    source-dirs:         lang
+    source-dirs:
+      - src
+      - embed
+      - lang
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - HashedExpression
       - regex-posix
+    default-extensions:
+      - OverloadedStrings
+      - GADTs
+      - OverloadedStrings
+      - FlexibleContexts
+      - FlexibleInstances
+      - TypeFamilies
+      - TypeApplications
+      - StandaloneDeriving
+      - TypeSynonymInstances
+      - FunctionalDependencies
+      - RoleAnnotations
+      - UndecidableInstances
+      - ExtendedDefaultRules
+      - MultiParamTypeClasses
+      - TemplateHaskell
+      - DeriveAnyClass
+      - QuasiQuotes
+      - ScopedTypeVariables
+      - TupleSections
+      - DataKinds
+      - InstanceSigs
+      - RecordWildCards
+      - LambdaCase
+      - PolyKinds
 
 tests:
   HashedExpression-test:

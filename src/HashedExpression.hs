@@ -28,10 +28,15 @@ module HashedExpression
     , variable3D
     , sum
     , product
+    , normalize
+    , Evaluable(..)
     ) where
 
+import HashedExpression.CollectDifferential
 import HashedExpression.Derivative
 import HashedExpression.Expression
+import HashedExpression.Interp
+import HashedExpression.Normalize
 import HashedExpression.Operation
 import Prelude hiding
     ( (*)
