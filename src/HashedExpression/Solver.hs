@@ -1,4 +1,4 @@
-module HashedSolver
+module HashedExpression.Solver
     ( Problem(..)
     , Variable(..)
     , Constraint(..)
@@ -47,10 +47,10 @@ import HashedExpression.Expression
     , exMap
     )
 import HashedExpression.Inner
-import HashedNode
-import HashedNormalize (normalize)
-import HashedPrettify
-import HashedToC
+import HashedExpression.Node
+import HashedExpression.Normalize (normalize)
+import HashedExpression.Prettify
+import HashedExpression.ToC
 import HashedExpression.Utils
 import System.Process (readProcess, readProcessWithExitCode)
 

@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module HashedSolverSpec where
+module SolverSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -32,15 +32,15 @@ import HashedExpression.Expression
 
 import HashedExpression.Inner
 import HashedExpression.Interp
-import HashedNode
-import HashedNormalize (normalize)
-import HashedOperation
-import HashedOperation (var, var1d, var2d, var3d)
-import HashedPrettify (showExp, showExpDebug)
-import HashedSolver
-import HashedToC
+import HashedExpression.Node
+import HashedExpression.Normalize (normalize)
+import HashedExpression.Operation
+import HashedExpression.Operation (var, var1d, var2d, var3d)
+import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.Solver
+import HashedExpression.ToC
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

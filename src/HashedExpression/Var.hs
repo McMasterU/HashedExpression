@@ -1,9 +1,9 @@
-module HashedVar where
+module HashedExpression.Var where
 
 import Data.Set (Set, fromList)
 import HashedExpression.Expression
 
-import HashedOperation
+import HashedExpression.Operation
 import Prelude hiding (const)
 
 defaultDim1D = 10

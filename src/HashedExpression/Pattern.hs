@@ -5,7 +5,7 @@
 -- easier to read.
 --
 -------------------------------------------------------------------------------
-module HashedPattern where
+module HashedExpression.Pattern where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
@@ -18,8 +18,8 @@ import HashedExpression.Expression
 
 import HashedExpression.Inner
 import HashedExpression.Inner
-import HashedNode
-import HashedOperation
+import HashedExpression.Node
+import HashedExpression.Operation
 import HashedExpression.Utils
 import qualified Prelude
 import Prelude hiding

@@ -1,4 +1,4 @@
-module HashedPrettify
+module HashedExpression.Prettify
     ( prettify
     , prettifyDebug
     , showExpDebug
@@ -15,7 +15,7 @@ import qualified Data.Text as T
 import Data.Typeable
 import HashedExpression.Expression
 
-import HashedNode
+import HashedExpression.Node
 
 -- |
 --

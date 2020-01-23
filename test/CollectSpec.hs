@@ -1,4 +1,4 @@
-module HashedCollectSpec where
+module CollectSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -14,13 +14,13 @@ import HashedExpression.Expression
 
 import HashedExpression.Inner (D_, ET_, topologicalSort, unwrap)
 import HashedExpression.Interp
-import HashedNode
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Node
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

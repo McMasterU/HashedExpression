@@ -1,4 +1,4 @@
-module HashedToC
+module HashedExpression.ToC
     ( MemMap(..)
     , MemMapEntry
     , Code
@@ -42,8 +42,8 @@ import HashedExpression.Expression
     )
 import HashedExpression.Hash
 import HashedExpression.Inner
-import HashedNode
-import HashedPrettify (prettifyDebug)
+import HashedExpression.Node
+import HashedExpression.Prettify (prettifyDebug)
 import HashedExpression.Utils
 
 -- | Mem map (offset, R or C, shape)

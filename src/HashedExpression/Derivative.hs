@@ -19,9 +19,9 @@ import HashedExpression.Expression
 
 import HashedExpression.Hash
 import HashedExpression.Inner
-import HashedNode
-import HashedNormalize
-import HashedOperation
+import HashedExpression.Node
+import HashedExpression.Normalize
+import HashedExpression.Operation
 import HashedExpression.Utils
 import Prelude hiding
     ( (*)

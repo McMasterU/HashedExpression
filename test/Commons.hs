@@ -23,12 +23,12 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedNormalize
-import HashedOperation
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Normalize
+import HashedExpression.Operation
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import Prelude hiding
     ( (*)
     , (+)

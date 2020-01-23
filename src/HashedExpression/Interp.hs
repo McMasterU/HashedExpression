@@ -24,8 +24,8 @@ import HashedExpression.Expression
     , Three
     , Two
     )
-import HashedNode
-import HashedPrettify (prettify, showExp)
+import HashedExpression.Node
+import HashedExpression.Prettify (prettify, showExp)
 import HashedExpression.Utils
 import Text.Printf
 

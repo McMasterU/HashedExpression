@@ -23,11 +23,11 @@ import HashedExpression.Expression
 
 import HashedExpression.Hash
 import HashedExpression.Inner
-import HashedNode
-import HashedNormalize
-import HashedOperation (const, const1d, const2d, const3d)
-import HashedPattern
-import HashedPrettify
+import HashedExpression.Node
+import HashedExpression.Normalize
+import HashedExpression.Operation (const, const1d, const2d, const3d)
+import HashedExpression.Pattern
+import HashedExpression.Prettify
 import HashedExpression.Utils
 import Prelude hiding
     ( (*)

@@ -3,7 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module HashedToCSpec where
+module ToCSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -34,12 +34,12 @@ import HashedExpression.Expression
     )
 import HashedExpression.Inner
 import HashedExpression.Interp
-import HashedNode
-import HashedNormalize (normalize)
-import HashedPrettify (showExp, showExpDebug)
-import HashedToC
+import HashedExpression.Node
+import HashedExpression.Normalize (normalize)
+import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.ToC
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck

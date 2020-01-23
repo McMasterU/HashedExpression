@@ -11,10 +11,10 @@ import HashedExpression.Derivative
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
-import HashedNormalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Normalize
 import Prelude hiding
     ( (*)
     , (+)
@@ -46,8 +46,8 @@ import ToF.VelocityGenerator
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import HashedExpression.CollectDifferential
-import HashedSolver
-import HashedToC (Code, singleExpressionCProgram)
+import HashedExpression.Solver
+import HashedExpression.ToC (Code, singleExpressionCProgram)
 import HashedExpression.Utils
 
 vxName :: String

@@ -1,4 +1,4 @@
-module HashedNode
+module HashedExpression.Node
     ( nodeElementType
     , nodeTypeWeight
     , sameNodeType

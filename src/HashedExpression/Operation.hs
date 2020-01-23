@@ -1,4 +1,4 @@
-module HashedOperation
+module HashedExpression.Operation
     ( var
     , var1d
     , var2d
@@ -34,7 +34,7 @@ import HashedExpression.Expression
 
 import HashedExpression.Hash
 import HashedExpression.Inner
-import HashedNode
+import HashedExpression.Node
 import HashedExpression.Utils
 import Prelude hiding
     ( (*)

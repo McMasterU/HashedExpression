@@ -12,10 +12,10 @@ import HashedExpression.Derivative
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
     , (+)
@@ -49,11 +49,11 @@ import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import Graphics.EasyPlot
 import HashedExpression.CollectDifferential
-import HashedPlot
-import HashedSolver
-import HashedToC (singleExpressionCProgram)
+import HashedExpression.Plot
+import HashedExpression.Solver
+import HashedExpression.ToC (singleExpressionCProgram)
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import Test.Hspec
 import ToF.VelocityGenerator
 

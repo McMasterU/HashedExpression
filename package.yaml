@@ -76,6 +76,24 @@ library:
     - RecordWildCards
     - LambdaCase
     - PolyKinds
+  exposed-modules:
+    - HashedExpression.CollectDifferential
+    - HashedExpression.Derivative
+    - HashedExpression.Expression
+    - HashedExpression.Hash
+    - HashedExpression.Inner
+    - HashedExpression.Interp
+    - HashedExpression.Node
+    - HashedExpression.Normalize
+    - HashedExpression.Operation
+    - HashedExpression.Pattern
+    - HashedExpression.Plot
+    - HashedExpression.Prettify
+    - HashedExpression.Solver
+    - HashedExpression.ToC
+    - HashedExpression.Utils
+    - HashedExpression.Var
+    - FFTW
 
 
 

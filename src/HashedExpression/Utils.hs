@@ -7,8 +7,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import HashedExpression.Expression 
 import HashedExpression.Hash
-import HashedNode
-import HashedPrettify
+import HashedExpression.Node
+import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
     , (+)

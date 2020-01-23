@@ -13,10 +13,10 @@ import HashedExpression.Derivative
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedNormalize
-import HashedOperation
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Normalize
+import HashedExpression.Operation
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
     , (+)
@@ -52,11 +52,11 @@ import Data.STRef.Strict
 import Fruit.Fruit
 import Graphics.EasyPlot
 import HashedExpression.CollectDifferential
-import HashedPlot
-import HashedSolver
-import HashedToC (singleExpressionCProgram)
+import HashedExpression.Plot
+import HashedExpression.Solver
+import HashedExpression.ToC (singleExpressionCProgram)
 import HashedExpression.Utils
-import HashedVar
+import HashedExpression.Var
 import Problems
 import RecoverKSpace.RecoverKSpace
 import Test.Hspec

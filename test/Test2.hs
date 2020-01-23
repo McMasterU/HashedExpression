@@ -4,11 +4,11 @@ import Commons
 import Data.Maybe (fromJust)
 import HashedExpression.Expression
 
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
-import HashedVar
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Var
 import Prelude hiding
     ( (*)
     , (+)

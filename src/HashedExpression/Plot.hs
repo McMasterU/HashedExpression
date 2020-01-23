@@ -1,4 +1,4 @@
-module HashedPlot where
+module HashedExpression.Plot where
 
 -------------------------------------------------------------------------------
 -- | Require: gnuplot (http://www.gnuplot.info/)

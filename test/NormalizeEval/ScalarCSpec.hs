@@ -11,10 +11,10 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression.Expression
 
 import HashedExpression.Interp
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import HashedExpression.Utils
 import Prelude hiding
     ( (*)

@@ -76,7 +76,7 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Expression
 
 import HashedExpression.Hash
-import HashedNode
+import HashedExpression.Node
 import HashedExpression.Utils
 import Prelude hiding
     ( (*)
