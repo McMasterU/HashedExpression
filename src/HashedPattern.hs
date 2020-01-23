@@ -14,12 +14,13 @@ import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
-import HashedExpression
-import HashedInner
-import HashedInner
+import HashedExpression.Expression
+
+import HashedExpression.Inner
+import HashedExpression.Inner
 import HashedNode
 import HashedOperation
-import HashedUtils
+import HashedExpression.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)

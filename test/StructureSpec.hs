@@ -9,15 +9,16 @@ import Control.Monad (replicateM_)
 import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
-import HashedExpression
-import HashedInner (D_, ET_, topologicalSort, topologicalSortManyRoots, unwrap)
-import HashedInterp
+import HashedExpression.Expression
+
+import HashedExpression.Inner (D_, ET_, topologicalSort, topologicalSortManyRoots, unwrap)
+import HashedExpression.Interp
 import HashedNode
 import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedUtils
+import HashedExpression.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)

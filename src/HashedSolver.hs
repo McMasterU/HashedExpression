@@ -30,9 +30,10 @@ import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import Debug.Trace (traceShowId)
 import FFTW
-import HashedCollect
-import HashedDerivative
-import HashedExpression
+import HashedExpression.CollectDifferential
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
     ( Covector
     , DimensionType
     , ET(..)
@@ -45,12 +46,12 @@ import HashedExpression
     , exIndex
     , exMap
     )
-import HashedInner
+import HashedExpression.Inner
 import HashedNode
 import HashedNormalize (normalize)
 import HashedPrettify
 import HashedToC
-import HashedUtils
+import HashedExpression.Utils
 import System.Process (readProcess, readProcessWithExitCode)
 
 ninf :: Double

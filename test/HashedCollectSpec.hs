@@ -8,17 +8,18 @@ import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Debug.Trace (traceShow)
-import HashedCollect
-import HashedDerivative
-import HashedExpression
-import HashedInner (D_, ET_, topologicalSort, unwrap)
-import HashedInterp
+import HashedExpression.CollectDifferential
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Inner (D_, ET_, topologicalSort, unwrap)
+import HashedExpression.Interp
 import HashedNode
 import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedUtils
+import HashedExpression.Utils
 import HashedVar
 import qualified Prelude
 import Prelude hiding

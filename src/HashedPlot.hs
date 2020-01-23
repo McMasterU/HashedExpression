@@ -10,9 +10,9 @@ import Graphics.EasyPlot
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
-import HashedExpression (Expression, Node(..), R, Scalar, exMap)
-import HashedInterp
-import HashedUtils
+import HashedExpression.Expression(Expression, Node(..), R, Scalar, exMap)
+import HashedExpression.Interp
+import HashedExpression.Utils
 import System.Process (readProcessWithExitCode)
 
 type FileName = String

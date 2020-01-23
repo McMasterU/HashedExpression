@@ -13,7 +13,8 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
 import Data.Typeable
-import HashedExpression
+import HashedExpression.Expression
+
 import HashedNode
 
 -- |

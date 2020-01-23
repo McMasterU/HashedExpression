@@ -8,9 +8,10 @@ import Data.Complex
 import qualified Data.IntMap.Strict as IM
 import Data.Map (empty, fromList, union)
 import qualified Data.Set as Set
-import HashedDerivative
-import HashedExpression
-import HashedInterp
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Interp
 import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
@@ -47,11 +48,11 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import Graphics.EasyPlot
-import HashedCollect
+import HashedExpression.CollectDifferential
 import HashedPlot
 import HashedSolver
 import HashedToC (singleExpressionCProgram)
-import HashedUtils
+import HashedExpression.Utils
 import HashedVar
 import Test.Hspec
 import ToF.VelocityGenerator

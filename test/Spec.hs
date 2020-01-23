@@ -5,9 +5,10 @@ import Data.Array.Unboxed as U
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
 import qualified HashedCollectSpec
-import HashedDerivative
-import HashedExpression
-import HashedInterp
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Interp
 import qualified HashedInterpSpec
 import HashedNormalize
 import qualified HashedNormalizeSpec
@@ -52,7 +53,7 @@ import qualified Test2
 
 import Commons
 import Data.Maybe (fromJust)
-import HashedUtils
+import HashedExpression.Utils
 import HashedVar
 import Test.Hspec
 import Test.Hspec.Runner

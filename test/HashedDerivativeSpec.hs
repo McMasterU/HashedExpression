@@ -3,7 +3,8 @@ module HashedDerivativeSpec where
 import Commons
 import Data.List
 import Data.Maybe (fromJust)
-import HashedExpression
+import HashedExpression.Expression
+
 import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation

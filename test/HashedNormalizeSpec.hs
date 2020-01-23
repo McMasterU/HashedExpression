@@ -10,12 +10,13 @@ import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
-import HashedExpression
-import HashedInterp ((~=), eval)
+import HashedExpression.Expression
+
+import HashedExpression.Interp ((~=), eval)
 import HashedNormalize
 import HashedOperation
 import HashedPrettify
-import HashedUtils
+import HashedExpression.Utils
 import HashedVar
 import Prelude hiding
     ( (*)

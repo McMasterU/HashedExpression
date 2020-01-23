@@ -1,7 +1,8 @@
 module HashedVar where
 
 import Data.Set (Set, fromList)
-import HashedExpression
+import HashedExpression.Expression
+
 import HashedOperation
 import Prelude hiding (const)
 

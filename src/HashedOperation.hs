@@ -30,11 +30,12 @@ import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, natVal)
-import HashedExpression
-import HashedHash
-import HashedInner
+import HashedExpression.Expression
+
+import HashedExpression.Hash
+import HashedExpression.Inner
 import HashedNode
-import HashedUtils
+import HashedExpression.Utils
 import Prelude hiding
     ( (*)
     , (+)

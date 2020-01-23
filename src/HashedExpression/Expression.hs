@@ -1,4 +1,4 @@
-module HashedExpression
+module HashedExpression.Expression
     ( R
     , C
     , Covector

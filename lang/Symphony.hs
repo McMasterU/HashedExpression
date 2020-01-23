@@ -19,14 +19,14 @@ import Data.List.Extra (firstJust)
 import Data.Map (Map)
 import Data.Tuple.HT (fst3)
 import ErrM
-import qualified HashedExpression as HE
-import HashedExpression (ExpressionMap, Node(..))
-import HashedInner
+import qualified HashedExpression.Expression as HE
+import HashedExpression.Expression(ExpressionMap, Node(..))
+import HashedExpression.Inner
 import qualified HashedNode as HN
 import qualified HashedOperation as HO
 import HashedPrettify
 import qualified HashedSolver as HS
-import qualified HashedUtils as HU
+import qualified HashedExpression.Utils as HU
 import LayoutHashedLang
 import LexHashedLang
 

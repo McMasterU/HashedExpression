@@ -20,13 +20,14 @@ import Data.Time (diffUTCTime, getCurrentTime)
 import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
-import HashedExpression
-import HashedInterp
+import HashedExpression.Expression
+
+import HashedExpression.Interp
 import HashedNormalize
 import HashedOperation
 import qualified HashedOperation
 import HashedPrettify
-import HashedUtils
+import HashedExpression.Utils
 import HashedVar
 import Prelude hiding
     ( (*)

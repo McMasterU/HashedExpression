@@ -3,13 +3,14 @@ module NormalizeEval.OneRSpec where
 import Commons
 import Data.Map.Strict
 import Data.Maybe (fromJust)
-import HashedExpression
-import HashedInterp
+import HashedExpression.Expression
+
+import HashedExpression.Interp
 import HashedNormalize
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
-import HashedUtils
+import HashedExpression.Utils
 import Prelude hiding
     ( (*)
     , (+)

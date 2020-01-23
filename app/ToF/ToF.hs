@@ -7,9 +7,10 @@ import Data.Array
 import qualified Data.IntMap.Strict as IM
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
-import HashedDerivative
-import HashedExpression
-import HashedInterp
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Interp
 import HashedOperation hiding (product, sum)
 import qualified HashedOperation
 import HashedPrettify
@@ -44,10 +45,10 @@ import ToF.VelocityGenerator
 
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
-import HashedCollect
+import HashedExpression.CollectDifferential
 import HashedSolver
 import HashedToC (Code, singleExpressionCProgram)
-import HashedUtils
+import HashedExpression.Utils
 
 vxName :: String
 vxName = "vx"
