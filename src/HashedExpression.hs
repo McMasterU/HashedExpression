@@ -1,0 +1,59 @@
+module HashedExpression
+    ( exteriorDerivative
+    , derivativeAllVars
+    , R
+    , C
+    , Covector
+    , Expression
+    , Scalar
+    , AddableOp(..)
+    , NegateOp(..)
+    , MultiplyOp(..)
+    , (-)
+    , PowerOp(..)
+    , PiecewiseOp(..)
+    , VectorSpaceOp(..)
+    , NumOp(..)
+    , FTOp(..)
+    , ComplexRealOp(..)
+    , RotateOp(..)
+    , InnerProductSpaceOp(..)
+    , const
+    , constant1D
+    , constant2D
+    , constant3D
+    , var
+    , variable1D
+    , variable2D
+    , variable3D
+    , sum
+    , product
+    ) where
+
+import HashedExpression.Derivative
+import HashedExpression.Expression
+import HashedExpression.Operation
+import Prelude hiding
+    ( (*)
+    , (+)
+    , (-)
+    , (/)
+    , (^)
+    , acos
+    , acosh
+    , asin
+    , asinh
+    , atan
+    , atanh
+    , const
+    , cos
+    , cosh
+    , exp
+    , negate
+    , product
+    , sin
+    , sinh
+    , sum
+    , tan
+    , tanh
+    )
