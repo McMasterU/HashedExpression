@@ -1,18 +1,19 @@
-module HashedInterpSpec where
+module InterpSpec where
 
 import Commons
 import Data.Complex (Complex(..))
 import Data.Map.Strict (union)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
-import HashedExpression
-import HashedInterp
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
-import HashedUtils
-import HashedVar
+import HashedExpression.Expression
+
+import HashedExpression.Interp
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Utils
+import HashedExpression.Var
 import Prelude hiding
     ( (*)
     , (+)

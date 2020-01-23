@@ -1,10 +1,12 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 -------------------------------------------------------------------------------
 -- | Inner Hashed functions, there are functions as
 -- how to combine expression with options
 --
 --
 -------------------------------------------------------------------------------
-module HashedInner
+module HashedExpression.Inner
     ( D_
     , ET_
     , unwrap
@@ -73,10 +75,11 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
-import HashedExpression
-import HashedHash
-import HashedNode
-import HashedUtils
+import HashedExpression.Expression
+
+import HashedExpression.Hash
+import HashedExpression.Node
+import HashedExpression.Utils
 import Prelude hiding
     ( (*)
     , (+)
@@ -202,7 +205,7 @@ addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
                 (OpMany op, args) -> op args
                 (OpManyElement op elm, args) -> op (elementType elm) args
      in addInternal mp (shape, node)
---                _ -> error "HashedInner.applySameScope"
+--                _ -> error "HashedExpression.Inner.applySameScope"
 addEntryWithContext contextMp mp (Condition op) ns@(conditionN:branchesNs) =
     let headBranchN = head branchesNs
         shape = retrieveShape headBranchN contextMp

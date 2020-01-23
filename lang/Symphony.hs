@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Symphony where
 
@@ -19,14 +20,14 @@ import Data.List.Extra (firstJust)
 import Data.Map (Map)
 import Data.Tuple.HT (fst3)
 import ErrM
-import qualified HashedExpression as HE
-import HashedExpression (ExpressionMap, Node(..))
-import HashedInner
-import qualified HashedNode as HN
-import qualified HashedOperation as HO
-import HashedPrettify
-import qualified HashedSolver as HS
-import qualified HashedUtils as HU
+import qualified HashedExpression.Expression as HE
+import HashedExpression.Expression(ExpressionMap, Node(..))
+import HashedExpression.Inner
+import qualified HashedExpression.Node as HN
+import qualified HashedExpression.Operation as HO
+import HashedExpression.Prettify
+import qualified HashedExpression.Solver as HS
+import qualified HashedExpression.Utils as HU
 import LayoutHashedLang
 import LexHashedLang
 
@@ -719,12 +720,6 @@ constructExp context shapeInfo exp =
                         unless (getNT operand == HE.R) $
                         throwError $
                         ErrorWithPosition "Operand must be a real vector" funPos
-                    onlyForComplexVector operand =
-                        unless (getNT operand == HE.C) $
-                        throwError $
-                        ErrorWithPosition
-                            "Operand must be a complex vector"
-                            funPos
                 operand <- constructExp context shapeInfo exp
                 let delta = numToDouble num
                 let huber delta operand =

@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module HashedSolverSpec where
+module SolverSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -26,20 +26,21 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedCollect
-import HashedDerivative
-import HashedExpression
-import HashedInner
-import HashedInterp
-import HashedNode
-import HashedNormalize (normalize)
-import HashedOperation
-import HashedOperation (var, var1d, var2d, var3d)
-import HashedPrettify (showExp, showExpDebug)
-import HashedSolver
-import HashedToC
-import HashedUtils
-import HashedVar
+import HashedExpression.CollectDifferential
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Inner
+import HashedExpression.Interp
+import HashedExpression.Node
+import HashedExpression.Normalize (normalize)
+import HashedExpression.Operation
+import HashedExpression.Operation (var, var1d, var2d, var3d)
+import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.Solver
+import HashedExpression.ToC
+import HashedExpression.Utils
+import HashedExpression.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

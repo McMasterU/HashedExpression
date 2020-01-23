@@ -8,13 +8,14 @@ import Data.Maybe (fromJust)
 import Data.Typeable (Typeable)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
-import HashedExpression
-import HashedInterp
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
-import HashedUtils
+import HashedExpression.Expression
+
+import HashedExpression.Interp
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Utils
 import Prelude hiding
     ( (*)
     , (+)

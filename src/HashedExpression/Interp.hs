@@ -1,4 +1,4 @@
-module HashedInterp
+module HashedExpression.Interp
     ( Evaluable(..)
     , Approximable(..)
     ) where
@@ -11,7 +11,7 @@ import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
-import HashedExpression
+import HashedExpression.Expression
     ( C
     , ET(..)
     , Expression(..)
@@ -23,9 +23,9 @@ import HashedExpression
     , Three
     , Two
     )
-import HashedNode
-import HashedPrettify (prettify, showExp)
-import HashedUtils
+import HashedExpression.Node
+import HashedExpression.Prettify (prettify, showExp)
+import HashedExpression.Utils
 import Text.Printf
 
 -- | This operation emulates the mathematical operation

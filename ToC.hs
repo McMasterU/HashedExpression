@@ -1,4 +1,4 @@
-module HashedToC
+module HashedExpression.ToC
     ( MemMap(..)
     , MemMapEntry
     , Code
@@ -30,7 +30,8 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import FFTW
 import GHC.Stack (HasCallStack)
-import HashedExpression
+import HashedExpression.Expression
+
     ( DimensionType
     , ET(..)
     , Expression(..)
@@ -39,11 +40,11 @@ import HashedExpression
     , NumType
     , Shape
     )
-import HashedHash
-import HashedInner
-import HashedNode
-import HashedPrettify (prettifyDebug)
-import HashedUtils
+import HashedExpression.Hash
+import HashedExpression.Inner
+import HashedExpression.Node
+import HashedExpression.Prettify (prettifyDebug)
+import HashedExpression.Utils
 
 -- | Mem map (offset, R or C, shape)
 --

@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 
-module HashedNormalizeSpec where
+module NormalizeSpec where
 
 import Commons
 import Data.Array (listArray)
@@ -10,13 +10,14 @@ import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
-import HashedExpression
-import HashedInterp ((~=), eval)
-import HashedNormalize
-import HashedOperation
-import HashedPrettify
-import HashedUtils
-import HashedVar
+import HashedExpression.Expression
+
+import HashedExpression.Interp ((~=), eval)
+import HashedExpression.Normalize
+import HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Utils
+import HashedExpression.Var
 import Prelude hiding
     ( (*)
     , (+)

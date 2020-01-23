@@ -7,7 +7,7 @@
     typeclasses for constraints and operations definition.
     - **HashedOperation.hs**: All the functions for constructing expressions, including
 creating vars and implementation of operations.
-    - **HashedInner.hs**: All the functions dealing with internal structures of
+    - **HashedExpression.Inner.hs**: All the functions dealing with internal structures of
 expressions, as well as transforming expressions. This can be thought as the core
 of HashedExpression.
     - **HashedPattern.hs**: For matching and substituting on expression trees.
@@ -28,7 +28,7 @@ This for hashed expressions is like what regular expressions is for strings.
     ```haskell
     exteriorDerivative {x, y} (x^3 + y^3 + 2xy) = 3x^2 * dx + 3y^2 * dy + 2x * dy + 2y * dx
     ```
-    - **HashedCollect.hs**: For collecting and grouping partial derivatives w.r.t each variable
+    - **HashedExpression.CollectDifferential.hs**: For collecting and grouping partial derivatives w.r.t each variable
     after taking derivative.
     ```haskell
     collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
@@ -37,7 +37,7 @@ This for hashed expressions is like what regular expressions is for strings.
     ```haskell
     collectDifferentials (3x^2 * dx + 3y^2 * dy + 2x * dy + 2y * dx) = (3x^2 + 2y) * dx + (3y^2 + 2x) * dy
     ```
-    - **HashedInterp.hs**: Haskell interpreter to evaluate expressions, useful for testing.
+    - **HashedExpression.Interp.hs**: Haskell interpreter to evaluate expressions, useful for testing.
     - **HashedToC.hs**: For generating C code to evaluate expression.
     - **HashedSolver.hs**: Construct optimization problems (out of objective expressions, constraint expressions, etc.)
     process, schedule and generate C code: evaluate partial derivatives, objective, jacobian. Optimization solvers then use
@@ -48,7 +48,7 @@ This for hashed expressions is like what regular expressions is for strings.
     - **HashedNode.hs**: Functions to get information of expression nodes.
     - **HashedPrettify.hs**: Printing expressions, useful for debugging.
     - **HashedPlot.hs**: For plotting expressions, useful for debugging.
-    - **HashedVar.hs** and **HashedUtils.hs** : Utilities
+    - **HashedVar.hs** and **Utils.hs** : Utilities
 
 
 ## Style Guide

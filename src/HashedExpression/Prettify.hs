@@ -1,4 +1,4 @@
-module HashedPrettify
+module HashedExpression.Prettify
     ( prettify
     , prettifyDebug
     , showExpDebug
@@ -13,8 +13,9 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
 import Data.Typeable
-import HashedExpression
-import HashedNode
+import HashedExpression.Expression
+
+import HashedExpression.Node
 
 -- |
 --

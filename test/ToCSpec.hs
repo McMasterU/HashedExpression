@@ -3,7 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module HashedToCSpec where
+module ToCSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -22,7 +22,7 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression
+import HashedExpression.Expression
     ( C
     , DimensionType
     , Expression(..)
@@ -31,14 +31,14 @@ import HashedExpression
     , R
     , Scalar
     )
-import HashedInner
-import HashedInterp
-import HashedNode
-import HashedNormalize (normalize)
-import HashedPrettify (showExp, showExpDebug)
-import HashedToC
-import HashedUtils
-import HashedVar
+import HashedExpression.Inner
+import HashedExpression.Interp
+import HashedExpression.Node
+import HashedExpression.Normalize (normalize)
+import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.ToC
+import HashedExpression.Utils
+import HashedExpression.Var
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck

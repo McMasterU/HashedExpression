@@ -5,7 +5,7 @@
 -- This module is for computing exterior derivative
 --
 -------------------------------------------------------------------------------
-module HashedDerivative
+module HashedExpression.Derivative
     ( exteriorDerivative
     , derivativeAllVars
     ) where
@@ -15,13 +15,14 @@ import Data.List.HT (removeEach)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import HashedExpression
-import HashedHash
-import HashedInner
-import HashedNode
-import HashedNormalize
-import HashedOperation
-import HashedUtils
+import HashedExpression.Expression
+
+import HashedExpression.Hash
+import HashedExpression.Inner
+import HashedExpression.Node
+import HashedExpression.Normalize
+import HashedExpression.Operation
+import HashedExpression.Utils
 import Prelude hiding
     ( (*)
     , (+)

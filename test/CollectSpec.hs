@@ -1,4 +1,4 @@
-module HashedCollectSpec where
+module CollectSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -8,18 +8,19 @@ import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Debug.Trace (traceShow)
-import HashedCollect
-import HashedDerivative
-import HashedExpression
-import HashedInner (D_, ET_, topologicalSort, unwrap)
-import HashedInterp
-import HashedNode
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
-import HashedUtils
-import HashedVar
+import HashedExpression.CollectDifferential
+import HashedExpression.Derivative
+import HashedExpression.Expression
+
+import HashedExpression.Inner (D_, ET_, topologicalSort, unwrap)
+import HashedExpression.Interp
+import HashedExpression.Node
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Utils
+import HashedExpression.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

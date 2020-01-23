@@ -1,13 +1,14 @@
-module HashedDerivativeSpec where
+module DerivativeSpec where
 
 import Commons
 import Data.List
 import Data.Maybe (fromJust)
-import HashedExpression
-import HashedNormalize
-import HashedOperation hiding (product, sum)
-import qualified HashedOperation
-import HashedPrettify
+import HashedExpression.Expression
+
+import HashedExpression.Normalize
+import HashedExpression.Operation hiding (product, sum)
+import qualified HashedExpression.Operation
+import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
     , (+)
