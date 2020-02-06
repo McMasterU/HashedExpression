@@ -34,9 +34,9 @@ module HashedExpression
 
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 import HashedExpression.Interp
-import HashedExpression.Normalize
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation
 import Prelude hiding
     ( (*)

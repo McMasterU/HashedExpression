@@ -6,10 +6,10 @@ import Data.Array.Unboxed as U
 import Data.Map (fromList, union)
 import qualified Data.Set as Set
 import HashedExpression.Derivative
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 import HashedExpression.Interp
-import HashedExpression.Normalize
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify

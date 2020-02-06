@@ -1,4 +1,4 @@
-module HashedExpression.Hash
+module HashedExpression.Internal.Hash
     ( hash
     , addInternal
     , fromNode
@@ -8,7 +8,7 @@ import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import Debug.Trace (traceShowId)
-import HashedExpression.Expression hiding ((*), (+), (-))
+import HashedExpression.Internal.Expression hiding ((*), (+), (-))
 
 -- | modulo and radix for base-hashing
 -- See https://cp-algorithms.com/string/string-hashing.html

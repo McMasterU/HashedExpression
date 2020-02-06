@@ -32,7 +32,7 @@ import Debug.Trace (traceShowId)
 import FFTW
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
     ( Covector
     , DimensionType
     , ET(..)
@@ -46,10 +46,10 @@ import HashedExpression.Expression
     , exMap
     )
 import HashedExpression.Internal.Inner
-import HashedExpression.Node
-import HashedExpression.Normalize (normalize)
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Prettify
-import HashedExpression.ToC
+import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import System.Process (readProcess, readProcessWithExitCode)
 

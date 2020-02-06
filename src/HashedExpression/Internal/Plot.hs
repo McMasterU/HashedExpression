@@ -10,7 +10,7 @@ import Graphics.EasyPlot
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
-import HashedExpression.Expression (Expression, Node(..), R, Scalar, exMap)
+import HashedExpression.Internal.Expression (Expression, Node(..), R, Scalar, exMap)
 import HashedExpression.Interp
 import HashedExpression.Internal.Utils
 import System.Process (readProcessWithExitCode)

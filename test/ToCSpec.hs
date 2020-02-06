@@ -22,7 +22,7 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
     ( C
     , DimensionType
     , Expression(..)
@@ -33,10 +33,10 @@ import HashedExpression.Expression
     )
 import HashedExpression.Internal.Inner
 import HashedExpression.Interp
-import HashedExpression.Node
-import HashedExpression.Normalize (normalize)
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Prettify (showExp, showExpDebug)
-import HashedExpression.ToC
+import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import HashedExpression.Internal.Var
 import System.Process (readProcess, readProcessWithExitCode)

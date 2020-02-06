@@ -3,10 +3,10 @@ module NormalizeEval.OneCSpec where
 import Commons
 import Data.Map.Strict
 import Data.Maybe (fromJust)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 import HashedExpression.Interp
-import HashedExpression.Normalize
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify

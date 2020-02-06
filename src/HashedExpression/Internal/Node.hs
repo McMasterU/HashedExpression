@@ -1,4 +1,4 @@
-module HashedExpression.Node
+module HashedExpression.Internal.Node
     ( nodeElementType
     , nodeTypeWeight
     , sameNodeType
@@ -16,7 +16,7 @@ module HashedExpression.Node
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 -- | Helpers functions for Expression nodes
 --

@@ -74,10 +74,10 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Hash
-import HashedExpression.Node
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)

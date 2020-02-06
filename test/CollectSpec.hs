@@ -10,12 +10,12 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShow)
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 import HashedExpression.Internal.Inner (D_, ET_, topologicalSort, unwrap)
 import HashedExpression.Interp
-import HashedExpression.Node
-import HashedExpression.Normalize
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify

@@ -9,7 +9,7 @@ import Control.Monad (replicateM_)
 import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 import HashedExpression.Internal.Inner
     ( D_
@@ -19,8 +19,8 @@ import HashedExpression.Internal.Inner
     , unwrap
     )
 import HashedExpression.Interp
-import HashedExpression.Node
-import HashedExpression.Normalize
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify

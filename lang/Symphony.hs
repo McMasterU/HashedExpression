@@ -20,10 +20,10 @@ import Data.List.Extra (firstJust)
 import Data.Map (Map)
 import Data.Tuple.HT (fst3)
 import ErrM
-import qualified HashedExpression.Expression as HE
-import HashedExpression.Expression(ExpressionMap, Node(..))
+import qualified HashedExpression.Internal.Expression as HE
+import HashedExpression.Internal.Expression(ExpressionMap, Node(..))
 import HashedExpression.Internal.Inner
-import qualified HashedExpression.Node as HN
+import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Operation as HO
 import HashedExpression.Prettify
 import qualified HashedExpression.Solver as HS
