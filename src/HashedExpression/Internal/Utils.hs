@@ -1,13 +1,13 @@
-module HashedExpression.Utils where
+module HashedExpression.Internal.Utils where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import HashedExpression.Expression
-import HashedExpression.Hash
-import HashedExpression.Node
+import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Node
 import HashedExpression.Prettify
 import Prelude hiding
     ( (*)

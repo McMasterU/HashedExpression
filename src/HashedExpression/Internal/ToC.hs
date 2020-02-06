@@ -1,4 +1,4 @@
-module HashedExpression.ToC
+module HashedExpression.Internal.ToC
     ( MemMap(..)
     , MemMapEntry
     , Code
@@ -30,8 +30,7 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import FFTW
 import GHC.Stack (HasCallStack)
-import HashedExpression.Expression
-
+import HashedExpression.Internal.Expression
     ( DimensionType
     , ET(..)
     , Expression(..)
@@ -40,11 +39,11 @@ import HashedExpression.Expression
     , NumType
     , Shape
     )
-import HashedExpression.Hash
-import HashedExpression.Inner
-import HashedExpression.Node
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Node
 import HashedExpression.Prettify (prettifyDebug)
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 
 -- | Mem map (offset, R or C, shape)
 --

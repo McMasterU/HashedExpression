@@ -11,7 +11,7 @@ import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
     ( C
     , ET(..)
     , Expression(..)
@@ -23,9 +23,9 @@ import HashedExpression.Expression
     , Three
     , Two
     )
-import HashedExpression.Node
+import HashedExpression.Internal.Node
 import HashedExpression.Prettify (prettify, showExp)
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Text.Printf
 
 -- | This operation emulates the mathematical operation

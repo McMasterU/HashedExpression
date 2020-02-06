@@ -15,14 +15,14 @@ import Data.List.HT (removeEach)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Hash
-import HashedExpression.Inner
-import HashedExpression.Node
-import HashedExpression.Normalize
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

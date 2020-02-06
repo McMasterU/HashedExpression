@@ -1,4 +1,4 @@
-module HashedExpression.CollectDifferential
+module HashedExpression.Internal.CollectDifferential
     ( collectDifferentials
     ) where
 
@@ -19,16 +19,16 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Hash
-import HashedExpression.Inner
-import HashedExpression.Node
-import HashedExpression.Normalize
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation (const, const1d, const2d, const3d)
-import HashedExpression.Pattern
+import HashedExpression.Internal.Pattern
 import HashedExpression.Prettify
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

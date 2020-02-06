@@ -43,47 +43,36 @@ build-tools:
   - happy
 
 default-extensions:
+  - OverloadedStrings
+  - GADTs
+  - OverloadedStrings
   - FlexibleContexts
+  - FlexibleInstances
+  - TypeFamilies
+  - TypeApplications
+  - StandaloneDeriving
+  - TypeSynonymInstances
+  - FunctionalDependencies
+  - AllowAmbiguousTypes
+  - RoleAnnotations
+  - UndecidableInstances
+  - ExtendedDefaultRules
+  - MultiParamTypeClasses
+  - TemplateHaskell
+  - DeriveAnyClass
+  - QuasiQuotes
+  - ScopedTypeVariables
+  - TupleSections
+  - DataKinds
+  - InstanceSigs
   - RecordWildCards
+  - LambdaCase
+  - PolyKinds
 
 library:
   source-dirs:
     - src
     - embed
-  default-extensions:
-    - OverloadedStrings
-    - GADTs
-    - OverloadedStrings
-    - FlexibleContexts
-    - FlexibleInstances
-    - TypeFamilies
-    - TypeApplications
-    - StandaloneDeriving
-    - TypeSynonymInstances
-    - FunctionalDependencies
-    - AllowAmbiguousTypes
-    - RoleAnnotations
-    - UndecidableInstances
-    - ExtendedDefaultRules
-    - MultiParamTypeClasses
-    - TemplateHaskell
-    - DeriveAnyClass
-    - QuasiQuotes
-    - ScopedTypeVariables
-    - TupleSections
-    - DataKinds
-    - InstanceSigs
-    - RecordWildCards
-    - LambdaCase
-    - PolyKinds
-  exposed-modules:
-    - HashedExpression.Derivative
-    - HashedExpression.Interp
-    - HashedExpression.Operation
-    - HashedExpression.Plot
-    - HashedExpression.Prettify
-    - HashedExpression.Solver
-    - HashedExpression
 
 
 
@@ -101,80 +90,28 @@ executables:
   symphony:
     main:                Main.hs
     source-dirs:
-      - src
-      - embed
       - lang
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
+      - HashedExpression
       - regex-posix
-    default-extensions:
-      - OverloadedStrings
-      - GADTs
-      - OverloadedStrings
-      - FlexibleContexts
-      - FlexibleInstances
-      - TypeFamilies
-      - TypeApplications
-      - StandaloneDeriving
-      - TypeSynonymInstances
-      - FunctionalDependencies
-      - RoleAnnotations
-      - UndecidableInstances
-      - ExtendedDefaultRules
-      - MultiParamTypeClasses
-      - TemplateHaskell
-      - DeriveAnyClass
-      - QuasiQuotes
-      - ScopedTypeVariables
-      - TupleSections
-      - DataKinds
-      - InstanceSigs
-      - RecordWildCards
-      - LambdaCase
-      - PolyKinds
+
 
 tests:
   HashedExpression-test:
     main:                Spec.hs
     source-dirs:
       - test
-      - src
-      - embed
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
+      - HashedExpression
       - hspec
       - process
       - uuid
       - HUnit
-    default-extensions:
-      - OverloadedStrings
-      - GADTs
-      - OverloadedStrings
-      - FlexibleContexts
-      - FlexibleInstances
-      - TypeFamilies
-      - TypeApplications
-      - StandaloneDeriving
-      - TypeSynonymInstances
-      - FunctionalDependencies
-      - AllowAmbiguousTypes
-      - RoleAnnotations
-      - UndecidableInstances
-      - ExtendedDefaultRules
-      - MultiParamTypeClasses
-      - TemplateHaskell
-      - DeriveAnyClass
-      - QuasiQuotes
-      - ScopedTypeVariables
-      - TupleSections
-      - DataKinds
-      - InstanceSigs
-      - RecordWildCards
-      - LambdaCase
-      - PolyKinds

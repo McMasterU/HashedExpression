@@ -6,7 +6,7 @@
 --
 --
 -------------------------------------------------------------------------------
-module HashedExpression.Inner
+module HashedExpression.Internal.Inner
     ( D_
     , ET_
     , unwrap
@@ -28,7 +28,6 @@ module HashedExpression.Inner
     , ElementOutcome(..)
     , const_
     , num_
-    , sum_
     , product_
     , diffConst
     , topologicalSort
@@ -75,11 +74,11 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Hash
-import HashedExpression.Node
-import HashedExpression.Utils
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

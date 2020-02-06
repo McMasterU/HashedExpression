@@ -9,9 +9,9 @@ import Control.Monad (replicateM_)
 import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
     ( D_
     , ET_
     , topologicalSort
@@ -19,12 +19,12 @@ import HashedExpression.Inner
     , unwrap
     )
 import HashedExpression.Interp
-import HashedExpression.Node
-import HashedExpression.Normalize
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)

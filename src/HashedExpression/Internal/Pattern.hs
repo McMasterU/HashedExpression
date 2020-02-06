@@ -5,7 +5,7 @@
 -- easier to read.
 --
 -------------------------------------------------------------------------------
-module HashedExpression.Pattern where
+module HashedExpression.Internal.Pattern where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
@@ -14,13 +14,13 @@ import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Inner
-import HashedExpression.Inner
-import HashedExpression.Node
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Node
 import HashedExpression.Operation
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)

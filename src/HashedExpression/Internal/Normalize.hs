@@ -2,7 +2,7 @@
 -- | For normalizeing expressions
 --
 -------------------------------------------------------------------------------
-module HashedExpression.Normalize
+module HashedExpression.Internal.Normalize
     ( normalize
     , normalizingTransformation
     , flattenSumProdRules
@@ -31,15 +31,15 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
-import HashedExpression.Hash
-import HashedExpression.Inner
-import HashedExpression.Node
+import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Node
 import HashedExpression.Operation (const, const1d, const2d, const3d)
-import HashedExpression.Pattern
+import HashedExpression.Internal.Pattern
 import HashedExpression.Prettify
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

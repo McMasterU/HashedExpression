@@ -47,8 +47,6 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import Graphics.EasyPlot
-import HashedExpression.Plot
-import HashedExpression.Solver
 
 main :: IO ()
 main = print "hello world"

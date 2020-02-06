@@ -5,15 +5,15 @@ import Data.Complex (Complex(..))
 import Data.Map.Strict (union)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
-import HashedExpression.Expression
+import HashedExpression.Internal.Expression
 
 import HashedExpression.Interp
-import HashedExpression.Normalize
+import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Utils
-import HashedExpression.Var
+import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Var
 import Prelude hiding
     ( (*)
     , (+)
