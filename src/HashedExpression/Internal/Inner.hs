@@ -6,7 +6,7 @@
 --
 --
 -------------------------------------------------------------------------------
-module HashedExpression.Inner
+module HashedExpression.Internal.Inner
     ( D_
     , ET_
     , unwrap
@@ -28,7 +28,6 @@ module HashedExpression.Inner
     , ElementOutcome(..)
     , const_
     , num_
-    , sum_
     , product_
     , diffConst
     , topologicalSort
@@ -79,7 +78,7 @@ import HashedExpression.Expression
 
 import HashedExpression.Hash
 import HashedExpression.Node
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

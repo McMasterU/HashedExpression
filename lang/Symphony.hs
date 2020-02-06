@@ -22,12 +22,12 @@ import Data.Tuple.HT (fst3)
 import ErrM
 import qualified HashedExpression.Expression as HE
 import HashedExpression.Expression(ExpressionMap, Node(..))
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import qualified HashedExpression.Node as HN
 import qualified HashedExpression.Operation as HO
 import HashedExpression.Prettify
 import qualified HashedExpression.Solver as HS
-import qualified HashedExpression.Utils as HU
+import qualified HashedExpression.Internal.Utils as HU
 import LayoutHashedLang
 import LexHashedLang
 

@@ -30,7 +30,7 @@ import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import Debug.Trace (traceShowId)
 import FFTW
-import HashedExpression.CollectDifferential
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
 import HashedExpression.Expression
     ( Covector
@@ -45,12 +45,12 @@ import HashedExpression.Expression
     , exIndex
     , exMap
     )
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
 import HashedExpression.Normalize (normalize)
 import HashedExpression.Prettify
 import HashedExpression.ToC
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import System.Process (readProcess, readProcessWithExitCode)
 
 ninf :: Double

@@ -31,14 +31,14 @@ import HashedExpression.Expression
     , R
     , Scalar
     )
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Interp
 import HashedExpression.Node
 import HashedExpression.Normalize (normalize)
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.ToC
-import HashedExpression.Utils
-import HashedExpression.Var
+import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Var
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck

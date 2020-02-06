@@ -32,7 +32,7 @@ module HashedExpression
     , Evaluable(..)
     ) where
 
-import HashedExpression.CollectDifferential
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
 import HashedExpression.Expression
 import HashedExpression.Interp

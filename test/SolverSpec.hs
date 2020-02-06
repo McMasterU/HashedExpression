@@ -26,11 +26,11 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression.CollectDifferential
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
 import HashedExpression.Expression
 
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Interp
 import HashedExpression.Node
 import HashedExpression.Normalize (normalize)
@@ -39,8 +39,8 @@ import HashedExpression.Operation (var, var1d, var2d, var3d)
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Solver
 import HashedExpression.ToC
-import HashedExpression.Utils
-import HashedExpression.Var
+import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

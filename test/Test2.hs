@@ -8,7 +8,7 @@ import HashedExpression.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Var
+import HashedExpression.Internal.Var
 import Prelude hiding
     ( (*)
     , (+)

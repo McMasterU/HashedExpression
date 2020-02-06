@@ -35,9 +35,9 @@ import GHC.TypeLits (KnownNat, natVal)
 import HashedExpression.Expression
 
 import HashedExpression.Hash
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

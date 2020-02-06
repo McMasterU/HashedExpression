@@ -27,8 +27,8 @@ import HashedExpression.Normalize
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Utils
-import HashedExpression.Var
+import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Var
 import Prelude hiding
     ( (*)
     , (+)

@@ -1,4 +1,4 @@
-module HashedExpression.Utils where
+module HashedExpression.Internal.Utils where
 
 import Data.Array
 import qualified Data.IntMap.Strict as IM

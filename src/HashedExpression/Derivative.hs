@@ -18,11 +18,11 @@ import Data.Typeable (Typeable)
 import HashedExpression.Expression
 
 import HashedExpression.Hash
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
 import HashedExpression.Normalize
 import HashedExpression.Operation
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

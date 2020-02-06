@@ -80,7 +80,6 @@ library:
     - HashedExpression.Derivative
     - HashedExpression.Interp
     - HashedExpression.Operation
-    - HashedExpression.Plot
     - HashedExpression.Prettify
     - HashedExpression.Solver
     - HashedExpression

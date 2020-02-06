@@ -16,11 +16,11 @@ import Data.Maybe
 import Debug.Trace (trace, traceShowId)
 import HashedExpression.Expression
 
-import HashedExpression.Inner
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
 import HashedExpression.Operation
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)

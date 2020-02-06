@@ -34,12 +34,12 @@ import GHC.Exts (sortWith)
 import HashedExpression.Expression
 
 import HashedExpression.Hash
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
 import HashedExpression.Operation (const, const1d, const2d, const3d)
 import HashedExpression.Pattern
 import HashedExpression.Prettify
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)

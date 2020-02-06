@@ -40,10 +40,10 @@ import HashedExpression.Expression
     , Shape
     )
 import HashedExpression.Hash
-import HashedExpression.Inner
+import HashedExpression.Internal.Inner
 import HashedExpression.Node
 import HashedExpression.Prettify (prettifyDebug)
-import HashedExpression.Utils
+import HashedExpression.Internal.Utils
 
 -- | Mem map (offset, R or C, shape)
 --
