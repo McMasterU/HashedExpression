@@ -37,7 +37,6 @@ import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
-import HashedExpression.Operation (var, var1d, var2d, var3d)
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Solver
 import qualified Prelude
@@ -123,7 +122,7 @@ makeValidBoxConstraint (name, shape) =
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
         [size] -> do
-            let x = var1d size name
+            let x = variable1D @Default1D name
             val1 <-
                 V1D . listArray (0, size - 1) <$>
                 generate (vectorOf size arbitrary)
@@ -133,7 +132,7 @@ makeValidBoxConstraint (name, shape) =
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
         [size1, size2] -> do
-            let x = var2d (size1, size2) name
+            let x = variable2D @Default2D1 @Default2D2 name
             val1 <-
                 V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$>
                 generate (vectorOf (size1 * size2) arbitrary)
@@ -142,16 +141,15 @@ makeValidBoxConstraint (name, shape) =
                 generate (vectorOf (size1 * size2) arbitrary)
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
-        [size1, size2, size3] -> do
-            let x = var3d (size1, size2, size3) name
-            val1 <-
-                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
-                generate (vectorOf (size1 * size2 * size3) arbitrary)
-            val2 <-
-                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
-                generate (vectorOf (size1 * size2 * size3) arbitrary)
-            generate $
-                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+--        [size1, size2, size3] -> do TODO -- add 3D for tests
+--            val1 <-
+--                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
+--                generate (vectorOf (size1 * size2 * size3) arbitrary)
+--            val2 <-
+--                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
+--                generate (vectorOf (size1 * size2 * size3) arbitrary)
+--            generate $
+--                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
 
 -- |
 --

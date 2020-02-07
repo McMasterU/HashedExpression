@@ -12,9 +12,6 @@ module HashedExpression.Internal.Expression
     , ElementType
     , NumType
     , Addable
-    , One
-    , Two
-    , Three
     , VectorSpace
     , InnerProductSpace
     , AddableOp(..)
@@ -80,15 +77,6 @@ data Covector
 -- | Type representation of vector dimension
 --
 data Scalar
-    deriving (DimensionType, Typeable)
-
-data One
-    deriving (DimensionType, Typeable)
-
-data Two
-    deriving (DimensionType, Typeable)
-
-data Three
     deriving (DimensionType, Typeable)
 
 -- | 

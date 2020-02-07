@@ -17,11 +17,8 @@ import HashedExpression.Internal.Expression
     , Expression(..)
     , ExpressionMap
     , Node(..)
-    , One
     , R
     , Scalar
-    , Three
-    , Two
     )
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
@@ -34,26 +31,8 @@ import Text.Printf
 expZeroR :: ExpressionMap -> Int -> Expression Scalar R
 expZeroR = flip Expression
 
-expOneR :: ExpressionMap -> Int -> Expression One R
-expOneR = flip Expression
-
-expTwoR :: ExpressionMap -> Int -> Expression Two R
-expTwoR = flip Expression
-
-expThreeR :: ExpressionMap -> Int -> Expression Three R
-expThreeR = flip Expression
-
 expZeroC :: ExpressionMap -> Int -> Expression Scalar C
 expZeroC = flip Expression
-
-expOneC :: ExpressionMap -> Int -> Expression One C
-expOneC = flip Expression
-
-expTwoC :: ExpressionMap -> Int -> Expression Two C
-expTwoC = flip Expression
-
-expThreeC :: ExpressionMap -> Int -> Expression Three C
-expThreeC = flip Expression
 
 -- | Choose branch base on condition value
 --
@@ -186,16 +165,16 @@ instance Evaluable Scalar R Double where
                             eval valMap (expZeroR mp arg1) *
                             eval valMap (expZeroR mp arg2)
                         [size] ->
-                            let res1 = eval valMap $ expOneR mp arg1
-                                res2 = eval valMap $ expOneR mp arg2
+                            let res1 = evaluate1DReal valMap $ (mp, arg1)
+                                res2 = evaluate1DReal valMap $ (mp, arg2)
                              in sum [ x * y
                                     | i <- [0 .. size - 1]
                                     , let x = res1 ! i
                                     , let y = res2 ! i
                                     ]
                         [size1, size2] ->
-                            let res1 = eval valMap $ expTwoR mp arg1
-                                res2 = eval valMap $ expTwoR mp arg2
+                            let res1 = evaluate2DReal valMap $ (mp, arg1)
+                                res2 = evaluate2DReal valMap $ (mp, arg2)
                              in sum [ x * y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -203,8 +182,8 @@ instance Evaluable Scalar R Double where
                                     , let y = res2 ! (i, j)
                                     ]
                         [size1, size2, size3] ->
-                            let res1 = eval valMap $ expThreeR mp arg1
-                                res2 = eval valMap $ expThreeR mp arg2
+                            let res1 = evaluate3DReal valMap $ (mp, arg1)
+                                res2 = evaluate3DReal valMap $ (mp, arg2)
                              in sum [ x * y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -248,16 +227,16 @@ instance Evaluable Scalar C (Complex Double) where
                             eval valMap (expZeroC mp arg1) *
                             conjugate (eval valMap (expZeroC mp arg2))
                         [size] ->
-                            let res1 = eval valMap $ expOneC mp arg1
-                                res2 = eval valMap $ expOneC mp arg2
+                            let res1 = evaluate1DComplex valMap $ (mp, arg1)
+                                res2 = evaluate1DComplex valMap $ (mp, arg2)
                              in sum [ x * conjugate y
                                     | i <- [0 .. size - 1]
                                     , let x = res1 ! i
                                     , let y = res2 ! i
                                     ]
                         [size1, size2] ->
-                            let res1 = eval valMap $ expTwoC mp arg1
-                                res2 = eval valMap $ expTwoC mp arg2
+                            let res1 = evaluate2DComplex valMap $ (mp, arg1)
+                                res2 = evaluate2DComplex valMap $ (mp, arg2)
                              in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -265,8 +244,8 @@ instance Evaluable Scalar C (Complex Double) where
                                     , let y = res2 ! (i, j)
                                     ]
                         [size1, size2, size3] ->
-                            let res1 = eval valMap $ expThreeC mp arg1
-                                res2 = eval valMap $ expThreeC mp arg2
+                            let res1 = evaluate3DComplex valMap $ (mp, arg1)
+                                res2 = evaluate3DComplex valMap $ (mp, arg2)
                              in sum [ x * conjugate y
                                     | i <- [0 .. size1 - 1]
                                     , j <- [0 .. size2 - 1]
@@ -305,40 +284,40 @@ evaluate1DReal valMap (mp, n)
                     _ -> error "no value associated with the variable"
             Const val -> listArray (0, size - 1) $ replicate size val
             Sum R args ->
-                foldrElementwise (+) . map (eval valMap . expOneR mp) $ args
+                foldrElementwise (+) . map (evaluate1DReal valMap . (mp,)) $ args
             Mul R args ->
-                foldrElementwise (*) . map (eval valMap . expOneR mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expOneR mp arg)
-            Neg R arg -> fmap negate . eval valMap $ expOneR mp arg
+                foldrElementwise (*) . map (evaluate1DReal valMap . (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg))
+            Neg R arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
                 let scalar = eval valMap $ expZeroR mp arg1
-                 in fmap (scalar *) . eval valMap $ expOneR mp arg2
+                 in fmap (scalar *) . evaluate1DReal valMap $ (mp, arg2)
             Div arg1 arg2 ->
                 zipWithA
                     (/)
-                    (eval valMap $ expOneR mp arg2)
-                    (eval valMap $ expOneR mp arg2)
-            Sqrt arg -> fmap sqrt . eval valMap $ expOneR mp arg
-            Sin arg -> fmap sin . eval valMap $ expOneR mp arg
-            Cos arg -> fmap cos . eval valMap $ expOneR mp arg
-            Tan arg -> fmap tan . eval valMap $ expOneR mp arg
-            Exp arg -> fmap exp . eval valMap $ expOneR mp arg
-            Log arg -> fmap log . eval valMap $ expOneR mp arg
-            Sinh arg -> fmap sinh . eval valMap $ expOneR mp arg
-            Cosh arg -> fmap cosh . eval valMap $ expOneR mp arg
-            Tanh arg -> fmap tanh . eval valMap $ expOneR mp arg
-            Asin arg -> fmap asin . eval valMap $ expOneR mp arg
-            Acos arg -> fmap acos . eval valMap $ expOneR mp arg
-            Atan arg -> fmap atan . eval valMap $ expOneR mp arg
-            Asinh arg -> fmap asinh . eval valMap $ expOneR mp arg
-            Acosh arg -> fmap acosh . eval valMap $ expOneR mp arg
-            Atanh arg -> fmap atanh . eval valMap $ expOneR mp arg
-            RealPart arg -> fmap realPart . eval valMap $ expOneC mp arg
-            ImagPart arg -> fmap imagPart . eval valMap $ expOneC mp arg
+                    (evaluate1DReal valMap $ (mp, arg2))
+                    (evaluate1DReal valMap $ (mp, arg2))
+            Sqrt arg -> fmap sqrt . evaluate1DReal valMap $ (mp, arg)
+            Sin arg -> fmap sin . evaluate1DReal valMap $ (mp, arg)
+            Cos arg -> fmap cos . evaluate1DReal valMap $ (mp, arg)
+            Tan arg -> fmap tan . evaluate1DReal valMap $ (mp, arg)
+            Exp arg -> fmap exp . evaluate1DReal valMap $ (mp, arg)
+            Log arg -> fmap log . evaluate1DReal valMap $ (mp, arg)
+            Sinh arg -> fmap sinh . evaluate1DReal valMap $ (mp, arg)
+            Cosh arg -> fmap cosh . evaluate1DReal valMap $ (mp, arg)
+            Tanh arg -> fmap tanh . evaluate1DReal valMap $ (mp, arg)
+            Asin arg -> fmap asin . evaluate1DReal valMap $ (mp, arg)
+            Acos arg -> fmap acos . evaluate1DReal valMap $ (mp, arg)
+            Atan arg -> fmap atan . evaluate1DReal valMap $ (mp, arg)
+            Asinh arg -> fmap asinh . evaluate1DReal valMap $ (mp, arg)
+            Acosh arg -> fmap acosh . evaluate1DReal valMap $ (mp, arg)
+            Atanh arg -> fmap atanh . evaluate1DReal valMap $ (mp, arg)
+            RealPart arg -> fmap realPart . evaluate1DComplex valMap $ (mp, arg)
+            ImagPart arg -> fmap imagPart . evaluate1DComplex valMap $ (mp, arg)
                     -- Rotate rA arg ->
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expOneR mp conditionArg
-                    branches = map (eval valMap . expOneR mp) branchArgs
+                let cdt = evaluate1DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate1DReal valMap . (mp,)) branchArgs
                  in listArray
                         (0, size - 1)
                         [ chosen ! i
@@ -346,9 +325,9 @@ evaluate1DReal valMap (mp, n)
                         , let chosen = chooseBranch marks (cdt ! i) branches
                         ]
             Rotate [amount] arg ->
-                rotate1D size amount (eval valMap $ expOneR mp arg)
+                rotate1D size amount (evaluate1DReal valMap $ (mp, arg))
             TwiceReFT arg ->
-                let innerRes = eval valMap $ expOneR mp arg
+                let innerRes = evaluate1DReal valMap $ (mp, arg)
                     scaleFactor = fromIntegral size / 2
                  in listArray
                         (0, size - 1)
@@ -357,7 +336,7 @@ evaluate1DReal valMap (mp, n)
                         | i <- [0 .. size - 1]
                         ]
             TwiceImFT arg ->
-                let innerRes = eval valMap $ expOneR mp arg
+                let innerRes = evaluate1DReal valMap $ (mp, arg)
                     scaleFactor = fromIntegral size / 2
                  in listArray
                         (0, size - 1)
@@ -368,31 +347,26 @@ evaluate1DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expOneR mp arg
+                        let inner = fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap realPart ftResult
                     C ->
-                        let inner = eval valMap $ expOneC mp arg
+                        let inner = evaluate1DComplex valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap realPart ftResult
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expOneR mp arg
+                        let inner = fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap imagPart ftResult
                     C ->
-                        let inner = eval valMap $ expOneC mp arg
+                        let inner = evaluate1DComplex valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap imagPart ftResult
             _ -> error "expression structure One R is wrong"
     | otherwise = error "one r but shape is not [size] ??"
 
--- |
---
-instance Evaluable One R (Array Int Double) where
-    eval :: ValMaps -> Expression One R -> Array Int Double
-    eval valMap (Expression n mp) = evaluate1DReal valMap (mp, n)
 
 instance (KnownNat n) => Evaluable n R (Array Int Double) where
     eval :: ValMaps -> Expression n R -> Array Int Double
@@ -406,27 +380,27 @@ evaluate1DComplex valMap (mp, n)
     | [size] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (eval valMap . expOneC mp) $ args
+                foldrElementwise (+) . map (evaluate1DComplex valMap . (mp,)) $ args
             Mul C args ->
-                foldrElementwise (*) . map (eval valMap . expOneC mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expOneC mp arg)
-            Neg C arg -> fmap negate . eval valMap $ expOneC mp arg
+                foldrElementwise (*) . map (evaluate1DComplex valMap . (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg))
+            Neg C arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . eval valMap $ expOneC mp arg2
+                         in fmap (scalar *) . evaluate1DComplex valMap $ (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . eval valMap $ expOneC mp arg2
+                         in fmap (scalar *) . evaluate1DComplex valMap $ (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
-                    (eval valMap $ expOneR mp arg1)
-                    (eval valMap $ expOneR mp arg2)
+                    (evaluate1DReal valMap $ (mp, arg1))
+                    (evaluate1DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expOneR mp conditionArg
-                    branches = map (eval valMap . expOneC mp) branchArgs
+                let cdt = evaluate1DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate1DComplex valMap . (mp,)) branchArgs
                  in listArray
                         (0, size - 1)
                         [ chosen ! i
@@ -434,16 +408,11 @@ evaluate1DComplex valMap (mp, n)
                         , let chosen = chooseBranch marks (cdt ! i) branches
                         ]
             Rotate [amount] arg ->
-                rotate1D size amount (eval valMap $ expOneC mp arg)
+                rotate1D size amount (evaluate1DComplex valMap $ (mp, arg))
             _ -> error "expression structure One C is wrong"
     | otherwise = error "one C but shape is not [size] ??"
 
 --                         in chooseBranch marks cdt branches
--- |
---
-instance Evaluable One C (Array Int (Complex Double)) where
-    eval :: ValMaps -> Expression One C -> Array Int (Complex Double)
-    eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
 
 instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
     eval :: ValMaps -> Expression n C -> Array Int (Complex Double)
@@ -463,39 +432,39 @@ evaluate2DReal valMap (mp, n)
                 listArray ((0, 0), (size1 - 1, size2 - 1)) $
                 replicate (size1 * size2) val
             Sum R args ->
-                foldrElementwise (+) . map (eval valMap . expTwoR mp) $ args
+                foldrElementwise (+) . map (evaluate2DReal valMap . (mp,)) $ args
             Mul R args ->
-                foldrElementwise (*) . map (eval valMap . expTwoR mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expTwoR mp arg)
-            Neg R arg -> fmap negate . eval valMap $ expTwoR mp arg
+                foldrElementwise (*) . map (evaluate2DReal valMap . (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg))
+            Neg R arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
                 let scalar = eval valMap $ expZeroR mp arg1
-                 in fmap (scalar *) . eval valMap $ expTwoR mp arg2
+                 in fmap (scalar *) . evaluate2DReal valMap $ (mp, arg2)
             Div arg1 arg2 ->
                 zipWithA
                     (/)
-                    (eval valMap $ expTwoR mp arg2)
-                    (eval valMap $ expTwoR mp arg2)
-            Sqrt arg -> fmap sqrt . eval valMap $ expTwoR mp arg
-            Sin arg -> fmap sin . eval valMap $ expTwoR mp arg
-            Cos arg -> fmap cos . eval valMap $ expTwoR mp arg
-            Tan arg -> fmap tan . eval valMap $ expTwoR mp arg
-            Exp arg -> fmap exp . eval valMap $ expTwoR mp arg
-            Log arg -> fmap log . eval valMap $ expTwoR mp arg
-            Sinh arg -> fmap sinh . eval valMap $ expTwoR mp arg
-            Cosh arg -> fmap cosh . eval valMap $ expTwoR mp arg
-            Tanh arg -> fmap tanh . eval valMap $ expTwoR mp arg
-            Asin arg -> fmap asin . eval valMap $ expTwoR mp arg
-            Acos arg -> fmap acos . eval valMap $ expTwoR mp arg
-            Atan arg -> fmap atan . eval valMap $ expTwoR mp arg
-            Asinh arg -> fmap asinh . eval valMap $ expTwoR mp arg
-            Acosh arg -> fmap acosh . eval valMap $ expTwoR mp arg
-            Atanh arg -> fmap atanh . eval valMap $ expTwoR mp arg
-            RealPart arg -> fmap realPart . eval valMap $ expTwoC mp arg
-            ImagPart arg -> fmap imagPart . eval valMap $ expTwoC mp arg
+                    (evaluate2DReal valMap $ (mp, arg2))
+                    (evaluate2DReal valMap $ (mp, arg2))
+            Sqrt arg -> fmap sqrt . evaluate2DReal valMap $ (mp, arg)
+            Sin arg -> fmap sin . evaluate2DReal valMap $ (mp, arg)
+            Cos arg -> fmap cos . evaluate2DReal valMap $ (mp, arg)
+            Tan arg -> fmap tan . evaluate2DReal valMap $ (mp, arg)
+            Exp arg -> fmap exp . evaluate2DReal valMap $ (mp, arg)
+            Log arg -> fmap log . evaluate2DReal valMap $ (mp, arg)
+            Sinh arg -> fmap sinh . evaluate2DReal valMap $ (mp, arg)
+            Cosh arg -> fmap cosh . evaluate2DReal valMap $ (mp, arg)
+            Tanh arg -> fmap tanh . evaluate2DReal valMap $ (mp, arg)
+            Asin arg -> fmap asin . evaluate2DReal valMap $ (mp, arg)
+            Acos arg -> fmap acos . evaluate2DReal valMap $ (mp, arg)
+            Atan arg -> fmap atan . evaluate2DReal valMap $ (mp, arg)
+            Asinh arg -> fmap asinh . evaluate2DReal valMap $ (mp, arg)
+            Acosh arg -> fmap acosh . evaluate2DReal valMap $ (mp, arg)
+            Atanh arg -> fmap atanh . evaluate2DReal valMap $ (mp, arg)
+            RealPart arg -> fmap realPart . evaluate2DComplex valMap $ (mp, arg)
+            ImagPart arg -> fmap imagPart . evaluate2DComplex valMap $ (mp, arg)
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expTwoR mp conditionArg
-                    branches = map (eval valMap . expTwoR mp) branchArgs
+                let cdt = evaluate2DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate2DReal valMap . (mp,)) branchArgs
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ chosen ! (i, j)
@@ -508,9 +477,9 @@ evaluate2DReal valMap (mp, n)
                 rotate2D
                     (size1, size2)
                     (amount1, amount2)
-                    (eval valMap $ expTwoR mp arg)
+                    (evaluate2DReal valMap $ (mp, arg))
             TwiceReFT arg ->
-                let innerRes = eval valMap $ expTwoR mp arg
+                let innerRes = evaluate2DReal valMap $ (mp, arg)
                     scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
@@ -522,7 +491,7 @@ evaluate2DReal valMap (mp, n)
                         , j <- [0 .. size2 - 1]
                         ]
             TwiceImFT arg ->
-                let innerRes = eval valMap $ expTwoR mp arg
+                let innerRes = evaluate2DReal valMap $ (mp, arg)
                     scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
@@ -536,29 +505,25 @@ evaluate2DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expTwoR mp arg
+                        let inner = fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap realPart ftResult
                     C ->
-                        let inner = eval valMap $ expTwoC mp arg
+                        let inner = evaluate2DComplex valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap realPart ftResult
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expTwoR mp arg
+                        let inner = fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap imagPart ftResult
                     C ->
-                        let inner = eval valMap $ expTwoC mp arg
+                        let inner = evaluate2DComplex valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap imagPart ftResult
             _ -> error "expression structure Two R is wrong"
     | otherwise = error "Two r but shape is not [size1, size2] ??"
-
-instance Evaluable Two R (Array (Int, Int) Double) where
-    eval :: ValMaps -> Expression Two R -> Array (Int, Int) Double
-    eval valMap (Expression n mp) = evaluate2DReal valMap (mp, n)
 
 instance (KnownNat m, KnownNat n) =>
          Evaluable '( m, n) R (Array (Int, Int) Double) where
@@ -573,27 +538,27 @@ evaluate2DComplex valMap (mp, n)
     | [size1, size2] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (eval valMap . expTwoC mp) $ args
+                foldrElementwise (+) . map (evaluate2DComplex valMap. (mp,)) $ args
             Mul C args ->
-                foldrElementwise (*) . map (eval valMap . expTwoC mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expTwoC mp arg)
-            Neg C arg -> fmap negate . eval valMap $ expTwoC mp arg
+                foldrElementwise (*) . map (evaluate2DComplex valMap. (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg))
+            Neg C arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . eval valMap $ expTwoC mp arg2
+                         in fmap (scalar *) . evaluate2DComplex valMap $ (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . eval valMap $ expTwoC mp arg2
+                         in fmap (scalar *) . evaluate2DComplex valMap $ (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
-                    (eval valMap $ expTwoR mp arg1)
-                    (eval valMap $ expTwoR mp arg2)
+                    (evaluate2DReal valMap $ (mp, arg1))
+                    (evaluate2DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expTwoR mp conditionArg
-                    branches = map (eval valMap . expTwoC mp) branchArgs
+                let cdt = evaluate2DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate2DComplex valMap . (mp,)) branchArgs
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ chosen ! (i, j)
@@ -606,13 +571,9 @@ evaluate2DComplex valMap (mp, n)
                 rotate2D
                     (size1, size2)
                     (amount1, amount2)
-                    (eval valMap $ expTwoC mp arg)
+                    (evaluate2DComplex valMap $ (mp, arg))
             _ -> error "expression structure Two C is wrong"
     | otherwise = error "Two C but shape is not [size1, size2] ??"
-
-instance Evaluable Two C (Array (Int, Int) (Complex Double)) where
-    eval :: ValMaps -> Expression Two C -> Array (Int, Int) (Complex Double)
-    eval valMap (Expression n mp) = evaluate2DComplex valMap (mp, n)
 
 instance (KnownNat m, KnownNat n) =>
          Evaluable '( m, n) C (Array (Int, Int) (Complex Double)) where
@@ -633,39 +594,39 @@ evaluate3DReal valMap (mp, n)
                 listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $
                 replicate (size1 * size2 * size3) val
             Sum R args ->
-                foldrElementwise (+) . map (eval valMap . expThreeR mp) $ args
+                foldrElementwise (+) . map (evaluate3DReal valMap . (mp,)) $ args
             Mul R args ->
-                foldrElementwise (*) . map (eval valMap . expThreeR mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expThreeR mp arg)
-            Neg R arg -> fmap negate . eval valMap $ expThreeR mp arg
+                foldrElementwise (*) . map (evaluate3DReal valMap . (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg))
+            Neg R arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
                 let scalar = eval valMap $ expZeroR mp arg1
-                 in fmap (scalar *) . eval valMap $ expThreeR mp arg2
+                 in fmap (scalar *) . evaluate3DReal valMap $ (mp, arg2)
             Div arg1 arg2 ->
                 zipWithA
                     (/)
-                    (eval valMap $ expThreeR mp arg2)
-                    (eval valMap $ expThreeR mp arg2)
-            Sqrt arg -> fmap sqrt . eval valMap $ expThreeR mp arg
-            Sin arg -> fmap sin . eval valMap $ expThreeR mp arg
-            Cos arg -> fmap cos . eval valMap $ expThreeR mp arg
-            Tan arg -> fmap tan . eval valMap $ expThreeR mp arg
-            Exp arg -> fmap exp . eval valMap $ expThreeR mp arg
-            Log arg -> fmap log . eval valMap $ expThreeR mp arg
-            Sinh arg -> fmap sinh . eval valMap $ expThreeR mp arg
-            Cosh arg -> fmap cosh . eval valMap $ expThreeR mp arg
-            Tanh arg -> fmap tanh . eval valMap $ expThreeR mp arg
-            Asin arg -> fmap asin . eval valMap $ expThreeR mp arg
-            Acos arg -> fmap acos . eval valMap $ expThreeR mp arg
-            Atan arg -> fmap atan . eval valMap $ expThreeR mp arg
-            Asinh arg -> fmap asinh . eval valMap $ expThreeR mp arg
-            Acosh arg -> fmap acosh . eval valMap $ expThreeR mp arg
-            Atanh arg -> fmap atanh . eval valMap $ expThreeR mp arg
-            RealPart arg -> fmap realPart . eval valMap $ expThreeC mp arg
-            ImagPart arg -> fmap imagPart . eval valMap $ expThreeC mp arg
+                    (evaluate3DReal valMap $ (mp, arg2))
+                    (evaluate3DReal valMap $ (mp, arg2))
+            Sqrt arg -> fmap sqrt . evaluate3DReal valMap $ (mp, arg)
+            Sin arg -> fmap sin . evaluate3DReal valMap $ (mp, arg)
+            Cos arg -> fmap cos . evaluate3DReal valMap $ (mp, arg)
+            Tan arg -> fmap tan . evaluate3DReal valMap $ (mp, arg)
+            Exp arg -> fmap exp . evaluate3DReal valMap $ (mp, arg)
+            Log arg -> fmap log . evaluate3DReal valMap $ (mp, arg)
+            Sinh arg -> fmap sinh . evaluate3DReal valMap $ (mp, arg)
+            Cosh arg -> fmap cosh . evaluate3DReal valMap $ (mp, arg)
+            Tanh arg -> fmap tanh . evaluate3DReal valMap $ (mp, arg)
+            Asin arg -> fmap asin . evaluate3DReal valMap $ (mp, arg)
+            Acos arg -> fmap acos . evaluate3DReal valMap $ (mp, arg)
+            Atan arg -> fmap atan . evaluate3DReal valMap $ (mp, arg)
+            Asinh arg -> fmap asinh . evaluate3DReal valMap $ (mp, arg)
+            Acosh arg -> fmap acosh . evaluate3DReal valMap $ (mp, arg)
+            Atanh arg -> fmap atanh . evaluate3DReal valMap $ (mp, arg)
+            RealPart arg -> fmap realPart . evaluate3DComplex valMap $ (mp, arg)
+            ImagPart arg -> fmap imagPart . evaluate3DComplex valMap $ (mp, arg)
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expThreeR mp conditionArg
-                    branches = map (eval valMap . expThreeR mp) branchArgs
+                let cdt = evaluate3DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate3DReal valMap . (mp,)) branchArgs
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ chosen ! (i, j, k)
@@ -679,9 +640,9 @@ evaluate3DReal valMap (mp, n)
                 rotate3D
                     (size1, size2, size3)
                     (amount1, amount2, amount3)
-                    (eval valMap $ expThreeR mp arg)
+                    (evaluate3DReal valMap $ (mp, arg))
             TwiceReFT arg ->
-                let innerRes = eval valMap $ expThreeR mp arg
+                let innerRes = evaluate3DReal valMap $ (mp, arg)
                     scaleFactor =
                         fromIntegral size1 * fromIntegral size2 *
                         fromIntegral size3 /
@@ -699,7 +660,7 @@ evaluate3DReal valMap (mp, n)
                         , k <- [0 .. size3 - 1]
                         ]
             TwiceImFT arg ->
-                let innerRes = eval valMap $ expThreeR mp arg
+                let innerRes = evaluate3DReal valMap $ (mp, arg)
                     scaleFactor =
                         fromIntegral size1 * fromIntegral size2 *
                         fromIntegral size3 /
@@ -719,35 +680,30 @@ evaluate3DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expThreeR mp arg
+                        let inner = fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap realPart ftResult
                     C ->
-                        let inner = eval valMap $ expThreeC mp arg
+                        let inner = evaluate3DComplex valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap realPart ftResult
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . eval valMap $ expThreeR mp arg
+                        let inner = fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap imagPart ftResult
                     C ->
-                        let inner = eval valMap $ expThreeC mp arg
+                        let inner = evaluate3DComplex valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap imagPart ftResult
             _ -> error "expression structure Three R is wrong"
     | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
--- | 
---
-instance Evaluable Three R (Array (Int, Int, Int) Double) where
-    eval :: ValMaps -> Expression Three R -> Array (Int, Int, Int) Double
-    eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
 
 instance (KnownNat m, KnownNat n, KnownNat p) =>
          Evaluable '( m, n, p) R (Array (Int, Int, Int) Double) where
@@ -760,27 +716,27 @@ evaluate3DComplex valMap (mp, n)
     | [size1, size2, size3] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (eval valMap . expThreeC mp) $ args
+                foldrElementwise (+) . map (evaluate3DComplex valMap . (mp,)) $ args
             Mul C args ->
-                foldrElementwise (*) . map (eval valMap . expThreeC mp) $ args
-            Power x arg -> fmap (^ x) (eval valMap $ expThreeC mp arg)
-            Neg C arg -> fmap negate . eval valMap $ expThreeC mp arg
+                foldrElementwise (*) . map (evaluate3DComplex valMap . (mp,)) $ args
+            Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg))
+            Neg C arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . eval valMap $ expThreeC mp arg2
+                         in fmap (scalar *) . evaluate3DComplex valMap $ (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . eval valMap $ expThreeC mp arg2
+                         in fmap (scalar *) . evaluate3DComplex valMap $ (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
-                    (eval valMap $ expThreeR mp arg1)
-                    (eval valMap $ expThreeR mp arg2)
+                    (evaluate3DReal valMap $ (mp, arg1))
+                    (evaluate3DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
-                let cdt = eval valMap $ expThreeR mp conditionArg
-                    branches = map (eval valMap . expThreeC mp) branchArgs
+                let cdt = evaluate3DReal valMap $ (mp, conditionArg)
+                    branches = map (evaluate3DComplex valMap . (mp,)) branchArgs
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ chosen ! (i, j, k)
@@ -794,16 +750,10 @@ evaluate3DComplex valMap (mp, n)
                 rotate3D
                     (size1, size2, size3)
                     (amount1, amount2, amount3)
-                    (eval valMap $ expThreeC mp arg)
+                    (evaluate3DComplex valMap $ (mp, arg))
             _ -> error "expression structure Three C is wrong"
     | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
-instance Evaluable Three C (Array (Int, Int, Int) (Complex Double)) where
-    eval ::
-           ValMaps
-        -> Expression Three C
-        -> Array (Int, Int, Int) (Complex Double)
-    eval valMap (Expression n mp) = evaluate3DComplex valMap (mp, n)
 
 instance (KnownNat m, KnownNat n, KnownNat p) =>
          Evaluable '( m, n, p) C (Array (Int, Int, Int) (Complex Double)) where

@@ -2,13 +2,7 @@
 
 module HashedExpression.Operation
     ( var
-    , var1d
-    , var2d
-    , var3d
     , const
-    , const1d
-    , const2d
-    , const3d
     , constant1D
     , constant2D
     , constant3D
@@ -74,60 +68,12 @@ var name = Expression h (fromList [(h, node)])
     node = ([], Var name)
     h = hash node
 
-var1d :: HasCallStack => Int -> String -> Expression One R
-var1d size name
-    | size > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size], Var name)
-    h = hash node
-
-var2d :: HasCallStack => (Int, Int) -> String -> Expression Two R
-var2d (size1, size2) name
-    | size1 > 0 && size2 > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size1, size2], Var name)
-    h = hash node
-
-var3d :: HasCallStack => (Int, Int, Int) -> String -> Expression Three R
-var3d (size1, size2, size3) name
-    | size1 > 0 && size2 > 0 && size3 > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size1, size2, size3], Var name)
-    h = hash node
-
 -- |
 --
 const :: Double -> Expression Scalar R
 const val = Expression h (fromList [(h, node)])
   where
     node = ([], Const val)
-    h = hash node
-
-const1d :: HasCallStack => Int -> Double -> Expression One R
-const1d size val
-    | size > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size], Const val)
-    h = hash node
-
-const2d :: HasCallStack => (Int, Int) -> Double -> Expression Two R
-const2d (size1, size2) val
-    | size1 > 0 && size2 > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size1, size2], Const val)
-    h = hash node
-
-const3d :: HasCallStack => (Int, Int, Int) -> Double -> Expression Three R
-const3d (size1, size2, size3) val
-    | size1 > 0 && size2 > 0 && size3 > 0 = Expression h (fromList [(h, node)])
-    | otherwise = error "All dimentions should be positive integer"
-  where
-    node = ([size1, size2, size3], Const val)
     h = hash node
 
 -- | Element-wise sum
@@ -323,20 +269,6 @@ instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
     ft :: Expression d R -> Expression d C
     ft e = ft (e +: constWithShape (expressionShape e) 0)
 
--- | 
---
-instance (ElementType et) => RotateOp Int (Expression One et) where
-    rotate :: Int -> Expression One et -> Expression One et
-    rotate x = applyUnary . unary $ Rotate [x]
-
-instance (ElementType et) => RotateOp (Int, Int) (Expression Two et) where
-    rotate :: (Int, Int) -> Expression Two et -> Expression Two et
-    rotate (x, y) = applyUnary . unary $ Rotate [x, y]
-
-instance (ElementType et) =>
-         RotateOp (Int, Int, Int) (Expression Three et) where
-    rotate :: (Int, Int, Int) -> Expression Three et -> Expression Three et
-    rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
 
 -- | 
 --
