@@ -8,19 +8,18 @@ import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Debug.Trace (traceShow)
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 
 import HashedExpression.Internal.Inner (D_, ET_, topologicalSort, unwrap)
-import HashedExpression.Interp
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
-import HashedExpression.Internal.Var
 import qualified Prelude
 import Prelude hiding
     ( (*)
@@ -50,6 +49,7 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 prop_DVarStayAlone :: Expression Scalar R -> Bool
 prop_DVarStayAlone exp = property
@@ -80,7 +80,8 @@ prop_DVarAppearOnce exp = property
     allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
     property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
 
-prop_DVarStayAloneWithOneR :: Expression One R -> Expression One R -> Bool
+prop_DVarStayAloneWithOneR ::
+       Expression Default1D R -> Expression Default1D R -> Bool
 prop_DVarStayAloneWithOneR exp1 exp2 = property
   where
     exp = exp1 <.> exp2
@@ -99,7 +100,8 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
             _ -> isDVarAlone rootId
 
 --        | DVar _ <- retrieveNode nId mp = True
-prop_DVarAppearOnceWithOneR :: Expression One R -> Expression One R -> Bool
+prop_DVarAppearOnceWithOneR ::
+       Expression Default1D R -> Expression Default1D R -> Bool
 prop_DVarAppearOnceWithOneR exp1 exp2 = property
   where
     exp = exp1 <.> exp2

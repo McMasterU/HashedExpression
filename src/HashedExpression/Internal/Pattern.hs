@@ -19,8 +19,8 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
-import HashedExpression.Operation
 import HashedExpression.Internal.Utils
+import HashedExpression.Operation
 import qualified Prelude
 import Prelude hiding
     ( (*)
@@ -34,7 +34,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp

@@ -372,7 +372,7 @@ withContext = flip ($)
 just :: Int -> Change
 just nId _ = ExpressionDiff IM.empty nId
 
--- | 
+-- |
 --
 instance AddableOp Change where
     (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]

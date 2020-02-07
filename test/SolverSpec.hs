@@ -26,21 +26,19 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 
 import HashedExpression.Internal.Inner
-import HashedExpression.Interp
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Operation
-import HashedExpression.Operation (var, var1d, var2d, var3d)
-import HashedExpression.Prettify (showExp, showExpDebug)
-import HashedExpression.Solver
 import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
-import HashedExpression.Internal.Var
+import HashedExpression.Interp
+import HashedExpression.Operation
+import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.Solver
 import qualified Prelude
 import Prelude hiding
     ( (*)
@@ -54,7 +52,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp
@@ -73,6 +71,7 @@ import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 -- |
 --
@@ -89,7 +88,7 @@ isOneAfterAnother memMap nIds = all isOk xs
 -- |
 --
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemNoConstraint (SuiteScalarR exp valMap) = do
+prop_constructProblemNoConstraint (Suite exp valMap) = do
     let names = Map.keys valMap
         pdMap =
             partialDerivativeMaps $
@@ -117,13 +116,13 @@ makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
 makeValidBoxConstraint (name, shape) =
     case shape of
         [] -> do
-            let x = var name
+            let x = variable name
             val1 <- VScalar <$> generate arbitrary
             val2 <- VScalar <$> generate arbitrary
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
         [size] -> do
-            let x = var1d size name
+            let x = variable1D @Default1D name
             val1 <-
                 V1D . listArray (0, size - 1) <$>
                 generate (vectorOf size arbitrary)
@@ -133,30 +132,29 @@ makeValidBoxConstraint (name, shape) =
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
         [size1, size2] -> do
-            let x = var2d (size1, size2) name
+            let x = variable2D @Default2D1 @Default2D2 name
             val1 <-
                 V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$>
                 generate (vectorOf (size1 * size2) arbitrary)
             val2 <-
                 V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$>
                 generate (vectorOf (size1 * size2) arbitrary)
-            generate $
-                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
-        [size1, size2, size3] -> do
-            let x = var3d (size1, size2, size3) name
-            val1 <-
-                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
-                generate (vectorOf (size1 * size2 * size3) arbitrary)
-            val2 <-
-                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
-                generate (vectorOf (size1 * size2 * size3) arbitrary)
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
 
+--        [size1, size2, size3] -> do TODO -- add 3D for tests
+--            val1 <-
+--                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
+--                generate (vectorOf (size1 * size2 * size3) arbitrary)
+--            val2 <-
+--                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
+--                generate (vectorOf (size1 * size2 * size3) arbitrary)
+--            generate $
+--                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
 -- |
 --
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
+prop_constructProblemBoxConstraint (Suite exp valMap) = do
     let names = Map.keys valMap
     let df@(Expression dfN dfMp) =
             collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
@@ -192,7 +190,8 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
 --
 makeValidScalarConstraint :: IO ConstraintStatement
 makeValidScalarConstraint = do
-    sc <- fst <$> generate genScalarR
+    sc <-
+        fst <$> generate (sized (genScalarR @Default1D @Default2D1 @Default2D2))
     val1 <- VScalar <$> generate arbitrary
     val2 <- VScalar <$> generate arbitrary
     generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]
@@ -200,7 +199,7 @@ makeValidScalarConstraint = do
 -- |
 --
 prop_constructProblemScalarConstraints :: SuiteScalarR -> Expectation
-prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
+prop_constructProblemScalarConstraints (Suite exp valMap) = do
     let names = Map.keys valMap
     let df@(Expression dfN dfMp) =
             collectDifferentials . exteriorDerivative (Set.fromList names) $ exp

@@ -18,13 +18,13 @@ import HashedExpression.Internal.Inner
     , topologicalSortManyRoots
     , unwrap
     )
-import HashedExpression.Interp
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
 import qualified Prelude
 import Prelude hiding
     ( (*)
@@ -37,7 +37,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp
@@ -54,6 +54,7 @@ import Prelude hiding
     )
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 -- |
 --
@@ -104,7 +105,7 @@ prop_StructureScalarC exp
 
 -- |
 --
-prop_StructureOneC :: Expression One C -> Bool
+prop_StructureOneC :: Expression Default1D C -> Bool
 prop_StructureOneC exp
     | RealImag _ _ <- retrieveNode n mp = True
     | otherwise = False

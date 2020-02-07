@@ -18,11 +18,11 @@ module HashedExpression
     , ComplexRealOp(..)
     , RotateOp(..)
     , InnerProductSpaceOp(..)
-    , const
+    , constant
     , constant1D
     , constant2D
     , constant3D
-    , var
+    , variable
     , variable1D
     , variable2D
     , variable3D
@@ -32,11 +32,11 @@ module HashedExpression
     , Evaluable(..)
     ) where
 
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
-import HashedExpression.Interp
 import HashedExpression.Internal.Normalize
+import HashedExpression.Interp
 import HashedExpression.Operation
 import Prelude hiding
     ( (*)
@@ -50,7 +50,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp

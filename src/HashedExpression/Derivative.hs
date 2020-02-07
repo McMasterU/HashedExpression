@@ -21,8 +21,8 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
-import HashedExpression.Operation
 import HashedExpression.Internal.Utils
+import HashedExpression.Operation
 import Prelude hiding
     ( (*)
     , (+)
@@ -130,7 +130,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
             Power x arg ->
                 let f = Expression @D_ arg mp
                     df = hiddenDerivative' f
-                    constX = const . fromIntegral $ x
+                    constX = constant . fromIntegral $ x
                  in constX *. (f ^ (x - 1)) |*| df
                  -- d(-f) = -d(f)
             Neg R arg -> d1Input (Neg R) arg
@@ -155,7 +155,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
              ->
                 let f = Expression @D_ arg mp
                     df = exteriorDerivative' f
-                    recipSqrtF = const 0.5 *. (one / sqrt f)
+                    recipSqrtF = constant 0.5 *. (one / sqrt f)
                  in recipSqrtF |*| df
             Sin arg
                 -- d(sin(f)) = cos(f) * d(f)

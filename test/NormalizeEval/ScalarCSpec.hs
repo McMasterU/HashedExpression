@@ -10,12 +10,12 @@ import Debug.Trace (traceShow, traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression.Internal.Expression
 
-import HashedExpression.Interp
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)
@@ -27,7 +27,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp
@@ -48,13 +48,13 @@ import Test.QuickCheck
 -- |
 --
 prop_NormalizeThenEval :: SuiteScalarC -> Bool
-prop_NormalizeThenEval (SuiteScalarC exp valMaps) =
+prop_NormalizeThenEval (Suite exp valMaps) =
     eval valMaps exp ~= eval valMaps (normalize exp)
 
 -- |
 --
 prop_Add :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
+prop_Add (Suite exp1 valMaps1) (Suite exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = union valMaps1 valMaps2
@@ -69,7 +69,7 @@ prop_Add (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) (normalize1, 
         | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteScalarC -> SuiteScalarC -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(normalize1, normalize2, normalizeMul) =
+prop_Multiply (Suite exp1 valMaps1) (Suite exp2 valMaps2) x@(normalize1, normalize2, normalizeMul) =
     if eval valMaps exp1' * eval valMaps exp2' ~= eval valMaps expMul'
         then True
         else error $
@@ -94,9 +94,9 @@ prop_Multiply (SuiteScalarC exp1 valMaps1) (SuiteScalarC exp2 valMaps2) x@(norma
         | otherwise = exp1 * exp2
 
 prop_AddMultiply :: SuiteScalarC -> Bool
-prop_AddMultiply (SuiteScalarC exp valMaps) =
+prop_AddMultiply (Suite exp valMaps) =
     eval valMaps (normalize (exp + exp)) ~=
-    eval valMaps (normalize (const 2 *. exp))
+    eval valMaps (normalize (constant 2 *. exp))
 
 spec :: Spec
 spec =

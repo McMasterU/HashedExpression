@@ -400,7 +400,7 @@ alexStartPos :: Posn
 alexStartPos = Pn 0 1 1
 
 alexMove :: Posn -> Char -> Posn
-alexMove (Pn a l c) '\t' = Pn (a+1)  l     (((c+7) `div` 8)*8+1)
+alexMove (Pn a l c) '\t' = Pn (a+1)  l     (((c+7) `div` 10)*8+1)
 alexMove (Pn a l c) '\n' = Pn (a+1) (l+1)   1
 alexMove (Pn a l c) _    = Pn (a+1)  l     (c+1)
 
