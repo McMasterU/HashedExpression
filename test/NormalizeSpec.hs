@@ -12,12 +12,11 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import HashedExpression.Internal.Expression
 
-import HashedExpression.Interp ((~=), eval)
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp ((~=), eval)
 import HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
-import Var
 import Prelude hiding
     ( (*)
     , (+)
@@ -46,6 +45,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
+import Var
 
 reFT :: (DimensionType d) => Expression d R -> Expression d R
 reFT = xRe . ft

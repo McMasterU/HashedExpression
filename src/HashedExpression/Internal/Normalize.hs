@@ -36,10 +36,10 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
-import HashedExpression.Operation (const, const1d, const2d, const3d)
 import HashedExpression.Internal.Pattern
-import HashedExpression.Prettify
 import HashedExpression.Internal.Utils
+import HashedExpression.Operation (const, const1d, const2d, const3d)
+import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
     , (+)

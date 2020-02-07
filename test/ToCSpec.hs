@@ -32,16 +32,16 @@ import HashedExpression.Internal.Expression
     , Scalar
     )
 import HashedExpression.Internal.Inner
-import HashedExpression.Interp
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
-import Var
+import HashedExpression.Interp
+import HashedExpression.Prettify (showExp, showExpDebug)
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 hasFFTW :: IO Bool
 hasFFTW = do
@@ -99,7 +99,7 @@ readC str = (readR rePart, readR imPart)
 -- |
 --
 prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
-prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) =
+prop_CEqualInterpScalarR (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
@@ -115,7 +115,7 @@ prop_CEqualInterpScalarR (SuiteScalarR exp valMaps) =
 -- |
 --
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) =
+prop_CEqualInterpScalarC (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
@@ -135,7 +135,7 @@ prop_CEqualInterpScalarC (SuiteScalarC exp valMaps) =
 -- |
 --
 prop_CEqualInterpOneR :: SuiteOneR -> Expectation
-prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
+prop_CEqualInterpOneR (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
@@ -152,7 +152,7 @@ prop_CEqualInterpOneR (SuiteOneR exp valMaps) =
 -- |
 --
 prop_CEqualInterpOneC :: SuiteOneC -> Expectation
-prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
+prop_CEqualInterpOneC (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
@@ -173,7 +173,7 @@ prop_CEqualInterpOneC (SuiteOneC exp valMaps) =
 -- |
 --
 prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
-prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) =
+prop_CEqualInterpTwoR (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW
@@ -191,7 +191,7 @@ prop_CEqualInterpTwoR (SuiteTwoR exp valMaps) =
 -- |
 --
 prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
-prop_CEqualInterpTwoC (SuiteTwoC exp valMaps) =
+prop_CEqualInterpTwoC (Suite exp valMaps) =
     if containsFTNode $ exMap exp
         then do
             hasFTLib <- hasFFTW

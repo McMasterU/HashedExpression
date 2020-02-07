@@ -22,13 +22,13 @@ import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression.Internal.Expression
 
-import HashedExpression.Interp
+import GHC.TypeLits (KnownNat, Nat)
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
-import Var
 import Prelude hiding
     ( (*)
     , (+)
@@ -58,6 +58,7 @@ import Prelude hiding
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 -- |
 --
@@ -104,41 +105,28 @@ genDouble = arbitrary `suchThat` inSmallRange
 
 -- |
 --
-genValMap :: Vars -> Gen ValMaps
+genValMap ::
+       forall size1D size2D1 size2D2.
+       (KnownNat size1D, KnownNat size2D1, KnownNat size2D2)
+    => Vars
+    -> Gen ValMaps
 genValMap vars = do
+    let sz1D = valueFromNat @size1D
+        sz2D1 = valueFromNat @size2D1
+        sz2D2 = valueFromNat @size2D2
     let [names0d, names1d, names2d, names3d] = vars
     list0d <- vectorOf (length names0d) genDouble
     let vm0 = Map.fromList . zip names0d $ map VScalar list0d
-    list1d <- vectorOf (length names1d) . vectorOf defaultDim1D $ genDouble
+    list1d <- vectorOf (length names1d) . vectorOf sz1D $ genDouble
     let vm1 =
-            Map.fromList .
-            zip names1d . map (V1D . listArray (0, defaultDim1D - 1)) $
+            Map.fromList . zip names1d . map (V1D . listArray (0, sz1D - 1)) $
             list1d
-    list2d <-
-        vectorOf (length names2d) . vectorOf (default1stDim2D * default2ndDim2D) $
-        genDouble
+    list2d <- vectorOf (length names2d) . vectorOf (sz2D1 * sz2D2) $ genDouble
     let vm2 =
             Map.fromList .
-            zip names2d .
-            map
-                (V2D .
-                 listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1))) $
+            zip names2d . map (V2D . listArray ((0, 0), (sz2D1 - 1, sz2D2 - 1))) $
             list2d
-    list3d <-
-        vectorOf (length names3d) .
-        vectorOf (default1stDim2D * default2ndDim2D * default3rdDim3D) $
-        genDouble
-    let vm3 =
-            Map.fromList .
-            zip names3d .
-            map
-                (V3D .
-                 listArray
-                     ( (0, 0, 0)
-                     , ( default1stDim3D - 1
-                       , default2ndDim3D - 1
-                       , default3rdDim3D - 1))) $
-            list3d
+    let vm3 = Map.empty -- TODO: not testing with 3D yet.
     return $ Map.unions [vm0, vm1, vm2, vm3]
 
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
@@ -148,704 +136,380 @@ shouldApprox x y = assertBool msg (x ~= y)
 
 infix 1 `shouldApprox`
 
-withRatio :: [(Int, a)] -> [a]
-withRatio = concatMap (uncurry replicate)
+liftE1 ::
+       (Expression d1 et1 -> Expression d2 et2)
+    -> (Expression d1 et1, Vars)
+    -> (Expression d2 et2, Vars)
+liftE1 op (e, v) = (op e, v)
 
--------------------------------------------------------------------------------
--- | MARK: Gen functions Scalar R
---
---
+liftE2 ::
+       (Expression d1 et1 -> Expression d2 et2 -> Expression d3 et3)
+    -> (Expression d1 et1, Vars)
+    -> (Expression d2 et2, Vars)
+    -> (Expression d3 et3, Vars)
+liftE2 op (e1, v1) (e2, v2) = ((op e1 e2), (mergeVars [v1, v2]))
+
 -------------------------------------------------------------------------------
 primitiveScalarR :: Gen (Expression Scalar R, Vars)
 primitiveScalarR = do
     name <- elements . map pure $ ['a' .. 'z']
     dbl <- genDouble
-    elements . withRatio $
-        [ (6, (var name, [[name], [], [], []]))
-        , (4, (const dbl, [[], [], [], []]))
-        ]
+    r <- (`mod` 10) <$> arbitrary
+    if r < 6
+        then return ((var name), [[(name)], [], [], []])
+        else return ((const dbl), [[], [], [], []])
 
-operandScalarR :: Gen (Expression Scalar R, Vars)
-operandScalarR = oneof . withRatio $ [(8, primitiveScalarR), (1, genScalarR)]
-
-genScalarR :: Gen (Expression Scalar R, Vars)
-genScalarR =
-    oneof . withRatio $
-    [ (4, fromNaryScalarR sum)
-    , (4, fromNaryScalarR product)
-    , (4, fromBinaryScalarR (*.))
-    , (4, fromBinaryScalarR (+))
-    , (4, fromBinaryScalarR (*))
-    , (4, fromBinaryScalarR (-))
-    , (4, fromBinaryScalarR (<.>))
-    , (2, fromUnaryScalarR negate)
-    , (1, fromUnaryScalarR (^ 2))
-    , (1, fromInnerProdHigherScalarR)
-    , (2, fromScalarCScalarR)
-    , (1, fromPiecewiseScalarR)
-    ]
-    --    replicate 8 primitiveScalarR ++ replicate 2 genScalarR
-  where
-    fromPiecewiseScalarR :: Gen (Expression Scalar R, Vars)
-    fromPiecewiseScalarR = do
-        numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandScalarR
-        condition <- operandScalarR
-        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-        let vars = mergeVars $ map snd branches ++ [snd condition]
-            exp = piecewise marks (fst condition) $ map fst branches
-        return (exp, vars)
-    fromNaryScalarR ::
-           ([Expression Scalar R] -> Expression Scalar R)
-        -> Gen (Expression Scalar R, Vars)
-    fromNaryScalarR f = do
-        numOperands <- elements [3 .. 4]
-        ons <- vectorOf numOperands operandScalarR
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromInnerProdHigherScalarR :: Gen (Expression Scalar R, Vars)
-    fromInnerProdHigherScalarR = do
-        operand1 <- genOneR
-        operand2 <- genOneR
-        let exp = fst operand1 <.> fst operand2
-            vars = mergeVars [snd operand1, snd operand2]
-        return (exp, vars)
-    fromUnaryScalarR ::
-           (Expression Scalar R -> Expression Scalar R)
-        -> Gen (Expression Scalar R, Vars)
-    fromUnaryScalarR f = do
-        on <- operandScalarR
-        let exp = f . fst $ on
-            names = snd on
-        return (exp, names)
-    fromBinaryScalarR ::
-           (Expression Scalar R -> Expression Scalar R -> Expression Scalar R)
-        -> Gen (Expression Scalar R, Vars)
-    fromBinaryScalarR f = do
-        on1 <- operandScalarR
-        on2 <- operandScalarR
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromScalarCScalarR :: Gen (Expression Scalar R, Vars)
-    fromScalarCScalarR = do
-        rand <- elements [True, False]
-        (zeroC, vars) <- genScalarC
-        let exp =
-                if rand
-                    then xRe zeroC
-                    else xIm zeroC
-        return (exp, vars)
-
-instance Arbitrary (Expression Scalar R) where
-    arbitrary = fmap fst genScalarR
-
--- |
---
-data SuiteScalarR =
-    SuiteScalarR (Expression Scalar R) ValMaps
-
-instance Show SuiteScalarR where
-    show (SuiteScalarR e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
-
--- |
---
-instance Arbitrary SuiteScalarR where
-    arbitrary = do
-        (exp, vars) <- genScalarR
-        valMaps <- genValMap vars
-        return $ SuiteScalarR exp valMaps
-
--------------------------------------------------------------------------------
--- | MARK: Gen functions Scalar C
---
---
--------------------------------------------------------------------------------
 primitiveScalarC :: Gen (Expression Scalar C, Vars)
-primitiveScalarC = do
-    name1 <- elements . map pure $ ['a' .. 'z']
-    name2 <- elements . map pure $ ['a' .. 'z']
-    dbl <- genDouble
-    elements . withRatio $
-        [ (1, (var name1 +: var name2, [[name1, name2], [], [], []]))
-        , (1, (const dbl +: const 0, [[], [], [], []]))
-        ]
-
-operandScalarC :: Gen (Expression Scalar C, Vars)
-operandScalarC = oneof . withRatio $ [(9, primitiveScalarC), (1, genScalarC)]
-
-genScalarC :: Gen (Expression Scalar C, Vars)
-genScalarC =
-    oneof . withRatio $
-    [ (6, fromNaryScalarC sum)
-    , (3, fromNaryScalarC product)
-    , (6, fromBinaryScalarC (*.))
-    , (6, fromBinaryScalarC (+))
-    , (3, fromBinaryScalarC (*))
-    , (6, fromBinaryScalarC (-))
-    , (3, fromBinaryScalarC (<.>))
-    , (3, fromUnaryScalarC negate)
-    , (1, fromUnaryScalarC (^ 2))
-    , (1, fromInnerProdHigherScalarC)
-    , (2, fromRealImagScalarC)
-    , (1, fromPiecewiseScalarC)
-    ]
-  where
-    fromPiecewiseScalarC :: Gen (Expression Scalar C, Vars)
-    fromPiecewiseScalarC = do
-        numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandScalarC
-        condition <- operandScalarR
-        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-        let vars = mergeVars $ map snd branches ++ [snd condition]
-            exp = piecewise marks (fst condition) $ map fst branches
-        return (exp, vars)
-    fromNaryScalarC ::
-           ([Expression Scalar C] -> Expression Scalar C)
-        -> Gen (Expression Scalar C, Vars)
-    fromNaryScalarC f = do
-        numOperands <- elements [3]
-        ons <- vectorOf numOperands operandScalarC
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromUnaryScalarC ::
-           (Expression Scalar C -> Expression Scalar C)
-        -> Gen (Expression Scalar C, Vars)
-    fromUnaryScalarC f = do
-        on <- operandScalarC
-        let exp = f . fst $ on
-            vars = snd on
-        return (exp, vars)
-    fromInnerProdHigherScalarC :: Gen (Expression Scalar C, Vars)
-    fromInnerProdHigherScalarC = do
-        operand1 <- genOneC
-        operand2 <- genOneC
-        let exp = fst operand1 <.> fst operand2
-            vars = mergeVars [snd operand1, snd operand2]
-        return (exp, vars)
-    fromBinaryScalarC ::
-           (Expression Scalar C -> Expression Scalar C -> Expression Scalar C)
-        -> Gen (Expression Scalar C, Vars)
-    fromBinaryScalarC f = do
-        on1 <- operandScalarC
-        on2 <- operandScalarC
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromRealImagScalarC :: Gen (Expression Scalar C, Vars)
-    fromRealImagScalarC = do
-        on1 <- genScalarR
-        on2 <- genScalarR
-        let exp = fst on1 +: fst on2
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-
-instance Arbitrary (Expression Scalar C) where
-    arbitrary = fmap fst genScalarC
-
-data SuiteScalarC =
-    SuiteScalarC (Expression Scalar C) ValMaps
-
-instance Show SuiteScalarC where
-    show (SuiteScalarC e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
-
-instance Arbitrary SuiteScalarC where
-    arbitrary = do
-        (exp, names) <- genScalarC
-        valMaps <- genValMap names
-        return $ SuiteScalarC exp valMaps
+primitiveScalarC = liftE2 (+:) <$> primitiveScalarR <*> primitiveScalarR
 
 -------------------------------------------------------------------------------
--- | MARK: Gen functions One R
---
---
--------------------------------------------------------------------------------
-primitiveOneR :: Gen (Expression One R, Vars)
-primitiveOneR = do
+primitive1DR ::
+       forall n. KnownNat n
+    => Gen (Expression n R, Vars)
+primitive1DR = do
     name <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
     dbl <- genDouble
-    elements . withRatio $
-        [ (6, (var1d defaultDim1D name, [[], [name], [], []]))
-        , (4, (const1d defaultDim1D dbl, [[], [], [], []]))
-        ]
+    r <- (`mod` 10) <$> arbitrary
+    if r < 6
+        then return ((variable1D @n name), [[], [(name)], [], []])
+        else return ((constant1D @n dbl), [[], [], [], []])
 
-operandOneR :: Gen (Expression One R, Vars)
-operandOneR = oneof . withRatio $ [(8, primitiveOneR), (1, genOneR)]
-
-genOneR :: Gen (Expression One R, Vars)
-genOneR =
-    oneof . withRatio $
-    [ (4, fromNaryOneR sum)
-    , (4, fromNaryOneR product)
-    , (4, fromBinaryOneR (+))
-    , (4, fromBinaryOneR (*))
-    , (4, fromBinaryOneR (-))
-    , (3, fromUnaryOneR negate)
-    , (1, fromUnaryOneR (^ 2))
-    , (1, fromScaleOneR)
-    , (1, fromOneCOneR)
-    , (3, fromRotateOneR)
-    , (1, fromPiecewiseOneR)
-    , (1, fromFourierTransformOneR)
-    ]
-  where
-    fromFourierTransformOneR :: Gen (Expression One R, Vars)
-    fromFourierTransformOneR = do
-        on <- operandOneR
-        reOrIm <- elements [xRe, xIm]
-        return (reOrIm . ft . fst $ on, snd on)
-    fromPiecewiseOneR :: Gen (Expression One R, Vars)
-    fromPiecewiseOneR = do
-        numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandOneR
-        condition <- operandOneR
-        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-        let vars = mergeVars $ map snd branches ++ [snd condition]
-            exp = piecewise marks (fst condition) $ map fst branches
-        return (exp, vars)
-    fromRotateOneR :: Gen (Expression One R, Vars)
-    fromRotateOneR = do
-        on <- operandOneR
-        amount <- elements [-9 .. 9]
-        return (rotate amount $ fst on, snd on)
-    fromNaryOneR ::
-           ([Expression One R] -> Expression One R)
-        -> Gen (Expression One R, Vars)
-    fromNaryOneR f = do
-        numOperands <- elements [3 .. 4]
-        ons <- vectorOf numOperands operandOneR
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromUnaryOneR ::
-           (Expression One R -> Expression One R)
-        -> Gen (Expression One R, Vars)
-    fromUnaryOneR f = do
-        on <- operandOneR
-        let exp = f . fst $ on
-            names = snd on
-        return (exp, names)
-    fromBinaryOneR ::
-           (Expression One R -> Expression One R -> Expression One R)
-        -> Gen (Expression One R, Vars)
-    fromBinaryOneR f = do
-        on1 <- operandOneR
-        on2 <- operandOneR
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromScaleOneR :: Gen (Expression One R, Vars)
-    fromScaleOneR = do
-        scalar <- operandScalarR
-        scalee <- operandOneR
-        let exp = fst scalar *. fst scalee
-            vars = mergeVars [snd scalar, snd scalee]
-        return (exp, vars)
-    fromOneCOneR :: Gen (Expression One R, Vars)
-    fromOneCOneR = do
-        rand <- elements [True, False]
-        (oneC, vars) <- genOneC
-        let exp =
-                if rand
-                    then xRe oneC
-                    else xIm oneC
-        return (exp, vars)
-
-instance Arbitrary (Expression One R) where
-    arbitrary = fmap fst genOneR
-
--- |
---
-data SuiteOneR =
-    SuiteOneR (Expression One R) ValMaps
-
-instance Show SuiteOneR where
-    show (SuiteOneR e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
-
--- |
---
-instance Arbitrary SuiteOneR where
-    arbitrary = do
-        (exp, vars) <- genOneR
-        valMaps <- genValMap vars
-        return $ SuiteOneR exp valMaps
+primitive1DC ::
+       forall n. KnownNat n
+    => Gen (Expression n C, Vars)
+primitive1DC = liftE2 (+:) <$> primitive1DR @n <*> primitive1DR @n
 
 -------------------------------------------------------------------------------
--- | MARK: Gen functions One C
---
---
--------------------------------------------------------------------------------
-primitiveOneC :: Gen (Expression One C, Vars)
-primitiveOneC = do
-    name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    dbl1 <- genDouble
-    dbl2 <- genDouble
-    elements . withRatio $
-        [ ( 6
-          , ( var1d defaultDim1D name1 +: var1d defaultDim1D name2
-            , [[], [name1, name2], [], []]))
-        , ( 4
-          , ( const1d defaultDim1D dbl1 +: const1d defaultDim1D dbl2
-            , [[], [], [], []]))
-        ]
-
-operandOneC :: Gen (Expression One C, Vars)
-operandOneC = oneof . withRatio $ [(9, primitiveOneC), (1, genOneC)]
-
-genOneC :: Gen (Expression One C, Vars)
-genOneC =
-    oneof . withRatio $
-    [ (6, fromNaryOneC sum)
-    , (3, fromNaryOneC product)
-    , (6, fromBinaryOneC (+))
-    , (6, fromBinaryOneC (-))
-    , (3, fromBinaryOneC (*))
-    , (3, fromUnaryOneC negate)
-    , (1, fromUnaryOneC (^ 2))
-    , (2, fromScaleOneC)
-    , (3, fromRotateOneC)
-    , (1, fromPiecewiseOneC)
-    , (1, fromFourierTransformOneC)
-    ]
-  where
-    fromFourierTransformOneC :: Gen (Expression One C, Vars)
-    fromFourierTransformOneC = do
-        on <- operandOneC
-        return (ft . fst $ on, snd on)
-    fromPiecewiseOneC :: Gen (Expression One C, Vars)
-    fromPiecewiseOneC = do
-        numBranches <- elements [2 .. 4]
-        branches <- vectorOf numBranches operandOneC
-        condition <- operandOneR
-        marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-        let vars = mergeVars $ map snd branches ++ [snd condition]
-            exp = piecewise marks (fst condition) $ map fst branches
-        return (exp, vars)
-    fromRotateOneC :: Gen (Expression One C, Vars)
-    fromRotateOneC = do
-        on <- operandOneC
-        amount <- elements [-9 .. 9]
-        return (rotate amount $ fst on, snd on)
-    fromNaryOneC ::
-           ([Expression One C] -> Expression One C)
-        -> Gen (Expression One C, Vars)
-    fromNaryOneC f = do
-        numOperands <- elements [3]
-        ons <- vectorOf numOperands operandOneC
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromUnaryOneC ::
-           (Expression One C -> Expression One C)
-        -> Gen (Expression One C, Vars)
-    fromUnaryOneC f = do
-        on <- operandOneC
-        let exp = f . fst $ on
-            names = snd on
-        return (exp, names)
-    fromBinaryOneC ::
-           (Expression One C -> Expression One C -> Expression One C)
-        -> Gen (Expression One C, Vars)
-    fromBinaryOneC f = do
-        on1 <- operandOneC
-        on2 <- operandOneC
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromScaleOneC :: Gen (Expression One C, Vars)
-    fromScaleOneC = do
-        scalarR <- operandScalarR
-        scalarC <- operandScalarC
-        scalee <- operandOneC
-        rand <- elements [True, False]
-        let (exp, vars) =
-                if rand
-                    then ( fst scalarR *. fst scalee
-                         , mergeVars [snd scalarR, snd scalee])
-                    else ( fst scalarC *. fst scalee
-                         , mergeVars [snd scalarC, snd scalee])
-        return (exp, vars)
-
-instance Arbitrary (Expression One C) where
-    arbitrary = fmap fst genOneC
-
--- |
---
-data SuiteOneC =
-    SuiteOneC (Expression One C) ValMaps
-
-instance Show SuiteOneC where
-    show (SuiteOneC e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
-
--- |
---
-instance Arbitrary SuiteOneC where
-    arbitrary = do
-        (exp, vars) <- genOneC
-        valMaps <- genValMap vars
-        return $ SuiteOneC exp valMaps
-
--------------------------------------------------------------------------------
--- | MARK: Gen functions Two R
---
---
--------------------------------------------------------------------------------
-primitiveTwoR :: Gen (Expression Two R, Vars)
-primitiveTwoR = do
+primitive2DR ::
+       forall m n. (KnownNat m, KnownNat n)
+    => Gen (Expression '( m, n) R, Vars)
+primitive2DR = do
     name <- elements . map ((++ "2") . pure) $ ['a' .. 'z']
     dbl <- genDouble
-    elements . withRatio $
-        [ ( 6
-          , ( var2d (default1stDim2D, default2ndDim2D) name
-            , [[], [], [name], []]))
-        , ( 4
-          , (const2d (default1stDim2D, default2ndDim2D) dbl, [[], [], [], []]))
-        ]
+    r <- (`mod` 10) <$> arbitrary
+    if r < 6
+        then return (variable2D @m @n name, [[], [], [(name)], []])
+        else return (constant2D @m @n dbl, [[], [], [], []])
 
-operandTwoR :: Gen (Expression Two R, Vars)
-operandTwoR = oneof . withRatio $ [(8, primitiveTwoR), (1, genTwoR)]
+primitive2DC ::
+       forall m n. (KnownNat m, KnownNat n)
+    => Gen (Expression '( m, n) C, Vars)
+primitive2DC = liftE2 (+:) <$> primitive2DR @m @n <*> primitive2DR @m @n
 
-genTwoR :: Gen (Expression Two R, Vars)
-genTwoR =
-    oneof . withRatio $
-    [ (4, fromNaryTwoR sum)
-    , (4, fromNaryTwoR product)
-    , (4, fromBinaryTwoR (+))
-    , (4, fromBinaryTwoR (*))
-    , (4, fromBinaryTwoR (-))
-    , (3, fromUnaryTwoR negate)
-    , (1, fromUnaryTwoR (^ 2))
-    , (1, fromScaleTwoR)
-    , (1, fromTwoCTwoR)
-    , (2, fromRotateTwoR)
-    , (1, fromFourierTransformTwoR)
-    ]
-  where
-    fromFourierTransformTwoR :: Gen (Expression Two R, Vars)
-    fromFourierTransformTwoR = do
-        on <- operandTwoR
-        reOrIm <- elements [xRe, xIm]
-        return (reOrIm . ft . fst $ on, snd on)
-    fromRotateTwoR :: Gen (Expression Two R, Vars)
-    fromRotateTwoR = do
-        on <- operandTwoR
-        amount1 <- elements [-9 .. 9]
-        amount2 <- elements [-9 .. 9]
-        return (rotate (amount1, amount2) $ fst on, snd on)
-    fromNaryTwoR ::
-           ([Expression Two R] -> Expression Two R)
-        -> Gen (Expression Two R, Vars)
-    fromNaryTwoR f = do
-        numOperands <- elements [3 .. 4]
-        ons <- vectorOf numOperands operandTwoR
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromUnaryTwoR ::
-           (Expression Two R -> Expression Two R)
-        -> Gen (Expression Two R, Vars)
-    fromUnaryTwoR f = do
-        on <- operandTwoR
-        let exp = f . fst $ on
-            names = snd on
-        return (exp, names)
-    fromBinaryTwoR ::
-           (Expression Two R -> Expression Two R -> Expression Two R)
-        -> Gen (Expression Two R, Vars)
-    fromBinaryTwoR f = do
-        on1 <- operandTwoR
-        on2 <- operandTwoR
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromScaleTwoR :: Gen (Expression Two R, Vars)
-    fromScaleTwoR = do
-        scalar <- operandScalarR
-        scalee <- operandTwoR
-        let exp = fst scalar *. fst scalee
-            vars = mergeVars [snd scalar, snd scalee]
-        return (exp, vars)
-    fromTwoCTwoR :: Gen (Expression Two R, Vars)
-    fromTwoCTwoR = do
-        rand <- elements [True, False]
-        (oneC, vars) <- genTwoC
-        let exp =
-                if rand
-                    then xRe oneC
-                    else xIm oneC
-        return (exp, vars)
+--type  = 10
+-------------------------------------------------------------------------------
+genScalarR ::
+       forall default1D default2D1 default2D2.
+       (KnownNat default1D, KnownNat default2D1, KnownNat default2D2)
+    => Int
+    -> Gen (Expression Scalar R, Vars)
+genScalarR size
+    | size == 0 = primitiveScalarR
+    | otherwise =
+        let sub = genScalarR @default1D @default2D1 @default2D2 (size `div` 10)
+            subC = genScalarC @default1D @default2D1 @default2D2 (size `div` 10)
+            sub1D = gen1DR @default1D @default2D1 @default2D2 (size `div` 10)
+            sub2D = gen2DR @default1D @default2D1 @default2D2 (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- sub
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (*.)
+                , binary (-)
+                , binary (<.>)
+                , unary negate
+                , unary (^ 2)
+                , liftE1 xRe <$> subC
+                , liftE1 xIm <$> subC
+                , liftE2 (<.>) <$> sub1D <*> sub1D
+                , liftE2 (<.>) <$> sub2D <*> sub2D
+                ]
 
-instance Arbitrary (Expression Two R) where
-    arbitrary = fmap fst genTwoR
+-------------------------------------------------------------------------------
+genScalarC ::
+       forall default1D default2D1 default2D2.
+       (KnownNat default1D, KnownNat default2D1, KnownNat default2D2)
+    => Int
+    -> Gen (Expression Scalar C, Vars)
+genScalarC size
+    | size == 0 = primitiveScalarC
+    | otherwise =
+        let sub = genScalarC @default1D @default2D1 @default2D2 (size `div` 10)
+            subR = genScalarR @default1D @default2D1 @default2D2 (size `div` 10)
+            sub1D = gen1DC @default1D @default2D1 @default2D2 (size `div` 10)
+            sub2D = gen2DC @default1D @default2D1 @default2D2 (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- subR
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (*.)
+                , binary (-)
+                , binary (<.>)
+                , unary negate
+                , unary (^ 2)
+                , liftE2 (+:) <$> subR <*> subR
+                , liftE2 (<.>) <$> sub1D <*> sub1D
+                , liftE2 (<.>) <$> sub2D <*> sub2D
+                ]
 
--- |
---
-data SuiteTwoR =
-    SuiteTwoR (Expression Two R) ValMaps
+-------------------------------------------------------------------------------
+gen1DR ::
+       forall n default2D1 default2D2.
+       (KnownNat n, KnownNat default2D1, KnownNat default2D2)
+    => Int
+    -> Gen (Expression n R, Vars)
+gen1DR size
+    | size == 0 = primitive1DR
+    | otherwise =
+        let sub = gen1DR @n @default2D1 @default2D2 (size `div` 10)
+            subC = gen1DC @n @default2D1 @default2D2 (size `div` 10)
+            subScalar = genScalarR @n @default2D1 @default2D2 (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- sub
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            fromRotate = do
+                amount <- elements [-(valueFromNat @n) .. valueFromNat @n]
+                liftE1 (rotate amount) <$> sub
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (-)
+                , unary negate
+                , unary (^ 2)
+                , liftE1 xRe <$> subC
+                , liftE1 xIm <$> subC
+                , liftE2 (*.) <$> subScalar <*> sub
+                , fromRotate
+                , liftE1 (xRe . ft) <$> sub
+                , liftE1 (xIm . ft) <$> sub
+                ]
 
-instance Show SuiteTwoR where
-    show (SuiteTwoR e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
+-------------------------------------------------------------------------------
+gen1DC ::
+       forall n default2D1 default2D2.
+       (KnownNat n, KnownNat default2D1, KnownNat default2D2)
+    => Int
+    -> Gen (Expression n C, Vars)
+gen1DC size
+    | size == 0 = primitive1DC
+    | otherwise =
+        let sub = gen1DC @n @default2D1 @default2D2 (size `div` 10)
+            subR = gen1DR @n @default2D1 @default2D2 (size `div` 10)
+            subScalar = genScalarC @n @default2D1 @default2D2 (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- subR
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            fromRotate = do
+                amount <- elements [-(valueFromNat @n) .. valueFromNat @n]
+                liftE1 (rotate amount) <$> sub
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (-)
+                , unary negate
+                , unary (^ 2)
+                , liftE2 (+:) <$> subR <*> subR
+                , liftE2 (*.) <$> subScalar <*> sub
+                , liftE1 ft <$> sub
+                , fromRotate
+                ]
 
--- |
---
-instance Arbitrary SuiteTwoR where
+-------------------------------------------------------------------------------
+gen2DR ::
+       forall default1D m n. (KnownNat default1D, KnownNat m, KnownNat n)
+    => Int
+    -> Gen (Expression '( m, n) R, Vars)
+gen2DR size
+    | size == 0 = primitive2DR
+    | otherwise =
+        let sub = gen2DR @default1D @m @n (size `div` 10)
+            subC = gen2DC @default1D @m @n (size `div` 10)
+            subScalar = genScalarR @default1D @m @n (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- sub
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            fromRotate = do
+                amount1 <- elements [-(valueFromNat @m) .. valueFromNat @m]
+                amount2 <- elements [-(valueFromNat @n) .. valueFromNat @n]
+                liftE1 (rotate (amount1, amount2)) <$> sub
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (-)
+                , unary negate
+                , unary (^ 2)
+                , liftE1 xRe <$> subC
+                , liftE1 xIm <$> subC
+                , liftE2 (*.) <$> subScalar <*> sub
+                , fromRotate
+                , liftE1 (xRe . ft) <$> sub
+                , liftE1 (xIm . ft) <$> sub
+                ]
+
+-------------------------------------------------------------------------------
+gen2DC ::
+       forall default1D m n. (KnownNat default1D, KnownNat m, KnownNat n)
+    => Int
+    -> Gen (Expression '( m, n) C, Vars)
+gen2DC size
+    | size == 0 = primitive2DC
+    | otherwise =
+        let sub = gen2DC @default1D @m @n (size `div` 10)
+            subR = gen2DR @default1D @m @n (size `div` 10)
+            subScalar = genScalarC @default1D @m @n (size `div` 10)
+            fromPiecewise = do
+                numBranches <- elements [2 .. 4]
+                branches <- vectorOf numBranches sub
+                condition <- subR
+                marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
+                let vars = mergeVars $ map snd branches ++ [snd condition]
+                    exp = piecewise marks (fst condition) $ map fst branches
+                return (exp, vars)
+            fromRotate = do
+                amount1 <- elements [-(valueFromNat @m) .. valueFromNat @m]
+                amount2 <- elements [-(valueFromNat @n) .. valueFromNat @n]
+                liftE1 (rotate (amount1, amount2)) <$> sub
+            binary op = liftE2 op <$> sub <*> sub
+            unary op = liftE1 op <$> sub
+         in oneof
+                [ fromPiecewise
+                , binary (+)
+                , binary (*)
+                , binary (-)
+                , unary negate
+                , unary (^ 2)
+                , liftE2 (+:) <$> subR <*> subR
+                , liftE2 (*.) <$> subScalar <*> sub
+                , liftE1 ft <$> sub
+                , fromRotate
+                ]
+
+-------------------------------------------------------------------------------
+data Suite (size1D :: Nat) (size2D1 :: Nat) (size2D2 :: Nat) d et =
+    Suite (Expression d et) ValMaps
+    deriving (Show)
+
+-------------------------------------------------------------------------------
+type TestSuite = Suite Default1D Default2D1 Default2D2
+
+type SuiteScalarR = TestSuite Scalar R
+
+type SuiteScalarC = TestSuite Scalar C
+
+type SuiteOneR = TestSuite Default1D R
+
+type SuiteOneC = TestSuite Default1D C
+
+type SuiteTwoR = TestSuite '( Default2D1, Default2D2) R
+
+type SuiteTwoC = TestSuite '( Default2D1, Default2D2) C
+
+-------------------------------------------------------------------------------
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 Scalar R) where
     arbitrary = do
-        (exp, vars) <- genTwoR
-        valMaps <- genValMap vars
-        return $ SuiteTwoR exp valMaps
+        (exp, vars) <- sized $ genScalarR @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
 
--------------------------------------------------------------------------------
--- | MARK: Gen functions Two C
---
---
--------------------------------------------------------------------------------
-primitiveTwoC :: Gen (Expression Two C, Vars)
-primitiveTwoC = do
-    name1 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    name2 <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
-    dbl1 <- genDouble
-    dbl2 <- genDouble
-    elements . withRatio $
-        [ ( 6
-          , ( var2d (default1stDim2D, default2ndDim2D) name1 +:
-              var2d (default1stDim2D, default2ndDim2D) name2
-            , [[], [], [name1, name2], []]))
-        , ( 4
-          , ( const2d (default1stDim2D, default2ndDim2D) dbl1 +:
-              const2d (default1stDim2D, default2ndDim2D) dbl2
-            , [[], [], [], []]))
-        ]
-
-operandTwoC :: Gen (Expression Two C, Vars)
-operandTwoC = oneof . withRatio $ [(8, primitiveTwoC), (1, genTwoC)]
-
-genTwoC :: Gen (Expression Two C, Vars)
-genTwoC =
-    oneof . withRatio $
-    [ (6, fromNaryTwoC sum)
-    , (3, fromNaryTwoC product)
-    , (6, fromBinaryTwoC (+))
-    , (6, fromBinaryTwoC (-))
-    , (3, fromBinaryTwoC (*))
-    , (3, fromUnaryTwoC negate)
-    , (1, fromUnaryTwoC (^ 2))
-    , (2, fromScaleTwoC)
-    , (2, fromRotateTwoC)
-    , (1, fromFourierTransformTwoC)
-    ]
-  where
-    fromFourierTransformTwoC :: Gen (Expression Two C, Vars)
-    fromFourierTransformTwoC = do
-        on <- operandTwoC
-        return (ft . fst $ on, snd on)
-    fromRotateTwoC :: Gen (Expression Two C, Vars)
-    fromRotateTwoC = do
-        on <- operandTwoC
-        amount1 <- elements [-9 .. 9]
-        amount2 <- elements [-9 .. 9]
-        return (rotate (amount1, amount2) $ fst on, snd on)
-    fromNaryTwoC ::
-           ([Expression Two C] -> Expression Two C)
-        -> Gen (Expression Two C, Vars)
-    fromNaryTwoC f = do
-        numOperands <- elements [3]
-        ons <- vectorOf numOperands operandTwoC
-        let exp = f . map fst $ ons
-            vars = mergeVars . map snd $ ons
-        return (exp, vars)
-    fromUnaryTwoC ::
-           (Expression Two C -> Expression Two C)
-        -> Gen (Expression Two C, Vars)
-    fromUnaryTwoC f = do
-        on <- operandTwoC
-        let exp = f . fst $ on
-            names = snd on
-        return (exp, names)
-    fromBinaryTwoC ::
-           (Expression Two C -> Expression Two C -> Expression Two C)
-        -> Gen (Expression Two C, Vars)
-    fromBinaryTwoC f = do
-        on1 <- operandTwoC
-        on2 <- operandTwoC
-        let exp = f (fst on1) (fst on2)
-            vars = mergeVars [snd on1, snd on2]
-        return (exp, vars)
-    fromScaleTwoC :: Gen (Expression Two C, Vars)
-    fromScaleTwoC = do
-        scalarR <- operandScalarR
-        scalarC <- operandScalarC
-        scalee <- operandTwoC
-        rand <- elements [True, False]
-        let (exp, vars) =
-                if rand
-                    then ( fst scalarR *. fst scalee
-                         , mergeVars [snd scalarR, snd scalee])
-                    else ( fst scalarC *. fst scalee
-                         , mergeVars [snd scalarC, snd scalee])
-        return (exp, vars)
-
-instance Arbitrary (Expression Two C) where
-    arbitrary = fmap fst genTwoC
-
--- |
---
-data SuiteTwoC =
-    SuiteTwoC (Expression Two C) ValMaps
-
-instance Show SuiteTwoC where
-    show (SuiteTwoC e valMaps) =
-        format [("Expr", exp), ("ValMap", show valMaps)]
-      where
-        exp = prettifyDebug e
-        normalizedExp = prettifyDebug . normalize $ e
-        evalExp = eval valMaps e
-        evalNormalized = eval valMaps $ normalize e
-
--- |
---
-instance Arbitrary SuiteTwoC where
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 Scalar C) where
     arbitrary = do
-        (exp, vars) <- genTwoC
-        valMaps <- genValMap vars
-        return $ SuiteTwoC exp valMaps
+        (exp, vars) <- sized $ genScalarC @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
+
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 size1D R) where
+    arbitrary = do
+        (exp, vars) <- sized $ gen1DR @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
+
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 size1D C) where
+    arbitrary = do
+        (exp, vars) <- sized $ gen1DC @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
+
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 '( size2D1, size2D2) R) where
+    arbitrary = do
+        (exp, vars) <- sized $ gen2DR @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
+
+instance (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
+         Arbitrary (Suite size1D size2D1 size2D2 '( size2D1, size2D2) C) where
+    arbitrary = do
+        (exp, vars) <- sized $ gen2DC @size1D @size2D1 @size2D2
+        valMaps <- genValMap @size1D @size2D1 @size2D2 vars
+        return $ Suite exp valMaps
 
 -------------------------------------------------------------------------------
--- | MARK: Arbitrary instance for all kinds of expressions
---
---
+instance Arbitrary (Expression Scalar R) where
+    arbitrary = fst <$> sized (genScalarR @Default1D @Default2D1 @Default2D2)
+
+instance Arbitrary (Expression Scalar C) where
+    arbitrary = fst <$> sized (genScalarC @Default1D @Default2D1 @Default2D2)
+
+instance KnownNat n => Arbitrary (Expression n R) where
+    arbitrary = fst <$> sized (gen1DR @n @Default2D1 @Default2D2)
+
+instance KnownNat n => Arbitrary (Expression n C) where
+    arbitrary = fst <$> sized (gen1DC @n @Default2D1 @Default2D2)
+
+instance (KnownNat m, KnownNat n) => Arbitrary (Expression '( m, n) R) where
+    arbitrary = fst <$> sized (gen2DR @Default1D @m @n)
+
+instance (KnownNat m, KnownNat n) => Arbitrary (Expression '( m, n) C) where
+    arbitrary = fst <$> sized (gen2DC @Default1D @m @n)
+
 -------------------------------------------------------------------------------
 data ArbitraryExpresion =
     forall d et. (DimensionType d, ElementType et) =>
@@ -861,13 +525,21 @@ instance Arbitrary ArbitraryExpresion where
             option2 =
                 fmap ArbitraryExpresion (arbitrary :: Gen (Expression Scalar C))
             option3 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression One R))
+                fmap
+                    ArbitraryExpresion
+                    (arbitrary :: Gen (Expression Default1D R))
             option4 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression One C))
+                fmap
+                    ArbitraryExpresion
+                    (arbitrary :: Gen (Expression Default1D C))
             option5 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Two R))
+                fmap
+                    ArbitraryExpresion
+                    (arbitrary :: Gen (Expression '( Default2D1, Default2D2) R))
             option6 =
-                fmap ArbitraryExpresion (arbitrary :: Gen (Expression Two C))
+                fmap
+                    ArbitraryExpresion
+                    (arbitrary :: Gen (Expression '( Default2D1, Default2D2) C))
          in oneof [option1, option2, option3, option4, option5, option6]
 
 -- |
@@ -875,6 +547,7 @@ instance Arbitrary ArbitraryExpresion where
 getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, Int)
 getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 
+-------------------------------------------------------------------------------
 -- |
 --
 sz :: Expression d et -> Int

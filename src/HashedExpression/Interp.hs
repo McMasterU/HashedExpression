@@ -24,8 +24,8 @@ import HashedExpression.Internal.Expression
     , Two
     )
 import HashedExpression.Internal.Node
-import HashedExpression.Prettify (prettify, showExp)
 import HashedExpression.Internal.Utils
+import HashedExpression.Prettify (prettify, showExp)
 import Text.Printf
 
 -- | This operation emulates the mathematical operation

@@ -32,11 +32,11 @@ module HashedExpression
     , Evaluable(..)
     ) where
 
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
-import HashedExpression.Interp
 import HashedExpression.Internal.Normalize
+import HashedExpression.Interp
 import HashedExpression.Operation
 import Prelude hiding
     ( (*)

@@ -26,21 +26,20 @@ import Data.UUID (toString)
 import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode(..))
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 
 import HashedExpression.Internal.Inner
-import HashedExpression.Interp
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
+import HashedExpression.Internal.ToC
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Operation (var, var1d, var2d, var3d)
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Solver
-import HashedExpression.Internal.ToC
-import HashedExpression.Internal.Utils
-import Var
 import qualified Prelude
 import Prelude hiding
     ( (*)
@@ -73,6 +72,7 @@ import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
+import Var
 
 -- |
 --
@@ -89,7 +89,7 @@ isOneAfterAnother memMap nIds = all isOk xs
 -- |
 --
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemNoConstraint (SuiteScalarR exp valMap) = do
+prop_constructProblemNoConstraint (Suite exp valMap) = do
     let names = Map.keys valMap
         pdMap =
             partialDerivativeMaps $
@@ -156,7 +156,7 @@ makeValidBoxConstraint (name, shape) =
 -- |
 --
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
+prop_constructProblemBoxConstraint (Suite exp valMap) = do
     let names = Map.keys valMap
     let df@(Expression dfN dfMp) =
             collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
@@ -192,7 +192,8 @@ prop_constructProblemBoxConstraint (SuiteScalarR exp valMap) = do
 --
 makeValidScalarConstraint :: IO ConstraintStatement
 makeValidScalarConstraint = do
-    sc <- fst <$> generate genScalarR
+    sc <-
+        fst <$> generate (sized (genScalarR @Default1D @Default2D1 @Default2D2))
     val1 <- VScalar <$> generate arbitrary
     val2 <- VScalar <$> generate arbitrary
     generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]
@@ -200,7 +201,7 @@ makeValidScalarConstraint = do
 -- |
 --
 prop_constructProblemScalarConstraints :: SuiteScalarR -> Expectation
-prop_constructProblemScalarConstraints (SuiteScalarR exp valMap) = do
+prop_constructProblemScalarConstraints (Suite exp valMap) = do
     let names = Map.keys valMap
     let df@(Expression dfN dfMp) =
             collectDifferentials . exteriorDerivative (Set.fromList names) $ exp

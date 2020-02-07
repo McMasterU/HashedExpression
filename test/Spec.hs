@@ -8,8 +8,8 @@ import qualified Data.Set as Set
 import HashedExpression.Derivative
 import HashedExpression.Internal.Expression
 
-import HashedExpression.Interp
 import HashedExpression.Internal.Normalize
+import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
@@ -54,9 +54,9 @@ import qualified ToCSpec
 import Commons
 import Data.Maybe (fromJust)
 import HashedExpression.Internal.Utils
-import Var
 import Test.Hspec
 import Test.Hspec.Runner
+import Var
 
 --main :: IO ()
 --main = do

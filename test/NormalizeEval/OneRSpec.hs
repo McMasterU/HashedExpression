@@ -5,12 +5,12 @@ import Data.Map.Strict
 import Data.Maybe (fromJust)
 import HashedExpression.Internal.Expression
 
-import HashedExpression.Interp
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Internal.Utils
 import Prelude hiding
     ( (*)
     , (+)
@@ -43,13 +43,13 @@ import Test.QuickCheck
 -- |
 --
 prop_NormalizeThenEval :: SuiteOneR -> Bool
-prop_NormalizeThenEval (SuiteOneR exp valMaps) =
+prop_NormalizeThenEval (Suite exp valMaps) =
     eval valMaps exp ~= eval valMaps (normalize exp)
 
 -- |
 --
 prop_Add :: SuiteOneR -> SuiteOneR -> (Bool, Bool, Bool) -> Bool
-prop_Add (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
+prop_Add (Suite exp1 valMaps1) (Suite exp2 valMaps2) (normalize1, normalize2, normalizeSum) =
     eval valMaps exp1' + eval valMaps exp2' ~= eval valMaps expSum'
   where
     valMaps = union valMaps1 valMaps2
@@ -64,7 +64,7 @@ prop_Add (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, normal
         | otherwise = exp1 + exp2
 
 prop_Multiply :: SuiteOneR -> SuiteOneR -> (Bool, Bool, Bool) -> Bool
-prop_Multiply (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, normalize2, normalizeMul) =
+prop_Multiply (Suite exp1 valMaps1) (Suite exp2 valMaps2) (normalize1, normalize2, normalizeMul) =
     if lhs ~= rhs
         then True
         else error
@@ -90,7 +90,7 @@ prop_Multiply (SuiteOneR exp1 valMaps1) (SuiteOneR exp2 valMaps2) (normalize1, n
     rhs = eval valMaps expMul'
 
 prop_AddMultiply :: SuiteOneR -> Bool
-prop_AddMultiply (SuiteOneR exp valMaps) =
+prop_AddMultiply (Suite exp valMaps) =
     eval valMaps (normalize (exp + exp)) ~=
     eval valMaps (normalize (const 2 *. exp))
 

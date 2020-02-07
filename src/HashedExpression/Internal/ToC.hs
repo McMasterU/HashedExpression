@@ -42,8 +42,8 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
-import HashedExpression.Prettify (prettifyDebug)
 import HashedExpression.Internal.Utils
+import HashedExpression.Prettify (prettifyDebug)
 
 -- | Mem map (offset, R or C, shape)
 --

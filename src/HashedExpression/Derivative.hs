@@ -21,8 +21,8 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
-import HashedExpression.Operation
 import HashedExpression.Internal.Utils
+import HashedExpression.Operation
 import Prelude hiding
     ( (*)
     , (+)

@@ -8,7 +8,6 @@ import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import Var
 import Prelude hiding
     ( (*)
     , (+)
@@ -37,6 +36,7 @@ import Prelude hiding
     , tanh
     )
 import Test.Hspec
+import Var
 
 spec :: Spec
 spec =
