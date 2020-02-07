@@ -15,39 +15,14 @@ import Data.List.HT (removeEach)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import HashedExpression.Internal.Expression
-
+import HashedExpression.Internal.Expression hiding (NumOp(..), MultiplyOp(..), (-), (+), (*), negate)
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
+import Prelude hiding ((^))
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
-import HashedExpression.Operation
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
+import HashedExpression.Operation1
 
 -- | Exterior derivative
 --

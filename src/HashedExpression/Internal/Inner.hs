@@ -115,7 +115,10 @@ safeUnion = IM.union
 -- | Placeholder for any dimension type
 --
 data D_
-    deriving (Typeable, DimensionType)
+    deriving (Typeable, Dimension)
+    
+instance ToShape D_ where
+    toShape = error "D_ is a place holder, init variable for D_ is not applicable"
 
 -- | Placeholder for any element type
 --

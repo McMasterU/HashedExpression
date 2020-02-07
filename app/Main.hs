@@ -47,6 +47,37 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import Graphics.EasyPlot
+import HashedExpression
 
 main :: IO ()
-main = print "hello world"
+main = do 
+    let x = variable "x"
+        y = variable3D @100 @100 @100 "y"
+    let exp = y <.> y + x
+    print "hello world"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
