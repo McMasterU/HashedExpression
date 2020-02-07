@@ -36,7 +36,7 @@ default3rdDim3D = 10
 
 type Default3D3 = 10
 
-[zero, one] = map const [0, 1]
+[zero, one] = map constant [0, 1]
 
 [zero1, one1] = map (constant1D @Default1D) [0, 1]
 
@@ -45,7 +45,7 @@ type Default3D3 = 10
 [zero3, one3] = map (constant3D @Default3D1 @Default3D2 @Default3D3) [0, 1]
 
 [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z] =
-    map var
+    map variable
         [ "a"
         , "b"
         , "c"

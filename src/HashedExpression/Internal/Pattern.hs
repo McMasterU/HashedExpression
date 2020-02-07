@@ -34,7 +34,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp

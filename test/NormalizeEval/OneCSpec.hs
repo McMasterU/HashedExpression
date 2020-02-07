@@ -22,7 +22,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp
@@ -92,7 +92,7 @@ prop_Multiply (Suite exp1 valMaps1) (Suite exp2 valMaps2) (normalize1, normalize
 prop_AddMultiply :: SuiteOneC -> Bool
 prop_AddMultiply (Suite exp valMaps) =
     eval valMaps (normalize (exp + exp)) ~=
-    eval valMaps (normalize (const 2 *. exp))
+    eval valMaps (normalize (constant 2 *. exp))
 
 spec :: Spec
 spec =

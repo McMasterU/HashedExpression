@@ -52,7 +52,7 @@ import Prelude hiding
     , asinh
     , atan
     , atanh
-    , const
+    , constant
     , cos
     , cosh
     , exp
@@ -116,7 +116,7 @@ makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
 makeValidBoxConstraint (name, shape) =
     case shape of
         [] -> do
-            let x = var name
+            let x = variable name
             val1 <- VScalar <$> generate arbitrary
             val2 <- VScalar <$> generate arbitrary
             generate $
@@ -141,6 +141,7 @@ makeValidBoxConstraint (name, shape) =
                 generate (vectorOf (size1 * size2) arbitrary)
             generate $
                 elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+
 --        [size1, size2, size3] -> do TODO -- add 3D for tests
 --            val1 <-
 --                V3D . listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) <$>
@@ -150,7 +151,6 @@ makeValidBoxConstraint (name, shape) =
 --                generate (vectorOf (size1 * size2 * size3) arbitrary)
 --            generate $
 --                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
-
 -- |
 --
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation

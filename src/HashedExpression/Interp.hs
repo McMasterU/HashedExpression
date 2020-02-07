@@ -284,9 +284,11 @@ evaluate1DReal valMap (mp, n)
                     _ -> error "no value associated with the variable"
             Const val -> listArray (0, size - 1) $ replicate size val
             Sum R args ->
-                foldrElementwise (+) . map (evaluate1DReal valMap . (mp,)) $ args
+                foldrElementwise (+) . map (evaluate1DReal valMap . (mp, )) $
+                args
             Mul R args ->
-                foldrElementwise (*) . map (evaluate1DReal valMap . (mp,)) $ args
+                foldrElementwise (*) . map (evaluate1DReal valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg))
             Neg R arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
@@ -317,7 +319,7 @@ evaluate1DReal valMap (mp, n)
                     -- Rotate rA arg ->
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate1DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate1DReal valMap . (mp,)) branchArgs
+                    branches = map (evaluate1DReal valMap . (mp, )) branchArgs
                  in listArray
                         (0, size - 1)
                         [ chosen ! i
@@ -347,7 +349,8 @@ evaluate1DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap realPart ftResult
                     C ->
@@ -357,7 +360,8 @@ evaluate1DReal valMap (mp, n)
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
                             ftResult = fourierTransform1D size inner
                          in fmap imagPart ftResult
                     C ->
@@ -366,7 +370,6 @@ evaluate1DReal valMap (mp, n)
                          in fmap imagPart ftResult
             _ -> error "expression structure One R is wrong"
     | otherwise = error "one r but shape is not [size] ??"
-
 
 instance (KnownNat n) => Evaluable n R (Array Int Double) where
     eval :: ValMaps -> Expression n R -> Array Int Double
@@ -380,19 +383,23 @@ evaluate1DComplex valMap (mp, n)
     | [size] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (evaluate1DComplex valMap . (mp,)) $ args
+                foldrElementwise (+) . map (evaluate1DComplex valMap . (mp, )) $
+                args
             Mul C args ->
-                foldrElementwise (*) . map (evaluate1DComplex valMap . (mp,)) $ args
+                foldrElementwise (*) . map (evaluate1DComplex valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg))
             Neg C arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . evaluate1DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate1DComplex valMap $
+                            (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . evaluate1DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate1DComplex valMap $
+                            (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
@@ -400,7 +407,8 @@ evaluate1DComplex valMap (mp, n)
                     (evaluate1DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate1DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate1DComplex valMap . (mp,)) branchArgs
+                    branches =
+                        map (evaluate1DComplex valMap . (mp, )) branchArgs
                  in listArray
                         (0, size - 1)
                         [ chosen ! i
@@ -413,7 +421,6 @@ evaluate1DComplex valMap (mp, n)
     | otherwise = error "one C but shape is not [size] ??"
 
 --                         in chooseBranch marks cdt branches
-
 instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
     eval :: ValMaps -> Expression n C -> Array Int (Complex Double)
     eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
@@ -432,9 +439,11 @@ evaluate2DReal valMap (mp, n)
                 listArray ((0, 0), (size1 - 1, size2 - 1)) $
                 replicate (size1 * size2) val
             Sum R args ->
-                foldrElementwise (+) . map (evaluate2DReal valMap . (mp,)) $ args
+                foldrElementwise (+) . map (evaluate2DReal valMap . (mp, )) $
+                args
             Mul R args ->
-                foldrElementwise (*) . map (evaluate2DReal valMap . (mp,)) $ args
+                foldrElementwise (*) . map (evaluate2DReal valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg))
             Neg R arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
@@ -464,7 +473,7 @@ evaluate2DReal valMap (mp, n)
             ImagPart arg -> fmap imagPart . evaluate2DComplex valMap $ (mp, arg)
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate2DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate2DReal valMap . (mp,)) branchArgs
+                    branches = map (evaluate2DReal valMap . (mp, )) branchArgs
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ chosen ! (i, j)
@@ -505,7 +514,8 @@ evaluate2DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap realPart ftResult
                     C ->
@@ -515,7 +525,8 @@ evaluate2DReal valMap (mp, n)
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
                             ftResult = fourierTransform2D (size1, size2) inner
                          in fmap imagPart ftResult
                     C ->
@@ -538,19 +549,23 @@ evaluate2DComplex valMap (mp, n)
     | [size1, size2] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (evaluate2DComplex valMap. (mp,)) $ args
+                foldrElementwise (+) . map (evaluate2DComplex valMap . (mp, )) $
+                args
             Mul C args ->
-                foldrElementwise (*) . map (evaluate2DComplex valMap. (mp,)) $ args
+                foldrElementwise (*) . map (evaluate2DComplex valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg))
             Neg C arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . evaluate2DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate2DComplex valMap $
+                            (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . evaluate2DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate2DComplex valMap $
+                            (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
@@ -558,7 +573,8 @@ evaluate2DComplex valMap (mp, n)
                     (evaluate2DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate2DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate2DComplex valMap . (mp,)) branchArgs
+                    branches =
+                        map (evaluate2DComplex valMap . (mp, )) branchArgs
                  in listArray
                         ((0, 0), (size1 - 1, size2 - 1))
                         [ chosen ! (i, j)
@@ -594,9 +610,11 @@ evaluate3DReal valMap (mp, n)
                 listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $
                 replicate (size1 * size2 * size3) val
             Sum R args ->
-                foldrElementwise (+) . map (evaluate3DReal valMap . (mp,)) $ args
+                foldrElementwise (+) . map (evaluate3DReal valMap . (mp, )) $
+                args
             Mul R args ->
-                foldrElementwise (*) . map (evaluate3DReal valMap . (mp,)) $ args
+                foldrElementwise (*) . map (evaluate3DReal valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg))
             Neg R arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
             Scale R arg1 arg2 ->
@@ -626,7 +644,7 @@ evaluate3DReal valMap (mp, n)
             ImagPart arg -> fmap imagPart . evaluate3DComplex valMap $ (mp, arg)
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate3DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate3DReal valMap . (mp,)) branchArgs
+                    branches = map (evaluate3DReal valMap . (mp, )) branchArgs
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ chosen ! (i, j, k)
@@ -680,7 +698,8 @@ evaluate3DReal valMap (mp, n)
             ReFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap realPart ftResult
@@ -692,7 +711,8 @@ evaluate3DReal valMap (mp, n)
             ImFT arg ->
                 case retrieveElementType arg mp of
                     R ->
-                        let inner = fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
+                        let inner =
+                                fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
                             ftResult =
                                 fourierTransform3D (size1, size2, size3) inner
                          in fmap imagPart ftResult
@@ -703,7 +723,6 @@ evaluate3DReal valMap (mp, n)
                          in fmap imagPart ftResult
             _ -> error "expression structure Three R is wrong"
     | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
-
 
 instance (KnownNat m, KnownNat n, KnownNat p) =>
          Evaluable '( m, n, p) R (Array (Int, Int, Int) Double) where
@@ -716,19 +735,23 @@ evaluate3DComplex valMap (mp, n)
     | [size1, size2, size3] <- retrieveShape n mp =
         case retrieveNode n mp of
             Sum C args ->
-                foldrElementwise (+) . map (evaluate3DComplex valMap . (mp,)) $ args
+                foldrElementwise (+) . map (evaluate3DComplex valMap . (mp, )) $
+                args
             Mul C args ->
-                foldrElementwise (*) . map (evaluate3DComplex valMap . (mp,)) $ args
+                foldrElementwise (*) . map (evaluate3DComplex valMap . (mp, )) $
+                args
             Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg))
             Neg C arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
             Scale C arg1 arg2 ->
                 case retrieveElementType arg1 mp of
                     R ->
                         let scalar = fromR . eval valMap $ expZeroR mp arg1
-                         in fmap (scalar *) . evaluate3DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate3DComplex valMap $
+                            (mp, arg2)
                     C ->
                         let scalar = eval valMap $ expZeroC mp arg1
-                         in fmap (scalar *) . evaluate3DComplex valMap $ (mp, arg2)
+                         in fmap (scalar *) . evaluate3DComplex valMap $
+                            (mp, arg2)
             RealImag arg1 arg2 ->
                 zipWithA
                     (:+)
@@ -736,7 +759,8 @@ evaluate3DComplex valMap (mp, n)
                     (evaluate3DReal valMap $ (mp, arg2))
             Piecewise marks conditionArg branchArgs ->
                 let cdt = evaluate3DReal valMap $ (mp, conditionArg)
-                    branches = map (evaluate3DComplex valMap . (mp,)) branchArgs
+                    branches =
+                        map (evaluate3DComplex valMap . (mp, )) branchArgs
                  in listArray
                         ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                         [ chosen ! (i, j, k)
@@ -753,7 +777,6 @@ evaluate3DComplex valMap (mp, n)
                     (evaluate3DComplex valMap $ (mp, arg))
             _ -> error "expression structure Three C is wrong"
     | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
-
 
 instance (KnownNat m, KnownNat n, KnownNat p) =>
          Evaluable '( m, n, p) C (Array (Int, Int, Int) (Complex Double)) where

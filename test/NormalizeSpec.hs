@@ -57,7 +57,7 @@ spec :: Spec
 spec = do
     describe "Normalize spec" $ do
         specify "normalize scalar one zero" $ do
-            const 0.0 *. const 9.0 `shouldNormalizeTo` const 0.0
+            constant 0.0 *. constant 9.0 `shouldNormalizeTo` constant 0.0
             x * one `shouldNormalizeTo` x
             one * x `shouldNormalizeTo` x
             x * zero `shouldNormalizeTo` zero
@@ -119,21 +119,21 @@ spec = do
             product [one, one, x, y, one, z] `shouldNormalizeTo`
                 product [x, y, z]
             sum [one, one, x, y, one, z] `shouldNormalizeTo`
-                sum [const 3, x, y, z]
-            product [const 1, const 2, x, y, const 3, z] `shouldNormalizeTo`
-                product [const 6, x, y, z]
+                sum [constant 3, x, y, z]
+            product [constant 1, constant 2, x, y, constant 3, z] `shouldNormalizeTo`
+                product [constant 6, x, y, z]
         specify "combine same terms" $
             -- Higher dimension this is correct
          do
-            sum [one *. x1, x1, x1, const 3 *. y1, y1] `shouldNormalizeTo`
-                sum [const 3 *. x1, const 4 *. y1]
-            sum [const (-1) *. x1, x1, const 3 *. y1, y1, z1] `shouldNormalizeTo`
-                sum [const 4 *. y1, z1]
+            sum [one *. x1, x1, x1, constant 3 *. y1, y1] `shouldNormalizeTo`
+                sum [constant 3 *. x1, constant 4 *. y1]
+            sum [constant (-1) *. x1, x1, constant 3 *. y1, y1, z1] `shouldNormalizeTo`
+                sum [constant 4 *. y1, z1]
             x1 - x1 `shouldNormalizeTo` zero1
-            sum [one *. x, x, x, const 3 *. y, y] `shouldNormalizeTo`
-                sum [const 3 *. x, const 4 *. y]
-            sum [const (-1) *. x, x, const 3 *. y, y, z] `shouldNormalizeTo`
-                sum [const 4 *. y, z]
+            sum [one *. x, x, x, constant 3 *. y, y] `shouldNormalizeTo`
+                sum [constant 3 *. x, constant 4 *. y]
+            sum [constant (-1) *. x, x, constant 3 *. y, y, z] `shouldNormalizeTo`
+                sum [constant 4 *. y, z]
             x - x `shouldNormalizeTo` zero
         specify "scale rules" $ do
             x *. (y *. v) `shouldNormalizeTo` (x * y) *. v
@@ -206,11 +206,11 @@ spec = do
         specify "some Ft rules" $ do
             reFT (reFT x1) +
                 imFT (imFT x1) `shouldNormalizeTo`
-                const (fromIntegral defaultDim1D) *.
+                constant (fromIntegral defaultDim1D) *.
                 x1
             reFT (reFT x2) +
                 imFT (imFT x2) `shouldNormalizeTo`
-                const (fromIntegral (default1stDim2D * default2ndDim2D)) *.
+                constant (fromIntegral (default1stDim2D * default2ndDim2D)) *.
                 x2
             let x = variable1D @10 "x"
                 y = variable1D @10 "y"

@@ -156,8 +156,8 @@ primitiveScalarR = do
     dbl <- genDouble
     r <- (`mod` 10) <$> arbitrary
     if r < 6
-        then return ((var name), [[(name)], [], [], []])
-        else return ((const dbl), [[], [], [], []])
+        then return ((variable name), [[(name)], [], [], []])
+        else return ((constant dbl), [[], [], [], []])
 
 primitiveScalarC :: Gen (Expression Scalar C, Vars)
 primitiveScalarC = liftE2 (+:) <$> primitiveScalarR <*> primitiveScalarR

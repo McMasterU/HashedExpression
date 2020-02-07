@@ -1,8 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module HashedExpression.Operation
-    ( var
-    , const
+    ( variable
+    , constant
     , constant1D
     , constant2D
     , constant3D
@@ -62,16 +62,16 @@ import qualified Prelude
 
 -- | Create primitive expressions
 --
-var :: String -> Expression Scalar R
-var name = Expression h (fromList [(h, node)])
+variable :: String -> Expression Scalar R
+variable name = Expression h (fromList [(h, node)])
   where
     node = ([], Var name)
     h = hash node
 
 -- |
 --
-const :: Double -> Expression Scalar R
-const val = Expression h (fromList [(h, node)])
+constant :: Double -> Expression Scalar R
+constant val = Expression h (fromList [(h, node)])
   where
     node = ([], Const val)
     h = hash node
@@ -180,9 +180,9 @@ huber ::
 huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
   where
     one = constWithShape @d (expressionShape e) 1
-    inner = const 0.5 *. (e * e)
-    outerLeft = const (-delta) *. e - const (delta * delta / 2) *. one
-    outerRight = const delta *. e - const (delta * delta / 2) *. one
+    inner = constant 0.5 *. (e * e)
+    outerLeft = constant (-delta) *. e - constant (delta * delta / 2) *. one
+    outerRight = constant delta *. e - constant (delta * delta / 2) *. one
 
 -- | Norm 2
 --
@@ -268,7 +268,6 @@ instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
 instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
     ft :: Expression d R -> Expression d C
     ft e = ft (e +: constWithShape (expressionShape e) 0)
-
 
 -- | 
 --

@@ -27,7 +27,7 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Utils
-import HashedExpression.Operation (const)
+import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
 import Prelude hiding
     ( (*)
