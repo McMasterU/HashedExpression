@@ -38,7 +38,7 @@ import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
-import HashedExpression.Internal.Var
+import Var
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck

@@ -1,4 +1,4 @@
-module HashedExpression.Internal.Var where
+module Var where
 
 import Data.Set (Set, fromList)
 import HashedExpression.Internal.Expression
@@ -6,17 +6,19 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import Prelude hiding (const)
 
+
 defaultDim1D = 10
-
+type Default1D = 10
 default1stDim2D = 12
-
+type Default2D1 = 12
 default2ndDim2D = 13
-
+type Default2D2 = 13
 default1stDim3D = 10
-
+type Default3D1 = 10
 default2ndDim3D = 10
-
+type Default3D2 = 10
 default3rdDim3D = 10
+type Default3D3 = 10
 
 [zero, one] = map const [0, 1]
 

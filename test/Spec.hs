@@ -54,7 +54,7 @@ import qualified ToCSpec
 import Commons
 import Data.Maybe (fromJust)
 import HashedExpression.Internal.Utils
-import HashedExpression.Internal.Var
+import Var
 import Test.Hspec
 import Test.Hspec.Runner
 

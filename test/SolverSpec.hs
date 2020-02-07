@@ -40,7 +40,7 @@ import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Solver
 import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
-import HashedExpression.Internal.Var
+import Var
 import qualified Prelude
 import Prelude hiding
     ( (*)

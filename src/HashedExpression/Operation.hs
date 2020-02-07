@@ -23,6 +23,7 @@ module HashedExpression.Operation
     , norm1
     , norm2
     , sumElements
+    , valueFromNat
     ) where
 
 import Data.Array
