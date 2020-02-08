@@ -22,30 +22,7 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import qualified Prelude
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , constant
-    , cos
-    , cosh
-    , exp
-    , negate
-    , product
-    , sin
-    , sinh
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import Prelude (Bool)
 import Prelude (Bool)
 
@@ -155,19 +132,20 @@ instance SumRestOp Pattern PatternList PatternList where
 
 -- | Pattern
 --
-instance AddableOp Pattern where
+instance Num Pattern where
     (+) wh1 wh2 = PSum [wh1, wh2]
-
-instance NegateOp Pattern where
     negate = PNeg
-
-instance MultiplyOp Pattern where
     (*) wh1 wh2 = PMul [wh1, wh2]
+
+instance Fractional Pattern where
+    (/) = PDiv
+    fromRational = PConst . fromRational
 
 instance VectorSpaceOp Pattern Pattern where
     scale = PScale
 
-instance NumOp Pattern where
+instance Floating Pattern where
+    pi = PConst pi
     sqrt = PSqrt
     exp = PExp
     log = PLog
@@ -183,7 +161,6 @@ instance NumOp Pattern where
     asinh = PAsinh
     acosh = PAcosh
     atanh = PAtanh
-    (/) = PDiv
 
 instance ComplexRealOp Pattern Pattern where
     (+:) = PRealImag
@@ -206,18 +183,14 @@ mapL f (PListHole fs listCapture) = PListHole (f . fs) listCapture
 
 -- | Pattern Power
 --
-instance AddableOp PatternPower where
+instance Num PatternPower where
     (+) = PPowerMul
-
-instance MultiplyOp PatternPower where
     (*) = PPowerMul
 
 -- | Pattern Rotate Amount
 --
-instance AddableOp PatternRotateAmount where
+instance Num PatternRotateAmount where
     (+) = PRotateAmountSum
-
-instance NegateOp PatternRotateAmount where
     negate = PRotateAmountNegate
 
 -- | Discrete fourier transform

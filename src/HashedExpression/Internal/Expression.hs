@@ -1,3 +1,5 @@
+{-# LANGUAGE ConstraintKinds #-}
+
 module HashedExpression.Internal.Expression
     ( R
     , C
@@ -8,20 +10,16 @@ module HashedExpression.Internal.Expression
     , ExpressionMap
     , Expression(..)
     , Scalar
+    , Dimension
+    , ToShape(..)
     , DimensionType
     , ElementType
     , NumType
-    , Addable
     , VectorSpace
     , InnerProductSpace
-    , AddableOp(..)
-    , NegateOp(..)
-    , MultiplyOp(..)
-    , (-)
     , PowerOp(..)
     , PiecewiseOp(..)
     , VectorSpaceOp(..)
-    , NumOp(..)
     , FTOp(..)
     , ComplexRealOp(..)
     , RotateOp(..)
@@ -38,54 +36,34 @@ import Data.Array
 import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
-import Data.Proxy (Proxy)
+import Data.Proxy (Proxy(..))
 import Data.Typeable (Typeable, typeRep)
-import GHC.TypeLits (KnownNat, Nat)
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , cos
-    , cosh
-    , exp
-    , negate
-    , sin
-    , sinh
-    , tan
-    , tanh
-    )
+import GHC.TypeLits (KnownNat, Nat, natVal)
+import Prelude hiding ((^))
 
 -- | Type representation of elements in the 1D, 2D, 3D, ... grid
 --
 data R
-    deriving (NumType, ElementType, Addable, Typeable)
+    deriving (NumType, ElementType, Typeable)
 
 data C
-    deriving (NumType, ElementType, Addable, Typeable)
+    deriving (NumType, ElementType, Typeable)
 
 data Covector
-    deriving (ElementType, Addable, Typeable)
+    deriving (ElementType, Typeable)
 
 -- | Type representation of vector dimension
 --
 data Scalar
-    deriving (DimensionType, Typeable)
+    deriving (Dimension, Typeable)
 
 -- | 
 --
-instance (KnownNat n) => DimensionType n
+instance (KnownNat n) => Dimension n
 
-instance (KnownNat m, KnownNat n) => DimensionType '( m, n)
+instance (KnownNat m, KnownNat n) => Dimension '( m, n)
 
-instance (KnownNat m, KnownNat n, KnownNat p) => DimensionType '( m, n, p)
+instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '( m, n, p)
 
 -- | Classes as constraints
 --
@@ -95,22 +73,43 @@ class ElementType et =>
       NumType et
 
 
-class DimensionType d
+-------------------------------------------------------------------------------
+class (Dimension d) =>
+      ToShape d
+    where
+    toShape :: Proxy d -> Shape
 
-class ElementType et =>
-      Addable et
+instance ToShape Scalar where
+    toShape _ = []
 
+instance (KnownNat n) => ToShape n where
+    toShape _ = [nat @n]
 
-class (DimensionType d, Addable et, NumType s) =>
-      VectorSpace d et s
+instance (KnownNat m, KnownNat n) => ToShape '( m, n) where
+    toShape _ = [nat @m, nat @n]
 
+instance (KnownNat m, KnownNat n, KnownNat p) => ToShape '( m, n, p) where
+    toShape _ = [nat @m, nat @n, nat @p]
+
+type DimensionType d = (Dimension d, ToShape d)
+
+-------------------------------------------------------------------------------
+-- | 
+--
+nat :: forall n. (KnownNat n)
+    => Int
+nat = fromIntegral $ natVal (Proxy :: Proxy n)
+
+-------------------------------------------------------------------------------
+class Dimension d
+
+class VectorSpace d et s
 
 class VectorSpace d s s =>
       InnerProductSpace d s
 
 
-instance (ElementType et, Addable et, DimensionType d) =>
-         VectorSpace d et R
+instance (DimensionType d, ElementType et) => VectorSpace d et R
 
 instance (DimensionType d) => VectorSpace d C C
 
@@ -118,18 +117,6 @@ instance VectorSpace d s s => InnerProductSpace d s
 
 -- | Classes for operations so that both Expression and Pattern (in HashedPattern) can implement
 --
-class AddableOp a where
-    (+) :: a -> a -> a
-
-class NegateOp a where
-    negate :: a -> a
-
-(-) :: (AddableOp a, NegateOp a) => a -> a -> a
-x - y = x + negate y
-
-class MultiplyOp a where
-    (*) :: a -> a -> a
-
 class PowerOp a b | a -> b where
     (^) :: a -> b -> a
 
@@ -137,24 +124,6 @@ class VectorSpaceOp a b where
     scale :: a -> b -> b
     (*.) :: a -> b -> b
     (*.) = scale
-
-class NumOp a where
-    sqrt :: a -> a
-    exp :: a -> a
-    log :: a -> a
-    sin :: a -> a
-    cos :: a -> a
-    tan :: a -> a
-    asin :: a -> a
-    acos :: a -> a
-    atan :: a -> a
-    sinh :: a -> a
-    cosh :: a -> a
-    tanh :: a -> a
-    asinh :: a -> a
-    acosh :: a -> a
-    atanh :: a -> a
-    (/) :: a -> a -> a
 
 class ComplexRealOp r c | r -> c, c -> r where
     (+:) :: r -> r -> c
@@ -173,9 +142,7 @@ class PiecewiseOp a b where
 class FTOp a b | a -> b where
     ft :: a -> b
 
-infixl 6 +, -, +:
-
-infixl 7 *, /
+infixl 6 +:
 
 infixl 8 *., `scale`, <.>
 

@@ -17,33 +17,7 @@ import HashedExpression.Internal.Utils
 import HashedExpression.Interp ((~=), eval)
 import HashedExpression.Operation
 import HashedExpression.Prettify
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import Test.Hspec
 import Var
 

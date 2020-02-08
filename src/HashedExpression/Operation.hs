@@ -1,24 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module HashedExpression.Operation
-    ( variable
-    , constant
-    , constant1D
-    , constant2D
-    , constant3D
-    , variable1D
-    , variable2D
-    , variable3D
-    , norm2square
-    , sum
-    , product
-    , huber
-    , huberNorm
-    , norm1
-    , norm2
-    , sumElements
-    , valueFromNat
-    ) where
+module HashedExpression.Operation where
 
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
@@ -27,88 +9,99 @@ import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, natVal)
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Expression hiding (NumOp(..), (*), (+), (-))
 
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
-import qualified Prelude
+import Prelude hiding ((^))
 
--- | Create primitive expressions
---
-variable :: String -> Expression Scalar R
-variable name = Expression h (fromList [(h, node)])
-  where
-    node = ([], Var name)
-    h = hash node
-
--- |
---
-constant :: Double -> Expression Scalar R
-constant val = Expression h (fromList [(h, node)])
-  where
-    node = ([], Const val)
-    h = hash node
-
--- | Element-wise sum
---
-instance (DimensionType d, Addable et) => AddableOp (Expression d et) where
-    (+) :: Expression d et -> Expression d et -> Expression d et
-    (+) e1 e2 =
-        let op = naryET Sum ElementDefault `hasShape` expressionShape e1
-         in ensureSameShape e1 e2 $ applyBinary op e1 e2
-
-instance (DimensionType d) => NegateOp (Expression d et) where
-    negate :: Expression d et -> Expression d et
-    negate =
-        let op = unaryET Neg ElementDefault
-         in applyUnary $ unaryET Neg ElementDefault
-
-sum :: (DimensionType d, Addable et) => [Expression d et] -> Expression d et
-sum = applyNary (naryET Sum ElementDefault)
-
--- | Element-wise multiplication
---
-instance (DimensionType d, NumType et) => MultiplyOp (Expression d et) where
-    (*) :: Expression d et -> Expression d et -> Expression d et
-    (*) e1 e2 =
-        let op = naryET Mul ElementDefault `hasShape` expressionShape e1
-         in ensureSameShape e1 e2 $ applyBinary op e1 e2
-
-product :: (DimensionType d, NumType et) => [Expression d et] -> Expression d et
-product = applyNary (naryET Mul ElementDefault)
-
--- | Element-wise multiplication
---
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
     (^) :: Expression d et -> Int -> Expression d et
     (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
+
+-------------------------------------------------------------------------------
+fromDouble ::
+       forall d. ToShape d
+    => Double
+    -> (Expression d R)
+fromDouble value = Expression h (fromList [(h, node)])
+  where
+    node = (toShape (Proxy @d), Const value)
+    h = hash node
+
+-------------------------------------------------------------------------------
+instance ToShape d => Num (Expression d R) where
+    e1 + e2 =
+        let op = naryET Sum ElementDefault `hasShape` expressionShape e1
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    e1 * e2 =
+        let op = naryET Mul ElementDefault `hasShape` expressionShape e1
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    negate =
+        let op = unaryET Neg ElementDefault
+         in applyUnary $ unaryET Neg ElementDefault
+    fromInteger val = fromDouble $ fromIntegral val
+    abs = error "TODO: abs"
+    signum = error "Not applicable to tensor"
+
+-------------------------------------------------------------------------------
+instance ToShape d => Fractional (Expression d R) where
+    e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
+    fromRational r = fromDouble $ fromRational r
+
+-------------------------------------------------------------------------------
+instance ToShape d => Floating (Expression d R) where
+    pi = fromDouble $ pi
+    sqrt = applyUnary (unary Sqrt)
+    exp = applyUnary (unary Exp)
+    log = applyUnary (unary Log)
+    sin = applyUnary (unary Sin)
+    cos = applyUnary (unary Cos)
+    tan = applyUnary (unary Tan)
+    asin = applyUnary (unary Asin)
+    acos = applyUnary (unary Acos)
+    atan = applyUnary (unary Atan)
+    sinh = applyUnary (unary Sinh)
+    cosh = applyUnary (unary Cosh)
+    tanh = applyUnary (unary Tanh)
+    asinh = applyUnary (unary Asinh)
+    acosh = applyUnary (unary Acosh)
+    atanh = applyUnary (unary Atanh)
+
+-------------------------------------------------------------------------------
+instance ToShape d => Num (Expression d C) where
+    e1 + e2 =
+        let op = naryET Sum ElementDefault `hasShape` expressionShape e1
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    e1 * e2 =
+        let op = naryET Mul ElementDefault `hasShape` expressionShape e1
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    negate =
+        let op = unaryET Neg ElementDefault
+         in applyUnary $ unaryET Neg ElementDefault
+    fromInteger val = fromIntegral val +: fromIntegral 0
+    abs = error "TODO: abs"
+    signum = error "Not applicable to tensor"
+
+-------------------------------------------------------------------------------
+instance ToShape d => Fractional (Expression d C) where
+    e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
+    fromRational r = (fromDouble $ fromRational r) +: fromIntegral 0
+
+-------------------------------------------------------------------------------
+instance ToShape d => Num (Expression d Covector) where
+    e1 + e2 =
+        let op = naryET Sum ElementDefault `hasShape` expressionShape e1
+         in ensureSameShape e1 e2 $ applyBinary op e1 e2
+    (*) = error "Not applicable to 1-form"
+    negate =
+        let op = unaryET Neg ElementDefault
+         in applyUnary $ unaryET Neg ElementDefault
+    fromInteger = error "Not applicable to 1-form"
+    abs = error "TODO: abs"
+    signum = error "Not applicable to 1-form"
 
 -- | Scale in vector space
 --
@@ -137,26 +130,6 @@ instance (DimensionType d) =>
     xIm =
         let op = unary ImagPart
          in applyUnary op
-
--- | NumOp for R
---
-instance (DimensionType d) => NumOp (Expression d R) where
-    sqrt = applyUnary (unary Sqrt)
-    exp = applyUnary (unary Exp)
-    log = applyUnary (unary Log)
-    sin = applyUnary (unary Sin)
-    cos = applyUnary (unary Cos)
-    tan = applyUnary (unary Tan)
-    asin = applyUnary (unary Asin)
-    acos = applyUnary (unary Acos)
-    atan = applyUnary (unary Atan)
-    sinh = applyUnary (unary Sinh)
-    cosh = applyUnary (unary Cosh)
-    tanh = applyUnary (unary Tanh)
-    asinh = applyUnary (unary Asinh)
-    acosh = applyUnary (unary Acosh)
-    atanh = applyUnary (unary Atanh)
-    (/) e1 e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
 
 -- | inner product
 --
@@ -189,8 +162,9 @@ huber delta e = piecewise [-delta, delta] e [outerLeft, inner, outerRight]
 norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
--- | Norm 1
 --
+---- | Norm 1
+----
 norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
@@ -295,6 +269,14 @@ valueFromNat ::
     => Int
 valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
 
+-- | Create primitive expressions
+--
+variable :: String -> Expression Scalar R
+variable name = Expression h (fromList [(h, node)])
+  where
+    node = ([], Var name)
+    h = hash node
+
 -- | Create primitive expressions using Nat kind
 --
 variable1D ::
@@ -328,6 +310,14 @@ variable3D name = Expression h (fromList [(h, node)])
     size2 = valueFromNat @n
     size3 = valueFromNat @p
     node = ([size1, size3], Var name)
+    h = hash node
+
+-- |
+--
+constant :: Double -> Expression Scalar R
+constant val = Expression h (fromList [(h, node)])
+  where
+    node = ([], Const val)
     h = hash node
 
 -- |

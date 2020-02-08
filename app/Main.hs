@@ -47,6 +47,34 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import Graphics.EasyPlot
+import HashedExpression
 
 main :: IO ()
-main = print "hello world"
+main = do
+    print "hello world"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

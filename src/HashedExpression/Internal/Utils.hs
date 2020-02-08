@@ -9,29 +9,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Prettify
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , negate
-    , sin
-    , sinh
-    , sqrt
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import qualified Prelude
 
 import Data.Complex
@@ -258,89 +236,47 @@ plus a b = Prelude.sum [a, b]
 --
 --
 -------------------------------------------------------------------------------
-instance {-# OVERLAPPABLE #-} Num a => AddableOp a where
-    (+) = plus
-
-instance AddableOp (Array Int Double) where
+instance Num (Array Int Double) where
     (+) arr1 arr2 =
         listArray
             (0, size - 1)
             [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
       where
         size = length . elems $ arr1
+    negate arr =
+        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
+      where
+        size = length . elems $ arr
+    (*) arr1 arr2 =
+        listArray
+            (0, size - 1)
+            [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
+      where
+        size = length . elems $ arr1
+    abs = error "TODO"
+    signum = error "N/A"
+    fromInteger = error "TODO"
 
-instance AddableOp (Array Int (Complex Double)) where
+instance Num (Array Int (Complex Double)) where
     (+) arr1 arr2 =
         listArray
             (0, size - 1)
             [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
       where
         size = length . elems $ arr1
-
--------------------------------------------------------------------------------
--- | MARK: Negate
---
---
--------------------------------------------------------------------------------
-instance {-# OVERLAPPABLE #-} Num a => NegateOp a where
-    negate = Prelude.negate
-
-instance NegateOp (Array Int Double) where
     negate arr =
         listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
       where
         size = length . elems $ arr
-
-instance NegateOp (Array Int (Complex Double)) where
-    negate arr =
-        listArray (0, size - 1) [-x | i <- [0 .. size - 1], let x = arr ! i]
-      where
-        size = length . elems $ arr
-
--------------------------------------------------------------------------------
--- | MARK: (*)
---
---
---
--------------------------------------------------------------------------------
-instance {-# OVERLAPPABLE #-} Num a => MultiplyOp a where
-    (*) = times
-
-instance MultiplyOp (Array Int Double) where
     (*) arr1 arr2 =
         listArray
             (0, size - 1)
             [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
       where
         size = length . elems $ arr1
+    abs = error "TODO"
+    signum = error "N/A"
+    fromInteger = error "TODO"
 
-instance MultiplyOp (Array Int (Complex Double)) where
-    (*) arr1 arr2 =
-        listArray
-            (0, size - 1)
-            [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
-      where
-        size = length . elems $ arr1
-
--- | MARK: Other
---
 instance PowerOp Double Int where
     (^) x y = x Prelude.^ y
-
-instance {-# OVERLAPPABLE #-} (Num a, Floating a) => NumOp a where
-    sqrt = Prelude.sqrt
-    exp = Prelude.exp
-    log = Prelude.log
-    sin = Prelude.sin
-    cos = Prelude.cos
-    tan = Prelude.tan
-    asin = Prelude.asin
-    acos = Prelude.acos
-    atan = Prelude.atan
-    sinh = Prelude.sinh
-    cosh = Prelude.cosh
-    tanh = Prelude.tanh
-    asinh = Prelude.asinh
-    acosh = Prelude.acosh
-    atanh = Prelude.atanh
-    (/) x y = x Prelude./ y

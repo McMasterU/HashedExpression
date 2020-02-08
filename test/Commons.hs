@@ -29,32 +29,7 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
