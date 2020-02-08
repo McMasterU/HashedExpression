@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module HashedExpression.Operation1 where
+module HashedExpression.Operation where
 
 import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)

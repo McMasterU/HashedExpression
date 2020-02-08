@@ -6,14 +6,9 @@ module HashedExpression
     , Covector
     , Expression
     , Scalar
-    , AddableOp(..)
-    , NegateOp(..)
-    , MultiplyOp(..)
-    , (-)
     , PowerOp(..)
     , PiecewiseOp(..)
     , VectorSpaceOp(..)
-    , NumOp(..)
     , FTOp(..)
     , ComplexRealOp(..)
     , RotateOp(..)
@@ -38,27 +33,4 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Normalize
 import HashedExpression.Interp
 import HashedExpression.Operation
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , constant
-    , cos
-    , cosh
-    , exp
-    , negate
-    , product
-    , sin
-    , sinh
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))

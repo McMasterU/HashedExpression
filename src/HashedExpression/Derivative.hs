@@ -15,14 +15,21 @@ import Data.List.HT (removeEach)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import HashedExpression.Internal.Expression hiding (NumOp(..), MultiplyOp(..), (-), (+), (*), negate)
+import HashedExpression.Internal.Expression hiding
+    ( MultiplyOp(..)
+    , NumOp(..)
+    , (*)
+    , (+)
+    , (-)
+    , negate
+    )
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Inner
-import Prelude hiding ((^))
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
-import HashedExpression.Operation1
+import HashedExpression.Operation
+import Prelude hiding ((^))
 
 -- | Exterior derivative
 --

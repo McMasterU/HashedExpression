@@ -40,33 +40,7 @@ import HashedExpression.Operation
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Solver
 import qualified Prelude
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , constant
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec

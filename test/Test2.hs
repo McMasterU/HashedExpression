@@ -8,33 +8,7 @@ import HashedExpression.Internal.Normalize
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import Test.Hspec
 import Var
 

@@ -79,33 +79,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 
 -- | TODO: Check if 2 different nodes from 2 maps have the same hash
 --
@@ -116,9 +90,10 @@ safeUnion = IM.union
 --
 data D_
     deriving (Typeable, Dimension)
-    
+
 instance ToShape D_ where
-    toShape = error "D_ is a place holder, init variable for D_ is not applicable"
+    toShape =
+        error "D_ is a place holder, init variable for D_ is not applicable"
 
 -- | Placeholder for any element type
 --
@@ -377,17 +352,37 @@ just nId _ = ExpressionDiff IM.empty nId
 
 -- |
 --
-instance AddableOp Change where
+instance Num Change where
     (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
+    negate change mp = applyDiff mp (unaryET Neg ElementDefault) [change mp]
+    (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
+    signum = error "N/A"
+    abs = error "TODO"
+    fromInteger = error "N/A"
+
+instance Fractional Change where
+    (/) change1 change2 = change1 * (change2 ^ (-1))
+    fromRational r = error "N/A"
+
+instance Floating Change where
+    sqrt change mp = applyDiff mp (unary Sqrt) [change mp]
+    exp change mp = applyDiff mp (unary Exp) [change mp]
+    log change mp = applyDiff mp (unary Log) [change mp]
+    sin change mp = applyDiff mp (unary Sin) [change mp]
+    cos change mp = applyDiff mp (unary Cos) [change mp]
+    tan change mp = applyDiff mp (unary Tan) [change mp]
+    asin change mp = applyDiff mp (unary Asin) [change mp]
+    acos change mp = applyDiff mp (unary Acos) [change mp]
+    atan change mp = applyDiff mp (unary Atan) [change mp]
+    sinh change mp = applyDiff mp (unary Sinh) [change mp]
+    cosh change mp = applyDiff mp (unary Cosh) [change mp]
+    tanh change mp = applyDiff mp (unary Tanh) [change mp]
+    asinh change mp = applyDiff mp (unary Asinh) [change mp]
+    acosh change mp = applyDiff mp (unary Acosh) [change mp]
+    atanh change mp = applyDiff mp (unary Atanh) [change mp]
 
 sum_ :: [Change] -> Change
 sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
-
-instance NegateOp Change where
-    negate change mp = applyDiff mp (unaryET Neg ElementDefault) [change mp]
-
-instance MultiplyOp Change where
-    (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
 
 product_ :: [Change] -> Change
 product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
@@ -404,24 +399,6 @@ instance ComplexRealOp Change Change where
         applyDiff mp (binary RealImag) [change1 mp, change2 mp]
     xRe change1 mp = applyDiff mp (unary RealPart) [change1 mp]
     xIm change1 mp = applyDiff mp (unary ImagPart) [change1 mp]
-
-instance (DimensionType d) => NumOp Change where
-    sqrt change mp = applyDiff mp (unary Sqrt) [change mp]
-    exp change mp = applyDiff mp (unary Exp) [change mp]
-    log change mp = applyDiff mp (unary Log) [change mp]
-    sin change mp = applyDiff mp (unary Sin) [change mp]
-    cos change mp = applyDiff mp (unary Cos) [change mp]
-    tan change mp = applyDiff mp (unary Tan) [change mp]
-    asin change mp = applyDiff mp (unary Asin) [change mp]
-    acos change mp = applyDiff mp (unary Acos) [change mp]
-    atan change mp = applyDiff mp (unary Atan) [change mp]
-    sinh change mp = applyDiff mp (unary Sinh) [change mp]
-    cosh change mp = applyDiff mp (unary Cosh) [change mp]
-    tanh change mp = applyDiff mp (unary Tanh) [change mp]
-    asinh change mp = applyDiff mp (unary Asinh) [change mp]
-    acosh change mp = applyDiff mp (unary Acosh) [change mp]
-    atanh change mp = applyDiff mp (unary Atanh) [change mp]
-    (/) change1 change2 = change1 * (change2 ^ (-1))
 
 instance InnerProductSpaceOp Change Change Change where
     (<.>) change1 change2 mp =

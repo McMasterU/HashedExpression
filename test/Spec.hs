@@ -19,32 +19,7 @@ import qualified NormalizeEval.OneRSpec as OneRSpec
 import qualified NormalizeEval.ScalarCSpec as ScalarCSpec
 import qualified NormalizeEval.ScalarRSpec as ScalarRSpec
 import qualified NormalizeSpec
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import qualified SolverSpec
 import qualified StructureSpec
 import qualified Test1

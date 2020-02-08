@@ -26,32 +26,7 @@ import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import qualified Prelude
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , constant
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^))
 import Test.Hspec
 import Test.QuickCheck
 import Var

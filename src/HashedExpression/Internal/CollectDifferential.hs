@@ -29,33 +29,7 @@ import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding
-    ( (*)
-    , (+)
-    , (-)
-    , (/)
-    , (^)
-    , acos
-    , acosh
-    , asin
-    , asinh
-    , atan
-    , atanh
-    , const
-    , const
-    , cos
-    , cosh
-    , exp
-    , log
-    , negate
-    , product
-    , sin
-    , sinh
-    , sqrt
-    , sum
-    , tan
-    , tanh
-    )
+import Prelude hiding ((^), product, sum)
 import qualified Prelude
 
 -- | Precondition: (satisfied by first applying normalizier)
