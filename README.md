@@ -5,18 +5,18 @@ Tensor-aware symbolic computing, code generation for optimization problems, and 
 This project contains:
 
 **HashedExpression**, a symbolic computing library designed to work with [tensors](https://en.wikipedia.org/wiki/Tensor) (read: 1D, 2D, 3D, n-D grid of elements):
-- A type-safe Haskell embedded DSL for constructing and manipulating expressions.
-- A type-safe Haskell embedded DSL for defining and generating code for optimization problems.
+- A type-safe Haskell embedded DSL to:
+  - Constructe and manipulate expressions.
+  - Generate code for optimization problems.
 - Doing normalization and simplification.
 - Computing (partial) derivatives.
-- Identifying common sub-expressions, compute executing order and generate fast C code for expressions evaluation.
-This speeds up solving optimization problems because objective functions and partial derivatives share a lot in many cases.
+- Identifying common sub-expressions, compute executing order and generate fast C code for expressions evaluation. This speeds up solving optimization problems because objective functions and partial derivatives often share computations.
 
 **Symphony**, a standalone language for HashedExpression, see section [Symphony](#symphony)
 
-HashedExpression supports some features and operations (including representing, simplifying, computing derivatives, ...) nicely that we haven't found elsewhere:
+HashedExpression supports some operations (representing, simplifying, computing derivatives, ...) nicely that we haven't found elsewhere:
 - Piecewise, useful for things like [huber loss](https://en.wikipedia.org/wiki/Huber_loss), which often used for regularization.
-- Fourier transformation (representing, simplifying, computing derivatives, ...), useful for image processing problems.
+- Fourier transformation, useful for image processing problems.
 
 ## HashedExpression
 
