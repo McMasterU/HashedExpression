@@ -1,10 +1,11 @@
-module HashedExpression.Internal.Plot where
-
 -------------------------------------------------------------------------------
 -- | Require: gnuplot (http://www.gnuplot.info/)
 --
 --
 -------------------------------------------------------------------------------
+
+module HashedExpression.Internal.Plot where
+
 import Graphics.EasyPlot
 
 import qualified Data.IntMap.Strict as IM
