@@ -1,11 +1,11 @@
 module FFTW where
+
 import Data.String.Quote
 
 -- | For computing fourier transform
---
 fftUtils :: String
 fftUtils =
-    [s|
+  [s|
 /**
 * ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
 * ---------------------------------------START-----------------------------------------

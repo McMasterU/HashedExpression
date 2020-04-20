@@ -1,6 +1,11 @@
+
+FORMAT=ormolu --mode inplace -o -XTypeApplications -o -XTemplateHaskellQuotes
+
 format:
-	find src -type f -name '*.hs' | xargs hindent
-	find test -type f -name '*.hs' | xargs hindent
+	find src -type f -name '*.hs' | xargs $(FORMAT)
+	find test -type f -name '*.hs' | xargs $(FORMAT)
+	find embed -type f -name '*.hs' | xargs $(FORMAT)
+
 
 check:
 	stack clean
