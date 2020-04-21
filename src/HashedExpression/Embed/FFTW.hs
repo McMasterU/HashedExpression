@@ -1,11 +1,11 @@
-module FFTW where
+module HashedExpression.Embed.FFTW where
 
-import Data.String.Quote
+import Data.String.Interpolate
 
 -- | For computing fourier transform
 fftUtils :: String
 fftUtils =
-  [s|
+  [i|
 /**
 * ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
 * ---------------------------------------START-----------------------------------------

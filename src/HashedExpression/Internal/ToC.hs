@@ -29,8 +29,8 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
-import FFTW
 import GHC.Stack (HasCallStack)
+import HashedExpression.Embed.FFTW
 import HashedExpression.Internal.Expression
   ( DimensionType,
     ET (..),

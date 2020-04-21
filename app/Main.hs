@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
@@ -19,33 +18,6 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import Prelude hiding
-  ( (*),
-    (+),
-    (-),
-    (/),
-    (^),
-    acos,
-    acosh,
-    asin,
-    asinh,
-    atan,
-    atanh,
-    const,
-    const,
-    cos,
-    cosh,
-    exp,
-    log,
-    negate,
-    product,
-    sin,
-    sinh,
-    sqrt,
-    sum,
-    tan,
-    tanh,
-  )
 
 main :: IO ()
 main = do

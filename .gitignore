@@ -7,7 +7,6 @@ dist-newstyle
 out/
 *.txt
 *.h5
-
 *.dat
 *.npz
 *.npy

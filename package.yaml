@@ -17,7 +17,7 @@ copyright:           "2019 Author name here"
 description:         Please see the README on GitHub at <https://github.com/githubuser/HashedExpression#readme>
 
 dependencies:
-  - base >= 4.7 && < 5
+  - base 
   - QuickCheck
   - utility-ht
   - containers
@@ -31,7 +31,7 @@ dependencies:
   - split
   - extra
   - easyplot
-  - string-quote
+  - string-interpolate
   - mtl
 
 extra-source-files:
@@ -72,7 +72,6 @@ default-extensions:
 library:
   source-dirs:
     - src
-    - embed
 
 
 

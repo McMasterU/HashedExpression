@@ -30,8 +30,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Tuple.HT (fst3, thd3)
 import Debug.Trace (traceShowId)
-import FFTW
 import HashedExpression.Derivative
+import HashedExpression.Embed.FFTW
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
   ( Covector,

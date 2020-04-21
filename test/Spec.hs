@@ -29,19 +29,7 @@ import qualified Test1
 import qualified Test2
 import qualified ToCSpec
 import Var
-import Prelude hiding ((^))
 
---main :: IO ()
---main = do
---    print ""
---    let reFT = xRe . ft
-----    let imFT = xIm . ft
---    let exp = normalize . reFT . reFT $ variable2D @6 @6 "x2"
---        valMap = fromList [("x2", V2D $ listArray ((0, 0), (6 - 1, 6 - 1)) [1 .. ])]
---    (_, vals) <- HashedToCSpec.evaluateCodeC True exp valMap
---    print $ prettifyShow $ eval valMap exp
---    print vals
---    showExp exp
 main :: IO ()
 main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 50} spec
 

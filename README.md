@@ -1,26 +1,6 @@
-# HashedExpression & Symphony   [![CircleCI](https://circleci.com/gh/dalvescb/HashedExpression/tree/master.svg?style=svg)](https://circleci.com/gh/dalvescb/HashedExpression/tree/master)
-Tensor-aware symbolic computing, code generation for optimization problems, and more.
-
-## Overview
-This project contains:
-
-**HashedExpression**, a symbolic computing library designed to work with [tensors](https://en.wikipedia.org/wiki/Tensor) (read: 1D, 2D, 3D, n-D grid of elements):
-- A type-safe Haskell embedded DSL to:
-  - Constructe and manipulate expressions.
-  - Generate code for optimization problems.
-- Doing normalization and simplification.
-- Computing (partial) derivatives.
-- Identifying common sub-expressions, compute executing order and generate fast C code for expressions evaluation. This speeds up solving optimization problems because objective functions and partial derivatives often share computations.
-
-**Symphony**, a standalone language for HashedExpression, see section [Symphony](#symphony)
-
-HashedExpression supports some operations (representing, simplifying, computing derivatives, ...) nicely that we haven't found elsewhere:
-- Piecewise, useful for things like [huber loss](https://en.wikipedia.org/wiki/Huber_loss), which often used for regularization.
-- Fourier transformation, useful for image processing problems.
-
 ## HashedExpression
 
-TODO
+A type-safe symbolic computing Haskell embeded DSL for solving optimization problems.
 
 ## Symphony
 
@@ -57,8 +37,6 @@ let:
 minimize:
   norm2square ((signal +: 0) * (ft x - (re +: im))) + 3000 *. regularization
 ```
-
-
 Running:
 
 ```terminal
@@ -97,11 +75,9 @@ void evaluate_objective() { .. };
 void evaluate_partial_derivatives() { .. } ;
 ...
 ```
-Which you can plug to your favorite optimization solver. Examples of
-optimization solvers (LBFGS, LBFGS-b, Ipopt) using HashedExpression generated `problem.c` can be found
-in `algorithms` directory, e.g: [LBFGS-b](https://github.com/dalvescb/HashedExpression/blob/master/algorithms/lbfgs-b/lbfgs-b.c).
-
-
+Which you can plug to your favorite optimization solver.  
+We provide several optimization solvers (LBFGS, LBFGS-b, Ipopt) adapter in `algorithms` directory,  
+e.g: [LBFGS-b](https://github.com/dalvescb/HashedExpression/blob/master/algorithms/lbfgs-b/lbfgs-b.c).
 
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.

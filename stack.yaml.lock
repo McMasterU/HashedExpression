@@ -12,15 +12,15 @@ packages:
   original:
     hackage: easyplot-1.0
 - completed:
-    hackage: string-quote-0.0.1@sha256:7d91a0ba1be44b2443497c92f2f027cd4580453b893f8b5ebf061e1d85befaf3,758
+    hackage: string-interpolate-0.2.0.0@sha256:a96f7e744f49d795887236319f74b2797fe2cdaadf2d5c4b06845d7a6ba4dbff,2527
     pantry-tree:
-      size: 273
-      sha256: d291028785ad39f8d05cde91594f6b313e35ff76af66c0452ab599b1f1f59e5f
+      size: 616
+      sha256: 4160533ceb37446c054689513054d67093aed5bb1651011d9506dd579c815722
   original:
-    hackage: string-quote-0.0.1
+    hackage: string-interpolate-0.2.0.0
 snapshots:
 - completed:
-    size: 524789
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/18.yaml
-    sha256: 646be71223e08234131c6989912e6011e01b9767bc447b6d466a35e14360bdf2
-  original: lts-14.18
+    size: 492027
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/9.yaml
+    sha256: 11394dc975e96c2fea90f7f2b3229630d46351a092ebcec78f0a56403930b429
+  original: lts-15.9
