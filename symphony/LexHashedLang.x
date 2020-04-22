@@ -168,7 +168,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "[" 15 (b "=" 8 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) (b "<=" 7 N N))) (b "File" 12 (b ">=" 10 (b "==" 9 N N) (b "Dataset" 11 N N)) (b "Random" 14 (b "Pattern" 13 N N) N))) (b "let" 22 (b "constraint" 19 (b "constant" 17 (b "]" 16 N N) (b "constants" 18 N N)) (b "it" 21 (b "constraints" 20 N N) N)) (b "variables" 26 (b "otherwise" 24 (b "minimize" 23 N N) (b "variable" 25 N N)) (b "}" 28 (b "{" 27 N N) N)))
+resWords = b "Random" 15 (b "=" 8 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) (b "<=" 7 N N))) (b "File" 12 (b ">=" 10 (b "==" 9 N N) (b "Dataset" 11 N N)) (b "Pattern" 14 (b "Image" 13 N N) N))) (b "let" 23 (b "constants" 19 (b "]" 17 (b "[" 16 N N) (b "constant" 18 N N)) (b "constraints" 21 (b "constraint" 20 N N) (b "it" 22 N N))) (b "variables" 27 (b "otherwise" 25 (b "minimize" 24 N N) (b "variable" 26 N N)) (b "}" 29 (b "{" 28 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 
@@ -196,7 +196,7 @@ alexStartPos :: Posn
 alexStartPos = Pn 0 1 1
 
 alexMove :: Posn -> Char -> Posn
-alexMove (Pn a l c) '\t' = Pn (a+1)  l     (((c+7) `div` 10)*8+1)
+alexMove (Pn a l c) '\t' = Pn (a+1)  l     (((c+7) `div` 8)*8+1)
 alexMove (Pn a l c) '\n' = Pn (a+1) (l+1)   1
 alexMove (Pn a l c) _    = Pn (a+1)  l     (c+1)
 

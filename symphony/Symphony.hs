@@ -71,7 +71,6 @@ data Context
         consts :: Consts
       }
 
--- | TODO:
 -- 1. Check if there is variables block
 -- 2. Check if variable block is valid (no name clash)
 -- 3. If there is a constant, check if it is valid (no name clash)
@@ -114,10 +113,10 @@ checkSemanticAndGenCode problem = do
           ++ ")"
       )
       (getBeginningPosition parseObjectiveExp)
-  liftIO $ putStrLn "Syntax is correct"
+  liftIO $ putStrLn "Syntax & semantic is correct"
   liftIO $
     putStrLn
-      "Now compute gradient, simplify, eliminate common subexpressions and generate code..."
+      "Construct problem and generate code..."
   let problemGen =
         HS.constructProblem
           (wrap objectiveExp)
@@ -421,6 +420,7 @@ toHEVal shape v =
               ++ " is incompatible with the shape or not supported yet"
     ValRandom -> return $ HU.VNum 3
     ValLiteral num -> return $ HU.VNum (numToDouble num)
+    ValImage imgFile -> undefined -- TODO
 
 -- |  TODO: Check if val is valid w.r.t shape
 checkVal :: HE.Shape -> Val -> Result ()
@@ -469,8 +469,7 @@ constructExp context shapeInfo exp =
           return $ add operand1 operand2
         ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
           let inferredShape =
-                inferShape context exp1 @> inferShape context exp2
-                  @> shapeInfo
+                inferShape context exp1 @> inferShape context exp2 @> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -493,9 +492,7 @@ constructExp context shapeInfo exp =
           checkSameNumType operand1 operand2 "Numtype mismatched: trying to subtract 2 vectors with different numtype" opPos
           return $ add operand1 (scale (HU.aConst [] (-1)) operand2)
         EMul exp1 (TokenMul (opPos, _)) exp2 -> do
-          let inferredShape =
-                inferShape context exp1 @> inferShape context exp2
-                  @> shapeInfo
+          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -510,9 +507,7 @@ constructExp context shapeInfo exp =
             opPos
           return $ multiply operand1 operand2
         EDiv exp1 (TokenDiv (opPos, _)) exp2 -> do
-          let inferredShape =
-                inferShape context exp1 @> inferShape context exp2
-                  @> shapeInfo
+          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -705,6 +700,8 @@ constructExp context shapeInfo exp =
             "normHuber" -> do
               onlyForRealVector operand
               return $ dot (huber delta operand) (HU.aConst (getShape operand) 1)
+            _ -> 
+              throwError $ ErrorWithPosition "Function not found" funPos
 
 inferShape :: Context -> Exp -> Maybe HE.Shape
 inferShape context@Context {..} exp =

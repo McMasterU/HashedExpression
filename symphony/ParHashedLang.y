@@ -55,22 +55,23 @@ import ErrM
   '>=' { PT _ (TS _ 10) }
   'Dataset' { PT _ (TS _ 11) }
   'File' { PT _ (TS _ 12) }
-  'Pattern' { PT _ (TS _ 13) }
-  'Random' { PT _ (TS _ 14) }
-  '[' { PT _ (TS _ 15) }
-  ']' { PT _ (TS _ 16) }
-  'constant' { PT _ (TS _ 17) }
-  'constants' { PT _ (TS _ 18) }
-  'constraint' { PT _ (TS _ 19) }
-  'constraints' { PT _ (TS _ 20) }
-  'it' { PT _ (TS _ 21) }
-  'let' { PT _ (TS _ 22) }
-  'minimize' { PT _ (TS _ 23) }
-  'otherwise' { PT _ (TS _ 24) }
-  'variable' { PT _ (TS _ 25) }
-  'variables' { PT _ (TS _ 26) }
-  '{' { PT _ (TS _ 27) }
-  '}' { PT _ (TS _ 28) }
+  'Image' { PT _ (TS _ 13) }
+  'Pattern' { PT _ (TS _ 14) }
+  'Random' { PT _ (TS _ 15) }
+  '[' { PT _ (TS _ 16) }
+  ']' { PT _ (TS _ 17) }
+  'constant' { PT _ (TS _ 18) }
+  'constants' { PT _ (TS _ 19) }
+  'constraint' { PT _ (TS _ 20) }
+  'constraints' { PT _ (TS _ 21) }
+  'it' { PT _ (TS _ 22) }
+  'let' { PT _ (TS _ 23) }
+  'minimize' { PT _ (TS _ 24) }
+  'otherwise' { PT _ (TS _ 25) }
+  'variable' { PT _ (TS _ 26) }
+  'variables' { PT _ (TS _ 27) }
+  '{' { PT _ (TS _ 28) }
+  '}' { PT _ (TS _ 29) }
   L_quoted { PT _ (TL $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
   L_PDoubleFun { PT _ (T_PDoubleFun _) }
@@ -169,6 +170,7 @@ Val : 'File' '(' String ')' { AbsHashedLang.ValFile $3 }
     | 'Dataset' '(' String ',' String ')' { AbsHashedLang.ValDataset $3 $5 }
     | 'Pattern' '(' KWDataPattern ')' { AbsHashedLang.ValPattern $3 }
     | 'Random' { AbsHashedLang.ValRandom }
+    | 'Image' '(' String ')' { AbsHashedLang.ValImage $3 }
     | Number { AbsHashedLang.ValLiteral $1 }
 Dim :: { Dim }
 Dim : '[' PInteger ']' { AbsHashedLang.Dim $2 }

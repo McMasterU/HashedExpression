@@ -2,9 +2,9 @@ name:                HashedExpression
 version:             0.1.0.0
 github:              "githubuser/HashedExpression"
 license:             BSD3
-author:              "Author name here"
+author:              "McMaster Start Coding"
 maintainer:          "example@example.com"
-copyright:           "2019 Author name here"
+copyright:           "2019 McMaster Start Coding"
 
 
 # Metadata used when publishing your package
@@ -35,7 +35,7 @@ dependencies:
   - mtl
 
 extra-source-files:
-  - lang/*.hs
+  - symphony/*.hs
   - ChangeLog.md
 
 build-tools:
@@ -89,7 +89,7 @@ executables:
   symphony:
     main:                Main.hs
     source-dirs:
-      - lang
+      - symphony
     ghc-options:
       - -threaded
       - -rtsopts
@@ -112,5 +112,4 @@ tests:
       - HashedExpression
       - hspec
       - process
-      - uuid
       - HUnit

@@ -9,6 +9,7 @@ import PrintHashedLang
 import SkelHashedLang
 import Symphony
 import System.Environment (getArgs, getProgName)
+import System.Exit
 
 main :: IO ()
 main = do
@@ -19,9 +20,14 @@ main = do
       putStrLn "Checking your optimization problem...."
       res <- runExceptT $ parse content >>= checkSemanticAndGenCode
       case res of
-        Left error -> print error
+        Left error -> do 
+          print error
+          exitFailure
         Right proceed -> do
           putStrLn "Writing problem.c......"
           proceed "."
           putStrLn "Done"
-    _ -> putStrLn "Please specify a Symphony source file"
+          exitSuccess
+    _ -> do
+      putStrLn "Please specify a Symphony source file"
+      exitFailure

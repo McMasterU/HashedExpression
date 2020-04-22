@@ -174,6 +174,7 @@ instance Print AbsHashedLang.Val where
     AbsHashedLang.ValDataset str1 str2 -> prPrec i 0 (concatD [doc (showString "Dataset"), doc (showString "("), prt 0 str1, doc (showString ","), prt 0 str2, doc (showString ")")])
     AbsHashedLang.ValPattern kwdatapattern -> prPrec i 0 (concatD [doc (showString "Pattern"), doc (showString "("), prt 0 kwdatapattern, doc (showString ")")])
     AbsHashedLang.ValRandom -> prPrec i 0 (concatD [doc (showString "Random")])
+    AbsHashedLang.ValImage str -> prPrec i 0 (concatD [doc (showString "Image"), doc (showString "("), prt 0 str, doc (showString ")")])
     AbsHashedLang.ValLiteral number -> prPrec i 0 (concatD [prt 0 number])
 
 instance Print AbsHashedLang.Dim where

@@ -129,9 +129,7 @@ localOffset :: [Int] -> [Int] -> Int
 localOffset shape indices
   | length shape == length indices =
     sum . zipWith (*) indices . map product . tail . tails $ shape
-  | otherwise =
-    error $
-      "shape and indices are not compatible" ++ show shape ++ show indices
+  | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
 
 -- | Helpers to write more readable code generation
 infixl 1 <<-, +=

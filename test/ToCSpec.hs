@@ -18,8 +18,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.UUID (toString)
-import Data.UUID.V1 (nextUUID)
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Internal.Expression
@@ -45,7 +43,7 @@ import Var
 
 hasFFTW :: IO Bool
 hasFFTW = do
-  fileName <- fmap (toString . fromJust) nextUUID
+  fileName <- generate $ vectorOf 10 $ elements ['A'..'Z']
   let fullFileName = "C/" ++ fileName ++ ".c"
       program = T.intercalate "\n" . map T.pack $ codes
   TIO.writeFile fullFileName program
@@ -69,7 +67,7 @@ evaluateCodeC ::
   IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
-  fileName <- fmap (toString . fromJust) nextUUID
+  fileName <- generate $ vectorOf 10 $ elements ['A'..'Z']
   let fullFileName = "C/" ++ fileName ++ ".c"
   let program = singleExpressionCProgram valMaps exp
   let libs

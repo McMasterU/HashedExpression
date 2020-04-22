@@ -83,6 +83,7 @@ ValFile. Val ::= "File" "(" String ")";
 ValDataset. Val ::= "Dataset" "(" String "," String ")";
 ValPattern. Val ::= "Pattern" "(" KWDataPattern ")";
 ValRandom. Val ::= "Random";
+ValImage. Val ::= "Image" "(" String ")";
 ValLiteral. Val ::= Number;
 
 

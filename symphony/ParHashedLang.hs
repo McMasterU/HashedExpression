@@ -1599,7 +1599,6 @@ myLexer = tokens
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 {-# LINE 1 "<built-in>" #-}
 {-# LINE 18 "<built-in>" #-}
-{-# LINE 1 "/Users/Dandoh/.stack/programs/x86_64-osx/ghc-8.6.5/lib/ghc-8.6.5/include/ghcversion.h" #-}
 
 
 

@@ -85,6 +85,7 @@ transVal x = case x of
   ValDataset string1 string2 -> failure x
   ValPattern kwdatapattern -> failure x
   ValRandom -> failure x
+  ValImage string -> failure x
   ValLiteral number -> failure x
 transDim :: Dim -> Result
 transDim x = case x of

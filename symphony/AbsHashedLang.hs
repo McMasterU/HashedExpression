@@ -76,6 +76,7 @@ data Val
     | ValDataset String String
     | ValPattern KWDataPattern
     | ValRandom
+    | ValImage String
     | ValLiteral Number
   deriving (Eq, Ord, Show, Read)
 
