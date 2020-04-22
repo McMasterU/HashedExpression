@@ -1,12 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
---{-# OPTIONS_GHC -W #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+
+--{-# OPTIONS_GHC -W #-}
 
 module Symphony.Symphony where
 
 import AbsHashedLang
+import Codec.Picture
 import Control.Monad (when)
 import Control.Monad.Except
 import qualified Data.Array as Array
@@ -103,7 +105,6 @@ checkSemantic problem = do
       (getBeginningPosition parseObjectiveExp)
   liftIO $ putStrLn "Syntax & semantic is correct"
   return $ ValidSymphony objectiveExp vars consts css
-
 
 -------------------------------------------------------------------------------
 
@@ -385,4 +386,25 @@ toHEVal shape v =
               ++ " is incompatible with the shape or not supported yet"
     ValRandom -> return $ HU.VNum 3
     ValLiteral num -> return $ HU.VNum (numToDouble num)
-    ValImage imgFile -> undefined -- TODO
+    ValImage imgPath -> do
+      a <- liftIO $ readImage imgPath
+      case a of
+        Left err -> throwError $ GeneralError $ "Error reading image at " <> imgPath <> ":" <> err
+        Right v -> do
+          -- TODO : only support grayscale yet, and this is very slow
+          let img = convertRGB8 v
+          let col = imageWidth img
+              row = imageHeight img
+              toGrayscale :: Pixel8 -> Pixel8 -> Pixel8 -> Double
+              toGrayscale r g b = (0.2126 * (fromIntegral r) + 0.7152 * (fromIntegral g) + 0.0722 * (fromIntegral b)) / 256
+          if (shape /= [row, col])
+            then throwError $ GeneralError $ "image size and variable shape don't match, image size is " ++ show row ++ "x" ++ show col
+            else
+              return $ HU.V2D $
+                Array.listArray
+                  ((0, 0), (row - 1, col - 1))
+                  [ toGrayscale r g b
+                    | i <- [0 .. row - 1],
+                      j <- [0 .. col - 1],
+                      let (PixelRGB8 r g b) = pixelAt img j i
+                  ]
