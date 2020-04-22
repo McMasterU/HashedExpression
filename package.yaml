@@ -97,6 +97,7 @@ executables:
     dependencies:
       - HashedExpression
       - regex-posix
+      - optparse-applicative
 
 
 tests:

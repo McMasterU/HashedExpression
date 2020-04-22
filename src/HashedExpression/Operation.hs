@@ -341,6 +341,7 @@ constant1D val = Expression h (fromList [(h, node)])
     node = ([size], Const val)
     h = hash node
 
+
 constant2D ::
   forall m n.
   (KnownNat m, KnownNat n) =>

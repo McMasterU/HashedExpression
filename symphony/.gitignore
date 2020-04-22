@@ -1,0 +1,8 @@
+*
+!*.hs
+!Symphony
+!Makefile
+!*.cf
+!*.y
+!*.x
+!.gitignore
