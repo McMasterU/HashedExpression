@@ -1,5 +1,9 @@
 module Symphony.Common where
 
+import AbsHashedLang
+import Control.Monad (when)
+import Control.Monad.Except
+import Data.List (intercalate)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -9,11 +13,6 @@ import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Internal.Utils as HU
 import qualified HashedExpression.Operation as HO
-import AbsHashedLang
-import Control.Monad (when)
-import Control.Monad.Except
-import Data.List (intercalate)
-
 
 data CompileError
   = SyntaxError (Int, Int)
@@ -36,7 +35,6 @@ data Context
         consts :: Consts
       }
 
-
 infixl 8 @>
 
 (@>) :: Maybe a -> Maybe a -> Maybe a
@@ -44,7 +42,7 @@ x @> y =
   case x of
     Just _ -> x
     Nothing -> y
-    
+
 -- | Utils
 getShape :: (ExpressionMap, Int) -> HE.Shape
 getShape (mp, n) = HN.retrieveShape n mp
@@ -118,13 +116,13 @@ getBeginningPosition exp =
     EPiecewise (TokenCase (pos, _)) exp _ -> pos
     EUnaryFun (PUnaryFun (pos, _)) _ -> pos
     EDoubleFun (PDoubleFun (pos, _)) _ _ -> pos
-    
+
 retrieveExpFromIdent ::
   Context -> ((Int, Int), String) -> Result (ExpressionMap, Int)
 retrieveExpFromIdent context@Context {..} (pos, name)
   | Just exp <- Map.lookup name declarations = return exp
   | otherwise = throwError $ ErrorWithPosition (name ++ " is undefined") pos
-  
+
 -- |  TODO: Check if val is valid w.r.t shape
 checkVal :: HE.Shape -> Val -> Result ()
 checkVal shape val = return ()

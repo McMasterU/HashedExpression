@@ -186,11 +186,9 @@ constructProblem objectiveFunction varList constraint
   | Just reason <- checkError = ProblemInvalid reason
   | otherwise = -- all the constraints are good
     let boxConstraints = extractBoxConstraint constraint
-        scalarConstraintsWithMp =
-          extractScalarConstraint varsWithShape constraint
+        scalarConstraintsWithMp = extractScalarConstraint varsWithShape constraint
         scalarConstraints = map fst scalarConstraintsWithMp
-        mergedMap =
-          IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
+        mergedMap = IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
         rootNs =
           exIndex f
             : ( map partialDerivativeId problemVariables
@@ -198,19 +196,12 @@ constructProblem objectiveFunction varList constraint
                   ++ concatMap constraintPartialDerivatives scalarConstraints
               )
         -- remove DVar nodes
-        relevantNodes =
-          Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs)
+        relevantNodes = Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs)
         -- expression map
         problemExpressionMap :: ExpressionMap
-        problemExpressionMap =
-          IM.filterWithKey
-            (\nId _ -> Set.member nId relevantNodes)
-            mergedMap
+        problemExpressionMap = IM.filterWithKey (\nId _ -> Set.member nId relevantNodes) mergedMap
         -- mem map
-        problemMemMap =
-          makeProblemMemMap
-            problemExpressionMap
-            (map nodeId problemVariables)
+        problemMemMap = makeProblemMemMap problemExpressionMap (map nodeId problemVariables)
         -- objective id
         problemObjectiveId = fId
      in ProblemValid $
@@ -225,7 +216,6 @@ constructProblem objectiveFunction varList constraint
   where
     -- set of name users consider as variable
     -- list of var names provided by users
-
     userSpecifiedVars = Set.fromList varList
     -- list of all vars name in the expression, they can be variables or fixed values
     expressionVars = Set.fromList . map fst . expressionVarNodes $ f
@@ -246,24 +236,19 @@ constructProblem objectiveFunction varList constraint
     vars = Set.fromList varsList
     -- Map from a variable name to id in the problem's ExpressionMap
     name2Id :: Map String Int
-    name2Id =
-      Map.fromList $ filter ((`Set.member` vars) . fst) $ expressionVarNodes f
+    name2Id = Map.fromList $ filter ((`Set.member` vars) . fst) $ expressionVarNodes f
     variableDatas :: [(String, (Int, Int))]
-    variableDatas =
-      Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
+    variableDatas = Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
     -- From a name to a Variable data
     toVariable :: (String, (Int, Int)) -> Variable
-    toVariable (varName, (nId, pId)) =
-      Variable {varName = varName, nodeId = nId, partialDerivativeId = pId}
+    toVariable (varName, (nId, pId)) = Variable {varName = varName, nodeId = nId, partialDerivativeId = pId}
     -- variables
     problemVariables :: [Variable]
     problemVariables = map toVariable variableDatas
     -- get variable shape
     variableShape :: String -> Shape
     variableShape name =
-      let nId =
-            fromMaybe (error "query non-variable name?") $
-              Map.lookup name name2Id
+      let nId = fromMaybe (error "query non-variable name?") $ Map.lookup name name2Id
        in retrieveShape nId fMp
     -- vars with shape
     varsWithShape = zip varsList (map variableShape varsList)
@@ -301,20 +286,16 @@ constructProblem objectiveFunction varList constraint
               scalarConstraints
           getBound (mp, n) = foldl update (ninf, inf) scalarConstraints
             where
-              getNum val =
-                case val of
-                  VScalar num -> num
-                  VNum num -> num
-                  _ ->
-                    error
-                      "Why scalar constraint is bounded by non-scalar ?"
+              getNum val = case val of
+                VScalar num -> num
+                VNum num -> num
+                _ -> error "Why scalar constraint is bounded by non-scalar ?"
               update (lb, ub) cs
                 | (mp, n) == getExpressionCS cs =
                   case cs of
                     Lower _ val -> (max lb (getNum val), ub)
                     Upper _ val -> (lb, min ub (getNum val))
-                    Between _ (val1, val2) ->
-                      (max lb (getNum val1), min ub (getNum val2))
+                    Between _ (val1, val2) -> (max lb (getNum val1), min ub (getNum val2))
                 | otherwise = (lb, ub)
           vars = map fst varsWithShape
           toScalarConstraint (mp, n) =
@@ -381,11 +362,7 @@ generateReadValuesCode name val address numDoubles =
   where
     readFileText filePath =
       scoped
-        [ "printf(\"Reading "
-            ++ name
-            ++ " from text file "
-            ++ filePath
-            ++ "....\\n\");",
+        [ "printf(\"Reading " ++ name ++ " from text file " ++ filePath ++ "....\\n\");",
           "FILE *fp = fopen(\"" ++ filePath ++ "\", \"r\");",
           "int i;",
           "for (i = 0; i < " ++ show numDoubles ++ "; i++) { ",
@@ -395,21 +372,11 @@ generateReadValuesCode name val address numDoubles =
         ]
     readFileHD5 filePath dataset =
       scoped
-        [ "printf(\"Reading "
-            ++ name
-            ++ " from HDF5 file "
-            ++ filePath
-            ++ " in dataset "
-            ++ dataset
-            ++ "....\\n\");",
+        [ "printf(\"Reading " ++ name ++ " from HDF5 file " ++ filePath ++ " in dataset " ++ dataset ++ "....\\n\");",
           "hid_t file, dset;",
-          "file = H5Fopen (\""
-            ++ filePath
-            ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);",
+          "file = H5Fopen (\"" ++ filePath ++ "\", H5F_ACC_RDONLY, H5P_DEFAULT);",
           "dset = H5Dopen (file, \"" ++ dataset ++ "\", H5P_DEFAULT);",
-          "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, "
-            ++ address
-            ++ ");",
+          "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, " ++ address ++ ");",
           "H5Fclose (file);",
           "H5Dclose (dset);"
         ]
@@ -525,11 +492,7 @@ generateProblemCode valMaps Problem {..}
               ++ "....\\n\");",
             "int i;",
             "for (i = 0; i < " ++ show offset ++ "; i++) {",
-            "  ptr["
-              ++ show offset
-              ++ " + "
-              ++ i
-              ++ "]" <<- "((double) rand() / (RAND_MAX))",
+            "  ptr[" ++ show offset ++ " + " ++ i ++ "]" <<- "((double) rand() / (RAND_MAX))",
             "}"
           ]
       where

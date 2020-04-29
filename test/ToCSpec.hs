@@ -43,7 +43,7 @@ import Var
 
 hasFFTW :: IO Bool
 hasFFTW = do
-  fileName <- generate $ vectorOf 10 $ elements ['A'..'Z']
+  fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
   let fullFileName = "C/" ++ fileName ++ ".c"
       program = T.intercalate "\n" . map T.pack $ codes
   TIO.writeFile fullFileName program
@@ -67,7 +67,7 @@ evaluateCodeC ::
   IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
-  fileName <- generate $ vectorOf 10 $ elements ['A'..'Z']
+  fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
   let fullFileName = "C/" ++ fileName ++ ".c"
   let program = singleExpressionCProgram valMaps exp
   let libs

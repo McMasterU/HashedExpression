@@ -82,9 +82,8 @@ makeMemMap mp = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
 -- Make sure varIds are allocated one after another
 makeProblemMemMap :: ExpressionMap -> [Int] -> MemMap
 makeProblemMemMap mp varIds
-  | any (not . (`IM.member` mp)) varIds = error "var id not in the map"
-  | length nIds /= length originalOrder =
-    error "reordering shouldn't change the number of nodes"
+  | not (all (`IM.member` mp) varIds) = error "var id not in the map"
+  | length nIds /= length originalOrder = error "reordering shouldn't change the number of nodes"
   | otherwise = uncurry MemMap $ foldl' (mmUpdate mp) (IM.empty, 0) nIds
   where
     varSet = Set.fromList varIds
@@ -155,15 +154,7 @@ forWith iter shape (initCodes, codes, afterCodes)
     ["{"]
       ++ space 2 initCodes
       ++ [ "  int " ++ iter ++ ";",
-           "  for ("
-             ++ iter
-             ++ " = 0; "
-             ++ iter
-             ++ " < "
-             ++ show (product shape)
-             ++ "; "
-             ++ iter
-             ++ "++) {"
+           "  for (" ++ iter ++ " = 0; " ++ iter ++ " < " ++ show (product shape) ++ "; " ++ iter ++ "++) {"
          ]
       ++ space 4 codes
       ++ ["  }"]

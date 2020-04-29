@@ -18,6 +18,7 @@ import qualified HashedExpression.Operation as HO
 import Symphony.Common
 
 -------------------------------------------------------------------------------
+
 -- | Infer the shape of expression with given context
 inferShape :: Context -> Exp -> Maybe HE.Shape
 inferShape context@Context {..} exp =
