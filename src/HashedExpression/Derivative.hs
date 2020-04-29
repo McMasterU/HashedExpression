@@ -1,11 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
-
--- |
--- This module is for computing exterior derivative
 module HashedExpression.Derivative
   ( exteriorDerivative,
     derivativeAllVars,

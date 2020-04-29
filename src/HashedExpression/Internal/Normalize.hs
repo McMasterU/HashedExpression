@@ -1,8 +1,3 @@
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
-
--- | For normalizeing expressions
 module HashedExpression.Internal.Normalize
   ( normalize,
     normalizingTransformation,
@@ -176,10 +171,8 @@ complexNumRules =
     (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z),
     negate (x +: y) |.~~~~~~> negate x +: negate y,
     (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero,
-    restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct
-      ~* ((x * z - y * w) +: (x * w + y * z)),
-    restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum
-      ~+ ((x + u) +: (y + v)),
+    restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~* ((x * z - y * w) +: (x * w + y * z)),
+    restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v)),
     (x +: y) *. (z +: w) |.~~~~~~> (x *. z - y *. w) +: (x *. w + y *. z),
     (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z + y <.> w) +: (y <.> z - x <.> w)
   ]
@@ -191,8 +184,7 @@ dotProductRules =
     x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y),
     x <.> (s *. y) |. isCovector s ~~~~~~> s *. (x <.> y),
     x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y), -- Conjugate if the scalar is complex
-    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y)
-      ~~~~~~> (x * y)
+    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y)
   ]
 
 -- | Rules of distributive over sum
@@ -234,8 +226,7 @@ fourierTransformRules =
 -- | Rules of piecewise
 piecewiseRules :: [Substitution]
 piecewiseRules =
-  [ piecewise_ condition branches |. allTheSame branches
-      ~~~~~~> headL branches
+  [ piecewise_ condition branches |. allTheSame branches ~~~~~~> headL branches
   ]
 
 -- | Rules of exponent and log
@@ -262,8 +253,7 @@ rotateRules =
     rotate amount (sum xs) |.~~~~~~> sum (mapL (rotate amount) xs),
     rotate amount (product xs) |.~~~~~~> product (mapL (rotate amount) xs),
     rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y,
-    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2
-      ~~~~~~> (x <.> y)
+    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y)
   ]
 
 -- | 1 and 0 rules for Sum and Mul since they can involve many operands
@@ -448,7 +438,7 @@ combineRealScalarRules :: Modification
 combineRealScalarRules exp@(mp, n)
   | Mul R ns <- retrieveNode n mp,
     let extracted = map extract ns,
-    any isJust . map snd $ extracted =
+    any (isJust . snd) extracted =
     let combinedScalars = product_ . catMaybes $ map snd extracted
         combinedScalees = product_ $ map fst extracted
      in combinedScalars *. combinedScalees

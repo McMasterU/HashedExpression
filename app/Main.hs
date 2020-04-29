@@ -18,7 +18,8 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
+import Data.String.Interpolate
 
 main :: IO ()
 main = do
-  print "hello world"
+  putStrLn [i|hello world|]
