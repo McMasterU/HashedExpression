@@ -77,7 +77,7 @@ evaluateCodeC withFT exp valMaps = do
   readProcess "gcc" ([fullFileName, "-o", "C/" ++ fileName] ++ libs) ""
   let runCommand = "C/" ++ fileName
   (exitCode, output, _) <- readProcessWithExitCode runCommand [] ""
-  readProcess "rm" [fullFileName] ""
+--  readProcess "rm" [fullFileName] ""
   readProcess "rm" ["C/" ++ fileName] ""
   return (exitCode, output)
 
@@ -213,18 +213,18 @@ spec =
     specify
       "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)"
       $ property prop_CEqualInterpScalarR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
-      $ property prop_CEqualInterpScalarC
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
-      $ property prop_CEqualInterpOneR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
-      $ property prop_CEqualInterpOneC
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
-      $ property prop_CEqualInterpTwoR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
-      $ property prop_CEqualInterpTwoC
+--    specify
+--      "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
+--      $ property prop_CEqualInterpScalarC
+--    specify
+--      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
+--      $ property prop_CEqualInterpOneR
+--    specify
+--      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
+--      $ property prop_CEqualInterpOneC
+--    specify
+--      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
+--      $ property prop_CEqualInterpTwoR
+--    specify
+--      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
+--      $ property prop_CEqualInterpTwoC

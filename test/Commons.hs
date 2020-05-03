@@ -101,7 +101,7 @@ genValMap vars = do
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
 shouldApprox x y = assertBool msg (x ~= y)
   where
-    msg = "Expected: " ++ prettifyShow x ++ "\nGot: " ++ prettifyShow y
+    msg = "Expected: " ++ prettifyShow y ++ "\nGot: " ++ prettifyShow x
 
 infix 1 `shouldApprox`
 

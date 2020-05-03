@@ -18,6 +18,7 @@ import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression,
 import HashedExpression.Internal.Inner (containsFTNode, topologicalSortManyRoots, unwrap)
 import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
 import HashedExpression.Internal.Utils (Val (..), ValMaps, showT)
+import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
 
@@ -26,31 +27,22 @@ data CSimpleConfig = CSimpleConfig
 
 type Address = Int
 
+type NodeID = Int
+
 data CSimpleCodegen
   = CSimpleCodegen
       { expressionMap :: ExpressionMap,
-        address :: Int -> Address,
-        memSize :: Int
+        address :: NodeID -> Address,
+        memSize :: Int,
+        (!!) :: NodeID -> Text -> Text,
+        imAt :: NodeID -> Text -> Text
       }
 
 -------------------------------------------------------------------------------
 
 -- | Helpers for code generation
-infix 1 <~
-
-(<~) :: Text -> Text -> Text
-(<~) a b = [i|#{a} = #{b};|]
-
 scoped :: Code -> Code
 scoped codes = ["{"] ++ indent 2 codes ++ ["}"]
-
-ptr :: CSimpleCodegen -> Int -> Text -> Text
-ptr (CSimpleCodegen mp address _) nID offsetVal =
-  let offset
-        | offsetVal == "" = ""
-        | offsetVal == "0" = ""
-        | otherwise = " + " <> offsetVal
-   in [i|ptr[#{address nID}#{offset}]|]
 
 -- | Helper functions to generate codes
 for :: Text -> Int -> Code -> Code
@@ -85,7 +77,9 @@ instance Codegen CSimpleCodegen CSimpleConfig where
     CSimpleCodegen
       { expressionMap = mp,
         address = addressMap,
-        memSize = totalSize
+        memSize = totalSize,
+        (!!) = access,
+        imAt = imAt
       }
     where
       (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
@@ -99,119 +93,113 @@ instance Codegen CSimpleCodegen CSimpleConfig where
       addressMap nID
         | Just offset <- IM.lookup nID memMap = offset
         | otherwise = error "Node ID doesn't exist in address map"
+      access :: Int -> Text -> Text
+      access nID offsetVal =
+        let offset
+              | offsetVal == "" = ""
+              | offsetVal == "0" = ""
+              | otherwise = " + " <> offsetVal
+         in [i|ptr[#{addressMap nID}#{offset}]|]
+      imAt nID offset = access nID $ offset <> " + " <> showT (product (retrieveShape nID mp))
 
   -------------------------------------------------------------------------------
   assigningValues :: CSimpleCodegen -> ValMaps -> Code
-  assigningValues cgen@(CSimpleCodegen mp address _) valMaps = concatMap codesForVar vars
+  assigningValues CSimpleCodegen {..} valMaps = concatMap codesForVar vars
     where
-      at = ptr cgen
       [i, j, k, nooffset] = ["j", "k", "l", "0"]
       vars :: [(Int, String)]
       vars =
         let toVar nId
-              | Var varName <- retrieveNode nId mp = Just (nId, varName)
+              | Var varName <- retrieveNode nId expressionMap = Just (nId, varName)
               | otherwise = Nothing
-         in mapMaybe toVar . IM.keys $ mp
+         in mapMaybe toVar . IM.keys $ expressionMap
       codesForVar :: (Int, String) -> Code
       codesForVar (n, varName) =
         case Map.lookup varName valMaps of
-          Just (VScalar val) -> [n `at` nooffset <~ showT val]
+          Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
           Just (V1D array1d) ->
-            let assignIndex id = [n `at` (showT id) <~ (showT (array1d ! id))]
+            let assignIndex id = [[I.i|#{n !! (showT id)} = #{array1d ! id};|]]
              in concatMap assignIndex $ indices array1d
           Just (V2D array2d) ->
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2) =
-                  [n `at` showT (localOffset shape [id1, id2]) <~ showT (array2d ! (id1, id2))]
+            let shape = retrieveShape n expressionMap
+                assignIndex (id1, id2) = [[I.i|#{n !! showT (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
              in concatMap assignIndex $ indices array2d
           Just (V3D array3d) ->
-            let shape = retrieveShape n mp
-                assignIndex (id1, id2, id3) =
-                  [n `at` showT (localOffset shape [id1, id2, id3]) <~ showT (array3d ! (id1, id2, id2))]
+            let shape = retrieveShape n expressionMap
+                assignIndex (id1, id2, id3) = [[I.i|#{n !! showT (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
              in concatMap assignIndex $ indices array3d
           _ -> []
 
   -------------------------------------------------------------------------------
   evaluating :: CSimpleCodegen -> [Int] -> Code
-  evaluating cgen@(CSimpleCodegen mp address _) rootIDs =
-    concatMap genCode $ topologicalSortManyRoots (mp, rootIDs)
+  evaluating CSimpleCodegen {..} rootIDs =
+    concatMap genCode $ topologicalSortManyRoots (expressionMap, rootIDs)
     where
-      shapeOf nID = retrieveShape nID mp
-      elementTypeOf nID = retrieveElementType nID mp
+      shapeOf nID = retrieveShape nID expressionMap
+      elementTypeOf nID = retrieveElementType nID expressionMap
       addressOf :: Int -> Text
       addressOf nID = [I.i|(ptr + #{address nID})|]
-      at = ptr cgen
-      reAt = at
-      imAt nID offset = ptr cgen nID $ offset <> " + " <> showT (product (retrieveShape nID mp))
       [i, j, k, nooffset] = ["j", "k", "l", "0"]
+      len nID = product (retrieveShape nID expressionMap)
       genCode :: Int -> Code
       genCode n =
-        let (shape, node) = retrieveInternal n mp
-            bound = product shape
+        let (shape, node) = retrieveInternal n expressionMap
          in case node of
               Var _ -> []
-              Const _ -> []
+              Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
               Sum R args ->
-                let sumAt i = T.intercalate " + " $ map (`at` i) args
-                 in for i bound [n `at` i <~ sumAt i]
+                let sumAt i = T.intercalate " + " $ map (!! i) args
+                 in for i (len n) [[I.i|#{n !! i} = #{sumAt i};|]]
               Mul R args ->
-                let prodAt i = T.intercalate " * " $ map (`at` i) args
-                 in for i bound [n `at` i <~ prodAt i]
-              Power x arg ->
-                let powerAt i =
-                      "pow(" <> arg `at` i <> "," <> showT x <> ")"
-                 in for i bound [n `at` i <~ powerAt i]
-              Neg R arg ->
-                let negAt i = "-" <> arg `at` i
-                 in for i bound [n `at` i <~ negAt i]
-              Scale R scalar arg ->
-                let scaleAt i = (scalar `at` nooffset) <> "*" <> arg `at` i
-                 in for i bound [n `at` i <~ scaleAt i]
-              Div arg1 arg2 ->
-                let divAt i = arg1 `at` i <> " / " <> arg2 `at` i
-                 in for i bound [n `at` i <~ divAt i]
-              Sqrt arg -> for i bound [n `at` i <~ "sqrt(" <> arg `at` i <> ")"]
-              Sin arg -> for i bound [n `at` i <~ "sin(" <> arg `at` i <> ")"]
-              Cos arg -> for i bound [n `at` i <~ "cos(" <> arg `at` i <> ")"]
-              Tan arg -> for i bound [n `at` i <~ "tan(" <> arg `at` i <> ")"]
-              Exp arg -> for i bound [n `at` i <~ "exp(" <> arg `at` i <> ")"]
-              Log arg -> for i bound [n `at` i <~ "log(" <> arg `at` i <> ")"]
-              Sinh arg -> for i bound [n `at` i <~ "sinh(" <> arg `at` i <> ")"]
-              Cosh arg -> for i bound [n `at` i <~ "cosh(" <> arg `at` i <> ")"]
-              Tanh arg -> for i bound [n `at` i <~ "tanh(" <> arg `at` i <> ")"]
-              Asin arg -> for i bound [n `at` i <~ "asin(" <> arg `at` i <> ")"]
-              Acos arg -> for i bound [n `at` i <~ "acos(" <> arg `at` i <> ")"]
-              Atan arg -> for i bound [n `at` i <~ "atan(" <> arg `at` i <> ")"]
-              Asinh arg -> for i bound [n `at` i <~ "asinh(" <> arg `at` i <> ")"]
-              Acosh arg -> for i bound [n `at` i <~ "acosh(" <> arg `at` i <> ")"]
-              Atanh arg -> for i bound [n `at` i <~ "atanh(" <> arg `at` i <> ")"]
+                let prodAt i = T.intercalate " * " $ map (!! i) args
+                 in for i (len n) [[I.i|#{n !! i} = #{prodAt i};|]]
+              Power x arg -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
+              Neg R arg -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
+              Scale R scalar arg -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
+              Div arg1 arg2 -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
+              Sqrt arg -> for i (len n) [[I.i|#{n !! i} = sqrt(#{arg !! i});|]]
+              Sin arg -> for i (len n) [[I.i|#{n !! i} = sin(#{arg !! i});|]]
+              Cos arg -> for i (len n) [[I.i|#{n !! i} = cos(#{arg !! i});|]]
+              Tan arg -> for i (len n) [[I.i|#{n !! i} = tan(#{arg !! i});|]]
+              Exp arg -> for i (len n) [[I.i|#{n !! i} = exp(#{arg !! i});|]]
+              Log arg -> for i (len n) [[I.i|#{n !! i} = log(#{arg !! i});|]]
+              Sinh arg -> for i (len n) [[I.i|#{n !! i} = sinh(#{arg !! i});|]]
+              Cosh arg -> for i (len n) [[I.i|#{n !! i} = cosh(#{arg !! i});|]]
+              Tanh arg -> for i (len n) [[I.i|#{n !! i} = tanh(#{arg !! i});|]]
+              Asin arg -> for i (len n) [[I.i|#{n !! i} = asin(#{arg !! i});|]]
+              Acos arg -> for i (len n) [[I.i|#{n !! i} = acos(#{arg !! i});|]]
+              Atan arg -> for i (len n) [[I.i|#{n !! i} = atan(#{arg !! i});|]]
+              Asinh arg -> for i (len n) [[I.i|#{n !! i} = asinh(#{arg !! i});|]]
+              Acosh arg -> for i (len n) [[I.i|#{n !! i} = acosh(#{arg !! i});|]]
+              Atanh arg -> for i (len n) [[I.i|#{n !! i} = atanh(#{arg !! i});|]]
               RealImag arg1 arg2 ->
-                for i bound [n `reAt` i <~ arg1 `at` i]
-                  ++ for i bound [n `imAt` i <~ arg2 `at` i]
+                for i (len n) [[I.i|#{n !! i} = #{arg1 !! i};|]]
+                  ++ for i (len n) [[I.i|#{n `imAt` i} = #{arg2 !! i};|]]
               InnerProd R arg1 arg2
-                | null (shapeOf arg1) ->
-                  [n `at` nooffset <~ arg1 `at` nooffset <> "*" <> arg2 `at` nooffset]
+                | null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
                 | otherwise ->
-                  let initCodes = ["double acc" <~ "0"]
-                      codes = for i bound ["acc +=" <> arg1 `at` i <> " * " <> arg2 `at` i]
-                      afterCodes = [n `at` nooffset <~ "acc"]
+                  let initCodes = [[I.i|double acc = 0;|]]
+                      codes = for i (len arg1) [[I.i|acc += #{arg1 !! i} * #{arg2 !! i};|]]
+                      afterCodes = [[I.i|#{n !! nooffset} = acc;|]]
                    in scoped $ initCodes ++ codes ++ afterCodes
               Piecewise marks condition branches ->
                 let m : ms = map showT marks
                     Just (b : bs, lst) = viewR branches
                     elseifEach (m, b) =
                       elseif
-                        (condition `at` i <> " <= " <> m)
-                        [n `at` i <~ b `at` i]
-                 in for i bound $
-                      if_ (condition `at` i <> " <= " <> m) [n `at` i <~ b `at` i]
-                        <> concatMap elseifEach (zip ms bs)
-                        <> else_ [n `at` i <~ lst `at` i]
+                        [I.i|#{condition !! i} <= #{m}|]
+                        [[I.i|#{n !! i} = #{b !! i};|]]
+                 in for i (len n) $
+                      if_
+                        [I.i|#{condition !! i} <= #{m}|]
+                        [[I.i|#{n !! i} = #{b !! i};|]]
+                        ++ concatMap elseifEach (zip ms bs)
+                        ++ else_ [[I.i|#{n !! i} = #{lst !! i};|]]
               Rotate [amount] arg ->
                 let [size] = shape
                  in for i size $
                       [ [I.i|int ai = (#{i} - #{amount} + #{size}) % #{size};|],
-                        n `at` i <~ arg `at` "ai"
+                        [I.i|#{n !! i} = #{arg !! "ai"};|]
                       ]
               Rotate [amount1, amount2] arg ->
                 let [size1, size2] = shape
@@ -219,7 +207,7 @@ instance Codegen CSimpleCodegen CSimpleConfig where
                  in for i size1 $ for j size2 $
                       [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
                         [I.i|int aj = (#{i} - #{amount2} + #{size2}) % #{size2};|],
-                        n `at` toIndex i j <~ arg `at` toIndex "ai" "aj"
+                        [I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]
                       ]
               Rotate [amount1, amount2, amount3] arg ->
                 let [size1, size2, size3] = shape
@@ -228,7 +216,7 @@ instance Codegen CSimpleCodegen CSimpleConfig where
                       [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
                         [I.i|int aj = (#{i} - #{amount2} + #{size2}) % #{size2};|],
                         [I.i|int ak = (#{i} - #{amount3} + #{size3}) % #{size3}'|],
-                        n `at` toIndex i j k <~ arg `at` toIndex "ai" "aj" "ak"
+                        [I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]
                       ]
               TwiceReFT arg ->
                 case shape of
@@ -238,6 +226,14 @@ instance Codegen CSimpleCodegen CSimpleConfig where
                 case shape of
                   [size] -> [[I.i|im_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
                   [size1, size2] -> [[I.i|im_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
+              ReFT arg ->
+                case shape of
+                  [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, REAL);|]]
+                  [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, REAL);|]]
+              ImFT arg ->
+                case shape of
+                  [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, IMAG);|]]
+                  [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, IMAG);|]]
               node -> error $ show node
 
 -------------------------------------------------------------------------------
@@ -260,20 +256,17 @@ singleExpressionCProgram valMaps expr =
     bound = product (retrieveShape n mp)
     et = retrieveElementType n mp
     codeGen = initCodegen (CodegenInit mp []) CSimpleConfig
-    at = ptr codeGen
-    reAt = at
-    imAt nID offset = ptr codeGen nID $ offset <> " + " <> showT (product (retrieveShape nID mp))
     [i, j, k, nooffset] = ["j", "k", "l", "0"]
-    initMemory = ["double *ptr" <~ "malloc(sizeof(double) * " <> showT (memSize codeGen) <> ");"]
+    initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{memSize codeGen});|]]
     -- assign value to variables
     assignVals = assigningValues codeGen valMaps
     -- codes to compute
     codes = evaluating codeGen [n]
     -- print the value of expression
     printValue
-      | et == R = for i bound ["printf(\"%f \"," <> n `at` i <> ");"]
+      | et == R = for i bound [[I.i|printf("%f", #{(!!) codeGen n i});|]]
       | et == C =
-        for i bound ["printf(\"%f \"," <> n `reAt` i <> ");"]
-          ++ ["printf(\"\\n\");"]
-          ++ for i bound ["printf(\"%f \"," <> n `imAt` i <> ");"]
+        for i bound [[I.i|printf("%f", #{(!!) codeGen n i});|]]
+          ++ [[I.i|printf("\n");|]]
+          ++ for i bound [[I.i|printf("%f", #{imAt codeGen n i});|]]
     releaseMemory = ["free(ptr);"]
