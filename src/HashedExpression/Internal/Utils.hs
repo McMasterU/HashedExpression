@@ -10,6 +10,7 @@ import Data.Maybe
 import qualified Data.Set as Set
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
+import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -214,6 +215,10 @@ times a b = Prelude.product [a, b]
 
 plus :: (Num a) => a -> a -> a
 plus a b = Prelude.sum [a, b]
+
+
+showT :: Show a => a -> T.Text
+showT = T.pack . show
 
 -------------------------------------------------------------------------------
 

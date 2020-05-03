@@ -16,7 +16,7 @@ data CodegenInit
       }
 
 -- | The typeclass for code generating
-class Codegen codegen configs | configs -> codegen where
+class Codegen codegen configs | configs -> codegen, codegen -> configs where
   -- Init all necessary infos and data for later code gen
   initCodegen :: CodegenInit -> configs -> codegen
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module HashedExpression.Derivative
   ( exteriorDerivative,
     derivativeAllVars,

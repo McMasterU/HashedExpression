@@ -32,7 +32,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Internal.ToC
+import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Prettify (showExp, showExpDebug)
@@ -73,7 +73,7 @@ evaluateCodeC withFT exp valMaps = do
   let libs
         | withFT = ["-lm", "-lfftw3"]
         | otherwise = ["-lm"]
-  TIO.writeFile fullFileName (T.intercalate "\n" . map T.pack $ program)
+  TIO.writeFile fullFileName (T.intercalate "\n" program)
   readProcess "gcc" ([fullFileName, "-o", "C/" ++ fileName] ++ libs) ""
   let runCommand = "C/" ++ fileName
   (exitCode, output, _) <- readProcessWithExitCode runCommand [] ""
@@ -117,8 +117,8 @@ prop_CEqualInterpScalarC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      writeFile "C/main.c"
-        $ intercalate "\n" . singleExpressionCProgram valMaps
+      TIO.writeFile "C/main.c"
+        $ T.intercalate "\n" . singleExpressionCProgram valMaps
         $ normalizedExp
       (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
       let ([im], [re]) = readC outputCodeC
@@ -153,8 +153,8 @@ prop_CEqualInterpOneC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      writeFile "C/main.c"
-        $ intercalate "\n" . singleExpressionCProgram valMaps
+      TIO.writeFile "C/main.c"
+        $ T.intercalate "\n" . singleExpressionCProgram valMaps
         $ normalizedExp
       (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
       let (re, im) = readC outputCodeC
@@ -191,8 +191,8 @@ prop_CEqualInterpTwoC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      writeFile "C/main.c"
-        $ intercalate "\n" . singleExpressionCProgram valMaps
+      TIO.writeFile "C/main.c"
+        $ T.intercalate "\n" . singleExpressionCProgram valMaps
         $ normalizedExp
       (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
       let (re, im) = readC outputCodeC

@@ -35,15 +35,15 @@ main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 50} spec
 
 spec :: Spec
 spec = do
-  describe "HashedSolverSpec" SolverSpec.spec
-  describe "NormalizeSpec" NormalizeSpec.spec
-  describe "Test1" Test1.spec
-  describe "Test2" Test2.spec
-  describe "HashedInterpSpec" InterpSpec.spec
-  describe "HashedCollectSpec" CollectSpec.spec
+--  describe "HashedSolverSpec" SolverSpec.spec
+--  describe "NormalizeSpec" NormalizeSpec.spec
+--  describe "Test1" Test1.spec
+--  describe "Test2" Test2.spec
+--  describe "HashedInterpSpec" InterpSpec.spec
+--  describe "HashedCollectSpec" CollectSpec.spec
   describe "HashedToCSpec" ToCSpec.spec
-  describe "StructureSpec" StructureSpec.spec
-  describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
-  describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
-  describe "NormalizeEval.OneRSpec" OneRSpec.spec
-  describe "NormalizeEval.OneCSpec" OneCSpec.spec
+--  describe "StructureSpec" StructureSpec.spec
+--  describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
+--  describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec
+--  describe "NormalizeEval.OneRSpec" OneRSpec.spec
+--  describe "NormalizeEval.OneCSpec" OneCSpec.spec
