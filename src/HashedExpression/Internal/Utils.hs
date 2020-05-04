@@ -208,14 +208,21 @@ valueFromHaskell val =
     V2D vs -> True
     V3D vs -> True
     _ -> False
-
--- | Prelude version of * and +
-times :: (Num a) => a -> a -> a
-times a b = Prelude.product [a, b]
-
-plus :: (Num a) => a -> a -> a
-plus a b = Prelude.sum [a, b]
-
+    
+-- |
+compatible :: Shape -> Val -> Bool
+compatible shape v =
+  case (shape, v) of
+    (_, VNum _) -> True
+    (_, VFile _) -> True
+    ([], VScalar val) -> True
+    ([x], V1D arr1d)
+      | bounds arr1d == (0, x - 1) -> True
+    ([x, y], V2D arr2d)
+      | bounds arr2d == ((0, 0), (x - 1, y - 1)) -> True
+    ([x, y, z], V3D arr3d)
+      | bounds arr3d == ((0, 0, 0), (x - 1, y - 1, z - 1)) -> True
+    _ -> False
 
 showT :: Show a => a -> T.Text
 showT = T.pack . show

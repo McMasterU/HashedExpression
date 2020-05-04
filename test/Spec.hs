@@ -32,50 +32,16 @@ import qualified ToCSpec
 import ToCSpec (evaluateCodeC)
 import Var
 
-main1 = do
-  let exp = Expression {exIndex = 7082896168417259, exMap = IM.fromList [(77528807, ([10], Var "d1")), (87820973, ([10], Var "v1")), (7082896168417259, ([], InnerProd R 87820973 77528807))]} :: Expression Scalar R
-  let valMap =
-        fromList
-          [ ( "d1",
-              V1D
-                ( array
-                    (0, 9)
-                    [ (0, 1.5958172544605354),
-                      (1, 1.314548693539582),
-                      (2, 1.1786498848347708),
-                      (3, 7.20375985180917),
-                      (4, 7.1317920688760905),
-                      (5, 7.204361565242639),
-                      (6, 4.789975032287655),
-                      (7, 9.475451912236897),
-                      (8, 5.787377921728574),
-                      (9, 8.978387621239188)
-                    ]
-                )
-            ),
-            ( "v1",
-              V1D
-                ( array
-                    (0, 9)
-                    [ (0, 0.16742794997767455),
-                      (1, 2.8570668339167566),
-                      (2, 6.280186667663374),
-                      (3, 3.8329879757437313),
-                      (4, 7.89320260393878),
-                      (5, 4.602021181179035),
-                      (6, 6.022001999697775),
-                      (7, 3.158035052947157),
-                      (8, 2.2984982879702223),
-                      (9, 7.3226890759137095)
-                    ]
-                )
-            )
-          ]
-  showExp $ normalize exp
-  evaluateCodeC True (normalize exp) valMap
-  print "DONE"
+--main = do
+--  let exp = (Expression {exIndex = 89536334, exMap = IM.fromList [(89536334,([10],Var "y1"))]}) ::
+--        Expression Default1D R
+--  let valMap = fromList [("y1",V1D (array (0,9) [(0,0.0),(1,0.0),(2,0.0),(3,0.0),(4,0.0),(5,0.0),(6,0.0),(7,0.0),(8,0.0),(9,0.0)]))]
+--  showExp $ normalize exp
+--  print $ eval valMap exp
+--  (_, val) <- evaluateCodeC True (normalize exp) valMap
+--  print $ val
 
---main :: IO ()
+main :: IO ()
 main = hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 50} spec
 
 spec :: Spec

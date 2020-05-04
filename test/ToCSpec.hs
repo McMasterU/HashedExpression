@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
+import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Expression
   ( C,
     DimensionType,
@@ -32,7 +33,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Prettify (showExp, showExpDebug)
@@ -59,12 +59,7 @@ hasFFTW = do
     codes = ["#include <fftw3.h>", "int main() {}"]
 
 -- |
-evaluateCodeC ::
-  (DimensionType d, NumType et) =>
-  Bool ->
-  Expression d et ->
-  ValMaps ->
-  IO (ExitCode, String)
+evaluateCodeC :: (DimensionType d, NumType et) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
@@ -77,7 +72,7 @@ evaluateCodeC withFT exp valMaps = do
   readProcess "gcc" ([fullFileName, "-o", "C/" ++ fileName] ++ libs) ""
   let runCommand = "C/" ++ fileName
   (exitCode, output, _) <- readProcessWithExitCode runCommand [] ""
---  readProcess "rm" [fullFileName] ""
+  readProcess "rm" [fullFileName] ""
   readProcess "rm" ["C/" ++ fileName] ""
   return (exitCode, output)
 
@@ -213,18 +208,18 @@ spec =
     specify
       "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)"
       $ property prop_CEqualInterpScalarR
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
---      $ property prop_CEqualInterpScalarC
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
---      $ property prop_CEqualInterpOneR
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
---      $ property prop_CEqualInterpOneC
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
---      $ property prop_CEqualInterpTwoR
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
---      $ property prop_CEqualInterpTwoC
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
+      $ property prop_CEqualInterpScalarC
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
+      $ property prop_CEqualInterpOneR
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
+      $ property prop_CEqualInterpOneC
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
+      $ property prop_CEqualInterpTwoR
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
+      $ property prop_CEqualInterpTwoC
