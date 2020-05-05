@@ -79,6 +79,20 @@ Which you can plug to your favorite optimization solver.
 We provide several optimization solvers (LBFGS, LBFGS-b, Ipopt) adapter in `algorithms` directory,  
 e.g: [LBFGS-b](https://github.com/dalvescb/HashedExpression/blob/master/algorithms/lbfgs-b/lbfgs-b.c).
 
+### Usage Docker
+To use symphony through docker (if you wish to avoid installing stack), build the docker image with
+```terminal
+$ docker build . -t symphony
+```
+Then run the docker container. In order to provide the input file to the container, you'll have to link 
+the path (say */some/path/*) containing the the symphony file on your host machine to the */target* path
+in the container
+```terminal
+docker run -v /some/path:/target symphony
+```
+Copy the resulting */some/path/problem.c* into your chosen *alogirthms* directory (i.e ipopt, lbfgs, etc),
+which contain their own Dockerfile's for executing the optimization problem (see respective README's)
+
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.
 
