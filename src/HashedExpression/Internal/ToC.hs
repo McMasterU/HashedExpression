@@ -586,7 +586,7 @@ singleExpressionCProgram valMaps expr =
     -- assign value to variables
     assignVals = generateAssignValueCodes valMaps memMap mp
     -- codes to compute
-    codes = generateEvaluatingCodes memMap (exMap expr, [exIndex expr])
+    codes = generateEvaluatingCodes memMap (exMap expr, [exRootID expr])
     -- print the value of expression
     printValue
       | et == R = for i n ["printf(\"%f \"," ++ n `at` i ++ ");"]

@@ -120,28 +120,28 @@ data OperationOption
   | Condition (ConditionArg -> [BranchArg] -> Node)
 
 -- |
-unwrap :: Expression d et -> (ExpressionMap, Int)
+unwrap :: Expression d et -> (ExpressionMap, NodeID)
 unwrap (Expression n mp) = (mp, n)
 
-wrap :: (ExpressionMap, Int) -> Expression d et
+wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
 -- |
-highestShape :: [(ExpressionMap, Int)] -> Shape
+highestShape :: [(ExpressionMap, NodeID)] -> Shape
 highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
 
 highestShapeWithContext :: ExpressionMap -> [Int] -> Shape
 highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
 
 -- | R < C < Covector
-highestElementType :: [(ExpressionMap, Int)] -> ET
+highestElementType :: [(ExpressionMap, NodeID)] -> ET
 highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 
 highestElementTypeWithContext :: ExpressionMap -> [Int] -> ET
 highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
 
 -- | The apply function that is used everywhere
-apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+apply :: OperationOption -> [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 apply option exprs =
   addEntryWithContext mergedMap mergedMap option (map snd exprs)
   where
@@ -153,7 +153,7 @@ addEntryWithContext ::
   ExpressionMap ->
   OperationOption ->
   [Int] ->
-  (ExpressionMap, Int)
+  (ExpressionMap, NodeID)
 addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
   let shape =
         case shapeOutcome of
@@ -181,10 +181,10 @@ addEntryWithContext contextMp mp (Condition op) ns@(conditionN : branchesNs) =
    in addInternal mp (shape, node)
 
 -- | General multiplication and sum
-mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 mulMany = apply $ naryET Mul ElementDefault
 
-sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 sumMany = apply $ naryET Sum ElementDefault
 
 -- |
@@ -263,7 +263,7 @@ diffConst shape val = ExpressionDiff mp n
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
-topologicalSort :: (ExpressionMap, Int) -> [Int]
+topologicalSort :: (ExpressionMap, NodeID) -> [Int]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
 -- | Topological sort, but with many roots
@@ -303,14 +303,14 @@ data ExpressionDiff
   deriving (Eq, Ord, Show)
 
 -- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
-type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
+type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 
 -- | Change w.r.t original expression map
 type Change = ExpressionMap -> ExpressionDiff
 
 -- | Modification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
 -- the new index of the root expression) between the modified and original expression
-type Modification = (ExpressionMap, Int) -> Change
+type Modification = (ExpressionMap, NodeID) -> Change
 
 -- |
 fromModification :: Modification -> ((ExpressionMap, Int) -> ExpressionDiff)

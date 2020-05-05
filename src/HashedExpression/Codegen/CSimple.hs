@@ -35,17 +35,22 @@ d2s val
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
 
+-- Offset w.r.t "ptr"
 type Address = Int
 
 type NodeID = Int
+
+-- e.g: i, j, k
+type Index = Text
 
 data CSimpleCodegen
   = CSimpleCodegen
       { cExpressionMap :: ExpressionMap,
         cAddress :: NodeID -> Address,
         cMemSize :: Int,
-        (!!) :: NodeID -> Text -> Text,
-        imAt :: NodeID -> Text -> Text
+        (!!) :: NodeID -> Index -> Text,
+        imAt :: NodeID -> Index -> Text,
+        reAt :: NodeID -> Index -> Text
       }
 
 -------------------------------------------------------------------------------
@@ -79,7 +84,8 @@ initCodegen (CodegenInit mp consecutiveIDs) _ =
       cAddress = addressMap,
       cMemSize = totalSize,
       (!!) = access,
-      imAt = imAt
+      imAt = imAt,
+      reAt = reAt
     }
   where
     (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
@@ -100,6 +106,8 @@ initCodegen (CodegenInit mp consecutiveIDs) _ =
             | offsetVal == "0" = ""
             | otherwise = " + " <> offsetVal
        in [i|ptr[#{addressMap nID}#{offset}]|]
+    -- Accessor for complex
+    reAt = access
     imAt nID offset = access nID $ offset <> " + " <> showT (product (retrieveShape nID mp))
 
 -------------------------------------------------------------------------------
@@ -396,8 +404,8 @@ instance Codegen CSimpleConfig where
                  ]
               ++ indent 2 readBounds
               ++ indent 2 readBoundScalarConstraints --
-              ++ ["}"] --
-              -------------------------------------------------------------------------------
+              ++ ["}"] 
+      -------------------------------------------------------------------------------
       readValsCodes =
         ["void read_values() {"]
           ++ ["  srand(time(NULL));"] --

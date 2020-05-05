@@ -103,9 +103,9 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -- |
 data ConstraintStatement
-  = Lower (ExpressionMap, Int) Val
-  | Upper (ExpressionMap, Int) Val
-  | Between (ExpressionMap, Int) (Val, Val)
+  = Lower (ExpressionMap, NodeID) Val
+  | Upper (ExpressionMap, NodeID) Val
+  | Between (ExpressionMap, NodeID) (Val, Val)
   deriving (Show, Eq, Ord)
 
 -- |
@@ -123,7 +123,7 @@ between exp = Between (unwrap exp)
 (.==) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
 (.==) exp val = Between (unwrap exp) (val, val)
 
-getExpressionCS :: ConstraintStatement -> (ExpressionMap, Int)
+getExpressionCS :: ConstraintStatement -> (ExpressionMap, NodeID)
 getExpressionCS cs =
   case cs of
     Lower exp _ -> exp
@@ -217,7 +217,7 @@ constructProblem objectiveFunction varList constraint
                       | Map.keys name2PartialDerivativeId == vars = Map.elems name2PartialDerivativeId
                       | otherwise = error "variables of objective and constraints should be the same, but is different here"
                  in ( ScalarConstraint
-                        { constraintValueId = exIndex g,
+                        { constraintValueId = exRootID g,
                           constraintPartialDerivatives = constraintPartialDerivatives,
                           constraintLowerBound = lb,
                           constraintUpperBound = ub
@@ -247,7 +247,7 @@ constructProblem objectiveFunction varList constraint
         scalarConstraints = map fst scalarConstraintsWithMp
         mergedMap = IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
         rootNs =
-          exIndex f
+          exRootID f
             : ( map partialDerivativeId problemVariables
                   ++ map constraintValueId scalarConstraints
                   ++ concatMap constraintPartialDerivatives scalarConstraints

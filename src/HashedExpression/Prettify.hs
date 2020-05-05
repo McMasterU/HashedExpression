@@ -18,10 +18,10 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 
 -- |
-unwrap :: Expression d et -> (ExpressionMap, Int)
+unwrap :: Expression d et -> (ExpressionMap, NodeID)
 unwrap (Expression n mp) = (mp, n)
 
-wrap :: (ExpressionMap, Int) -> Expression d et
+wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
 -- | Pretty exp
@@ -62,7 +62,7 @@ allEntries (Expression n mp) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
 
-allEntriesDebug :: (ExpressionMap, Int) -> [(Int, String)]
+allEntriesDebug :: (ExpressionMap, NodeID) -> [(Int, String)]
 allEntriesDebug (mp, n) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
@@ -77,11 +77,11 @@ showAllEntries e = do
     mkString (n, str) = show n ++ " --> " ++ str
 
 -- |
-debugPrint :: (ExpressionMap, Int) -> String
+debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
 
 -- |
-hiddenPrettify :: Bool -> (ExpressionMap, Int) -> T.Text
+hiddenPrettify :: Bool -> (ExpressionMap, NodeID) -> T.Text
 hiddenPrettify pastable (mp, n) =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]

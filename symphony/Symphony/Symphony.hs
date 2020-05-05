@@ -24,7 +24,7 @@ import ErrM
 import HashedExpression.Codegen
 import qualified HashedExpression.Codegen.CSimple as CSimple
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
+import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import HashedExpression.Internal.Utils
@@ -61,7 +61,7 @@ parse fileContent =
     r2c = Map.fromList . zip [1 ..] . map length . lines $ fileContent
     getNumColumn r = fromMaybe 0 $ Map.lookup r r2c
 
-data ValidSymphony = ValidSymphony (ExpressionMap, Int) Vars Consts [HS.ConstraintStatement]
+data ValidSymphony = ValidSymphony (ExpressionMap, NodeID) Vars Consts [HS.ConstraintStatement]
 
 -------------------------------------------------------------------------------
 -- 1. Check if there is variables block

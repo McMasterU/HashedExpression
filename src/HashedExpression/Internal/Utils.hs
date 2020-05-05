@@ -95,7 +95,7 @@ constWithShape shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
-varWithShape :: Shape -> String -> (ExpressionMap, Int)
+varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = (IM.fromList [(h, node)], h)
   where
     node = (shape, Var name)
@@ -156,14 +156,14 @@ pullProdOperands mp nId
   | otherwise = [nId]
 
 -- |
-aConst :: Shape -> Double -> (ExpressionMap, Int)
+aConst :: Shape -> Double -> (ExpressionMap, NodeID)
 aConst shape val = (IM.fromList [(h, node)], h)
   where
     node = (shape, Const val)
     h = hash node
 
 -- |
-dVarWithShape :: Shape -> String -> (ExpressionMap, Int)
+dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 dVarWithShape shape name = (IM.fromList [(h, node)], h)
   where
     node = (shape, DVar name)

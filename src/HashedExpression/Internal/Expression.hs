@@ -7,6 +7,7 @@ module HashedExpression.Internal.Expression
     ET (..),
     Node (..),
     Internal,
+    NodeID,
     ExpressionMap,
     Expression (..),
     Scalar,
@@ -66,9 +67,7 @@ instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 -- | Classes as constraints
 class ElementType et
 
-class
-  ElementType et =>
-  NumType et
+class ElementType et => NumType et
 
 -------------------------------------------------------------------------------
 class
@@ -93,10 +92,7 @@ type DimensionType d = (Dimension d, ToShape d)
 -------------------------------------------------------------------------------
 
 -- |
-nat ::
-  forall n.
-  (KnownNat n) =>
-  Int
+nat :: forall n. (KnownNat n) => Int
 nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -------------------------------------------------------------------------------
@@ -104,9 +100,7 @@ class Dimension d
 
 class VectorSpace d et s
 
-class
-  VectorSpace d s s =>
-  InnerProductSpace d s
+class VectorSpace d s s => InnerProductSpace d s
 
 instance (DimensionType d, ElementType et) => VectorSpace d et R
 
@@ -181,10 +175,14 @@ type Internal = (Shape, Node)
 -- | Hash map of all subexpressions
 type ExpressionMap = IntMap Internal
 
+-- | The index/key to look for the node on the hash table
+--
+type NodeID = Int
+
 -- | Expression with 2 phantom types (dimension and num type)
 data Expression d et
   = Expression
-      { exIndex :: Int, -- the index this expression
+      { exRootID :: Int, -- the index this expression
         exMap :: ExpressionMap -- all subexpressions
       }
   deriving (Show, Eq, Ord, Typeable)

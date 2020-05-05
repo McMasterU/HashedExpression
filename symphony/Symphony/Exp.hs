@@ -10,7 +10,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
+import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Internal.Utils as HU
@@ -45,7 +45,7 @@ inferShape context@Context {..} exp =
 -------------------------------------------------------------------------------
 
 -- | Construct a hashed expression given context and inferred shape
-constructExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, Int)
+constructExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, NodeID)
 constructExp context shapeInfo exp =
   let add x y = sumMany [x, y]
       multiply x y = mulMany [x, y]
@@ -319,8 +319,8 @@ constructExp context shapeInfo exp =
 
 -- | Check if two expression have the same shape
 checkSameShape ::
-  (ExpressionMap, Int) ->
-  (ExpressionMap, Int) ->
+  (ExpressionMap, NodeID) ->
+  (ExpressionMap, NodeID) ->
   String ->
   (Int, Int) ->
   Result ()
@@ -340,8 +340,8 @@ checkSameShape operand1 operand2 errStr pos = do
 
 -- | Check if two expression have the same num type
 checkSameNumType ::
-  (ExpressionMap, Int) ->
-  (ExpressionMap, Int) ->
+  (ExpressionMap, NodeID) ->
+  (ExpressionMap, NodeID) ->
   String ->
   (Int, Int) ->
   Result ()

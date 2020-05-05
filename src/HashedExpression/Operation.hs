@@ -227,10 +227,7 @@ instance
     applyUnary . unary $ Rotate [x, y, z]
 
 -- |
-valueFromNat ::
-  forall n.
-  (KnownNat n) =>
-  Int
+valueFromNat :: forall n. (KnownNat n) => Int
 valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- | Create primitive expressions

@@ -8,7 +8,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
+import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Operation as HO
@@ -30,7 +30,7 @@ type Consts = Map String (HE.Shape, HV.Val)
 
 data Context
   = Context
-      { declarations :: Map String (ExpressionMap, Int),
+      { declarations :: Map String (ExpressionMap, NodeID),
         vars :: Vars,
         consts :: Consts
       }
@@ -44,10 +44,10 @@ x @> y =
     Nothing -> y
 
 -- | Utils
-getShape :: (ExpressionMap, Int) -> HE.Shape
+getShape :: (ExpressionMap, NodeID) -> HE.Shape
 getShape (mp, n) = HN.retrieveShape n mp
 
-getNT :: (ExpressionMap, Int) -> HE.ET
+getNT :: (ExpressionMap, NodeID) -> HE.ET
 getNT (mp, n) = HN.retrieveElementType n mp
 
 toReadable :: HE.Shape -> String
@@ -118,7 +118,7 @@ getBeginningPosition exp =
     EDoubleFun (PDoubleFun (pos, _)) _ _ -> pos
 
 retrieveExpFromIdent ::
-  Context -> ((Int, Int), String) -> Result (ExpressionMap, Int)
+  Context -> ((Int, Int), String) -> Result (ExpressionMap, NodeID)
 retrieveExpFromIdent context@Context {..} (pos, name)
   | Just exp <- Map.lookup name declarations = return exp
   | otherwise = throwError $ ErrorWithPosition (name ++ " is undefined") pos

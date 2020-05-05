@@ -14,12 +14,14 @@ import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Internal.Expression
   ( C,
+    NodeID,
     ET (..),
     Expression (..),
     ExpressionMap,
     Node (..),
     R,
     Scalar,
+    NodeID
   )
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
@@ -274,7 +276,7 @@ foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
 -- |
-evaluate1DReal :: ValMaps -> (ExpressionMap, Int) -> Array Int Double
+evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveNode n mp of
@@ -377,7 +379,7 @@ instance (KnownNat n) => Evaluable n R (Array Int Double) where
 
 -- |
 evaluate1DComplex ::
-  ValMaps -> (ExpressionMap, Int) -> Array Int (Complex Double)
+  ValMaps -> (ExpressionMap, NodeID) -> Array Int (Complex Double)
 evaluate1DComplex valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveNode n mp of
@@ -425,7 +427,7 @@ instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
   eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
 
 -- |
-evaluate2DReal :: ValMaps -> (ExpressionMap, Int) -> Array (Int, Int) Double
+evaluate2DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) Double
 evaluate2DReal valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveNode n mp of
@@ -545,7 +547,7 @@ instance
 
 -- |
 evaluate2DComplex ::
-  ValMaps -> (ExpressionMap, Int) -> Array (Int, Int) (Complex Double)
+  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) (Complex Double)
 evaluate2DComplex valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveNode n mp of
@@ -601,7 +603,7 @@ instance
   eval valMap (Expression n mp) = evaluate2DComplex valMap (mp, n)
 
 evaluate3DReal ::
-  ValMaps -> (ExpressionMap, Int) -> Array (Int, Int, Int) Double
+  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) Double
 evaluate3DReal valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveNode n mp of
@@ -739,7 +741,7 @@ instance
   eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
 
 evaluate3DComplex ::
-  ValMaps -> (ExpressionMap, Int) -> Array (Int, Int, Int) (Complex Double)
+  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
 evaluate3DComplex valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveNode n mp of

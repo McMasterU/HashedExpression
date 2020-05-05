@@ -529,7 +529,7 @@ instance Arbitrary ArbitraryExpresion where
      in oneof [option1, option2, option3, option4, option5, option6]
 
 -- |
-getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, Int)
+getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, NodeID)
 getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 
 -------------------------------------------------------------------------------

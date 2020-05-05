@@ -5,35 +5,29 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import Prelude hiding (const)
 
-defaultDim1D :: Int
-defaultDim1D = 10
-
 type Default1D = 10
 
-default1stDim2D :: Int
-default1stDim2D = 12
+defaultDim1D = valueFromNat @Default1D
 
 type Default2D1 = 12
 
-default2ndDim2D :: Int
-default2ndDim2D = 13
+default1stDim2D = valueFromNat @Default2D1
 
 type Default2D2 = 13
 
-default1stDim3D :: Int
-default1stDim3D = 10
+default2ndDim2D = valueFromNat @Default2D2
 
 type Default3D1 = 10
 
-default2ndDim3D :: Int
-default2ndDim3D = 10
+default1stDim3D = valueFromNat @Default3D1
 
 type Default3D2 = 10
 
-default3rdDim3D :: Int
-default3rdDim3D = 10
+default2ndDim3D = valueFromNat @Default3D2
 
 type Default3D3 = 10
+
+default3rdDim3D = valueFromNat @Default3D3
 
 [zero, one] = map constant [0, 1]
 
@@ -168,8 +162,6 @@ type Default3D3 = 10
     ]
 
 allVars :: Set String
-allVars =
-  fromList $
-    vars ++ map (++ "1") vars ++ map (++ "2") vars ++ map (++ "3") vars
+allVars = fromList $ vars ++ map (++ "1") vars ++ map (++ "2") vars ++ map (++ "3") vars
   where
     vars = map return ['a' .. 'z']

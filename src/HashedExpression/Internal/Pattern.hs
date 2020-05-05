@@ -203,7 +203,7 @@ data GuardedPattern
 type Substitution = (GuardedPattern, Pattern)
 
 -- | Turn HashedPattern to a normalizier
-fromSubstitution :: Substitution -> (ExpressionMap, Int) -> ExpressionDiff
+fromSubstitution :: Substitution -> (ExpressionMap, NodeID) -> ExpressionDiff
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   | Just match <- match exp pattern,
     condition exp match =
@@ -225,7 +225,7 @@ infix 0 |.~~~~~~>, ~~~~~~>
 
 infixl 1 |.
 
-type Condition = (ExpressionMap, Int) -> Match -> Bool
+type Condition = (ExpressionMap, NodeID) -> Match -> Bool
 
 -- |
 (&&.) :: Condition -> Condition -> Condition
@@ -440,7 +440,7 @@ unionMatch match1 match2 =
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-match :: (ExpressionMap, Int) -> Pattern -> Maybe Match
+match :: (ExpressionMap, NodeID) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
       catMatch = foldl unionMatch emptyMatch
@@ -577,7 +577,7 @@ buildFromPatternRotateAmount match pra =
 
 -- |
 buildFromPatternList ::
-  (ExpressionMap, Int) -> Match -> PatternList -> [ExpressionDiff]
+  (ExpressionMap, NodeID) -> Match -> PatternList -> [ExpressionDiff]
 buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
@@ -586,7 +586,7 @@ buildFromPatternList exp match (PListHole fs listCapture)
       "ListCapture not in the Map ListCapture [Int] which should never happens"
 
 -- |
-buildFromPattern :: (ExpressionMap, Int) -> Match -> Pattern -> ExpressionDiff
+buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> ExpressionDiff
 buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
     applyDiff' = applyDiff originalMp

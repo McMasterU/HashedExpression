@@ -31,7 +31,7 @@ import ToCSpec (evaluateCodeC)
 import Var
 
 --main = do
---  let exp = (Expression {exIndex = 89536334, exMap = IM.fromList [(89536334,([10],Var "y1"))]}) ::
+--  let exp = (Expression {rootID = 89536334, exMap = IM.fromList [(89536334,([10],Var "y1"))]}) ::
 --        Expression Default1D R
 --  let valMap = fromList [("y1",V1D (array (0,9) [(0,0.0),(1,0.0),(2,0.0),(3,0.0),(4,0.0),(5,0.0),(6,0.0),(7,0.0),(8,0.0),(9,0.0)]))]
 --  showExp $ normalize exp
