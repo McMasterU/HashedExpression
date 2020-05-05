@@ -12,34 +12,102 @@ import Control.Monad (replicateM_, unless, when)
 import Data.Array
 import Data.Complex (Complex (..))
 import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate, sort)
+import Data.List (intercalate, sort, tails)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, mapMaybe)
+import qualified Data.String.Interpolate as I
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
+import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
+import HashedExpression.Embed.FFTW
 import HashedExpression.Internal.Expression
-  ( C,
-    DimensionType,
-    Expression (..),
-    Node (..),
-    NumType,
-    R,
-    Scalar,
-  )
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.Value
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
 import Var
+import Prelude hiding ((!!))
+
+-- | Compute the inner offset:
+-- e.g localOffset [3, 4, 5] [2, 0, 1] = 2 * (4 * 5) + 0 * (5) + 1
+localOffset :: [Int] -> [Int] -> Int
+localOffset shape indices
+  | length shape == length indices =
+    sum . zipWith (*) indices . map product . tail . tails $ shape
+  | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
+
+-- | Generate a fully working C program that compute the expression and
+-- print out the result, mostly used for testing
+singleExpressionCProgram ::
+  (DimensionType d, NumType et) => ValMaps -> Expression d et -> Code
+singleExpressionCProgram valMaps expr =
+  [ "#include <math.h>", --
+    "#include <stdio.h>",
+    "#include <stdlib.h>",
+    if containsFTNode $ exMap expr
+      then T.pack $ fftUtils
+      else "",
+    "int main()" --
+  ]
+    ++ scoped (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory)
+  where
+    (mp, n) = unwrap expr
+    bound = product (retrieveShape n mp)
+    et = retrieveElementType n mp
+    codeGen = initCodegen (CodegenInit mp []) CSimpleConfig
+    [i, j, k, nooffset] = ["i", "j", "k", "0"]
+    initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]]
+    -- assign value to variables
+    assignVals = assigningValues codeGen valMaps
+    -- codes to compute
+    codes = evaluating codeGen [n]
+    -- print the value of expression
+    printValue
+      | et == R = for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+      | et == C =
+        for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+          ++ [[I.i|printf("\\n");|]]
+          ++ for i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
+    releaseMemory = ["free(ptr);"]
+    -------------------------------------------------------------------------------
+    assigningValues :: CSimpleCodegen -> ValMaps -> Code
+    assigningValues CSimpleCodegen {..} valMaps = concatMap codesForVar vars
+      where
+        [i, j, k, nooffset] = ["i", "j", "k", "0"]
+        vars :: [(Int, String)]
+        vars =
+          let toVar nId
+                | Var varName <- retrieveNode nId mp = Just (nId, varName)
+                | otherwise = Nothing
+           in mapMaybe toVar . IM.keys $ mp
+        codesForVar :: (Int, String) -> Code
+        codesForVar (n, varName) =
+          case Map.lookup varName valMaps of
+            Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
+            Just (V1D array1d) ->
+              let assignIndex id = [[I.i|#{n !! (showT id)} = #{array1d ! id};|]]
+               in concatMap assignIndex $ indices array1d
+            Just (V2D array2d) ->
+              let shape = retrieveShape n mp
+                  assignIndex (id1, id2) =
+                    [[I.i|#{n !! showT (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
+               in concatMap assignIndex $ indices array2d
+            Just (V3D array3d) ->
+              let shape = retrieveShape n mp
+                  assignIndex (id1, id2, id3) =
+                    [[I.i|#{n !! showT (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
+               in concatMap assignIndex $ indices array3d
+            _ -> []
 
 hasFFTW :: IO Bool
 hasFFTW = do

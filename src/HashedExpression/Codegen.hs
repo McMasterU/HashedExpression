@@ -12,7 +12,7 @@ type Code = [Text]
 -- |
 data GenResult
   = Invalid String
-  | -- Give it the name of the folder of your solver, it will write all the files necessary
+  | -- Write all the necessary files in a given file path
     Success (String -> IO ())
 
 data CodegenInit
@@ -22,13 +22,8 @@ data CodegenInit
         -- more common options here
       }
 
--- | The typeclass for code generating
+-- | The type class for code generating
 class Codegen configs where
-  --  -- Init all necessary infos and data for later code gen
-  --  initCodegen :: CodegenInit -> configs -> codegen
-  --  -- Generate code for evaluating target node ids
-  --  evaluating :: codegen -> [Int] -> Code
-  -- Generate problem code
   generateProblemCode :: configs -> Problem -> ValMaps -> GenResult
 
 -- | Indent `n` space each line of code

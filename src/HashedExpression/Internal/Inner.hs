@@ -551,9 +551,8 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
 noChange :: Int -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
 
--- | All variables in the Expression
-expressionVarNodes ::
-  (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
+-- | All Var nodes in the Expression
+expressionVarNodes :: (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
 expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)

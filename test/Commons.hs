@@ -28,6 +28,7 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
+import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck

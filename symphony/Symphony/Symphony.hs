@@ -21,6 +21,8 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import Data.Tuple.HT (fst3)
 import ErrM
+import HashedExpression.Codegen
+import qualified HashedExpression.Codegen.CSimple as CSimple
 import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
 import HashedExpression.Internal.Inner
@@ -28,7 +30,7 @@ import qualified HashedExpression.Internal.Node as HN
 import HashedExpression.Internal.Utils
 import qualified HashedExpression.Operation as HO
 import HashedExpression.Prettify
-import qualified HashedExpression.Solver as HS
+import qualified HashedExpression.Problem as HS
 import qualified HashedExpression.Value as HV
 import LayoutHashedLang
 import LexHashedLang
@@ -125,9 +127,9 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css) = do
       let valMap =
             Map.mapMaybeWithKey varVal vars
               `Map.union` Map.mapMaybeWithKey constVal consts
-      case HS.generateProblemCode valMap heProblem of
-        HS.Invalid reason -> throwError $ GeneralError reason
-        HS.Success res -> liftIO $ res outputPath
+      case generateProblemCode CSimple.CSimpleConfig heProblem valMap of
+        Invalid reason -> throwError $ GeneralError reason
+        Success res -> liftIO $ res outputPath
     HS.ProblemInvalid reason -> throwError $ GeneralError reason
     HS.NoVariables -> throwError $ GeneralError "No variable to optimize over, feasibility problems are not supported yet"
   where

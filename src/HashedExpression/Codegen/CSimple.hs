@@ -1,6 +1,6 @@
 module HashedExpression.Codegen.CSimple where
 
-import Control.Monad (when)
+import Control.Monad (forM_, when)
 import Data.Array ((!), indices)
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
@@ -25,11 +25,6 @@ import HashedExpression.Value
 import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
-ninf :: Double
-ninf = -1 / 0
-
-inf :: Double
-inf = 1 / 0
 
 d2s :: Double -> Text
 d2s val
@@ -76,14 +71,6 @@ elseif condition codes = [[i|else if (#{condition})|]] ++ scoped codes
 
 else_ :: Code -> Code
 else_ codes = ["else"] ++ scoped codes
-
--- | Compute the inner offset:
--- e.g localOffset [3, 4, 5] [2, 0, 1] = 2 * (4 * 5) + 0 * (5) + 1
-localOffset :: [Int] -> [Int] -> Int
-localOffset shape indices
-  | length shape == length indices =
-    sum . zipWith (*) indices . map product . tail . tails $ shape
-  | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
 
 initCodegen :: CodegenInit -> CSimpleConfig -> CSimpleCodegen
 initCodegen (CodegenInit mp consecutiveIDs) _ =
@@ -226,42 +213,35 @@ instance Codegen CSimpleConfig where
   generateProblemCode :: CSimpleConfig -> Problem -> ValMaps -> GenResult
   generateProblemCode config Problem {..} valMaps
     | Just errorMsg <- checkError = Invalid errorMsg
-    | otherwise =
-      Success $ \folder -> do
-        let codes =
-              concat
-                [ defineStuffs,
-                  constraintCodes,
-                  readValsCodes,
-                  evaluatingCodes,
-                  evaluateObjectiveCodes,
-                  evaluatePartialDerivativesCodes,
-                  evaluateScalarConstraintsCodes,
-                  evaluateScalarConstraintsJacobianCodes
-                ]
-        let writeVal (var, val) =
-              when (valueFromHaskell val) $ do
-                let str = T.unwords . map showT . valElems $ val
-                TIO.writeFile (folder ++ "/" ++ var ++ ".txt") str
-        let writeUpperBound var val =
-              when (valueFromHaskell val) $ do
-                let str = T.unwords . map showT . valElems $ val
-                    fileName = var ++ "_ub.txt"
-                TIO.writeFile (folder ++ "/" ++ fileName) str
-        let writeLowerBound var val =
-              when (valueFromHaskell val) $ do
-                let str = T.unwords . map showT . valElems $ val
-                    fileName = var ++ "_lb.txt"
-                TIO.writeFile (folder ++ "/" ++ fileName) str
-        mapM_ writeVal $ Map.toList valMaps
-        let writeEach cnt =
-              case cnt of
-                BoxLower var val -> writeLowerBound var val
-                BoxUpper var val -> writeUpperBound var val
-                BoxBetween var (val1, val2) ->
-                  writeLowerBound var val1 >> writeUpperBound var val2
-        mapM_ writeEach boxConstraints
-        TIO.writeFile (folder ++ "/problem.c") $ T.intercalate "\n" codes
+    | otherwise = Success $ \folder -> do
+      -- If the value is not from file, write all the values into
+      -- text files so C code can read them
+      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map showT . valElems $ val
+      -- Write values
+      forM_ (Map.toList valMaps) $ \(var, val) -> do
+        when (valueFromHaskell val) $ do
+          let str = T.unwords . map showT . valElems $ val
+          TIO.writeFile (folder ++ "/" ++ var ++ ".txt") str
+      -- Write box constraints
+      forM_ boxConstraints $ \c -> case c of
+        BoxLower var val -> when (valueFromHaskell val) $ writeVal val (folder ++ "/" ++ var ++ "_lb.txt")
+        BoxUpper var val -> when (valueFromHaskell val) $ writeVal val (folder ++ "/" ++ var ++ "_ub.txt")
+        BoxBetween var (val1, val2) -> do
+          when (valueFromHaskell val1) $ writeVal val1 (folder ++ "/" ++ var ++ "_lb.txt")
+          when (valueFromHaskell val2) $ writeVal val2 (folder ++ "/" ++ var ++ "_ub.txt")
+      -- Write code
+      let codes =
+            concat
+              [ defineStuffs,
+                constraintCodes,
+                readValsCodes,
+                evaluatingCodes,
+                evaluateObjectiveCodes,
+                evaluatePartialDerivativesCodes,
+                evaluateScalarConstraintsCodes,
+                evaluateScalarConstraintsJacobianCodes
+              ]
+      TIO.writeFile (folder ++ "/problem.c") $ T.intercalate "\n" codes
     where
       -------------------------------------------------------------------------------
       -- variables we're trying to optimize over
@@ -289,14 +269,12 @@ instance Codegen CSimpleConfig where
       variableSizes :: [Int]
       variableSizes = map product variableShapes
       -------------------------------------------------------------------------------
-      -- Check if is variable or a fixed value
       checkError :: Maybe String
       checkError
         | Just name <- find (not . (`Map.member` valMaps)) vals = Just $ "No value provided for " ++ name
         | otherwise,
           let isOk (var, nId)
-                | Just val <- Map.lookup var valMaps =
-                  compatible (retrieveShape nId expressionMap) val
+                | Just val <- Map.lookup var valMaps = compatible (retrieveShape nId expressionMap) val
                 | otherwise = True,
           Just (var, shape) <- find (not . isOk) vs =
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
@@ -308,20 +286,19 @@ instance Codegen CSimpleConfig where
       objectiveOffset = cAddress objectiveId
       -- For both variables and values
       readValCodeEach (name, nId)
-        | Just val <- Map.lookup name valMaps = generateReadValuesCode name val ("ptr + " ++ show offset) (product shape)
+        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
           scoped
-            [ "printf(\"Init value for " <> T.pack name <> " is not provided, generating random for " <> T.pack name <> "....\\n\");",
+            [ [i|printf("Init value for #{name} is not provided, generating random for #{name} ... \\n");|],
               "int i;",
-              "for (i = 0; i < " <> showT offset <> "; i<>) {",
-              "  ptr[" <> showT offset <> " + i] = ((double) rand() / (RAND_MAX))",
+              [i|for (i = 0; i < #{product shape}; i++){|],
+              [i|  ptr[#{offset} + i] = ((double) rand() / RAND_MAX);|],
               "}"
             ]
         where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
-      objectiveAndGradient = objectiveId : map partialDerivativeId variables
-      -- MARK: codes part --
+      -------------------------------------------------------------------------------
       defineStuffs :: Code
       defineStuffs =
         [ "#include <math.h>",
@@ -332,17 +309,14 @@ instance Codegen CSimpleConfig where
           if containsFTNode expressionMap
             then T.pack fftUtils
             else "",
-          "",
-          "",
+          "// number of (higher dimensional) variables ",
           "#define NUM_VARIABLES " <> showT (length variables),
+          "// number of real variables, because each higher dimensional var is a grid of real variables",
           "#define NUM_ACTUAL_VARIABLES " <> showT (sum variableSizes),
           "#define MEM_SIZE " <> showT cMemSize,
-          "",
           "// all the actual double variables are allocated",
           "// one after another, starts from here",
           "#define VARS_START_OFFSET " <> showT (cAddress (nodeId . head $ variables)),
-          "",
-          "",
           "const char* var_name[NUM_VARIABLES] = {"
             <> (T.intercalate ", " . map (showT . varName) $ variables)
             <> "};",
@@ -362,38 +336,32 @@ instance Codegen CSimpleConfig where
             <> (T.intercalate ", " . map showT $ partialDerivativeOffsets)
             <> "};",
           "const int objective_offset = " <> showT objectiveOffset <> ";",
-          "double ptr[MEM_SIZE];",
-          "",
-          ""
+          "double ptr[MEM_SIZE];"
         ]
+      -------------------------------------------------------------------------------
       constraintCodes =
         let varPosition = take (length variableSizes) $ scanl (+) 0 variableSizes
             varWithPos = zip vars varPosition
             getPos name = snd . fromMaybe (error "get starting position variable") . find ((== name) . fst) $ varWithPos
             readUpperBoundCode name val =
               generateReadValuesCode
-                (name ++ "_ub")
-                val
+                ((name ++ "_ub"), product $ variableShape name)
                 ("upper_bound + " ++ show (getPos name))
-                (product $ variableShape name)
+                val
             readLowerBoundCode name val =
               generateReadValuesCode
-                (name ++ "_lb")
-                val
+                ((name ++ "_lb"), (product $ variableShape name))
                 ("lower_bound + " ++ show (getPos name))
-                (product $ variableShape name)
+                val
             readBounds =
               let readBoundCodeEach cnt =
                     case cnt of
                       BoxUpper name val -> readUpperBoundCode name val
                       BoxLower name val -> readLowerBoundCode name val
-                      BoxBetween name (val1, val2) ->
-                        readLowerBoundCode name val1
-                          ++ readUpperBoundCode name val2
+                      BoxBetween name (val1, val2) -> readLowerBoundCode name val1 ++ readUpperBoundCode name val2
                in concatMap readBoundCodeEach boxConstraints
             scalarConstraintDefineStuffs =
               [ "#define NUM_SCALAR_CONSTRAINT " <> showT (length scalarConstraints),
-                "",
                 "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];",
                 "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];",
                 "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {"
@@ -406,26 +374,18 @@ instance Codegen CSimpleConfig where
                     [ "{" <> T.intercalate "," (map (showT . cAddress) . constraintPartialDerivatives $ sc) <> "}"
                       | sc <- scalarConstraints
                     ]
-                  <> "};",
-                "",
-                ""
+                  <> "};"
               ]
             readBoundScalarConstraints =
               [ "sc_lower_bound[" <> showT i <> "] = " <> d2s val <> ";"
-                | (i, val) <-
-                    zip [0 ..] $ map constraintLowerBound scalarConstraints
+                | (i, val) <- zip [0 ..] $ map constraintLowerBound scalarConstraints
               ]
                 <> [ "sc_upper_bound[" <> showT i <> "] = " <> d2s val <> ";"
-                     | (i, val) <-
-                         zip [0 ..] $ map constraintUpperBound scalarConstraints
+                     | (i, val) <- zip [0 ..] $ map constraintUpperBound scalarConstraints
                    ]
-         in [ "const int bound_pos[NUM_VARIABLES] = {"
-                <> (T.intercalate ", " . map showT $ varPosition)
-                <> "};",
+         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map showT $ varPosition) <> "};",
               "double lower_bound[NUM_ACTUAL_VARIABLES];",
-              "double upper_bound[NUM_ACTUAL_VARIABLES];",
-              "",
-              ""
+              "double upper_bound[NUM_ACTUAL_VARIABLES];"
             ]
               ++ scalarConstraintDefineStuffs
               ++ [ "void read_bounds() {", --
@@ -434,26 +394,32 @@ instance Codegen CSimpleConfig where
                    "    upper_bound[i] = INFINITY;",
                    "  }"
                  ]
-              ++ scoped readBounds
-              ++ scoped readBoundScalarConstraints --
+              ++ indent 2 readBounds
+              ++ indent 2 readBoundScalarConstraints --
               ++ ["}"] --
+              -------------------------------------------------------------------------------
       readValsCodes =
         ["void read_values() {"]
           ++ ["  srand(time(NULL));"] --
           ++ scoped (concatMap readValCodeEach vs)
           ++ ["}"] --
+          -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
-          ++ scoped (evaluating codegen objectiveAndGradient)
+          ++ scoped (evaluating codegen $ objectiveId : map partialDerivativeId variables)
+      -------------------------------------------------------------------------------
       evaluateObjectiveCodes =
         ["void evaluate_objective()"]
           ++ scoped (evaluating codegen [objectiveId])
+      -------------------------------------------------------------------------------
       evaluatePartialDerivativesCodes =
         ["void evaluate_partial_derivatives()"]
           ++ scoped (evaluating codegen (map partialDerivativeId variables))
+      -------------------------------------------------------------------------------
       evaluateScalarConstraintsCodes =
         ["void evaluate_scalar_constraints()"]
           ++ scoped (evaluating codegen (map constraintValueId scalarConstraints))
+      -------------------------------------------------------------------------------
       evaluateScalarConstraintsJacobianCodes =
         ["void evaluate_scalar_constraints_jacobian()"]
           ++ scoped (evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
@@ -468,71 +434,8 @@ toShapeString shape
 
 -------------------------------------------------------------------------------
 
--- | Generate a fully working C program that compute the expression and
--- print out the result, mostly used for testing
-singleExpressionCProgram ::
-  (DimensionType d, NumType et) => ValMaps -> Expression d et -> Code
-singleExpressionCProgram valMaps expr =
-  [ "#include <math.h>", --
-    "#include <stdio.h>",
-    "#include <stdlib.h>",
-    if containsFTNode $ exMap expr
-      then T.pack $ fftUtils
-      else "",
-    "int main()" --
-  ]
-    ++ scoped (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory)
-  where
-    (mp, n) = unwrap expr
-    bound = product (retrieveShape n mp)
-    et = retrieveElementType n mp
-    codeGen = initCodegen (CodegenInit mp []) CSimpleConfig
-    [i, j, k, nooffset] = ["i", "j", "k", "0"]
-    initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]]
-    -- assign value to variables
-    assignVals = assigningValues codeGen valMaps
-    -- codes to compute
-    codes = evaluating codeGen [n]
-    -- print the value of expression
-    printValue
-      | et == R = for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
-      | et == C =
-        for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
-          ++ [[I.i|printf("\\n");|]]
-          ++ for i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
-    releaseMemory = ["free(ptr);"]
-    -------------------------------------------------------------------------------
-    assigningValues :: CSimpleCodegen -> ValMaps -> Code
-    assigningValues CSimpleCodegen {..} valMaps = concatMap codesForVar vars
-      where
-        [i, j, k, nooffset] = ["i", "j", "k", "0"]
-        vars :: [(Int, String)]
-        vars =
-          let toVar nId
-                | Var varName <- retrieveNode nId cExpressionMap = Just (nId, varName)
-                | otherwise = Nothing
-           in mapMaybe toVar . IM.keys $ cExpressionMap
-        codesForVar :: (Int, String) -> Code
-        codesForVar (n, varName) =
-          case Map.lookup varName valMaps of
-            Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
-            Just (V1D array1d) ->
-              let assignIndex id = [[I.i|#{n !! (showT id)} = #{array1d ! id};|]]
-               in concatMap assignIndex $ indices array1d
-            Just (V2D array2d) ->
-              let shape = retrieveShape n cExpressionMap
-                  assignIndex (id1, id2) =
-                    [[I.i|#{n !! showT (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
-               in concatMap assignIndex $ indices array2d
-            Just (V3D array3d) ->
-              let shape = retrieveShape n cExpressionMap
-                  assignIndex (id1, id2, id3) =
-                    [[I.i|#{n !! showT (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
-               in concatMap assignIndex $ indices array3d
-            _ -> []
-
-generateReadValuesCode :: String -> Val -> String -> Int -> Code
-generateReadValuesCode name val address numDoubles =
+generateReadValuesCode :: (String, Int) -> String -> Val -> Code
+generateReadValuesCode (name, size) address val =
   case val of
     VScalar value -> scoped ["*(" <> T.pack address <> ") = " <> showT value]
     V1D _ -> readFileText (T.pack name <> ".txt")
@@ -543,28 +446,28 @@ generateReadValuesCode name val address numDoubles =
     VNum value ->
       scoped
         [ "int i;",
-          "for (i = 0; i < " <> showT numDoubles <> "; i<>) { ",
-          "  *(" <> T.pack address <> " + i) = " <> showT value <> ";",
+          [i|for (i = 0; i < #{size}; i++){|],
+          [i|  *(#{address} + i) = #{value};|],
           "}"
         ]
   where
     readFileText filePath =
       scoped
-        [ "printf(\"Reading " <> T.pack name <> " from text file " <> filePath <> "....\\n\");",
-          "FILE *fp = fopen(\"" <> filePath <> "\", \"r\");",
+        [ [i|printf("Reading #{name} from text file #{filePath} ... \\n");|],
+          [i|FILE *fp = fopen("#{filePath}", "r");|],
           "int i;",
-          "for (i = 0; i < " <> showT numDoubles <> "; i<>) { ",
-          "  fscanf(fp, \"%lf\", " <> T.pack address <> " + i);",
+          [i|for (i = 0; i < #{size}; i++){|],
+          [i|  fscanf(fp, "%lf", #{address} + i);|],
           "}",
           "fclose(fp);"
         ]
     readFileHD5 filePath dataset =
       scoped
-        [ "printf(\"Reading " <> T.pack name <> " from HDF5 file " <> filePath <> " in dataset " <> dataset <> "....\\n\");",
+        [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} ... \\n");|],
           "hid_t file, dset;",
-          "file = H5Fopen (\"" <> filePath <> "\", H5F_ACC_RDONLY, H5P_DEFAULT);",
-          "dset = H5Dopen (file, \"" <> dataset <> "\", H5P_DEFAULT);",
-          "H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, " <> T.pack address <> ");",
+          [i|file = H5Fopen("#{filePath}", H5F_ACC_RDONLY, H5P_DEFAULT);|],
+          [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);"|],
+          [i|H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, #{address});|],
           "H5Fclose (file);",
           "H5Dclose (dset);"
         ]
