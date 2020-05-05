@@ -47,12 +47,12 @@ import HashedExpression.Internal.Expression
     exMap,
   )
 import HashedExpression.Internal.Inner
-import HashedExpression.Value
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify
+import HashedExpression.Value
 import System.Process (readProcess, readProcessWithExitCode)
 
 ninf :: Double
@@ -679,7 +679,6 @@ generateProblemCode valMaps Problem {..}
               )
           )
         ++ ["}"]
-
 
 -- |
 toShapeString :: Shape -> String

@@ -25,11 +25,11 @@ import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
-import qualified HashedExpression.Value as HV
-import qualified HashedExpression.Operation as HO
 import HashedExpression.Internal.Utils
+import qualified HashedExpression.Operation as HO
 import HashedExpression.Prettify
 import qualified HashedExpression.Solver as HS
+import qualified HashedExpression.Value as HV
 import LayoutHashedLang
 import LexHashedLang
 import ParHashedLang

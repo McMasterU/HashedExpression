@@ -8,9 +8,9 @@ import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
-import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash

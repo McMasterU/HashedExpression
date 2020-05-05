@@ -20,8 +20,8 @@ import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression,
 import HashedExpression.Internal.Inner (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
 import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
 import HashedExpression.Internal.Utils
-import HashedExpression.Value
 import HashedExpression.Problem
+import HashedExpression.Value
 import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
@@ -451,7 +451,7 @@ instance Codegen CSimpleConfig where
       evaluatePartialDerivativesCodes =
         ["void evaluate_partial_derivatives()"]
           ++ scoped (evaluating codegen (map partialDerivativeId variables))
-      evaluateScalarConstraintsCodes   =
+      evaluateScalarConstraintsCodes =
         ["void evaluate_scalar_constraints()"]
           ++ scoped (evaluating codegen (map constraintValueId scalarConstraints))
       evaluateScalarConstraintsJacobianCodes =

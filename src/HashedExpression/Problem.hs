@@ -39,7 +39,7 @@ data ScalarConstraint
       }
   deriving (Show, Eq, Ord)
 
--- | 
+-- |
 data Constraint
   = NoConstraint
   | Constraint [ConstraintStatement]
@@ -51,4 +51,3 @@ data ConstraintStatement
   | Upper (ExpressionMap, Int) Val
   | Between (ExpressionMap, Int) (Val, Val)
   deriving (Show, Eq, Ord)
-  

@@ -24,11 +24,11 @@ data CodegenInit
 
 -- | The typeclass for code generating
 class Codegen configs where
---  -- Init all necessary infos and data for later code gen
---  initCodegen :: CodegenInit -> configs -> codegen
---  -- Generate code for evaluating target node ids
---  evaluating :: codegen -> [Int] -> Code
-  -- Generate problem code 
+  --  -- Init all necessary infos and data for later code gen
+  --  initCodegen :: CodegenInit -> configs -> codegen
+  --  -- Generate code for evaluating target node ids
+  --  evaluating :: codegen -> [Int] -> Code
+  -- Generate problem code
   generateProblemCode :: configs -> Problem -> ValMaps -> GenResult
 
 -- | Indent `n` space each line of code
