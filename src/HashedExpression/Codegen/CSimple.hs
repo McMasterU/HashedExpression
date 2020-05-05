@@ -404,7 +404,7 @@ instance Codegen CSimpleConfig where
                  ]
               ++ indent 2 readBounds
               ++ indent 2 readBoundScalarConstraints --
-              ++ ["}"] 
+              ++ ["}"]
       -------------------------------------------------------------------------------
       readValsCodes =
         ["void read_values() {"]

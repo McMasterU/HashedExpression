@@ -53,8 +53,7 @@ inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
 -- |
-toRecursiveCollecting ::
-  ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveCollecting :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules

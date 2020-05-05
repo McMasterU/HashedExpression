@@ -23,8 +23,8 @@ import HashedExpression.Value
 data Variable
   = Variable
       { varName :: String,
-        nodeId :: Int,
-        partialDerivativeId :: Int
+        nodeId :: NodeID,
+        partialDerivativeId :: NodeID
       }
   deriving (Show)
 
@@ -37,8 +37,8 @@ data BoxConstraint
 -- |
 data ScalarConstraint
   = ScalarConstraint
-      { constraintValueId :: Int,
-        constraintPartialDerivatives :: [Int],
+      { constraintValueId :: NodeID,
+        constraintPartialDerivatives :: [NodeID],
         constraintLowerBound :: Double,
         constraintUpperBound :: Double
       }
@@ -48,7 +48,7 @@ data ScalarConstraint
 data Problem
   = Problem
       { variables :: [Variable],
-        objectiveId :: Int,
+        objectiveId :: NodeID,
         expressionMap :: ExpressionMap,
         boxConstraints :: [BoxConstraint],
         scalarConstraints :: [ScalarConstraint]
@@ -83,13 +83,13 @@ inf = 1 / 0
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
-partialDerivativeMaps :: Expression Scalar Covector -> Map String Int
+partialDerivativeMaps :: Expression Scalar Covector -> Map String NodeID
 partialDerivativeMaps df@(Expression dfId dfMp) =
   case retrieveNode dfId dfMp of
     Sum Covector ns -> Map.fromList $ mapMaybe getPartial ns
     _ -> Map.fromList $ mapMaybe getPartial [dfId]
   where
-    getPartial :: Int -> Maybe (String, Int)
+    getPartial :: NodeID -> Maybe (String, NodeID)
     getPartial nId
       | Mul Covector [partialId, dId] <- retrieveNode nId dfMp,
         DVar name <- retrieveNode dId dfMp =
@@ -169,7 +169,7 @@ constructProblem objectiveFunction varList constraint
   | Just reason <- checkError = ProblemInvalid reason
   | otherwise = -- all the constraints are good
     let -- variable name with its node ID and partial derivative ID
-        variableDatas :: [(String, (Int, Int))]
+        variableDatas :: [(String, (NodeID, NodeID))]
         variableDatas = Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
         -- variables
         problemVariables :: [Variable]
@@ -211,7 +211,7 @@ constructProblem objectiveFunction varList constraint
                         . exteriorDerivative (Set.fromList vars)
                         $ g
                     (lb, ub) = getBound (mp, n)
-                    name2PartialDerivativeId :: Map String Int
+                    name2PartialDerivativeId :: Map String NodeID
                     name2PartialDerivativeId = partialDerivativeMaps dg
                     constraintPartialDerivatives
                       | Map.keys name2PartialDerivativeId == vars = Map.elems name2PartialDerivativeId
@@ -282,13 +282,13 @@ constructProblem objectiveFunction varList constraint
     f@(Expression fId fMp) = normalize objectiveFunction
     df@(Expression dfId dfMp) = collectDifferentials . exteriorDerivative possibleVars $ f
     -- Map from a variable name to partial derivative id in the problem's ExpressionMap
-    name2PartialDerivativeId :: Map String Int
+    name2PartialDerivativeId :: Map String NodeID
     name2PartialDerivativeId = partialDerivativeMaps df
     -- 4. After this step we can know which are actually variables - those appear in name2PartialDerivativeId
     varsList = Map.keys name2PartialDerivativeId
     varsSet = Set.fromList varsList
     -------------------------------------------------------------------------------
-    name2Id :: Map String Int
+    name2Id :: Map String NodeID
     name2Id = Map.fromList $ filter ((`Set.member` varsSet) . fst) $ expressionVarNodes f
     -- get variable shape
     variableShape :: String -> Shape

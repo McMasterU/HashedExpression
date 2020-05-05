@@ -30,7 +30,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation

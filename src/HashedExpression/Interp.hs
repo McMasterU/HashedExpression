@@ -14,14 +14,14 @@ import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Internal.Expression
   ( C,
-    NodeID,
     ET (..),
     Expression (..),
     ExpressionMap,
     Node (..),
+    NodeID,
+    NodeID,
     R,
     Scalar,
-    NodeID
   )
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
@@ -31,10 +31,10 @@ import Text.Printf
 
 -- | This operation emulates the mathematical operation
 -- | Turn expression to the right type
-expZeroR :: ExpressionMap -> Int -> Expression Scalar R
+expZeroR :: ExpressionMap -> NodeID -> Expression Scalar R
 expZeroR = flip Expression
 
-expZeroC :: ExpressionMap -> Int -> Expression Scalar C
+expZeroC :: ExpressionMap -> NodeID -> Expression Scalar C
 expZeroC = flip Expression
 
 -- | Choose branch base on condition value

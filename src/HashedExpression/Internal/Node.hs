@@ -154,28 +154,28 @@ nodeArgs node =
 
 -- | Auxiliary functions for operations
 {-# INLINE retrieveNode #-}
-retrieveNode :: HasCallStack => Int -> ExpressionMap -> Node
+retrieveNode :: HasCallStack => NodeID -> ExpressionMap -> Node
 retrieveNode n mp =
   case IM.lookup n mp of
     Just (_, node) -> node
     _ -> error "node not in map"
 
 {-# INLINE retrieveInternal #-}
-retrieveInternal :: HasCallStack => Int -> ExpressionMap -> Internal
+retrieveInternal :: HasCallStack => NodeID -> ExpressionMap -> Internal
 retrieveInternal n mp =
   case IM.lookup n mp of
     Just internal -> internal
     _ -> error "node not in map"
 
 {-# INLINE retrieveElementType #-}
-retrieveElementType :: HasCallStack => Int -> ExpressionMap -> ET
+retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
 retrieveElementType n mp =
   case IM.lookup n mp of
     Just (_, node) -> nodeElementType node mp
     _ -> error "expression not in map"
 
 {-# INLINE retrieveShape #-}
-retrieveShape :: HasCallStack => Int -> ExpressionMap -> Shape
+retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
 retrieveShape n mp =
   case IM.lookup n mp of
     Just (dim, _) -> dim

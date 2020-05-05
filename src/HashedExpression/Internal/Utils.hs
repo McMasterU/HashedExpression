@@ -106,19 +106,19 @@ isScalarShape :: Shape -> Bool
 isScalarShape = null
 
 -- |
-pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
+pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
   | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)
   | otherwise = Nothing
 
 -- |
-pullConstants :: ExpressionMap -> [Int] -> Maybe (Shape, [Double])
+pullConstants :: ExpressionMap -> [NodeID] -> Maybe (Shape, [Double])
 pullConstants mp ns
   | xs@(x : _) <- mapMaybe (pullConstant mp) ns = Just (fst x, map snd xs)
   | otherwise = Nothing
 
 -- |
-isZero :: ExpressionMap -> Int -> Bool
+isZero :: ExpressionMap -> NodeID -> Bool
 isZero mp nId
   | Const 0 <- retrieveNode nId mp = True
   | RealImag arg1 arg2 <- retrieveNode nId mp,
@@ -128,7 +128,7 @@ isZero mp nId
   | otherwise = False
 
 -- |
-isOne :: ExpressionMap -> Int -> Bool
+isOne :: ExpressionMap -> NodeID -> Bool
 isOne mp nId
   | Const 1 <- retrieveNode nId mp = True
   | RealImag arg1 arg2 <- retrieveNode nId mp,
@@ -138,19 +138,19 @@ isOne mp nId
   | otherwise = False
 
 -- |
-isConstant :: ExpressionMap -> Int -> Bool
+isConstant :: ExpressionMap -> NodeID -> Bool
 isConstant mp nId
   | Const _ <- retrieveNode nId mp = True
   | otherwise = False
 
 -- |
-pullSumOperands :: ExpressionMap -> Int -> [Int]
+pullSumOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullSumOperands mp nId
   | Sum _ operands <- retrieveNode nId mp = operands
   | otherwise = [nId]
 
 -- |
-pullProdOperands :: ExpressionMap -> Int -> [Int]
+pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
   | Mul _ operands <- retrieveNode nId mp = operands
   | otherwise = [nId]

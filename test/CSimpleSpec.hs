@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 
-module ToCSpec where
+module CSimpleSpec where
 
 import Commons
 import Control.Applicative (liftA2)

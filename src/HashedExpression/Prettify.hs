@@ -57,12 +57,12 @@ prettifyDebug e@(Expression n mp) =
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 -- | All the entries of the expression
-allEntries :: forall d rc. Expression d rc -> [(Int, String)]
+allEntries :: forall d rc. Expression d rc -> [(NodeID, String)]
 allEntries (Expression n mp) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
 
-allEntriesDebug :: (ExpressionMap, NodeID) -> [(Int, String)]
+allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
 allEntriesDebug (mp, n) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp

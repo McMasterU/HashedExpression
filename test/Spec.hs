@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
+import qualified CSimpleSpec
+import CSimpleSpec (evaluateCodeC)
 import qualified CollectSpec
 import Commons
 import Data.Array.Unboxed as U
@@ -26,8 +28,6 @@ import qualified ProblemSpec
 import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
-import qualified ToCSpec
-import ToCSpec (evaluateCodeC)
 import Var
 
 --main = do
@@ -48,7 +48,7 @@ spec = do
   describe "NormalizeSpec" NormalizeSpec.spec
   describe "HashedInterpSpec" InterpSpec.spec
   describe "HashedCollectSpec" CollectSpec.spec
-  describe "HashedToCSpec" ToCSpec.spec
+  describe "CSimpleSpec" CSimpleSpec.spec
   describe "StructureSpec" StructureSpec.spec
   describe "NormalizeEval.ScalarRSpec" ScalarRSpec.spec
   describe "NormalizeEval.ScalarCSpec" ScalarCSpec.spec

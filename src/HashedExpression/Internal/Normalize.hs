@@ -85,7 +85,7 @@ normalizingTransformation = secondPass . firstPass
 
 -- | Turn a modification to a recursive transformation
 toRecursiveSimplification ::
-  ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+  ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,

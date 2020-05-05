@@ -148,13 +148,13 @@ infixl 8 ^
 type Shape = [Int]
 
 -- | Args - list of indices of arguments in the ExpressionMap
-type Args = [Int]
+type Args = [NodeID]
 
-type Arg = Int
+type Arg = NodeID
 
-type ConditionArg = Int
+type ConditionArg = NodeID
 
-type BranchArg = Int
+type BranchArg = NodeID
 
 -- | Rotation in each dimension.
 -- | Property:  the length of this must match the dimension of the data
@@ -176,7 +176,6 @@ type Internal = (Shape, Node)
 type ExpressionMap = IntMap Internal
 
 -- | The index/key to look for the node on the hash table
---
 type NodeID = Int
 
 -- | Expression with 2 phantom types (dimension and num type)
