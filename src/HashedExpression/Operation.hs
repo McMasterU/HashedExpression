@@ -21,11 +21,7 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
   (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
 -------------------------------------------------------------------------------
-fromDouble ::
-  forall d.
-  ToShape d =>
-  Double ->
-  (Expression d R)
+fromDouble :: forall d. ToShape d => Double -> (Expression d R)
 fromDouble value = Expression h (fromList [(h, node)])
   where
     node = (toShape (Proxy @d), Const value)
@@ -104,10 +100,7 @@ instance ToShape d => Num (Expression d Covector) where
   signum = error "Not applicable to 1-form"
 
 -- | Scale in vector space
-instance
-  (VectorSpace d et s) =>
-  VectorSpaceOp (Expression Scalar s) (Expression d et)
-  where
+instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression d et) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et
   scale e1 e2 =
     let op =
@@ -117,10 +110,7 @@ instance
 
 ---- | From R to C two part
 ----
-instance
-  (DimensionType d) =>
-  ComplexRealOp (Expression d R) (Expression d C)
-  where
+instance (DimensionType d) => ComplexRealOp (Expression d R) (Expression d C) where
   (+:) :: Expression d R -> Expression d R -> Expression d C
   (+:) e1 e2 =
     let op = binary RealImag
@@ -148,12 +138,7 @@ instance
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss
-huber ::
-  forall d.
-  (DimensionType d) =>
-  Double ->
-  Expression d R ->
-  Expression d R
+huber :: forall d. (DimensionType d) => Double -> Expression d R -> Expression d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     one = constWithShape @d (expressionShape e) 1
@@ -175,66 +160,41 @@ norm1 expr = sumElements (sqrt (expr * expr))
 class Norm2SquareOp a b | a -> b where
   norm2square :: a -> b
 
-instance
-  (DimensionType d) =>
-  Norm2SquareOp (Expression d R) (Expression Scalar R)
-  where
+instance (DimensionType d) => Norm2SquareOp (Expression d R) (Expression Scalar R) where
   norm2square :: Expression d R -> Expression Scalar R
   norm2square exp = exp <.> exp
 
-instance
-  (DimensionType d) =>
-  Norm2SquareOp (Expression d C) (Expression Scalar R)
-  where
+instance (DimensionType d) => Norm2SquareOp (Expression d C) (Expression Scalar R) where
   norm2square :: Expression d C -> Expression Scalar R
   norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
 
 -- |
-huberNorm ::
-  (DimensionType d) => Double -> Expression d R -> Expression Scalar R
+huberNorm :: (DimensionType d) => Double -> Expression d R -> Expression Scalar R
 huberNorm alpha = sumElements . huber alpha
 
 -- | Discrete fourier transform
 --
 -- | Sum across
-sumElements ::
-  forall d.
-  (DimensionType d) =>
-  Expression d R ->
-  Expression Scalar R
+sumElements :: forall d. (DimensionType d) => Expression d R -> Expression Scalar R
 sumElements expr = expr <.> one
   where
     one = constWithShape (expressionShape expr) 1 :: Expression d R
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance
-  (DimensionType d, ElementType et) =>
-  PiecewiseOp (Expression d R) (Expression d et)
-  where
-  piecewise ::
-    HasCallStack =>
-    [Double] ->
-    Expression d R ->
-    [Expression d et] ->
-    Expression d et
+instance (DimensionType d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
+  piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
   piecewise marks conditionExp branchExps
     | not (null marks),
       (Set.toList . Set.fromList $ marks) == marks,
       length marks + 1 == length branchExps =
-      guard $
-        applyConditionAry
-          (conditionAry (Piecewise marks))
-          conditionExp
-          branchExps
+      guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
     | otherwise =
       error $
         "Must satisfy number of marks = number of branches - 1, and marks are increasing "
           ++ show marks
     where
-      guard =
-        ensureSameShapeList branchExps
-          . ensureSameShape conditionExp (head branchExps)
+      guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
 
 instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
   ft :: Expression d C -> Expression d C
@@ -254,10 +214,7 @@ instance (ElementType et, KnownNat n) => RotateOp Int (Expression n et) where
   rotate :: Int -> Expression n et -> Expression n et
   rotate x = applyUnary . unary $ Rotate [x]
 
-instance
-  (ElementType et, KnownNat m, KnownNat n) =>
-  RotateOp (Int, Int) (Expression '(m, n) et)
-  where
+instance (ElementType et, KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expression '(m, n) et) where
   rotate :: (Int, Int) -> Expression '(m, n) et -> Expression '(m, n) et
   rotate (x, y) = applyUnary . unary $ Rotate [x, y]
 
@@ -265,17 +222,12 @@ instance
   (ElementType et, KnownNat m, KnownNat n, KnownNat p) =>
   RotateOp (Int, Int, Int) (Expression '(m, n, p) et)
   where
-  rotate ::
-    (Int, Int, Int) ->
-    Expression '(m, n, p) et ->
-    Expression '(m, n, p) et
-  rotate (x, y, z) = applyUnary . unary $ Rotate [x, y, z]
+  rotate :: (Int, Int, Int) -> Expression '(m, n, p) et -> Expression '(m, n, p) et
+  rotate (x, y, z) =
+    applyUnary . unary $ Rotate [x, y, z]
 
 -- |
-valueFromNat ::
-  forall n.
-  (KnownNat n) =>
-  Int
+valueFromNat :: forall n. (KnownNat n) => Int
 valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- | Create primitive expressions
@@ -340,7 +292,6 @@ constant1D val = Expression h (fromList [(h, node)])
     size = valueFromNat @n
     node = ([size], Const val)
     h = hash node
-
 
 constant2D ::
   forall m n.

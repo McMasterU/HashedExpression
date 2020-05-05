@@ -111,14 +111,14 @@ hashOutcome mp new newHash =
         else IsClash
 
 -- |
-addInternal :: ExpressionMap -> Internal -> (ExpressionMap, Int)
+addInternal :: ExpressionMap -> Internal -> (ExpressionMap, NodeID)
 addInternal mp e =
   case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
     (IsDuplicate h : _) -> (mp, h)
     (IsNew h : _) -> (IM.insert h e mp, h)
     _ -> error "addEntry everything clashed!"
 
-fromNode :: Internal -> (ExpressionMap, Int)
+fromNode :: Internal -> (ExpressionMap, NodeID)
 fromNode e = (mp, h)
   where
     h = hash e

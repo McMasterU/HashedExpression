@@ -10,6 +10,7 @@ module HashedExpression
     PiecewiseOp (..),
     VectorSpaceOp (..),
     FTOp (..),
+    NodeID,
     ComplexRealOp (..),
     RotateOp (..),
     InnerProductSpaceOp (..),

@@ -1,11 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
-
--- |
--- This module is for computing exterior derivative
 module HashedExpression.Derivative
   ( exteriorDerivative,
     derivativeAllVars,
@@ -83,7 +77,6 @@ hiddenDerivative vars (Expression n mp) = coerce res
     res =
       case node of
         -- dx = dx if x is in vars, otherwise 0
-
         Var name ->
           -- dc = 0
           let node =
@@ -257,9 +250,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
   Expression d R ->
   Expression d Covector
 (|*.|) e1@(Expression n1 mp1) e2@(Expression n2 mp2) =
-  let op =
-        binaryET Scale (ElementSpecific Covector)
-          `hasShape` expressionShape e2
+  let op = binaryET Scale (ElementSpecific Covector) `hasShape` expressionShape e2
    in applyBinary op e1 e2
 
 infixl 7 |*|

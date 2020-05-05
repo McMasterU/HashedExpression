@@ -18,6 +18,7 @@ import HashedExpression.Internal.Expression
   )
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
+import HashedExpression.Value
 import System.Process (readProcessWithExitCode)
 
 type FileName = String

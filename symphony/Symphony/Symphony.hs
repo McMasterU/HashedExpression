@@ -21,14 +21,17 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import Data.Tuple.HT (fst3)
 import ErrM
+import HashedExpression.Codegen
+import qualified HashedExpression.Codegen.CSimple as CSimple
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
+import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
-import qualified HashedExpression.Internal.Utils as HU
+import HashedExpression.Internal.Utils
 import qualified HashedExpression.Operation as HO
 import HashedExpression.Prettify
-import qualified HashedExpression.Solver as HS
+import qualified HashedExpression.Problem as HS
+import qualified HashedExpression.Value as HV
 import LayoutHashedLang
 import LexHashedLang
 import ParHashedLang
@@ -58,7 +61,7 @@ parse fileContent =
     r2c = Map.fromList . zip [1 ..] . map length . lines $ fileContent
     getNumColumn r = fromMaybe 0 $ Map.lookup r r2c
 
-data ValidSymphony = ValidSymphony (ExpressionMap, Int) Vars Consts [HS.ConstraintStatement]
+data ValidSymphony = ValidSymphony (ExpressionMap, NodeID) Vars Consts [HS.ConstraintStatement]
 
 -------------------------------------------------------------------------------
 -- 1. Check if there is variables block
@@ -69,7 +72,7 @@ data ValidSymphony = ValidSymphony (ExpressionMap, Int) Vars Consts [HS.Constrai
 -- 5. Gen code
 checkSemantic :: Problem -> Result ValidSymphony
 checkSemantic problem = do
-  let toExp name (shape, _) = HU.varWithShape shape name
+  let toExp name (shape, _) = varWithShape shape name
   varDecls <- getVarDecls problem -- 1
   vars <- foldM checkVariableDecl Map.empty varDecls -- 2
   constDecls <- getConstDecls problem
@@ -124,9 +127,9 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css) = do
       let valMap =
             Map.mapMaybeWithKey varVal vars
               `Map.union` Map.mapMaybeWithKey constVal consts
-      case HS.generateProblemCode valMap heProblem of
-        HS.Invalid reason -> throwError $ GeneralError reason
-        HS.Success res -> liftIO $ res outputPath
+      case generateProblemCode CSimple.CSimpleConfig heProblem valMap of
+        Invalid reason -> throwError $ GeneralError reason
+        Success res -> liftIO $ res outputPath
     HS.ProblemInvalid reason -> throwError $ GeneralError reason
     HS.NoVariables -> throwError $ GeneralError "No variable to optimize over, feasibility problems are not supported yet"
   where
@@ -258,7 +261,7 @@ checkConstraintDecl context@Context {..} acc decl = do
         | otherwise ->
           throwError $ ErrorWithPosition (name ++ " not found") pos
       (Just varExp, NumberBound num) ->
-        return (varExp, HU.VNum (numToDouble num))
+        return (varExp, HV.VNum (numToDouble num))
       _ -> do
         scalarExp <- constructExp context Nothing exp
         when (getShape scalarExp /= [])
@@ -279,7 +282,7 @@ checkConstraintDecl context@Context {..} acc decl = do
               throwError $
                 ErrorWithPosition (name ++ " not found") pos
           NumberBound num ->
-            return (scalarExp, HU.VNum (numToDouble num))
+            return (scalarExp, HV.VNum (numToDouble num))
   let newEntry =
         case decl of
           ConstraintLower {} -> HS.Lower constructedExp boundVal
@@ -322,58 +325,58 @@ checkLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
 -------------------------------------------------------------------------------
 
 -- | To HashedExpression's value
-toHEVal :: HE.Shape -> Val -> Result HU.Val
+toHEVal :: HE.Shape -> Val -> Result HV.Val
 toHEVal shape v =
   case v of
-    ValFile filePath -> return $ HU.VFile $ HU.TXT filePath
+    ValFile filePath -> return $ HV.VFile $ HV.TXT filePath
     ValDataset filePath dataset ->
-      return $ HU.VFile $ HU.HDF5 filePath dataset
+      return $ HV.VFile $ HV.HDF5 filePath dataset
     ValPattern (KWDataPattern pattern) ->
       case (pattern, shape) of
         ("FIRST_ROW_1", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ replicate size2 1 ++ repeat 0
         ("LAST_ROW_1", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ replicate (size2 * (size1 - 1)) 0 ++ repeat 1
         ("FIRST_COLUMN_1", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ concat
             $ replicate size1
             $ 1 : replicate (size2 - 1) 0
         ("LAST_COLUMN_1", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ concat
             $ replicate size1
             $ replicate (size2 - 1) 0 ++ [1]
         ("FIRST_ROW_0", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ replicate size2 0 ++ repeat 1
         ("LAST_ROW_0", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ replicate (size2 * (size1 - 1)) 1 ++ repeat 0
         ("FIRST_COLUMN_0", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ concat
             $ replicate size1
             $ 0 : replicate (size2 - 1) 1
         ("LAST_COLUMN_0", [size1, size2]) ->
           return
-            . HU.V2D
+            . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
             $ concat
             $ replicate size1
@@ -384,8 +387,8 @@ toHEVal shape v =
             $ "Pattern "
               ++ pattern
               ++ " is incompatible with the shape or not supported yet"
-    ValRandom -> return $ HU.VNum 3
-    ValLiteral num -> return $ HU.VNum (numToDouble num)
+    ValRandom -> return $ HV.VNum 3
+    ValLiteral num -> return $ HV.VNum (numToDouble num)
     ValImage imgPath -> do
       a <- liftIO $ readImage imgPath
       case a of
@@ -400,7 +403,7 @@ toHEVal shape v =
           if (shape /= [row, col])
             then throwError $ GeneralError $ "image size and variable shape don't match, image size is " ++ show row ++ "x" ++ show col
             else
-              return $ HU.V2D $
+              return $ HV.V2D $
                 Array.listArray
                   ((0, 0), (row - 1, col - 1))
                   [ toGrayscale r g b

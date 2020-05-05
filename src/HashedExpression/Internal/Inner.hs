@@ -120,28 +120,28 @@ data OperationOption
   | Condition (ConditionArg -> [BranchArg] -> Node)
 
 -- |
-unwrap :: Expression d et -> (ExpressionMap, Int)
+unwrap :: Expression d et -> (ExpressionMap, NodeID)
 unwrap (Expression n mp) = (mp, n)
 
-wrap :: (ExpressionMap, Int) -> Expression d et
+wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
 -- |
-highestShape :: [(ExpressionMap, Int)] -> Shape
+highestShape :: [(ExpressionMap, NodeID)] -> Shape
 highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
 
-highestShapeWithContext :: ExpressionMap -> [Int] -> Shape
+highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
 highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
 
 -- | R < C < Covector
-highestElementType :: [(ExpressionMap, Int)] -> ET
+highestElementType :: [(ExpressionMap, NodeID)] -> ET
 highestElementType = maximum . map (uncurry $ flip retrieveElementType)
 
-highestElementTypeWithContext :: ExpressionMap -> [Int] -> ET
+highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
 highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
 
 -- | The apply function that is used everywhere
-apply :: OperationOption -> [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+apply :: OperationOption -> [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 apply option exprs =
   addEntryWithContext mergedMap mergedMap option (map snd exprs)
   where
@@ -152,8 +152,8 @@ addEntryWithContext ::
   ExpressionMap ->
   ExpressionMap ->
   OperationOption ->
-  [Int] ->
-  (ExpressionMap, Int)
+  [NodeID] ->
+  (ExpressionMap, NodeID)
 addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
   let shape =
         case shapeOutcome of
@@ -181,10 +181,10 @@ addEntryWithContext contextMp mp (Condition op) ns@(conditionN : branchesNs) =
    in addInternal mp (shape, node)
 
 -- | General multiplication and sum
-mulMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 mulMany = apply $ naryET Mul ElementDefault
 
-sumMany :: [(ExpressionMap, Int)] -> (ExpressionMap, Int)
+sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
 sumMany = apply $ naryET Sum ElementDefault
 
 -- |
@@ -263,11 +263,11 @@ diffConst shape val = ExpressionDiff mp n
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 -- unreachable nodes will be ignored
-topologicalSort :: (ExpressionMap, Int) -> [Int]
+topologicalSort :: (ExpressionMap, NodeID) -> [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
 -- | Topological sort, but with many roots
-topologicalSortManyRoots :: (ExpressionMap, [Int]) -> [Int]
+topologicalSortManyRoots :: (ExpressionMap, [NodeID]) -> [NodeID]
 topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
   where
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
@@ -298,22 +298,22 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
 data ExpressionDiff
   = ExpressionDiff
       { extraEntries :: ExpressionMap, -- Extra entries we need to add to the original Expression Map
-        newRootId :: Int -- New root of the expression (can change, can be the same)
+        newRootId :: NodeID -- New root of the expression (can change, can be the same)
       }
   deriving (Eq, Ord, Show)
 
 -- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
-type Transformation = (ExpressionMap, Int) -> (ExpressionMap, Int)
+type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 
 -- | Change w.r.t original expression map
 type Change = ExpressionMap -> ExpressionDiff
 
 -- | Modification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
 -- the new index of the root expression) between the modified and original expression
-type Modification = (ExpressionMap, Int) -> Change
+type Modification = (ExpressionMap, NodeID) -> Change
 
 -- |
-fromModification :: Modification -> ((ExpressionMap, Int) -> ExpressionDiff)
+fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
 fromModification mkDiff exp@(mp, n) = mkDiff exp mp
 
 -- |
@@ -321,7 +321,7 @@ withContext :: ExpressionMap -> Change -> ExpressionDiff
 withContext = flip ($)
 
 -- |
-just :: Int -> Change
+just :: NodeID -> Change
 just nId _ = ExpressionDiff IM.empty nId
 
 -- |
@@ -389,7 +389,7 @@ instance PiecewiseOp Change Change where
       condition : branches
 
 -- |
-toTransformation :: ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toTransformation :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toTransformation normalizer exp@(mp, n) =
   let diff = normalizer exp
       newMp = IM.union mp (extraEntries diff)
@@ -414,12 +414,12 @@ data OperandOrder
 -- | Turn a a recursive one, i.e, apply rules to every node in the expression bottom up
 toRecursive ::
   OperandOrder ->
-  ((ExpressionMap, Int) -> ExpressionDiff) ->
-  ((ExpressionMap, Int) -> ExpressionDiff)
+  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
+  ((ExpressionMap, NodeID) -> ExpressionDiff)
 toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
-    f :: IM.IntMap ExpressionDiff -> Int -> IM.IntMap ExpressionDiff
+    f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
     f diffs nId =
       let children = nodeArgs $ retrieveNode nId mp
           childrenDiffs = map (fromJust . flip IM.lookup diffs) children
@@ -438,7 +438,7 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
 combineChildrenDiffs ::
   OperandOrder ->
   ExpressionMap ->
-  Int ->
+  NodeID ->
   [ExpressionDiff] ->
   ExpressionDiff
 combineChildrenDiffs operandOrder contextMp n childrenDiffs
@@ -451,9 +451,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
   | InnerProd R arg1 arg2 <- oldNode,
     operandOrder == Reorder =
     sortAndCombine (binaryET InnerProd (ElementSpecific R))
-  | oldChildren == newChildren
-      && all (== IM.empty) (map extraEntries childrenDiffs) =
-    noChange n
+  | oldChildren == newChildren && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
   | otherwise =
     case oldNode of
       Var _ -> noChange n
@@ -548,12 +546,11 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
       addEntryWithContext updatedContextMp mergedExtraEntries option ns
 
 -- | The ExpressionDiff corresponding to no change in this node
-noChange :: Int -> ExpressionDiff
+noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
 
--- | All variables in the Expression
-expressionVarNodes ::
-  (DimensionType d, ElementType et) => Expression d et -> [(String, Int)]
+-- | All Var nodes in the Expression
+expressionVarNodes :: (DimensionType d, ElementType et) => Expression d et -> [(String, NodeID)]
 expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
@@ -561,7 +558,7 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
       | Var varName <- retrieveNode nId mp = Just (varName, nId)
       | otherwise = Nothing
 
-varNodesWithId :: ExpressionMap -> [(String, Int)]
+varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
   where
     collect nId
@@ -580,8 +577,8 @@ containsFTNode mp = any isFT $ IM.elems mp
         TwiceReFT _ -> True
         _ -> False
 
--- | A function might be treated as function of variables that not appears in the function itself (like constraint of
--- optimization problem, so we want to pad zero partial derivative)
+-- | A function might be treated as function of variables that does not appears (like constraint of
+-- optimization problem) so we want to pad zero partial derivative
 -- (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
 introduceZeroPartialDerivatives ::
   [(String, Shape)] ->

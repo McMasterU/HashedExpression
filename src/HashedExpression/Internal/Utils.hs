@@ -8,6 +8,7 @@ import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.Stack (HasCallStack)
@@ -94,7 +95,7 @@ constWithShape shape val = Expression h (IM.fromList [(h, node)])
     node = (shape, Const val)
     h = hash node
 
-varWithShape :: Shape -> String -> (ExpressionMap, Int)
+varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = (IM.fromList [(h, node)], h)
   where
     node = (shape, Var name)
@@ -105,19 +106,19 @@ isScalarShape :: Shape -> Bool
 isScalarShape = null
 
 -- |
-pullConstant :: ExpressionMap -> Int -> Maybe (Shape, Double)
+pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
   | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)
   | otherwise = Nothing
 
 -- |
-pullConstants :: ExpressionMap -> [Int] -> Maybe (Shape, [Double])
+pullConstants :: ExpressionMap -> [NodeID] -> Maybe (Shape, [Double])
 pullConstants mp ns
   | xs@(x : _) <- mapMaybe (pullConstant mp) ns = Just (fst x, map snd xs)
   | otherwise = Nothing
 
 -- |
-isZero :: ExpressionMap -> Int -> Bool
+isZero :: ExpressionMap -> NodeID -> Bool
 isZero mp nId
   | Const 0 <- retrieveNode nId mp = True
   | RealImag arg1 arg2 <- retrieveNode nId mp,
@@ -127,7 +128,7 @@ isZero mp nId
   | otherwise = False
 
 -- |
-isOne :: ExpressionMap -> Int -> Bool
+isOne :: ExpressionMap -> NodeID -> Bool
 isOne mp nId
   | Const 1 <- retrieveNode nId mp = True
   | RealImag arg1 arg2 <- retrieveNode nId mp,
@@ -137,83 +138,39 @@ isOne mp nId
   | otherwise = False
 
 -- |
-isConstant :: ExpressionMap -> Int -> Bool
+isConstant :: ExpressionMap -> NodeID -> Bool
 isConstant mp nId
   | Const _ <- retrieveNode nId mp = True
   | otherwise = False
 
 -- |
-pullSumOperands :: ExpressionMap -> Int -> [Int]
+pullSumOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullSumOperands mp nId
   | Sum _ operands <- retrieveNode nId mp = operands
   | otherwise = [nId]
 
 -- |
-pullProdOperands :: ExpressionMap -> Int -> [Int]
+pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
   | Mul _ operands <- retrieveNode nId mp = operands
   | otherwise = [nId]
 
 -- |
-aConst :: Shape -> Double -> (ExpressionMap, Int)
+aConst :: Shape -> Double -> (ExpressionMap, NodeID)
 aConst shape val = (IM.fromList [(h, node)], h)
   where
     node = (shape, Const val)
     h = hash node
 
 -- |
-dVarWithShape :: Shape -> String -> (ExpressionMap, Int)
+dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 dVarWithShape shape name = (IM.fromList [(h, node)], h)
   where
     node = (shape, DVar name)
     h = hash node
 
-type Dataset = String
-
-data DataFile
-  = TXT FilePath
-  | -- C support hdf5, we want npy too but haven't found any npy reader library for C
-    -- file path to the data file from your solver
-    HDF5 FilePath Dataset -- HDF5 requires the name of the data set in the data file
-  deriving (Eq, Show, Ord)
-
-data Val
-  = VScalar Double
-  | V1D (Array Int Double)
-  | V2D (Array (Int, Int) Double)
-  | V3D (Array (Int, Int, Int) Double)
-  | -- MARK: These constructors are for making problems
-    VFile DataFile
-  | VNum Double -- Work for all shape
-  deriving (Eq, Show, Ord)
-
-type ValMaps = Map String Val
-
--- |
-valElems :: Val -> [Double]
-valElems val =
-  case val of
-    VScalar v -> [v]
-    V1D vs -> elems vs
-    V2D vs -> elems vs
-    V3D vs -> elems vs
-    _ -> []
-
-valueFromHaskell :: Val -> Bool
-valueFromHaskell val =
-  case val of
-    VScalar v -> True
-    V1D vs -> True
-    V2D vs -> True
-    V3D vs -> True
-    _ -> False
-
--- | Prelude version of * and +
-times :: (Num a) => a -> a -> a
-times a b = Prelude.product [a, b]
-
-plus :: (Num a) => a -> a -> a
-plus a b = Prelude.sum [a, b]
+showT :: Show a => a -> T.Text
+showT = T.pack . show
 
 -------------------------------------------------------------------------------
 

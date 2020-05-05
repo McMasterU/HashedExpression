@@ -53,8 +53,7 @@ inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
 -- |
-toRecursiveCollecting ::
-  ((ExpressionMap, Int) -> ExpressionDiff) -> Transformation
+toRecursiveCollecting :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
 -- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
@@ -84,16 +83,12 @@ separateDVarAlone =
   multipleTimes 1000 . chain $
     map
       (toRecursiveCollecting . fromSubstitution)
-      [ x <.> (restOfProduct ~* y) |. isCovector y
-          ~~~~~~> ((restOfProduct ~* x) <.> y),
+      [ x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
         x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y,
-        x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x)
-          <.> y,
+        x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y,
         s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y,
         s * (x * y) |. isDVar y ~~~~~~> (s * x) * y,
-        -- Dealing with rotate
-        x <.> rotate amount y |. isCovector y
-          ~~~~~~> (rotate (negate amount) x <.> y),
+        x <.> rotate amount y |. isCovector y ~~~~~~> (rotate (negate amount) x <.> y),
         x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y,
         x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y,
         x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y,
@@ -107,11 +102,7 @@ groupByDVar :: Modification
 groupByDVar exp@(mp, n) =
   case retrieveNode n mp of
     Sum Covector ns ->
-      let groups =
-            groupBy sameDVar
-              . sortWith getDVar
-              . filter (not . isZero mp)
-              $ ns
+      let groups = groupBy sameDVar . sortWith getDVar . filter (not . isZero mp) $ ns
        in sum_ . map (sum_ . map mulOneIfAlone) $ groups
     _ -> mulOneIfAlone n
   where

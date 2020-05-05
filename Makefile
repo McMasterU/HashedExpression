@@ -4,7 +4,7 @@ FORMAT=ormolu --mode inplace -o -XTypeApplications -o -XTemplateHaskellQuotes
 format:
 	find src -type f -name '*.hs' | xargs $(FORMAT)
 	find test -type f -name '*.hs' | xargs $(FORMAT)
-	$(FORMAT) lang/Symphony.hs
+	find symphony/Symphony -type f -name '*.hs' | xargs $(FORMAT)
 
 
 check:

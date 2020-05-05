@@ -28,6 +28,7 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
+import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
@@ -101,7 +102,7 @@ genValMap vars = do
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
 shouldApprox x y = assertBool msg (x ~= y)
   where
-    msg = "Expected: " ++ prettifyShow x ++ "\nGot: " ++ prettifyShow y
+    msg = "Expected: " ++ prettifyShow y ++ "\nGot: " ++ prettifyShow x
 
 infix 1 `shouldApprox`
 
@@ -528,7 +529,7 @@ instance Arbitrary ArbitraryExpresion where
      in oneof [option1, option2, option3, option4, option5, option6]
 
 -- |
-getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, Int)
+getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, NodeID)
 getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 
 -------------------------------------------------------------------------------

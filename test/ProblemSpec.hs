@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module SolverSpec where
+module ProblemSpec where
 
 import Commons
 import Control.Applicative (liftA2)
@@ -30,12 +30,12 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
-import HashedExpression.Internal.ToC
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Prettify (showExp, showExpDebug)
-import HashedExpression.Solver
+import HashedExpression.Problem
+import HashedExpression.Value
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
@@ -44,25 +44,22 @@ import Var
 import Prelude hiding ((^))
 import qualified Prelude
 
--- |
-isOneAfterAnother :: MemMap -> [Int] -> Bool
-isOneAfterAnother memMap nIds = all isOk xs
-  where
-    xs = zip nIds (tail nIds)
-    isOk (cur, nxt) =
-      let (offsetCur, _, shapeCur) =
-            fromJust $ IM.lookup cur (entryMap memMap)
-          (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
-       in offsetCur + Prelude.product shapeCur == offsetNxt
+---- |
+--isOneAfterAnother :: MemMap -> [Int] -> Bool
+--isOneAfterAnother memMap nIds = all isOk xs
+--  where
+--    xs = zip nIds (tail nIds)
+--    isOk (cur, nxt) =
+--      let (offsetCur, _, shapeCur) =
+--            fromJust $ IM.lookup cur (entryMap memMap)
+--          (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
+--       in offsetCur + Prelude.product shapeCur == offsetNxt
 
 -- |
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemNoConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
-      pdMap =
-        partialDerivativeMaps
-          $ collectDifferentials . exteriorDerivative (Set.fromList names)
-          $ exp
+      pdMap = partialDerivativeMaps . collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
       constructResult = constructProblem exp names NoConstraint
   case constructResult of
     NoVariables -> return () -- it is possible that the random expression doesn't have any variables
@@ -76,10 +73,10 @@ prop_constructProblemNoConstraint (Suite exp valMap) = do
               pId == partialDerivativeId variable =
               True
             | otherwise = False
-      assertBool "partial derivative ids aren't correct" $
-        all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+      assertBool "partial derivative ids aren't correct" $ all ok variables
+
+--      assertBool "variables are not allocated consecutively" $
+--        isOneAfterAnother memMap (map nodeId variables)
 
 -- |
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
@@ -93,24 +90,14 @@ makeValidBoxConstraint (name, shape) =
         elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
     [size] -> do
       let x = variable1D @Default1D name
-      val1 <-
-        V1D . listArray (0, size - 1)
-          <$> generate (vectorOf size arbitrary)
-      val2 <-
-        V1D . listArray (0, size - 1)
-          <$> generate (vectorOf size arbitrary)
-      generate $
-        elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+      val1 <- V1D . listArray (0, size - 1) <$> generate (vectorOf size arbitrary)
+      val2 <- V1D . listArray (0, size - 1) <$> generate (vectorOf size arbitrary)
+      generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
     [size1, size2] -> do
       let x = variable2D @Default2D1 @Default2D2 name
-      val1 <-
-        V2D . listArray ((0, 0), (size1 - 1, size2 - 1))
-          <$> generate (vectorOf (size1 * size2) arbitrary)
-      val2 <-
-        V2D . listArray ((0, 0), (size1 - 1, size2 - 1))
-          <$> generate (vectorOf (size1 * size2) arbitrary)
-      generate $
-        elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+      val1 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
+      val2 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
+      generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
 
 --        [size1, size2, size3] -> do TODO -- add 3D for tests
 --            val1 <-
@@ -149,8 +136,8 @@ prop_constructProblemBoxConstraint (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+      --      assertBool "variables are not allocated consecutively" $
+      --        isOneAfterAnother memMap (map nodeId variables)
       case (sampled, boxConstraints) of
         (_ : _, []) ->
           assertFailure
@@ -197,8 +184,8 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+      --      assertBool "variables are not allocated consecutively" $
+      --        isOneAfterAnother memMap (map nodeId variables)
       case (scc, scalarConstraints) of
         ([], _) -> return ()
         (_ : _, []) ->
@@ -218,8 +205,8 @@ problemsRepo =
           f = x <.> y + z <.> t
           constraints =
             Constraint
-              [ x .>= (VFile $ TXT "x_lb.txt"),
-                y .<= (VFile $ TXT "y_ub.txt"),
+              [ x .>= VFile (TXT "x_lb.txt"),
+                y .<= VFile (TXT "y_ub.txt"),
                 x <.> z .>= VScalar 3
               ]
           vars = ["x", "y", "z", "t"]
@@ -231,7 +218,7 @@ problemsRepo =
           constraints =
             Constraint
               [ x .>= VScalar 5,
-                y .<= (VFile $ TXT "y_ub.txt"),
+                y .<= VFile (TXT "y_ub.txt"),
                 x <.> z .>= VScalar 3
               ]
           vars = ["x", "y", "z", "t"]
@@ -251,22 +238,16 @@ problemsRepo =
 spec :: Spec
 spec =
   describe "Hash Solver spec " $ do
-    specify "test hand-writeen problems"
-      $ forM_ problemsRepo
-      $ \(problemResult, expected) ->
-        case (problemResult, expected) of
-          (ProblemInvalid _, True) ->
-            assertFailure
-              "This problem is valid but fail to construct"
-          (ProblemValid _, False) ->
-            assertFailure
-              "This problem is invalid but success to construct"
-          _ -> return ()
+    specify "test hand-written problems" $ forM_ problemsRepo $ \(problemResult, expected) ->
+      case (problemResult, expected) of
+        (ProblemInvalid _, True) ->
+          assertFailure "This problem is valid but fail to construct"
+        (ProblemValid _, False) ->
+          assertFailure "This problem is invalid but success to construct"
+        _ -> return ()
     specify "valid problem should be constructed successfully" $
       property prop_constructProblemNoConstraint
-    specify
-      "valid box constrained problem should be constructed successfully"
-      $ property prop_constructProblemBoxConstraint
-    specify
-      "valid scalar constraints problem should be successfully successfully"
-      $ property prop_constructProblemScalarConstraints
+    specify "valid box constrained problem should be constructed successfully" $
+      property prop_constructProblemBoxConstraint
+    specify "valid scalar constraints problem should be successfully successfully" $
+      property prop_constructProblemScalarConstraints

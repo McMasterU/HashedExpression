@@ -28,8 +28,7 @@ import qualified Prelude
 prop_DVarStayAlone :: Expression Scalar R -> Bool
 prop_DVarStayAlone exp = property
   where
-    collectedExp@(Expression rootId mp) =
-      collectDifferentials . exteriorDerivative allVars $ exp
+    collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
       | Const 0 <- retrieveNode nId mp = True
       | Mul Covector [_, cId] <- retrieveNode nId mp,
@@ -48,8 +47,7 @@ prop_DVarStayAlone exp = property
 prop_DVarAppearOnce :: Expression Scalar R -> Bool
 prop_DVarAppearOnce exp = property
   where
-    collectedExp@(Expression rootId mp) =
-      collectDifferentials . exteriorDerivative allVars $ exp
+    collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     getDVarNames node
       | DVar name <- node = [name]
       | otherwise = []
@@ -77,14 +75,12 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
         Sum Covector ns -> all isDVarAlone ns
         _ -> isDVarAlone rootId
 
---        | DVar _ <- retrieveNode nId mp = True
 prop_DVarAppearOnceWithOneR ::
   Expression Default1D R -> Expression Default1D R -> Bool
 prop_DVarAppearOnceWithOneR exp1 exp2 = property
   where
     exp = exp1 <.> exp2
-    collectedExp@(Expression rootId mp) =
-      collectDifferentials . exteriorDerivative allVars $ exp
+    collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     getDVarNames node
       | DVar name <- node = [name]
       | otherwise = []
