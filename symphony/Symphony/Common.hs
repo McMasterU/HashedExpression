@@ -11,7 +11,7 @@ import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..))
 import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
-import qualified HashedExpression.Internal.Utils as HU
+import qualified HashedExpression.Value as HV
 import qualified HashedExpression.Operation as HO
 
 data CompileError
@@ -23,10 +23,10 @@ data CompileError
 type Result a = ExceptT CompileError IO a
 
 -- | (name, shape, initialize value)
-type Vars = Map String (HE.Shape, Maybe HU.Val)
+type Vars = Map String (HE.Shape, Maybe HV.Val)
 
 -- | (name, shape, value)
-type Consts = Map String (HE.Shape, HU.Val)
+type Consts = Map String (HE.Shape, HV.Val)
 
 data Context
   = Context

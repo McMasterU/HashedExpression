@@ -2,6 +2,7 @@ module HashedExpression.Problem where
 
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
+import HashedExpression.Value
 
 -- |
 data Variable

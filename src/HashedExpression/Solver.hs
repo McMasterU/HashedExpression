@@ -47,6 +47,7 @@ import HashedExpression.Internal.Expression
     exMap,
   )
 import HashedExpression.Internal.Inner
+import HashedExpression.Value
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.ToC

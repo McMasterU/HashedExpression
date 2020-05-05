@@ -3,8 +3,8 @@ module HashedExpression.Codegen where
 import Data.Text (Text)
 import qualified Data.Text as T
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils (ValMaps)
 import HashedExpression.Problem
+import HashedExpression.Value
 
 -- | List where each element is a line of code
 type Code = [Text]
@@ -23,11 +23,11 @@ data CodegenInit
       }
 
 -- | The typeclass for code generating
-class Codegen codegen configs | configs -> codegen, codegen -> configs where
-  -- Init all necessary infos and data for later code gen
-  initCodegen :: CodegenInit -> configs -> codegen
-  -- Generate code for evaluating target node ids
-  evaluating :: codegen -> [Int] -> Code
+class Codegen configs where
+--  -- Init all necessary infos and data for later code gen
+--  initCodegen :: CodegenInit -> configs -> codegen
+--  -- Generate code for evaluating target node ids
+--  evaluating :: codegen -> [Int] -> Code
   -- Generate problem code 
   generateProblemCode :: configs -> Problem -> ValMaps -> GenResult
 

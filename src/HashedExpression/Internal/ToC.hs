@@ -27,6 +27,7 @@ import Data.List.HT (splitLast)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Set (Set, empty, insert, member)
+import HashedExpression.Value
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Stack (HasCallStack)
