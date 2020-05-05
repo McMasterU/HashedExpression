@@ -16,6 +16,7 @@ import Data.Complex (Complex (..))
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
+import HashedExpression.Value
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (fromList)
 import Data.Maybe (fromJust)
@@ -35,7 +36,7 @@ import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Prettify (showExp, showExpDebug)
-import HashedExpression.Solver
+import HashedExpression.Problem
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
@@ -44,16 +45,16 @@ import Var
 import Prelude hiding ((^))
 import qualified Prelude
 
--- |
-isOneAfterAnother :: MemMap -> [Int] -> Bool
-isOneAfterAnother memMap nIds = all isOk xs
-  where
-    xs = zip nIds (tail nIds)
-    isOk (cur, nxt) =
-      let (offsetCur, _, shapeCur) =
-            fromJust $ IM.lookup cur (entryMap memMap)
-          (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
-       in offsetCur + Prelude.product shapeCur == offsetNxt
+---- |
+--isOneAfterAnother :: MemMap -> [Int] -> Bool
+--isOneAfterAnother memMap nIds = all isOk xs
+--  where
+--    xs = zip nIds (tail nIds)
+--    isOk (cur, nxt) =
+--      let (offsetCur, _, shapeCur) =
+--            fromJust $ IM.lookup cur (entryMap memMap)
+--          (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
+--       in offsetCur + Prelude.product shapeCur == offsetNxt
 
 -- |
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
@@ -78,8 +79,8 @@ prop_constructProblemNoConstraint (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+--      assertBool "variables are not allocated consecutively" $
+--        isOneAfterAnother memMap (map nodeId variables)
 
 -- |
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
@@ -149,8 +150,8 @@ prop_constructProblemBoxConstraint (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+--      assertBool "variables are not allocated consecutively" $
+--        isOneAfterAnother memMap (map nodeId variables)
       case (sampled, boxConstraints) of
         (_ : _, []) ->
           assertFailure
@@ -197,8 +198,8 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      assertBool "variables are not allocated consecutively" $
-        isOneAfterAnother memMap (map nodeId variables)
+--      assertBool "variables are not allocated consecutively" $
+--        isOneAfterAnother memMap (map nodeId variables)
       case (scc, scalarConstraints) of
         ([], _) -> return ()
         (_ : _, []) ->
