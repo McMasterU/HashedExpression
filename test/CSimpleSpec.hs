@@ -24,7 +24,7 @@ import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed.FFTW
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Expression hiding (InnerProductSpaceOp (..))
 import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
@@ -32,6 +32,7 @@ import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Value
+import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
@@ -112,36 +113,32 @@ singleExpressionCProgram valMaps expr =
 hasFFTW :: IO Bool
 hasFFTW = do
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
-  let fullFileName = "C/" ++ fileName ++ ".c"
+  let cFilePath = "C" </> fileName <.> "c"
+      executablePath = "C" </> fileName
+      codes = ["#include <fftw3.h>", "int main() {}"]
       program = T.intercalate "\n" . map T.pack $ codes
-  TIO.writeFile fullFileName program
-  (exitCode, output, _) <-
-    readProcessWithExitCode
-      "gcc"
-      [fullFileName, "-o", "C/" ++ fileName, "-lm", "-lfftw3"]
-      ""
-  readProcessWithExitCode "rm" [fullFileName] ""
-  readProcessWithExitCode "rm" ["C/" ++ fileName] ""
+  TIO.writeFile cFilePath program
+  (exitCode, output, _) <- readProcessWithExitCode "gcc" [cFilePath, "-o", executablePath, "-lm", "-lfftw3"] ""
+  readProcessWithExitCode "rm" [cFilePath] ""
+  readProcessWithExitCode "rm" [executablePath] ""
   return $ exitCode == ExitSuccess
-  where
-    codes = ["#include <fftw3.h>", "int main() {}"]
 
 -- |
 evaluateCodeC :: (DimensionType d, NumType et) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
-  let fullFileName = "C/" ++ fileName ++ ".c"
-  let program = singleExpressionCProgram valMaps exp
-  let libs
+  let cFilePath = "C" </> fileName <.> "c"
+      executablePath = "C" </> fileName
+      program = singleExpressionCProgram valMaps exp
+      libs
         | withFT = ["-lm", "-lfftw3"]
         | otherwise = ["-lm"]
-  TIO.writeFile fullFileName (T.intercalate "\n" program)
-  readProcess "gcc" ([fullFileName, "-o", "C/" ++ fileName] ++ libs) ""
-  let runCommand = "C/" ++ fileName
-  (exitCode, output, _) <- readProcessWithExitCode runCommand [] ""
-  readProcess "rm" [fullFileName] ""
-  readProcess "rm" ["C/" ++ fileName] ""
+  TIO.writeFile cFilePath (T.intercalate "\n" program)
+  readProcess "gcc" ([cFilePath, "-o", executablePath] ++ libs) ""
+  (exitCode, output, _) <- readProcessWithExitCode executablePath [] ""
+  readProcess "rm" [cFilePath] ""
+  readProcess "rm" [executablePath] ""
   return (exitCode, output)
 
 -- | Parse output of the C program
@@ -164,9 +161,10 @@ prop_CEqualInterpScalarR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT (normalize exp) valMaps
+      let normalizedExp = normalize exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT normalizedExp valMaps
       let resultNormalize = read . head . splitOn " " $ outputSimple
-      let resultInterpNormalize = eval valMaps (normalize exp)
+      let resultInterpNormalize = eval valMaps normalizedExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -180,10 +178,7 @@ prop_CEqualInterpScalarC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      TIO.writeFile "C/main.c"
-        $ T.intercalate "\n" . singleExpressionCProgram valMaps
-        $ normalizedExp
-      (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
+      (exitCode, outputCodeC) <- evaluateCodeC withFT normalizedExp valMaps
       let ([im], [re]) = readC outputCodeC
       let resultNormalize = im :+ re
       let resultInterpNormalize = eval valMaps normalizedExp
@@ -199,10 +194,10 @@ prop_CEqualInterpOneR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT (normalize exp) valMaps
-      let resultNormalize =
-            listArray (0, defaultDim1D - 1) $ readR outputSimple
-      let resultInterpNormalize = eval valMaps (normalize exp)
+      let normalizedExp = normalize exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT normalizedExp valMaps
+      let resultNormalize = listArray (0, defaultDim1D - 1) $ readR outputSimple
+      let resultInterpNormalize = eval valMaps normalizedExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -216,14 +211,10 @@ prop_CEqualInterpOneC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      TIO.writeFile "C/main.c"
-        $ T.intercalate "\n" . singleExpressionCProgram valMaps
-        $ normalizedExp
-      (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
+      (exitCode, outputCodeC) <- evaluateCodeC withFT normalizedExp valMaps
       let (re, im) = readC outputCodeC
-      let resultNormalize =
-            listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
-      let resultInterpNormalize = eval valMaps normalizedExp
+          resultNormalize = listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
+          resultInterpNormalize = eval valMaps normalizedExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -236,11 +227,10 @@ prop_CEqualInterpTwoR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT (normalize exp) valMaps
-      let resultNormalize =
-            listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $
-              readR outputSimple
-      let resultInterpNormalize = eval valMaps (normalize exp)
+      let normalizedExp = normalize exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT normalizedExp valMaps
+      let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ readR outputSimple
+      let resultInterpNormalize = eval valMaps normalizedExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -254,25 +244,16 @@ prop_CEqualInterpTwoC (Suite exp valMaps) =
   where
     proceed withFT = do
       let normalizedExp = normalize exp
-      TIO.writeFile "C/main.c"
-        $ T.intercalate "\n" . singleExpressionCProgram valMaps
-        $ normalizedExp
       (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
       let (re, im) = readC outputCodeC
-      let resultNormalize =
-            listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $
-              zipWith (:+) re im
+      let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ zipWith (:+) re im
       let resultInterpNormalize = eval valMaps normalizedExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec
 spec :: Spec
 spec =
-  describe "Hashed To C spec" $ do
-    specify "Compute local offset" $ do
-      localOffset [2, 3, 4] [1, 2, 0] `shouldBe` (1 * 3 * 4 + 2 * 4 + 0)
-      localOffset [5] [3] `shouldBe` 3
-      localOffset [2, 3, 5, 6] [0, 0, 0, 0] `shouldBe` 0
+  describe "C simple spec" $ do
     specify
       "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)"
       $ property prop_CEqualInterpScalarR

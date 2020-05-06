@@ -60,19 +60,17 @@ toRecursiveCollecting = toTransformation . toRecursive NoReorder
 -- Also move covector to the right hand side of dot product
 restructure :: Transformation
 restructure =
-  multipleTimes 1000 $
-    chain
-      [ toMultiplyIfPossible, --
-        toRecursiveCollecting $ fromModification flattenSumProdRules
-      ]
+  multipleTimes 1000 . chain $
+    [ toMultiplyIfPossible, --
+      toRecursiveCollecting $ fromModification flattenSumProdRules
+    ]
 
 -- | x * y * covector * z --> (x * y * z) * covector
 splitCovectorProdRules :: Modification
 splitCovectorProdRules exp@(mp, n) =
   case retrieveNode n mp of
     Mul Covector ns ->
-      let ([differential], reals) =
-            partition ((== Covector) . flip retrieveElementType mp) ns
+      let ([differential], reals) = partition ((== Covector) . flip retrieveElementType mp) ns
           prodRest = product_ . map just $ reals
        in prodRest * just differential
     _ -> just n
@@ -80,20 +78,18 @@ splitCovectorProdRules exp@(mp, n) =
 -- |
 separateDVarAlone :: Transformation
 separateDVarAlone =
-  multipleTimes 1000 . chain $
-    map
-      (toRecursiveCollecting . fromSubstitution)
-      [ x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
-        x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y,
-        x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y,
-        s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y,
-        s * (x * y) |. isDVar y ~~~~~~> (s * x) * y,
-        x <.> rotate amount y |. isCovector y ~~~~~~> (rotate (negate amount) x <.> y),
-        x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y,
-        x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y,
-        x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y,
-        x <.> twiceImFT y |. isCovector y ~~~~~~> twiceImFT x <.> y
-      ]
+  multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
+    [ x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
+      x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y,
+      x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y,
+      s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y,
+      s * (x * y) |. isDVar y ~~~~~~> (s * x) * y,
+      x <.> rotate amount y |. isCovector y ~~~~~~> (rotate (negate amount) x <.> y),
+      x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y,
+      x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y,
+      x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y,
+      x <.> twiceImFT y |. isCovector y ~~~~~~> twiceImFT x <.> y
+    ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
 -- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->

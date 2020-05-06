@@ -6,7 +6,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Problem
 import HashedExpression.Value
 
--- | List where each element is a line of code
+-- | Each element is a line of code
 type Code = [Text]
 
 -- |

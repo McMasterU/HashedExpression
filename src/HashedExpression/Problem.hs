@@ -146,9 +146,7 @@ isBoxConstraint cs =
     (mp, n) = getExpressionCS cs
 
 -------------------------------------------------------------------------------
-data Constraint
-  = NoConstraint
-  | Constraint [ConstraintStatement]
+data Constraint = Constraint [ConstraintStatement]
   deriving (Show, Eq, Ord)
 
 -------------------------------------------------------------------------------
@@ -156,7 +154,7 @@ data Constraint
 -- |
 data ProblemResult
   = ProblemValid Problem
-  | ProblemInvalid String -- reason
+  | ProblemInvalid String 
   | NoVariables -- TODO - what about feasibility problems given constraints?
   deriving (Show)
 
@@ -184,7 +182,6 @@ constructProblem objectiveFunction varList constraint
         varsWithShape = zip varsList (map variableShape varsList)
         -------------------------------------------------------------------------------
         extractScalarConstraint :: [(String, Shape)] -> Constraint -> [(ScalarConstraint, ExpressionMap)]
-        extractScalarConstraint _ NoConstraint = []
         extractScalarConstraint varsWithShape (Constraint css) =
           let scalarConstraints = filter (not . isBoxConstraint) css
               listScalarExpressions = Set.toList . Set.fromList . map getExpressionCS $ scalarConstraints
@@ -205,8 +202,7 @@ constructProblem objectiveFunction varList constraint
               toScalarConstraint (mp, n) =
                 let exp = Expression @Scalar @R n mp
                     g = normalize exp
-                    dg =
-                      introduceZeroPartialDerivatives varsWithShape
+                    dg = introduceZeroPartialDerivatives varsWithShape
                         . collectDifferentials
                         . exteriorDerivative (Set.fromList vars)
                         $ g
@@ -227,7 +223,6 @@ constructProblem objectiveFunction varList constraint
            in map toScalarConstraint listScalarExpressions
         -------------------------------------------------------------------------------
         extractBoxConstraint :: Constraint -> [BoxConstraint]
-        extractBoxConstraint NoConstraint = []
         extractBoxConstraint (Constraint css) = map toBoxConstraint . filter isBoxConstraint $ css
           where
             toBoxConstraint cs =
@@ -297,7 +292,6 @@ constructProblem objectiveFunction varList constraint
        in retrieveShape nId fMp
     checkError =
       case constraint of
-        NoConstraint -> Nothing
         Constraint cs -> firstJust checkConstraint cs
     checkConstraint :: ConstraintStatement -> Maybe String
     checkConstraint cs =

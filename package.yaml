@@ -33,6 +33,7 @@ dependencies:
   - easyplot
   - string-interpolate
   - mtl
+  - filepath
 
 extra-source-files:
   - symphony/*.hs

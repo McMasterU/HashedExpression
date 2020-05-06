@@ -592,14 +592,9 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
         | otherwise = False
       alreadyExist name = any (isD name) . IM.keys $ mp
       makePart (name, shape)
-        | isScalarShape shape =
-          mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise =
-          apply
-            (binaryET InnerProd ElementDefault `hasShape` [])
-            [aConst shape 0, dVarWithShape shape name]
-      listToInsert =
-        map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
+        | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
+      listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
         case retrieveNode n mp of
           Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
