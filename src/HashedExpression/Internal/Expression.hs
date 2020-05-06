@@ -228,7 +228,7 @@ data Node
   | -- MARK: Discrete Fourier Transform
     ReFT Arg
   | ImFT Arg
-  | -- Need these inside because taking real of FT twice can be computed very fast
+  | -- Need these inside because taking real of FT twice can be very fast
     TwiceReFT Arg
   | TwiceImFT Arg
   deriving (Show, Eq, Ord)

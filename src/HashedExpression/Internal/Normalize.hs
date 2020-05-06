@@ -256,7 +256,7 @@ rotateRules =
     rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y)
   ]
 
--- | 1 and 0 rules for Sum and Mul since they can involve many operands
+-- | 1 and 0 rules for Sum and Mul
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
@@ -318,14 +318,12 @@ groupConstantsRules exp@(mp, n) =
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
             let total = const_ shape . Prelude.sum $ cs ->
-            sum_ $
-              total : (map just . filter (not . isConstant mp) $ ns)
+            sum_ $ total : (map just . filter (not . isConstant mp) $ ns)
         Mul _ ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
             let total = const_ shape . Prelude.product $ cs ->
-            product_ $
-              total : (map just . filter (not . isConstant mp) $ ns)
+            product_ $ total : (map just . filter (not . isConstant mp) $ ns)
         _ -> just n
 
 -- |
@@ -336,8 +334,7 @@ groupConstantsRules exp@(mp, n) =
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
   | Sum _ ns <- retrieveNode n mp =
-    sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $
-      ns
+    sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
     applyDiff' = applyDiff mp
@@ -361,12 +358,7 @@ combineTermsRules exp@(mp, n)
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
   | Mul _ ns <- retrieveNode n mp =
-    product_
-      . map (toDiff . combine)
-      . groupBy fn
-      . sortWith fst
-      . map cntAppr
-      $ ns
+    product_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
     applyDiff' = applyDiff mp
@@ -463,9 +455,7 @@ evaluateIfPossibleRules exp@(mp, n) =
       | otherwise -> res 0
     (Power x _, Just [val]) -> res $ val ** fromIntegral x
     (InnerProd R arg1 arg2, Just [val1, val2]) ->
-      res $
-        val1 * val2
-          * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
+      res $ val1 * val2 * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
     (Rotate _ _, Just [val]) -> res val
     -- TODO: sin, sos, ...
     _ -> just n
@@ -480,8 +470,7 @@ evaluateIfPossibleRules exp@(mp, n) =
 -- | rotateAmount in each direction always lie within (0, dim - 1)
 normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
-  | (shape, Rotate amount arg) <- retrieveInternal n mp =
-    rotate (zipWith mod amount shape) $ just arg
+  | (shape, Rotate amount arg) <- retrieveInternal n mp = rotate (zipWith mod amount shape) $ just arg
   | otherwise = just n
 
 -- | Because sometimes we got both Const (-0.0) and Const (0.0) which are different, so we turn them
@@ -520,9 +509,7 @@ pullOutPiecewiseRules exp@(mp, n)
     let branchWithPiecewise idx branch =
           let newPiecewiseBranches =
                 -- [1, 0, 0 .. ]
-                replicate idx zero
-                  ++ [one]
-                  ++ replicate (length branches - idx - 1) zero
+                replicate idx zero ++ [one] ++ replicate (length branches - idx - 1) zero
               allZerosOneOne =
                 -- piecewise marks condition [1, 0, 0, ..]
                 piecewise marks (just condition) newPiecewiseBranches
@@ -546,12 +533,8 @@ twiceReFTAndImFTRules exp@(mp, n)
   | Sum R sumands <- retrieveNode n mp,
     Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands,
     Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
-    let rest =
-          map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $
-            sumands
-        totalScaleFactor =
-          scaleFactor
-            * fromIntegral (Prelude.product $ retrieveShape innerArg mp)
+    let rest = map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
+        totalScaleFactor = scaleFactor * fromIntegral (Prelude.product $ retrieveShape innerArg mp)
         scalar = num_ totalScaleFactor
         scaled = scalar *. just innerArg
      in sum_ $ scaled : rest

@@ -42,16 +42,13 @@ scalarVariables (Function exp values) = mapMaybe toScalarVariable entries
 
 plot1VariableFunction :: Function -> FileName -> IO ()
 plot1VariableFunction fn@(Function exp values) imageName
-  | [var] <- scalarVariables fn =
+  | [var] <- scalarVariables fn = do
     let f x = eval (Map.insert var (VScalar x) values) exp
-     in do
-          plot (PDF $ "plots/" ++ imageName ++ ".pdf") $
-            Function2D [Title "Function"] [] f
-          readProcessWithExitCode "rm" ["plot1.dat"] ""
-          putStrLn "Done plotting !"
-          putStrLn $
-            "Your image " ++ imageName ++ ".pdf is in plots folder"
+    plot (PDF $ "plots/" ++ imageName ++ ".pdf") $
+      Function2D [Title "Function"] [] f
+    readProcessWithExitCode "rm" ["plot1.dat"] ""
+    putStrLn "Done plotting !"
+    putStrLn $ "Your image " ++ imageName ++ ".pdf is in plots folder"
   | otherwise = do
-    putStrLn
-      "Expression and values provided together is not a 1-variable function !!"
+    putStrLn "Expression and values provided together is not a 1-variable function !!"
     putStrLn "Can't do plotting"

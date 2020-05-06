@@ -21,16 +21,11 @@ import HashedExpression.Internal.Inner (containsFTNode, topologicalSortManyRoots
 import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
+import System.FilePath
 import HashedExpression.Value
 import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
-
-d2s :: Double -> Text
-d2s val
-  | val == ninf = "-INFINITY"
-  | val == inf = "INFINITY"
-  | otherwise = showT val
 
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
@@ -54,6 +49,12 @@ data CSimpleCodegen
       }
 
 -------------------------------------------------------------------------------
+
+d2s :: Double -> Text
+d2s val
+  | val == ninf = "-INFINITY"
+  | val == inf = "INFINITY"
+  | otherwise = showT val
 
 -- | Helpers for code generation
 scoped :: Code -> Code
@@ -229,14 +230,14 @@ instance Codegen CSimpleConfig where
       forM_ (Map.toList valMaps) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
           let str = T.unwords . map showT . valElems $ val
-          TIO.writeFile (folder ++ "/" ++ var ++ ".txt") str
+          TIO.writeFile (folder </> var <.> "txt") str
       -- Write box constraints
       forM_ boxConstraints $ \c -> case c of
-        BoxLower var val -> when (valueFromHaskell val) $ writeVal val (folder ++ "/" ++ var ++ "_lb.txt")
-        BoxUpper var val -> when (valueFromHaskell val) $ writeVal val (folder ++ "/" ++ var ++ "_ub.txt")
+        BoxLower var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_lb.txt"))
+        BoxUpper var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_ub.txt"))
         BoxBetween var (val1, val2) -> do
-          when (valueFromHaskell val1) $ writeVal val1 (folder ++ "/" ++ var ++ "_lb.txt")
-          when (valueFromHaskell val2) $ writeVal val2 (folder ++ "/" ++ var ++ "_ub.txt")
+          when (valueFromHaskell val1) $ writeVal val1 (folder </> (var <> "_lb.txt"))
+          when (valueFromHaskell val2) $ writeVal val2 (folder </> (var <> "_ub.txt"))
       -- Write code
       let codes =
             concat
@@ -249,7 +250,7 @@ instance Codegen CSimpleConfig where
                 evaluateScalarConstraintsCodes,
                 evaluateScalarConstraintsJacobianCodes
               ]
-      TIO.writeFile (folder ++ "/problem.c") $ T.intercalate "\n" codes
+      TIO.writeFile (folder </> "problem.c") $ T.intercalate "\n" codes
     where
       -------------------------------------------------------------------------------
       -- variables we're trying to optimize over
