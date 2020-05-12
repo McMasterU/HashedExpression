@@ -154,7 +154,7 @@ data Constraint = Constraint [ConstraintStatement]
 -- |
 data ProblemResult
   = ProblemValid Problem
-  | ProblemInvalid String 
+  | ProblemInvalid String
   | NoVariables -- TODO - what about feasibility problems given constraints?
   deriving (Show)
 
