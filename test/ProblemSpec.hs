@@ -60,7 +60,7 @@ prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemNoConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
       pdMap = partialDerivativeMaps . collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
-      constructResult = constructProblem exp names NoConstraint
+      constructResult = constructProblem exp names (Constraint [])
   case constructResult of
     NoVariables -> return () -- it is possible that the random expression doesn't have any variables
     ProblemInvalid reason ->
