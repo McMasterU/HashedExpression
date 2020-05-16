@@ -20,11 +20,11 @@ import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import Data.String.Interpolate
+import Prelude hiding ((^))
 
 main :: IO ()
 main = do
-  let vX = variable2D @10 @10 "X"
-      vY = variable2D @10 @10 "Y"
-      z = variable "z"
-      exp = vX <.> vY + z
-  showExp $ partialDerivative exp vX 
+  let x = variable "x"
+  let y = variable "y"
+  let f = sum [x^2 , 2*x , 1] * (x^2 + 2 * y + 1)
+  print $ allEntries f

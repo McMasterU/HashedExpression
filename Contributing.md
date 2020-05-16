@@ -1,61 +1,43 @@
 # Contributing
+## Why Hashed Expression
+Normally, we would see (arithmetic) expressions represented as tree.
+For example, the expression `f = (xy + 2x + 1)xy`
+![tree](examples/tree.png)
 
-## Quick code walk through
+How do we evaluate `f` with a given value of `x` and `y`, e.g `x = 2`, `y = 3`?
+Such function would be something like this in Haskell:
+```haskell
+evaluate :: Substitution -> Exp -> Int
+evaluate sub exp = case exp of 
+    Add xs -> sum . map (evaluate sub) $ xs
+    Mul xs -> product . map (evaluate sub) $ xs
+    Var name -> sub name
+    Const num -> num
+    ...
+```
 
-- Main:
-    - **HashedExpression.hs**: Base types (Expression, Node),
-    typeclasses for constraints and operations definition.
-    - **HashedOperation.hs**: All the functions for constructing expressions, including
-creating vars and implementation of operations.
-    - **HashedExpression.Inner.hs**: All the functions dealing with internal structures of
-expressions, as well as transforming expressions. This can be thought as the core
-of HashedExpression.
-    - **HashedPattern.hs**: For matching and substituting on expression trees.
-This for hashed expressions is like what regular expressions is for strings.
-    - **HashedNormalize.hs**: For normalizing expressions, i.e, bring expressions to their normal form. Contain rules and function `normalize`:
-    ```haskell
-    normalize :: (DimensionType d, ElementType et) => Expression d et -> Expression d et
-    ```
-    - **HashedDerivative.hs**: For computing derivative of real expressions:
-    ```haskell
-    exteriorDerivative ::
-       (DimensionType d)
-    => Set String -- ^ Variables
-    -> Expression d R  -- ^ Expression
-    -> Expression d Covector
-    ```
-    e.g:
-    ```haskell
-    exteriorDerivative {x, y} (x^3 + y^3 + 2xy) = 3x^2 * dx + 3y^2 * dy + 2x * dy + 2y * dx
-    ```
-    - **HashedExpression.CollectDifferential.hs**: For collecting and grouping partial derivatives w.r.t each variable
-    after taking derivative.
-    ```haskell
-    collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
-    ```
-    e.g:
-    ```haskell
-    collectDifferentials (3x^2 * dx + 3y^2 * dy + 2x * dy + 2y * dx) = (3x^2 + 2y) * dx + (3y^2 + 2x) * dy
-    ```
-    - **HashedExpression.Interp.hs**: Haskell interpreter to evaluate expressions, useful for testing.
-    - **HashedToC.hs**: For generating C code to evaluate expression.
-    - **HashedSolver.hs**: Construct optimization problems (out of objective expressions, constraint expressions, etc.)
-    process, schedule and generate C code: evaluate partial derivatives, objective, jacobian. Optimization solvers then use
-    it to solve optimization problem.
+Basically, we call evaluate on every subtree/node/leaf of the tree. This is inefficient. 
+For example, `evaluate sub x` is called 4 times.
 
-- Helpers:
-    - **HashedHash.hs**: All the stuffs related to hashing.
-    - **HashedNode.hs**: Functions to get information of expression nodes.
-    - **HashedPrettify.hs**: Printing expressions, useful for debugging.
-    - **HashedPlot.hs**: For plotting expressions, useful for debugging.
-    - **HashedVar.hs** and **Utils.hs** : Utilities
+So we want to identify all the common subexpressions and link them accordingly.
+Now the expression is no longer a Tree, but a Directed Acyclic Graph (DAG). 
+![dag](examples/dag.png)
 
+Let's analyze this DAG a bit:
+- It's a single-root DAG.
+- Each node uniquely represents a subexpression, and has:
+    - (1) Information of the subexpression it represents (what kind of operation, etc, ..)
+    - (2) Pointers to it's subexpressions
 
-## Style Guide
-- hindent
-    - Install: `stack install hindent`
-    - `hindent --indent-size 4 $FILE_PATH$`
+So what kind of data structure should we use for this kind of DAG?
 
-## Check for non-exhaustive patterns:
-- `stack clean`
-- `stack build --fast --ghc-options -Wincomplete-patterns`
+Our approach: each node/subexpression is uniquely indexed by hash of (1) and (2). 
+The expression is now a hash table with a root node ID.
+
+![Hash](examples/Hash.png)
+(Root ID is in maroon color)
+
+Or explicitly:
+![Hash explicit](examples/Hash_Explicit.png)
+
+The rest are just implementations. Good luck!
