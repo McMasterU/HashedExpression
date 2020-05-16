@@ -172,6 +172,13 @@ dVarWithShape shape name = (IM.fromList [(h, node)], h)
 showT :: Show a => a -> T.Text
 showT = T.pack . show
 
+-- |
+maybeVariable :: DimensionType d => Expression d R -> Maybe (String, Shape)
+maybeVariable (Expression nID mp) = case retrieveInternal nID mp of 
+  (shape, Var name) -> Just (name, shape)
+  _ -> Nothing
+  
+
 -------------------------------------------------------------------------------
 
 -- | MARK: (+)
