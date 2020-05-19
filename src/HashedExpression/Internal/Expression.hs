@@ -1,5 +1,17 @@
 {-# LANGUAGE ConstraintKinds #-}
 
+{-|
+Module      :  HashedExpression.Internal.Expression
+Copyright   :  (c) OCA 2020
+License     :  GPL (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+The @Expression@ data type is the core data structure of the HashedExpresion library.
+This module contains the all necessary definitions for constructing the Expression type.
+-}
+
 module HashedExpression.Internal.Expression
   ( R,
     C,
@@ -43,33 +55,33 @@ import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Prelude hiding ((^))
 
--- | Type representation of elements in the 1D, 2D, 3D, ... grid
+-- | Used to type Real values
+--   HashedExpression values are either 'R', 'C' or a 'Covector'
 data R
   deriving (NumType, ElementType, Typeable)
 
+-- | Used to type Complex values
+--   HashedExpression values are either 'R', 'C' or a 'Covector'
 data C
   deriving (NumType, ElementType, Typeable)
 
+-- | Used to type Covector values (used to compute exterior derivatives)
+--   HashedExpression values are either 'R', 'C' or a 'Covector'
 data Covector
   deriving (ElementType, Typeable)
 
--- | Type representation of vector dimension
+-- | Placeholder type for the zero dimension vectors (i.e not a vector)
+--   When specifying Vector dimensions for type class instances, in general
+--   use either 'Scalar' or an instance of 'KnownNat'
 data Scalar
   deriving (Dimension, Typeable)
 
--- |
-instance (KnownNat n) => Dimension n
-
-instance (KnownNat m, KnownNat n) => Dimension '(m, n)
-
-instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
 -- | Classes as constraints
 class ElementType et
 
 class ElementType et => NumType et
 
--------------------------------------------------------------------------------
 class
   (Dimension d) =>
   ToShape d where
@@ -97,6 +109,13 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -------------------------------------------------------------------------------
 class Dimension d
+
+
+instance (KnownNat n) => Dimension n
+
+instance (KnownNat m, KnownNat n) => Dimension '(m, n)
+
+instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
 class VectorSpace d et s
 

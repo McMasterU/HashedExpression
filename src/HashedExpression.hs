@@ -6,22 +6,26 @@ Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
 Portability :  unportable
 
-This module exports everything needed to build and evaluate HashedExpression's
+This module exports everything needed to build and evaluate HashedExpressions;
+including all HashedExpression operators, derivative functions, eval methods
+and normalization. For example,
+
 @
  x = variable "x"
  y = variable "y"
  expr = x + y
 @
-TODO put some better example code here?? maybe example with eval
-TODO point to what to import to generate C
+
+the above code creates a simple HashedExpression using the
+'variable' constructor method and taking advantage of the 'Num' class instance
+
 -}
 module HashedExpression
-  ( exteriorDerivative,
-    derivativeAllVars,
+  ( -- * Expression Constructors
+    Expression,
     R,
     C,
     Covector,
-    Expression,
     Scalar,
     PowerOp (..),
     PiecewiseOp (..),
@@ -31,6 +35,7 @@ module HashedExpression
     ComplexRealOp (..),
     RotateOp (..),
     InnerProductSpaceOp (..),
+    -- * Combinators
     constant,
     constant1D,
     constant2D,
@@ -42,7 +47,11 @@ module HashedExpression
     sum,
     product,
     normalize,
+    -- * Evaluation
     Evaluable (..),
+    -- * Derivatives
+    exteriorDerivative,
+    derivativeAllVars,
   )
 where
 

@@ -1,11 +1,17 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
--------------------------------------------------------------------------------
+{-|
+Module      :  HashedExpression.Internal.Inner
+Copyright   :  (c) OCA 2020
+License     :  GPL (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
 
--------------------------------------------------------------------------------
+Inner HashedExpression functionality, contains transformations
+and combinators for manually manipulating HashedExpressions
+-}
 
--- | Inner Hashed functions, there are functions as
--- how to combine expression with options
 module HashedExpression.Internal.Inner
   ( D_,
     ET_,
