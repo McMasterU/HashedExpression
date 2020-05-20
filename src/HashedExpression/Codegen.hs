@@ -9,15 +9,19 @@ import HashedExpression.Value
 -- | Each element is a line of code
 type Code = [Text]
 
--- |
+-- | The result of a code generation
 data GenResult
-  = Invalid String
-  | -- Write all the necessary files in a given file path
+  = -- | Unable to generate the code along with a reason why
+    Invalid String
+  | -- | Success, write all the necessary files in a given file path
     Success (String -> IO ())
 
+-- | The initial state of a code generation
 data CodegenInit
   = CodegenInit
-      { codegenExMap :: ExpressionMap,
+      { -- | The ExpressionMap containing the expression to generate
+        codegenExMap :: ExpressionMap,
+        -- FIXME: not sure what this is
         codegenConsecutiveIDs :: [Int]
         -- more common options here
       }
@@ -27,5 +31,11 @@ class Codegen configs where
   generateProblemCode :: configs -> Problem -> ValMaps -> GenResult
 
 -- | Indent `n` space each line of code
-indent :: Int -> Code -> Code
+indent ::
+  -- | The number of spaces by which to indent the code
+  Int ->
+  -- | The code to indent
+  Code ->
+  -- | The indented code
+  Code
 indent n = map (T.pack (replicate n ' ') <>)
