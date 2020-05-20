@@ -47,12 +47,17 @@ makeTrans ::
   Expression d et
 makeTrans smp = wrap . smp . unwrap
 
--- | Normalize an expression
+-- | Normalize an expression considering all possible rewrite rules in this module
 normalize ::
-  (DimensionType d, ElementType et) => Expression d et -> Expression d et
+  (DimensionType d, ElementType et) =>
+  Expression d et -> -- un-normalized expression
+  Expression d et -- normalized expression
 normalize = wrap . normalizingTransformation . unwrap
 
--- | Combine all the transformations
+-- | Combine all the transformations, using a two-pass normalization procedure
+--   Pass one transforms the expression a maximum of 100 times, or until it does not change anymore
+--   Pass two attempts to turn the expression into a top-level multiplication if possible (see `toMultiplyIfPossible`)
+--   See Internal.Inner.multipleTimes for greater control over this
 normalizingTransformation :: Transformation
 normalizingTransformation = secondPass . firstPass
   where
@@ -83,9 +88,10 @@ normalizingTransformation = secondPass . firstPass
              ]
     secondPass = toMultiplyIfPossible
 
--- | Turn a modification to a recursive transformation
+-- | Turn a modification into a recursive transformation
 toRecursiveSimplification ::
-  ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
+  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
+  Transformation
 toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
@@ -117,6 +123,7 @@ toMultiplyIfPossible1 =
       x <.> y |. isCovector x &&. isScalar x &&. isScalar y ~~~~~~> x * y
     ]
 
+-- | Create a transformation which combines together the various rules listed in this module.
 rulesFromPattern :: Transformation
 rulesFromPattern =
   chain . map (toRecursiveSimplification . fromSubstitution) . concat $
@@ -133,6 +140,8 @@ rulesFromPattern =
     ]
 
 -- | Rules with zero and one
+--
+--   This includes basic rules such as identity and zero of multiplication and identity of addition.
 zeroOneRules :: [Substitution]
 zeroOneRules =
   [ one *. x |.~~~~~~> x,
@@ -152,6 +161,9 @@ zeroOneRules =
     zero <.> x |.~~~~~~> scalarZero
   ]
 
+-- | Rules related to the scaling operation
+--
+--   This include rules such as associativity of scaling and moving a negation inside a scaling.
 scaleRules :: [Substitution]
 scaleRules =
   [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z,
@@ -161,7 +173,10 @@ scaleRules =
     restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
   ]
 
--- | Rules with complex operation
+-- | Rules for operations on complex numbers
+--
+--   This includes complex versions of basic addition and multiplication theorems, as well as
+--   simplifying complex numbers with no complex component into real numbers.
 complexNumRules :: [Substitution]
 complexNumRules =
   [ xRe (x +: y) |.~~~~~~> x,
@@ -177,7 +192,10 @@ complexNumRules =
     (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z + y <.> w) +: (y <.> z - x <.> w)
   ]
 
--- | Rules with dot product and scale
+-- | Rules for dot product and scale
+--
+--   These include mutual associativity of these operations as well as rules for shuffling the order of the two
+--   operations to put the real value in front of the expression.
 dotProductRules :: [Substitution]
 dotProductRules =
   [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y), --
@@ -187,7 +205,9 @@ dotProductRules =
     x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y)
   ]
 
--- | Rules of distributive over sum
+-- | Rules for distributivity of scale, multiplication and dot product over sum
+--
+--   This mostly consists of rules to bring leading multiplicands inside a sum, as one would expect.
 distributiveRules :: [Substitution]
 distributiveRules =
   [ x * sum ys |.~~~~~~> sum (mapL (x *) ys),
@@ -200,7 +220,10 @@ distributiveRules =
     sum ys *. x |.~~~~~~> sum (mapL (*. x) ys)
   ]
 
--- | Fourier transform rules
+-- | Rules for Fourier transform
+--
+--   This includes common Fourier transform theorems, including linearity, as well as simplfications that will reduce
+--   computational complexity (for example, setting the imaginary-valued FT of a real-valued FT of x to 0).
 fourierTransformRules :: [Substitution]
 fourierTransformRules =
   [ reFT (x +: y) |.~~~~~~> reFT x - imFT y,
@@ -223,13 +246,19 @@ fourierTransformRules =
     imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x
   ]
 
--- | Rules of piecewise
+-- | Rules for piecewise functions
+--
+--   Currently consists of a single rule to select the first function in the case where the multiple pieces of the
+--   function have the same domain.
 piecewiseRules :: [Substitution]
 piecewiseRules =
   [ piecewise_ condition branches |. allTheSame branches ~~~~~~> headL branches
   ]
 
--- | Rules of exponent and log
+-- | Rules for exponentiation and log
+--
+--   This includes simplifying exponents applied to logs (and vice versa), as well as setting the exponent of zero equal
+--   to one.
 exponentRules :: [Substitution]
 exponentRules =
   [ exp (log x) |.~~~~~~> x, --
@@ -237,14 +266,18 @@ exponentRules =
     exp zero |.~~~~~~> one
   ]
 
--- |
+-- | Miscallaneous rules for negations and exponentials
+--
+--   This includes turning a negated operand (e.g. scalar, vector, etc) into the scaling of that operand by -1.
 otherRules :: [Substitution]
 otherRules =
   [ negate x |.~~~~~~> scalar (-1) *. x, --
     (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
   ]
 
--- |
+-- | Rules related to rotations
+--
+--   This includes the linearity of rotations and combining two composed rotations together into one rotation.
 rotateRules :: [Substitution]
 rotateRules =
   [ rotate amount (s *. x) |.~~~~~~> s *. rotate amount x,
@@ -256,7 +289,9 @@ rotateRules =
     rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y)
   ]
 
--- | 1 and 0 rules for Sum and Mul
+-- | Identity and zero laws for 'Sum' and 'Mul'.
+--
+--   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
@@ -281,7 +316,9 @@ zeroOneSumProdRules exp@(mp, n) =
     -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
     _ -> just n
 
--- |
+-- | Rules for collapsing 'Sum' and 'Mul'
+--
+--   For example, if a sum or product consists of only one entry, it can be extracted.
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
@@ -295,7 +332,10 @@ collapseSumProdRules exp@(mp, n) =
       | length ns == 1 -> just $ head ns
     _ -> just n
 
--- | If sum or product contains sub-sum or sub-product, flatten them out
+-- | Rules for flattening 'Sum' and 'Mul'.
+--
+--   For example, if sum or product contains sub-sum or sub-product, flatten them out. This is analogous to the `concat`
+--   function on lists.
 flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
@@ -309,7 +349,9 @@ flattenSumProdRules exp@(mp, n) =
       product_ . map just . concatMap (pullProdOperands mp) $ ns
     _ -> just n
 
--- | If there are more than one constant in a sum or a product, group them together
+-- | Rules for grouping constants
+--
+--   If there is more than one constant in a sum or a product, group them together to reduce complexity.
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
@@ -326,11 +368,12 @@ groupConstantsRules exp@(mp, n) =
             product_ $ total : (map just . filter (not . isConstant mp) $ ns)
         _ -> just n
 
--- |
+-- | Rules for combining and reducing the number of terms in 'Sum'
 --
--- Sum(x,(-1) *. x,y) -> Sum(y)
--- Sum(2 *. x, (-1) *. x,y) -> Sum(x,y)
--- Sum(x,x,y) -> Sum(2 *. x,y)
+--   This includes the following scenarios:
+--   * Sum [x,(-1) *. x,y] -> Sum [y]
+--   * Sum [2 *. x, (-1) *. x,y] -> Sum [x,y]
+--   * Sum [x,x,y] -> Sum [2 *. x,y]
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
   | Sum _ ns <- retrieveNode n mp =
@@ -351,10 +394,11 @@ combineTermsRules exp@(mp, n)
       | val == 1 = just nId
       | otherwise = num_ val *. just nId
 
--- |
+-- | Rules for combining and reducing the numbers of terms in 'Mul'
 --
--- Mul(x^(-1) * x,y) -> y
--- Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
+--   This includes the following scenarios:
+--   * Mul(x^(-1) * x,y) -> y
+--   * Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
   | Mul _ ns <- retrieveNode n mp =
@@ -377,8 +421,10 @@ combineTermsRulesProd exp@(mp, n)
       | otherwise = just nId ^ val
 
 -- | Rules for combining powers of power
--- (x^2)^3 -> x^6
--- (x^2)^-1 -> x^-2
+--
+--   This includes rules like:
+--   * (x^2)^3 -> x^6
+--   * (x^2)^-1 -> x^-2
 combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
   | Power outerVal outerN <- retrieveNode n mp,
@@ -386,9 +432,10 @@ combinePowerRules exp@(mp, n)
     just innerN ^ (outerVal * innerVal)
   | otherwise = just n
 
--- | Rules for power of Sum and power of RealImag
--- (a+b)^2 should be (a+b)*(a+b)
--- (a +: b) ^ 2 should be (a +: b) * (a +: b)
+-- | Rules for power of sum and power of 'RealImag'
+--
+--   * (a+b)^2 should be (a+b)*(a+b)
+--   * (a +: b) ^ 2 should be (a +: b) * (a +: b)
 powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
   | Power val nId <- retrieveNode n mp,
@@ -406,7 +453,8 @@ powerSumRealImagRules exp@(mp, n)
       | otherwise = just nId
 
 -- | Rules for power product
--- (a*b*c)^k should be a^k * b^k * c^k
+--
+--   * (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
   | Power val nId <- retrieveNode n mp,
@@ -415,7 +463,8 @@ powerProdRules exp@(mp, n)
   | otherwise = just n
 
 -- | Rules for power scale
--- (a*.b)^2 should be a^2 *. b^2
+--
+--   * (a*.b)^2 should be a^2 *. b^2
 powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
   | Power val nId <- retrieveNode n mp,
@@ -424,8 +473,9 @@ powerScaleRules exp@(mp, n)
     (just scalar ^ val) *. (just scalee ^ val)
   | otherwise = just n
 
--- | Rules for combining scalar
--- (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
+-- | Rules for combining scalar scales and multiplications
+--
+--   * (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
 combineRealScalarRules :: Modification
 combineRealScalarRules exp@(mp, n)
   | Mul R ns <- retrieveNode n mp,
@@ -443,7 +493,9 @@ combineRealScalarRules exp@(mp, n)
         (just negatee, Just $ num_ (-1))
       | otherwise = (just nId, Nothing)
 
--- |
+-- | Rules that are applied in specific scenarios if possible
+--
+--   For instance, we can combine constants in 'Sum' and 'Mul' using regular Haskell arithmetic.
 evaluateIfPossibleRules :: Modification
 evaluateIfPossibleRules exp@(mp, n) =
   case (node, pulledVals) of
@@ -467,14 +519,18 @@ evaluateIfPossibleRules exp@(mp, n) =
     pulledVals = mapM getVal . nodeArgs $ node
     res = const_ shape
 
--- | rotateAmount in each direction always lie within (0, dim - 1)
+-- | Rules to normalize rotations
+--
+--   This ensures that rotateAmount in each direction always lie within (0, dim - 1)
 normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
   | (shape, Rotate amount arg) <- retrieveInternal n mp = rotate (zipWith mod amount shape) $ just arg
   | otherwise = just n
 
--- | Because sometimes we got both Const (-0.0) and Const (0.0) which are different, so we turn them
--- to Const (0.0)
+-- | Rules for negative zeroes
+--
+--   This is to avoid having `Const (-0.0)` show up, which is considered different than `Const (0.0)`.
+--   Thus, instead we convert those to `Const (0.0)`.
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
   | (shape, Const val) <- retrieveInternal n mp,
@@ -482,8 +538,11 @@ negativeZeroRules exp@(mp, n)
     const_ shape 0
   | otherwise = just n
 
--- | Piecewise of RealImag -> RealImag of piecewises
--- if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
+-- | Rules for piecewise functions of 'RealImag'
+--
+--   In particular, Piecewise of 'RealImag' is the same as 'RealImag' of piecewise functions.
+--
+--   * if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
 expandPiecewiseRealImag :: Modification
 expandPiecewiseRealImag exp@(mp, n)
   | Piecewise marks condition branches <- retrieveNode n mp,
@@ -499,8 +558,12 @@ expandPiecewiseRealImag exp@(mp, n)
       | RealImag re im <- retrieveNode nId mp = Just (re, im)
       | otherwise = Nothing
 
--- | piecewise marks condition [branch1, branch2, ..] -->
--- branch1 * piecewise marks condition [1, 0, 0, ..] + branch2 * piecewise marks condition [0, 1, 0, ..] + ..
+-- FIXME: This one needs a better explanation.
+
+-- | Rules for expanding piecewise functions
+--   In particular:
+--   piecewise marks condition [branch1, branch2, ..] -->
+--   branch1 * piecewise marks condition [1, 0, 0, ..] + branch2 * piecewise marks condition [0, 1, 0, ..] + ..
 pullOutPiecewiseRules :: Modification
 pullOutPiecewiseRules exp@(mp, n)
   | Piecewise marks condition branches <- retrieveNode n mp,
@@ -526,6 +589,8 @@ pullOutPiecewiseRules exp@(mp, n)
     shape = retrieveShape n mp
     one = const_ shape 1
     zero = const_ shape 0
+
+-- FIXME: not sure about this one either
 
 -- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
 twiceReFTAndImFTRules :: Modification
