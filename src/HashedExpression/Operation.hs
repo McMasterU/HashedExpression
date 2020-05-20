@@ -16,7 +16,13 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
+-- | This is a class for ...
+--
+--   @
+--     x ^ 0
+--   @
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
+  -- | This is the power method
   (^) :: Expression d et -> Int -> Expression d et
   (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
@@ -241,7 +247,7 @@ variable name = Expression h (fromList [(h, node)])
 variable1D ::
   forall n.
   (KnownNat n) =>
-  String ->
+  String -> 
   Expression n R
 variable1D name = Expression h (fromList [(h, node)])
   where

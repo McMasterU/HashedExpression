@@ -8,6 +8,8 @@ import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 
+-- TODO expose in stack
+
 -- | Compute partial derivative: ∂f / ∂x
 --   The second argument must be a variable
 partialDerivative :: DimensionType d => Expression Scalar R -> Expression d R -> Expression d R

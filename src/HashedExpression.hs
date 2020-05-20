@@ -54,7 +54,7 @@ module HashedExpression
     derivativeAllVars,
   )
 where
-
+-- TODO export prettify
 import HashedExpression.Derivative
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression

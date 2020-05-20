@@ -1,21 +1,27 @@
+# Generating haddock
+- from project root
+```terminal
+stack haddock --haddock-arguments "--odir=docs/"
+```
 # TODOs
 ### TODO Write Docs - Start With HashedPattern
 - Internal/Expression.hs
 - Internal/Inner.hs
 - Internal/Pattern.hs
-- Internal/Normalize.hs
+- Internal/Normalize.hs *Chris*
 - Internal/CollectDifferential.hs
 - Internal/Node.hs
-- Operation.hs *Undergrads?*
+- Operation.hs *Steven*
 
-- Interp.hs 
+- Value.hs *Nasim*
+- Interp.hs *Nasim*
 - Derivative.hs
 
 - Value.hs
 - Problem.hs
 
 - Codegen.hs
-- Codegen/CSimple.hs *Undergrad?*
+- Codegen/CSimple.hs *Steven*
 
 - Prettify.hs
 ### FIXME haddock module descriptions
