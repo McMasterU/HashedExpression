@@ -1,7 +1,7 @@
 {-|
 Module      :  HashedExpression
-Copyright   :  (c) OCA 2020
-License     :  GPL (see the LICENSE file)
+Copyright   :  (c) OCA 2020 
+License     :  MIT (see the LICENSE file)
 Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
 Portability :  unportable

@@ -19,8 +19,7 @@
 
 - Prettify.hs
 ### FIXME haddock module descriptions
-- choose license and add license file (currently has GPL and says to refer to LICENSE file that doesn't exist)
-- maintainer?? 
+- add proper copyright info
 ### TODO write haddock cheat sheat
 ### TODO Nhan write Partial Derivative function
 ### TODO better symphony example in README
