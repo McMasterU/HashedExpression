@@ -20,7 +20,7 @@ stack haddock --haddock-arguments "--odir=docs/"
 - Value.hs
 - Problem.hs
 
-- Codegen.hs
+- Codegen.hs *Chris*
 - Codegen/CSimple.hs *Steven*
 
 - Prettify.hs
