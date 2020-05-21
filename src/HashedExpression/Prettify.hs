@@ -42,8 +42,8 @@ prettify e@(Expression n mp) =
       node = expressionNode e
       dimensionStr
         | null shape = ""
-        | otherwise = "(" ++ intercalate ", " (map show shape) ++ ")"
-      typeName = " :: " ++ dimensionStr ++ " " ++ (show . typeRep $ (Proxy :: Proxy rc))
+        | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
+      typeName = " :: " ++ dimensionStr ++ (show . typeRep $ (Proxy :: Proxy rc))
    in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
 -- | Pretty exp to a string that can be paste to editor
