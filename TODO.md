@@ -26,6 +26,5 @@ stack haddock --haddock-arguments "--odir=docs/"
 - Prettify.hs
 ### FIXME haddock module descriptions
 - add proper copyright info
-### TODO write haddock cheat sheat
-### TODO Nhan write Partial Derivative function
 ### TODO better symphony example in README
+### TODO collapse ToShape into Dimension (leave toShape method)
