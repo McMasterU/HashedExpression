@@ -57,7 +57,7 @@ normalizingTransformation :: Transformation
 normalizingTransformation = secondPass . firstPass
   where
     firstPass =
-      multipleTimes 100 . chain $
+      multipleTimes 1000 . chain $
         map
           (toRecursiveSimplification . fromModification)
           [ evaluateIfPossibleRules,
