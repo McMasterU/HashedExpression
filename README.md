@@ -98,13 +98,12 @@ Build the docker image located in docs (it's important you do this from the root
 ```terminal
 docker build -t hashed-docker -f docs/Dockerfile .
 ```
-Then run the docker container to generate the haddock documentation
+-Then run the docker container to generate the haddock documentation (NOTE: every time you alter the 
+-code base you'll have to rebuild the image)
 ```terminal
-docker run -v /path/to/HashedExpression:/home/HashedExpression hashed-docker
+-docker run -v /some/path:/home/HashedExpression/docs hashed-docker
 ```
-this will generate all the haddock documentation (in html) into */path/to/HashedExpression/docs* 
-on your local system (assuming this is the correct path to the repo on your local system).
-NOTE: use absolute filepath when specifying HashedExpression on your local system
+-this will generate all the haddock documentation (in html) into */some/path* on your local system
 
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.
