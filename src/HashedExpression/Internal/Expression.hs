@@ -14,10 +14,10 @@ This module contains all necessary definitions for constructing the Expression t
 
 module HashedExpression.Internal.Expression
   ( -- * Expression Type
-    -- | The Expression data structure is essentially a collection of 'Node', where
+    -- | The Expression data structure is collection of 'Node', where
     --   each 'Node' is either an atomic value like variables and constants or
     --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
-    --   assuring reuse of like subexpressions
+    --   assuring reuse of common subexpressions
     Node (..),
     Internal,
     NodeID,
@@ -75,76 +75,85 @@ import Prelude hiding ((^))
 -- * Expression Type
 -- --------------------------------------------------------------------------------------------------------------------
 
-type Internal = (Shape, Node)
 
--- | Hash map of all subexpressions
+-- | The bulk of an 'Expression' is a collection of 'Node' (with their dimensions), in
+--   a Map indexed 'NodeID' (a generated hash value)
 type ExpressionMap = IntMap Internal
 
--- | The index/key to look for the node on the hash table
+-- | The internals of an 'Expression' are a collection of 'Node' with
+--   their dimensions
+type Internal = (Shape, Node)
+
+-- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
+--   Used as the index/key to perform a lookup in 'ExpressionMap'
 type NodeID = Int
 
--- | Expression with 2 phantom types (dimension and num type)
+-- | HashedExpression stores expressions as a collection of 'Node' indexed by a
+--   hash value (i.e 'NodeID').
+--   The type is parameterized by two phantom types, the expressions 'Dimension' and
+--   'ElementType'
+--
+-- @
+--    variable "x" :: Expression Scalar R
+--    constant1D @10 1 :: Expression 10 R
+-- @
+--
 data Expression d et
   = Expression
-      { exRootID :: Int, -- the index this expression
-        exMap :: ExpressionMap -- all subexpressions
+      { exRootID ::Int, -- ^ index to the topological root of ExpressionMap
+        exMap :: ExpressionMap -- ^ Map of all 'Node' indexable by 'NodeID'
       }
   deriving (Show, Eq, Ord, Typeable)
 
--- | A type role implemented so users cannot use coerce to convert between expression types
 type role Expression nominal nominal
 
--- | Node type
+-- | The Node type provides constructors for variables, constants and operators used to create expressions.
+--   The 'ExpressionMap' that is the content of an 'Expression' is a map from 'NodeID' to 'Node'
 data Node
-  = Var String
-  | DVar String -- ^ only contained in **Expression d Covector (1-form)**
-  | Const Double -- ^ only all elements the same
-      -- MARK: Basics
-  | Sum ET Args -- element-wise sum
-  | Mul ET Args -- multiply --> have different meanings (scale in vector space, multiplication, ...)
-  | Power Int Arg
-  | Neg ET Arg
-  | Scale ET Arg Arg
-  | -- MARK: only apply to R
-    Div Arg Arg -- TODO: Delete?
-  | Sqrt Arg
-  | Sin Arg
-  | Cos Arg
-  | Tan Arg
-  | Exp Arg
-  | Log Arg
-  | Sinh Arg
-  | Cosh Arg
-  | Tanh Arg
-  | Asin Arg
-  | Acos Arg
-  | Atan Arg
-  | Asinh Arg
-  | Acosh Arg
-  | Atanh Arg
-  | -- MARK: Complex related
-    RealImag Arg Arg -- from real and imagine
-  | RealPart Arg -- extract real part
-  | ImagPart Arg -- extract imaginary part
-      -- MARK: Inner product Space
-  | InnerProd ET Arg Arg
-  | -- MARK: Piecewise
-    Piecewise [Double] ConditionArg [BranchArg]
-  | Rotate RotateAmount Arg
-  | -- MARK: Discrete Fourier Transform
-    ReFT Arg
-  | ImFT Arg
-  | -- Need these inside because taking real of FT twice can be very fast
-    TwiceReFT Arg
-  | TwiceImFT Arg
+  = Var String -- ^ variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
+  | DVar String -- ^ differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
+  | Const Double -- ^ constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
+  | Sum ET Args -- ^ element-wise sum
+  | Mul ET Args -- ^ multiply, overloaded via 'Dimension'
+  | Power Int Arg -- ^ power to, overloaded via 'PowerOp'
+  | Neg ET Arg -- ^ negation, wrapped byf @Expression d R@ or @Expression d C@
+  | Scale ET Arg Arg -- ^ scaling, overloaded via 'VectorSpaceOp'
+  | Div Arg Arg -- ^ operand, wrapped by @Expression d R@
+  | Sqrt Arg -- ^ operand, wrapped by @Expression d R@
+  | Sin Arg -- ^ operand, wrapped by @Expression d R@
+  | Cos Arg -- ^ operand, wrapped by @Expression d R@
+  | Tan Arg -- ^ operand, wrapped by @Expression d R@
+  | Exp Arg -- ^ operand, wrapped by @Expression d R@
+  | Log Arg -- ^ operand, wrapped by @Expression d R@
+  | Sinh Arg -- ^ operand, wrapped by @Expression d R@
+  | Cosh Arg -- ^ operand, wrapped by @Expression d R@
+  | Tanh Arg -- ^ operand, wrapped by @Expression d R@
+  | Asin Arg -- ^ operand, wrapped by @Expression d R@
+  | Acos Arg -- ^ operand, wrapped by @Expression d R@
+  | Atan Arg -- ^ operand, wrapped by @Expression d R@
+  | Asinh Arg -- ^ operand, wrapped by @Expression d R@
+  | Acosh Arg -- ^ operand, wrapped by @Expression d R@
+  | Atanh Arg -- ^ operand, wrapped by @Expression d R@
+  | RealImag Arg Arg -- ^ construct a complex value from real and imagine parts, respectively, wrapped by @Expression d C@
+  | RealPart Arg -- ^ extract real from complex (transforms @Expression d C@ to @Expression d R@)
+  | ImagPart Arg -- ^ extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
+  | InnerProd ET Arg Arg -- ^ inner product operand, overload via 'InnerProductSpace'
+  | Piecewise [Double] ConditionArg [BranchArg] -- ^ piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
+  | Rotate RotateAmount Arg -- ^ rotate transformation, rotates vector elements by 'RotateAmount'
+  -- TODO Nhan why real and imag FT??
+  | ReFT Arg -- ^ real fourier transform
+  | ImFT Arg -- ^ imag fourier transform
+  | TwiceReFT Arg -- ^ real fourier transform, performed twice
+  | TwiceImFT Arg -- ^ imag fourier transform, performed twice
   deriving (Show, Eq, Ord)
 
--- | When a 'Node' type references a subexpression (i.e because the Node is an operator)
---   it references the subexpression by 'NodeID'
+-- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
 type Arg = NodeID
 
+-- | Used by operators in the 'Node' type to reference other subexpressions (i.e other 'Node')
 type Args = [NodeID]
 
+-- | A node used as a 
 type ConditionArg = NodeID
 
 type BranchArg = NodeID
@@ -154,40 +163,48 @@ type BranchArg = NodeID
 -- * Expression Element Types
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | Data representation of element type
+-- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
+--   Represents Real, Complex, and Covector values with R, C, Covector respectively
 data ET
   = R
   | C
   | Covector
   deriving (Show, Eq, Ord)
 
--- | Type representation of ElementType for Real values
+-- | Type representation of 'ElementType' for Real values
 --   HashedExpression values are either 'R', 'C' or a 'Covector'
 data R
   deriving (NumType, ElementType, Typeable)
 
--- | Type representation of ElementType for Complex values
+-- | Type representation of 'ElementType' for Complex values
 --   HashedExpression values are either 'R', 'C' or a 'Covector'
 data C
   deriving (NumType, ElementType, Typeable)
 
--- | Type representation of ElementType for Covector values
+-- | Type representation of 'ElementType' for Covector values
 --   HashedExpression values are either 'R', 'C' or a 'Covector'
 data Covector
   deriving (ElementType, Typeable)
 
 
--- | Classes as constraints
+-- | Class used to constrain 'Expression' operations by the type of element
+--   (i.e Real, Complex or Covector). See 'ET' for the corresponding data representation.
 class ElementType et
 
+-- | Class used to constrain 'Expression' operations by the type of element.
+--   Should be implemented by only numeric 'ElementType' (like 'R' and 'C')
 class ElementType et => NumType et
 
 -- --------------------------------------------------------------------------------------------------------------------
 -- * Expression Dimensions
 -- --------------------------------------------------------------------------------------------------------------------
 
+-- | An 'Expression' type is parameterized by two phantom types, the first of which should be 'DimensionType'.
+--   Using the 'Dimension' and 'ToShape' classes provides the dimensions of an expression at the type and data level (respectively).
 type DimensionType d = (Dimension d, ToShape d)
 
+-- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
+--   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
 class Dimension d
 
 -- | Dummy type (no data) for the zero dimension vectors (i.e not a vector)
@@ -202,8 +219,12 @@ instance (KnownNat m, KnownNat n) => Dimension '(m, n)
 
 instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
+-- | A @VectorSpace d et s@ is a space of vectors of @Dimension d@ and @ElementType et@,
+--   that can be scaled by values of @ElementType s@. Used primarily as a base for 'VectorSpaceOp'
 class VectorSpace d et s
 
+-- | Every @VectorSpace@ that can be scaled by the same ElementType has an @InnerProductSpace@.
+--   Used primarily as a base for 'InnerProductSpaceOp'
 class VectorSpace d s s => InnerProductSpace d s
 
 instance (DimensionType d, ElementType et) => VectorSpace d et R
@@ -212,8 +233,13 @@ instance (DimensionType d) => VectorSpace d C C
 
 instance VectorSpace d s s => InnerProductSpace d s
 
+-- | ToShape is used to reify dimensions encoded at the type level (i.e any implementation of 'Dimension'
+--   should also have an implementation in data)
 class (Dimension d) => ToShape d where
   toShape :: Proxy d -> Shape
+
+nat :: forall n. (KnownNat n) => Int
+nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 instance ToShape Scalar where
   toShape _ = []
@@ -234,39 +260,51 @@ instance (KnownNat m, KnownNat n, KnownNat p) => ToShape '(m, n, p) where
 -- [n, m, p] --> 3D with size n × m × p
 type Shape = [Int]
 
--- | Rotation in each dimension.
--- | Property:  the length of this must match the dimension of the data
+-- | Rotation in each dimension, given respectively in a list.
+--   The length of the list matches the number of dimensions
 type RotateAmount = [Int]
-
-nat :: forall n. (KnownNat n) => Int
-nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- --------------------------------------------------------------------------------------------------------------------
 -- * Generic Combinators
 -- --------------------------------------------------------------------------------------------------------------------
 
+-- | Interface for power (i.e power to) combinator for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class PowerOp a b | a -> b where
   (^) :: a -> b -> a
 
+
+-- | Interface for scaling (i.e vector scaling) combinator for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class VectorSpaceOp a b where
   scale :: a -> b -> b
   (*.) :: a -> b -> b
   (*.) = scale
 
+-- | Interface for complex combinators for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class ComplexRealOp r c | r -> c, c -> r where
-  (+:) :: r -> r -> c
-  xRe :: c -> r
-  xIm :: c -> r
+  (+:) :: r -> r -> c -- ^ construct complex data from real / imaginary parts
+  xRe :: c -> r -- ^ extract real part from complex data
+  xIm :: c -> r -- ^ extract imaginary part from complex data
 
+-- | Interface for Inner Product combinator for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class InnerProductSpaceOp a b c | a b -> c where
   (<.>) :: a -> b -> c
 
+-- | Interface for rotation combinator for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class RotateOp k a | a -> k where
   rotate :: k -> a -> a
 
+-- | Interface for rotation combinator for constructing 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class PiecewiseOp a b where
   piecewise :: [Double] -> a -> [b] -> b
 
+-- | Interface for fourier transform on 'Expression' types. Can be overloaded
+--   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class FTOp a b | a -> b where
   ft :: a -> b
 
