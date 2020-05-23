@@ -8,11 +8,11 @@
 -- The signal data may be reconstructed in several ways: (1) as a "real" image, (2) as an "imaginary" image,
 -- (3) as a magnitude image, or (4) as a phase image.
 
--- In this implementation, reconstruction is done as a "real" image and we skip the information from imaginary part.
+-- In this implementation, First we mask the image to figure out where we have signal.
 -- For this reason, one can split the MRI image in k-space into real and imaginary parts, and just take the
 -- real part for reconstruction. 
 
--- Putting a thereshold here, real part of k-space can be shown in binary 
+-- Putting a thereshold here, to creat a mask based on the signals in real part of k-space.
 -- (signal = abs(re) > 0.5), so if we have signal, signal[i][j]=1, otherwise signal[i][j]=0
 
 -- invFFT can naively reconstruct the Brain image based on the binary form of real part of k-space
@@ -47,10 +47,10 @@ let:
   smootherY = rotate (1, 0) x + rotate (-1, 0) x - 2 *. x
   regularization = norm2square smootherX + norm2square smootherY
   
--- Optimization objective is to minimize the difference between the fourier transform of the reconstructed image from real part
--- and the exact fourier which is (Real + iImg). Here the signal which consists of the real part of the fourier is multiplied
--- to eliminate the effect of imaginary part in calculating the difference. The regularizer is also added to the objective as the
--- median filter reduce the noise causing by artifacts of missing signals, while it preserves the edges.
--- TODO (3000? Curtis & Nhan)
+-- Optimization objective is to minimize the difference between the fourier transform of the reconstructed image from 
+-- Original signal (Real + iImg). Here the mask is multiplied ponitwise by this differnce to determine where we have signal
+-- The regularizer is also added to the objective as the median filter reduce the noise causing by artifacts of missing 
+-- signals, while it preserves the edges.
+-- \min ||((signal + i0) \odot  (ft (x) - (Re + iIm))) + \alpha \times (rotate (0, 1) x + rotate (0, -1) x - 2 * x))||_{l_2}
 minimize:
   norm2square ((signal +: 0) * (ft x - (re +: im))) + 3000 *. regularization
