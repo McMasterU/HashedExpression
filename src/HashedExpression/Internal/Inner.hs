@@ -30,7 +30,7 @@ module HashedExpression.Internal.Inner
     unary,
     unaryET,
     naryET,
-    -- * Types for Fixing ElementType and Dimension Outcomes With Helper's
+    -- * Types for Fixing ElementType and Dimension Outcomes With Helpers
     ElementOutcome (..),
     D_,
     ET_,
