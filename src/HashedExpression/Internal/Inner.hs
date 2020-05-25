@@ -2,7 +2,7 @@
 
 {-|
 Module      :  HashedExpression.Internal.Inner
-Copyright   :  (c) OCA 2020 
+Copyright   :  (c) OCA 2020
 License     :  MIT (see the LICENSE file)
 Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
@@ -13,11 +13,10 @@ and combinators for manually manipulating HashedExpressions
 -}
 
 module HashedExpression.Internal.Inner
-  ( D_,
-    ET_,
+  ( -- * Helper Functions for Constructing 'Expression' Combinators / Operators
+    apply,
     unwrap,
     wrap,
-    apply,
     mulMany,
     sumMany,
     hasShape,
@@ -31,7 +30,10 @@ module HashedExpression.Internal.Inner
     unary,
     unaryET,
     naryET,
+    -- * Types for Fixing ElementType and Dimension Outcomes With Helper's
     ElementOutcome (..),
+    D_,
+    ET_,
     const_,
     num_,
     product_,
@@ -87,89 +89,114 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
--- | TODO: Check if 2 different nodes from 2 maps have the same hash
-safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
-safeUnion = IM.union
 
--- | Placeholder for any dimension type
+-- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
+--   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
+--   (such as exterior derivatives)
 data D_
   deriving (Typeable, Dimension)
 
+-- | 'D_' is a placeholder type with no real Shape (i.e dimension/size). The method
+--   'toShape' should never actually be evaluated on this instance
 instance ToShape D_ where
   toShape =
     error "D_ is a place holder, init variable for D_ is not applicable"
 
--- | Placeholder for any element type
+-- | Placeholder for any element type, useful for performing symbolic computation on an 'Expression'
+--   that requires a fixed type in the element type parameter but the actual element type is irrelavent
 data ET_
   deriving (Typeable, ElementType)
 
--- |
+-- | A union type to select either a default 'ElementType' or a specific one.
+--   Default selection follows a priority chain 'R' < 'C' < 'Covector', choosing the first valid type
 data ElementOutcome
-  = ElementSpecific ET
-  | ElementDefault -- Highest element (R < C < Covector)
+  = ElementSpecific ET -- ^ force a specifc 'ElementType'
+  | ElementDefault -- ^ select prioritized valid element ('R' < 'C' < 'Covector')
 
-data NodeOutcome
-  = OpOne (Arg -> Node)
-  | OpOneElement (ET -> Arg -> Node) ElementOutcome
-  | OpTwo (Arg -> Arg -> Node)
-  | OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome
-  | OpMany (Args -> Node)
-  | OpManyElement (ET -> Args -> Node) ElementOutcome
-
-data ShapeOutcome
-  = ShapeSpecific Shape
-  | ShapeDefault -- Highest shape (shape with longest length)
-  | ShapeBranches -- Same as branches' shape
-
+-- | Possible outcomes effecting 'Dimension' and 'ElementType' when applying an operator.
+--   Because of piecewise functions, constructing combinators for 'Expression' can be complicated due to
+--   operator application resulting in conditionals
 data OperationOption
-  = Normal NodeOutcome ShapeOutcome
-  | Condition (ConditionArg -> [BranchArg] -> Node)
+  = Normal NodeOutcome ShapeOutcome -- ^ application has a normal outcome
+  | Condition (ConditionArg -> [BranchArg] -> Node) -- ^ application outcome depends on condition (piecewise function)
 
--- |
+-- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
+--   different cases for inferring 'DimensionType' and 'ElementType' of the resulting 'Node' need to be considered.
+--   The following data type contains constructors covering these cases, the are used in normal control flow by
+--   'OperationOption'
+--   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
+data NodeOutcome
+  = OpOne (Arg -> Node) -- ^ Unary Operator, 'ElementType' irrelavent
+  | OpOneElement (ET -> Arg -> Node) ElementOutcome -- ^ Unary Operator, 'ElementType' included
+  | OpTwo (Arg -> Arg -> Node) -- ^ Binary Operator, 'ElementType' irrelavent
+  | OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome -- ^ Binary Operator, 'ElementType' included
+  | OpMany (Args -> Node) -- ^ N-Ary Operator, 'ElementType' irrelavent
+  | OpManyElement (ET -> Args -> Node) ElementOutcome -- ^ N-Ary Operator, 'ElementType' included
+
+-- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
+--   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
+--   The following data type contains constructors covering these cases, the are used in normal control flow by
+--   'OperationOption'
+data ShapeOutcome
+  = ShapeSpecific Shape -- ^ provide a specific 'Shape'
+  | ShapeDefault -- ^ automatically select the 'Shape' with the longest length
+  | ShapeBranches -- ^ select the shape of a 'BranchArg' (used in piecewise functions)
+
+-- | TODO Haddock: Check if 2 different nodes from 2 maps have the same hash
+safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
+safeUnion = IM.union
+
+-- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
 unwrap :: Expression d et -> (ExpressionMap, NodeID)
 unwrap (Expression n mp) = (mp, n)
 
+-- | Wrap a 'ExpressionMap' and root 'NodeID' into an "Expression" type
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
--- |
-highestShape :: [(ExpressionMap, NodeID)] -> Shape
-highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
-
-highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
-highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
-
--- | R < C < Covector
-highestElementType :: [(ExpressionMap, NodeID)] -> ET
-highestElementType = maximum . map (uncurry $ flip retrieveElementType)
-
-highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
-highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
-
--- | The apply function that is used everywhere
-apply :: OperationOption -> [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a list of 'ExpressionMap' (arguments) using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'
+apply :: OperationOption -- ^ describes how an operators may change 'Dimension' or 'ElementType'
+      -> [(ExpressionMap, NodeID)] -- ^ the operators arguments
+      -> (ExpressionMap, NodeID) -- ^ the resulting 'Expression' (unwrapped)
 apply option exprs =
   addEntryWithContext mergedMap mergedMap option (map snd exprs)
   where
     mergedMap = IM.unions . map fst $ exprs
 
--- |
-addEntryWithContext ::
-  ExpressionMap ->
-  ExpressionMap ->
-  OperationOption ->
-  [NodeID] ->
-  (ExpressionMap, NodeID)
+-- | Generate a new 'ExpressionMap' with a new root 'Node' and 'NodeID' from a merged 'ExpressionMap' (of arguments)
+addEntryWithContext :: ExpressionMap -- ^ merged map of all
+                    -> ExpressionMap -- ^ TODO Haddock: is this not redundant?
+                    ->  OperationOption  -- ^ describes how an operators may change 'Dimension' or 'ElementType'
+                    -> [NodeID] -- ^ list of root 'NodeID' of arguments
+                    -> (ExpressionMap, NodeID) -- ^ the resulting 'Expression' (unwrapped)
 addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
-  let shape =
-        case shapeOutcome of
-          ShapeSpecific s -> s
-          _ -> highestShapeWithContext contextMp ns
-      elementType elementOutcome =
-        case elementOutcome of
-          ElementSpecific et -> et
-          _ -> highestElementTypeWithContext contextMp ns
-      node =
+  let
+    highestShape :: [(ExpressionMap, NodeID)] -> Shape
+    highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
+
+    highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
+    highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
+
+    highestElementType :: [(ExpressionMap, NodeID)] -> ET
+    highestElementType = maximum . map (uncurry $ flip retrieveElementType)
+
+    highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
+    highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
+
+    shape :: Shape
+    shape = case shapeOutcome of
+              ShapeSpecific s -> s
+              _ -> highestShapeWithContext contextMp ns
+
+    elementType :: ElementOutcome -> ET
+    elementType elementOutcome = case elementOutcome of
+      ElementSpecific et -> et
+      _ -> highestElementTypeWithContext contextMp ns
+
+    node :: Node
+    node =
         case (nodeOutcome, ns) of
           (OpOne op, [arg]) -> op arg
           (OpOneElement op elm, [arg]) -> op (elementType elm) arg
@@ -179,7 +206,6 @@ addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
           (OpMany op, args) -> op args
           (OpManyElement op elm, args) -> op (elementType elm) args
    in addInternal mp (shape, node)
---                _ -> error "HashedExpression.Inner.applySameScope"
 addEntryWithContext contextMp mp (Condition op) ns@(conditionN : branchesNs) =
   let headBranchN = head branchesNs
       shape = retrieveShape headBranchN contextMp

@@ -2,7 +2,7 @@
 
 {-|
 Module      :  HashedExpression.Internal.Expression
-Copyright   :  (c) OCA 2020 
+Copyright   :  (c) OCA 2020
 License     :  MIT (see the LICENSE file)
 Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
@@ -48,9 +48,8 @@ module HashedExpression.Internal.Expression
     VectorSpace,
     InnerProductSpace,
     -- * Generic Combinators
-    -- | The following cLasses define Expression combinators that can be overloaded
-    --   to directly support a variety of functionality; such as interpretation, pattern matching,
-    --   differentiation, etc
+    -- | The following classes define 'Expression' operators that can be overloaded to directly
+    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
     PowerOp (..),
     PiecewiseOp (..),
     VectorSpaceOp (..),
@@ -118,29 +117,30 @@ data Node
   | Power Int Arg -- ^ power to, overloaded via 'PowerOp'
   | Neg ET Arg -- ^ negation, wrapped byf @Expression d R@ or @Expression d C@
   | Scale ET Arg Arg -- ^ scaling, overloaded via 'VectorSpaceOp'
-  | Div Arg Arg -- ^ operand, wrapped by @Expression d R@
-  | Sqrt Arg -- ^ operand, wrapped by @Expression d R@
-  | Sin Arg -- ^ operand, wrapped by @Expression d R@
-  | Cos Arg -- ^ operand, wrapped by @Expression d R@
-  | Tan Arg -- ^ operand, wrapped by @Expression d R@
-  | Exp Arg -- ^ operand, wrapped by @Expression d R@
-  | Log Arg -- ^ operand, wrapped by @Expression d R@
-  | Sinh Arg -- ^ operand, wrapped by @Expression d R@
-  | Cosh Arg -- ^ operand, wrapped by @Expression d R@
-  | Tanh Arg -- ^ operand, wrapped by @Expression d R@
-  | Asin Arg -- ^ operand, wrapped by @Expression d R@
-  | Acos Arg -- ^ operand, wrapped by @Expression d R@
-  | Atan Arg -- ^ operand, wrapped by @Expression d R@
-  | Asinh Arg -- ^ operand, wrapped by @Expression d R@
-  | Acosh Arg -- ^ operand, wrapped by @Expression d R@
-  | Atanh Arg -- ^ operand, wrapped by @Expression d R@
+  -- TODO Haddock: remove? why?
+  | Div Arg Arg -- ^ division operator, wrapped by @Expression d R@
+  | Sqrt Arg -- ^ square root operator, wrapped by @Expression d R@
+  | Sin Arg -- ^ sin operator, wrapped by @Expression d R@
+  | Cos Arg -- ^ cos operator, wrapped by @Expression d R@
+  | Tan Arg -- ^ tan operator, wrapped by @Expression d R@
+  | Exp Arg -- ^ exp operator, wrapped by @Expression d R@
+  | Log Arg -- ^ log operator, wrapped by @Expression d R@
+  | Sinh Arg -- ^ sinh operator, wrapped by @Expression d R@
+  | Cosh Arg -- ^ cosh operator, wrapped by @Expression d R@
+  | Tanh Arg -- ^ tanh operator, wrapped by @Expression d R@
+  | Asin Arg -- ^ asin operator, wrapped by @Expression d R@
+  | Acos Arg -- ^ acos operator, wrapped by @Expression d R@
+  | Atan Arg -- ^ atan operator, wrapped by @Expression d R@
+  | Asinh Arg -- ^ asinh operator, wrapped by @Expression d R@
+  | Acosh Arg -- ^ acosh operator, wrapped by @Expression d R@
+  | Atanh Arg -- ^ atanh operator, wrapped by @Expression d R@
   | RealImag Arg Arg -- ^ construct a complex value from real and imagine parts, respectively, wrapped by @Expression d C@
   | RealPart Arg -- ^ extract real from complex (transforms @Expression d C@ to @Expression d R@)
   | ImagPart Arg -- ^ extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
-  | InnerProd ET Arg Arg -- ^ inner product operand, overload via 'InnerProductSpace'
+  | InnerProd ET Arg Arg -- ^ inner product operator, overload via 'InnerProductSpace'
   | Piecewise [Double] ConditionArg [BranchArg] -- ^ piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
   | Rotate RotateAmount Arg -- ^ rotate transformation, rotates vector elements by 'RotateAmount'
-  -- TODO Nhan why real and imag FT??
+  -- TODO Haddock: why real and imag FT??
   | ReFT Arg -- ^ real fourier transform
   | ImFT Arg -- ^ imag fourier transform
   | TwiceReFT Arg -- ^ real fourier transform, performed twice
@@ -153,9 +153,12 @@ type Arg = NodeID
 -- | Used by operators in the 'Node' type to reference other subexpressions (i.e other 'Node')
 type Args = [NodeID]
 
--- | A node used as a 
+-- | A 'Node' used by 'Piecewise' functions to select a 'BranchArg' function based on what partition
+--   it's evaluation is contained in
 type ConditionArg = NodeID
 
+-- | 'Piecewise' functions select from different 'BranchArg' expressions based on the evaluation
+--   of a 'ConditionArg' expression
 type BranchArg = NodeID
 
 
@@ -166,9 +169,9 @@ type BranchArg = NodeID
 -- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
 --   Represents Real, Complex, and Covector values with R, C, Covector respectively
 data ET
-  = R
-  | C
-  | Covector
+  = R  -- ^ Real Elements
+  | C  -- ^ Complex Elements
+  | Covector -- ^ Covector (contains 'DVar' operator) Elements
   deriving (Show, Eq, Ord)
 
 -- | Type representation of 'ElementType' for Real values
@@ -210,54 +213,98 @@ class Dimension d
 -- | Dummy type (no data) for the zero dimension vectors (i.e not a vector)
 --   When specifying vector dimensions for type class instances, in general
 --   use either 'Scalar' or an instance of 'KnownNat'
+--
+--   @
+--   variable "x" :: Expression Scalar R
+--   @
 data Scalar
   deriving (Dimension, Typeable)
 
+-- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable1D  "x" :: KnownNat n => Expression n R
+--   variable1D @10 "x" :: Expression 10 R
+--   @
+--
+--   With this instance, the above definition will satisfy the constraint
+--   @Dimension d => Expression d R@
 instance (KnownNat n) => Dimension n
 
+-- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
+--   variable2D @10 @5 "x" :: Expression '(10,5) R
+--   @
+--
+--   With this instance, the above definition will satisfy the constraint
+--   @Dimension d => Expression d R@
 instance (KnownNat m, KnownNat n) => Dimension '(m, n)
 
+-- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
+--   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
+--   @
+--
+--   With this instance, the above definition will satisfy the constraint
+--   @Dimension d => Expression d R@
 instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
 -- | A @VectorSpace d et s@ is a space of vectors of @Dimension d@ and @ElementType et@,
 --   that can be scaled by values of @ElementType s@. Used primarily as a base for 'VectorSpaceOp'
 class VectorSpace d et s
 
+-- | A 'VectorSpace' exists for all 'DimensionType' and 'ElementType' if scaled by a 'R' (Real element type)
+instance (DimensionType d, ElementType et) => VectorSpace d et R
+
+-- | A 'VectorSpace' exists for all 'DimensionType' over 'C' (Complex) vectors and scalings
+instance (DimensionType d) => VectorSpace d C C
+
 -- | Every @VectorSpace@ that can be scaled by the same ElementType has an @InnerProductSpace@.
 --   Used primarily as a base for 'InnerProductSpaceOp'
 class VectorSpace d s s => InnerProductSpace d s
 
-instance (DimensionType d, ElementType et) => VectorSpace d et R
-
-instance (DimensionType d) => VectorSpace d C C
-
+-- | Every 'VectorSpace' with the same 'ElementType' for vectors and their scalings has a corresponding
+--   'InnerProductSpace'
 instance VectorSpace d s s => InnerProductSpace d s
 
--- | ToShape is used to reify dimensions encoded at the type level (i.e any implementation of 'Dimension'
---   should also have an implementation in data)
+-- | ToShape is used to reify dimensions/sizes encoded at the type level (i.e any implementation of 'Dimension')
+--   The type level generally uses tuples with type level naturals (via 'KnownNat') to specify dimensions and
+--   their respective sizes. The 'toShape' method reifies these types to a corresponding list of Int
 class (Dimension d) => ToShape d where
   toShape :: Proxy d -> Shape
 
-nat :: forall n. (KnownNat n) => Int
-nat = fromIntegral $ natVal (Proxy :: Proxy n)
-
+-- | A scalar essentially has no dimensions/size, so we provide an empty list
 instance ToShape Scalar where
   toShape _ = []
 
+-- | Implementation for a 1D Vector
 instance (KnownNat n) => ToShape n where
   toShape _ = [nat @n]
 
+-- | Implementation for a 2D Vector
 instance (KnownNat m, KnownNat n) => ToShape '(m, n) where
   toShape _ = [nat @m, nat @n]
 
+-- | Implementation for a 2D Vector
 instance (KnownNat m, KnownNat n, KnownNat p) => ToShape '(m, n, p) where
   toShape _ = [nat @m, nat @n, nat @p]
 
--- | Shape type:
--- []        --> scalar
--- [n]       --> 1D with size n
--- [n, m]    --> 2D with size n × m
--- [n, m, p] --> 3D with size n × m × p
+-- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
+--   from Integer to Int
+nat :: forall n. (KnownNat n) => Int
+nat = fromIntegral $ natVal (Proxy :: Proxy n)
+
+-- | A Shape encodes the the dimensions (via the length of a list) and size of elements.
+--   It is the data level representation of the 'Dimension' class that's used to encode
+--   dimensions/sizes of a 'Expression' at the type level. For example,
+--
+-- >  []        => 'Scalar'
+-- >  [n]       => KnownNat n => Dimension n
+-- >  [n, m]    => (KnownNat n, KnownNat m) => Dimension '(n,m)
 type Shape = [Int]
 
 -- | Rotation in each dimension, given respectively in a list.

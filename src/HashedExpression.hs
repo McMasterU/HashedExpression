@@ -1,6 +1,6 @@
 {-|
 Module      :  HashedExpression
-Copyright   :  (c) OCA 2020 
+Copyright   :  (c) OCA 2020
 License     :  MIT (see the LICENSE file)
 Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional

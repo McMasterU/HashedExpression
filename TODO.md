@@ -28,3 +28,4 @@ stack haddock --haddock-arguments "--odir=docs/"
 - add proper copyright info
 ### TODO better symphony example in README
 ### TODO collapse ToShape into Dimension (leave toShape method)
+### TODO add regression tests for examples
