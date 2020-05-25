@@ -17,8 +17,8 @@ stack haddock --haddock-arguments "--odir=docs/"
 - Interp.hs *Nasim*
 - Derivative.hs
 
-- Value.hs
-- Problem.hs
+- Value.hs *Chris*
+- Problem.hs *Chris*
 
 - Codegen.hs *Chris*
 - Codegen/CSimple.hs *Steven*
