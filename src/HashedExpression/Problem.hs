@@ -17,29 +17,49 @@ import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value
 
+-- TODO: better sections in the Haddock.
+
 -------------------------------------------------------------------------------
 
--- |
+-- | Representation of a variable in an optimization problem
 data Variable
   = Variable
-      { varName :: String,
+      { -- | The variable's name
+        varName :: String,
+        -- | The variable's node ID
         nodeId :: NodeID,
+        -- | The ID of the partial derivative of the variable
         partialDerivativeId :: NodeID
       }
   deriving (Show)
 
--- |
+-- | A box constraint in an optimization problem
 data BoxConstraint
-  = BoxUpper String Val
-  | BoxLower String Val
-  | BoxBetween String (Val, Val)
+  = -- | An upper bound
+    BoxUpper
+      String -- The name of the bound
+      Val -- The value of the upper bound
+  | -- | A lower bound
+    BoxLower
+      String -- The name of the bound
+      Val -- The value of the lower bound
+  | -- | A range of values bound
+    BoxBetween
+      String -- The name of the bound
+      (Val, Val) -- (lower, upper)
 
--- |
+-- | A scalar constraint in an optimization problem
+--
+--   A scalar constraint is... TODO Dandoh: maybe an explanation of what it is?
 data ScalarConstraint
   = ScalarConstraint
-      { constraintValueId :: NodeID,
+      { -- | The node ID of the constraint
+        constraintValueId :: NodeID,
+        -- | The partial derivatives of the constraint
         constraintPartialDerivatives :: [NodeID],
+        -- | The lower bound of the constraint
         constraintLowerBound :: Double,
+        -- | The upper bound of the constraint
         constraintUpperBound :: Double
       }
   deriving (Show, Eq, Ord)
@@ -47,10 +67,15 @@ data ScalarConstraint
 -- | Problem represents a valid optimization problem
 data Problem
   = Problem
-      { variables :: [Variable],
+      { -- | The variables present in the problem
+        variables :: [Variable],
+        -- | The node ID of the objective expression
         objectiveId :: NodeID,
+        -- | The expression map of the problem, including the objective function and all constraints
         expressionMap :: ExpressionMap,
+        -- | A list of box constraints in the problem
         boxConstraints :: [BoxConstraint],
+        -- | A list of scalar constraints in the problem
         scalarConstraints :: [ScalarConstraint]
       }
 
@@ -73,9 +98,12 @@ instance Show Problem where
 -------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
+
+-- | Negative infinity
 ninf :: Double
 ninf = -1 / 0
 
+-- | Positive infinity
 inf :: Double
 inf = 1 / 0
 
@@ -101,28 +129,67 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
 
 -------------------------------------------------------------------------------
 
--- |
+-- | The statement of a constraint, including an 'ExpressionMap' subexpressions, the root 'NodeID' and its value
 data ConstraintStatement
-  = Lower (ExpressionMap, NodeID) Val
-  | Upper (ExpressionMap, NodeID) Val
-  | Between (ExpressionMap, NodeID) (Val, Val)
+  = -- | A lower bound constraint
+    Lower (ExpressionMap, NodeID) Val
+  | -- | An upper bound constraint
+    Upper (ExpressionMap, NodeID) Val
+  | -- | A constraint with a lower and upper bound
+    Between (ExpressionMap, NodeID) (Val, Val)
   deriving (Show, Eq, Ord)
 
--- |
+-- * Functions for creating 'ConstraintStatement's.
+
 infix 1 `between`, .>=, .<=, .==
 
-(.>=) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+-- | The expression is greater than the given value
+(.>=) ::
+  (DimensionType d) =>
+  -- | The constraint expression
+  Expression d R ->
+  -- | The value of the lower bound
+  Val ->
+  -- | The corresponding constraint statement
+  ConstraintStatement
 (.>=) exp = Lower (unwrap exp)
 
-(.<=) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+-- | The expression is less than the given value
+(.<=) ::
+  (DimensionType d) =>
+  -- | The constraint expression
+  Expression d R ->
+  -- | The value of the upper bound
+  Val ->
+  -- | The corresponding constraint statement
+  ConstraintStatement
 (.<=) exp = Upper (unwrap exp)
 
-between :: (DimensionType d) => Expression d R -> (Val, Val) -> ConstraintStatement
+-- | The expression is between two values
+between ::
+  (DimensionType d) =>
+  -- | The constraint expression
+  Expression d R ->
+  -- | The value of the lower and upper bounds
+  (Val, Val) ->
+  -- | The corresponding constraint statement
+  ConstraintStatement
 between exp = Between (unwrap exp)
 
-(.==) :: (DimensionType d) => Expression d R -> Val -> ConstraintStatement
+-- | An equality constraint
+--
+--   Note: this is the same as setting the upper and lower bound to the same value
+(.==) ::
+  (DimensionType d) =>
+  -- | The expression
+  Expression d R ->
+  -- | The value to set equal to the expression
+  Val ->
+  -- | The corresponding constraint statement
+  ConstraintStatement
 (.==) exp val = Between (unwrap exp) (val, val)
 
+-- | Extract the expression from the 'ConstraintStatement'
 getExpressionCS :: ConstraintStatement -> (ExpressionMap, NodeID)
 getExpressionCS cs =
   case cs of
@@ -130,6 +197,7 @@ getExpressionCS cs =
     Upper exp _ -> exp
     Between exp _ -> exp
 
+-- | Extract the value from the 'ConstraintStatement'
 getValCS :: ConstraintStatement -> [Val]
 getValCS cs =
   case cs of
@@ -137,6 +205,7 @@ getValCS cs =
     Upper _ val -> [val]
     Between _ (val1, val2) -> [val1, val2]
 
+-- | Returns True if the value is a box constraint, false otherwise
 isBoxConstraint :: ConstraintStatement -> Bool
 isBoxConstraint cs =
   case retrieveNode n mp of
@@ -146,16 +215,21 @@ isBoxConstraint cs =
     (mp, n) = getExpressionCS cs
 
 -------------------------------------------------------------------------------
+
+-- | A constraint is a sequence of constraint statements
 data Constraint = Constraint [ConstraintStatement]
   deriving (Show, Eq, Ord)
 
 -------------------------------------------------------------------------------
 
--- |
+-- | Information about whether the optimization problem is well-founded
 data ProblemResult
-  = ProblemValid Problem
-  | ProblemInvalid String
-  | NoVariables -- TODO - what about feasibility problems given constraints?
+  = -- | The problem is valid, here is the problem
+    ProblemValid Problem
+  | -- | The problem is invalid, here is the reason
+    ProblemInvalid String
+  | -- | The problem has no variables
+    NoVariables -- TODO - what about feasibility problems given constraints?
   deriving (Show)
 
 -------------------------------------------------------------------------------
@@ -202,7 +276,8 @@ constructProblem objectiveFunction varList constraint
               toScalarConstraint (mp, n) =
                 let exp = Expression @Scalar @R n mp
                     g = normalize exp
-                    dg = introduceZeroPartialDerivatives varsWithShape
+                    dg =
+                      introduceZeroPartialDerivatives varsWithShape
                         . collectDifferentials
                         . exteriorDerivative (Set.fromList vars)
                         $ g
