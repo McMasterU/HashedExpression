@@ -558,12 +558,9 @@ expandPiecewiseRealImag exp@(mp, n)
       | RealImag re im <- retrieveNode nId mp = Just (re, im)
       | otherwise = Nothing
 
--- FIXME: This one needs a better explanation.
-
 -- | Rules for expanding piecewise functions
---   In particular:
---   piecewise marks condition [branch1, branch2, ..] -->
---   branch1 * piecewise marks condition [1, 0, 0, ..] + branch2 * piecewise marks condition [0, 1, 0, ..] + ..
+--
+--   For example: `if x < 1 then x + 1 else x + y = (x + 1) * (if x < 1 then 1 else 0) + (x + y) * (if x < 1 then 0 else 1)`
 pullOutPiecewiseRules :: Modification
 pullOutPiecewiseRules exp@(mp, n)
   | Piecewise marks condition branches <- retrieveNode n mp,
@@ -590,9 +587,10 @@ pullOutPiecewiseRules exp@(mp, n)
     one = const_ shape 1
     zero = const_ shape 0
 
--- FIXME: not sure about this one either
-
--- | (s *. ) twiceReFT(x) + (s *. ) twiceImFT(x) ~~~> (s * size(x) / 2) *. x
+-- | Rules for advanced FT simplification
+--
+-- twiceReFT is the same as (xRe . ft) . (xRe . ft). The former has better performance than the latter for the same
+-- operation. We can simplify this further as `twiceReFT(x) + twiceImFT(x) = (size(x) / 2) *. x`.
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
   | Sum R sumands <- retrieveNode n mp,
