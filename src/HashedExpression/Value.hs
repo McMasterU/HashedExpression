@@ -29,7 +29,7 @@ data Val
     V3D (Array (Int, Int, Int) Double)
   | -- | Path to a data file
     VFile DataFile
-  | -- | TODO: Nhan, what is this?
+  | -- | A constant value for any shapes (e.g. a 100-by-200 matrix with every entry equal to 2.13)
     VNum Double
   deriving (Eq, Show, Ord)
 
