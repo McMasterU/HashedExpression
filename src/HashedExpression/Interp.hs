@@ -1,3 +1,7 @@
+{-|
+  This module is for approximation and evaluation of the expressions regarding to the precision
+-}
+
 module HashedExpression.Interp
   ( Evaluable (..),
     Approximable (..),
@@ -31,6 +35,12 @@ import Text.Printf
 
 -- | This operation emulates the mathematical operation
 -- | Turn expression to the right type
+
+{-|
+    Based on importing from HashedExpression, this operation will return the right type of expression, it supports different dimensions 
+    in Real and Complex
+-}
+
 expZeroR :: ExpressionMap -> NodeID -> Expression Scalar R
 expZeroR = flip Expression
 
@@ -38,6 +48,11 @@ expZeroC :: ExpressionMap -> NodeID -> Expression Scalar C
 expZeroC = flip Expression
 
 -- | Choose branch base on condition value
+--
+-- @
+-- In Decision tree, there are 2 possible outcomes, Head and Tail.
+-- The decision of being Head or Tail is made based on the the condition value.
+-- @
 chooseBranch :: [Double] -> Double -> [a] -> a
 chooseBranch marks val branches
   | val < head marks = head branches
@@ -48,14 +63,26 @@ chooseBranch marks val branches
 class
   Show a =>
   Approximable a where
-  (~=) :: a -> a -> Bool
-  prettifyShow :: a -> String
+  (~=) :: a -> a -> Bool            -- | Operator ~= as a function which can be used in infix style to determine the approximability of the input a
+  prettifyShow :: a -> String       -- | Prettyprint a string produced by show
 
 infix 4 ~=
 
--- |
+{-|
+   Calculating the reletive error for two double-precision input arguments.
+   It returns the error calculating by |a-b|/ max(|a|.|b|), where a and b are double-precision numbers, so it returns the relative 
+   error as double.
+   
+-}
+
 relativeError :: Double -> Double -> Double
 relativeError a b = abs (a - b) / max (abs a) (abs b)
+
+{-|
+Instance which belongs to approximable class for Double precision inputs.
+It takes 2 double precision inputs and return whether they one could be the approximate of the other by calculating the error.
+Returns true if the error is less than the condition value 
+-}
 
 instance Approximable Double where
   (~=) :: Double -> Double -> Bool
@@ -64,32 +91,60 @@ instance Approximable Double where
     | a == b = True
     | otherwise = relativeError a b < 0.01
   prettifyShow a
-    | abs a < 1e-10 = "0"
-    | otherwise = printf "%.2f" a
+    | abs a < 1e-10 = "0"             -- | in prettify, inputs less than a small condition value consider as zero,
+    | otherwise = printf "%.2f" a     -- | otherwise, it shows the exact input.
+                                      -- | [TODO] Is it a specific condition value for prettify?
+                                               
+{-|
+Instance which belongs to approximable class for Complex Double precision inputs.
+It takes 2 Complex double precision inputs and apply ~= operation on them.
+calculating the error in real and imaginary parts of the complex input seperately.
+Returns true if the error is less than the condition value.
+-}                              
 
 instance Approximable (Complex Double) where
-  (~=) :: Complex Double -> Complex Double -> Bool
-  a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)
+  (~=) :: Complex Double -> Complex Double -> Bool       -- | Using approximable operation ~= for two Complex Double input and returns Bool
+  a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b)    -- | check for real and imaginary parts seperately
   prettifyShow a =
-    prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i"
+    prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i"     -- | Prettyprint a string produced by show
 
+{-|
+Instance which belongs to approximable class for 1D array with Double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
 instance Approximable (Array Int Double) where
   (~=) :: Array Int Double -> Array Int Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"      -- | concatenate "," to seperate the elements of array in prettify
 
+{-|
+Instance which belongs to approximable class for 1D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
+
+-- | [TODO] Shouldn't we seperate the real and imaginary parts here?
 instance Approximable (Array Int (Complex Double)) where
   (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"      -- | concatenate "," to seperate the elements of array in prettify
+
+{-|
+Instance which belongs to approximable class for 2D array with double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
 
 instance Approximable (Array (Int, Int) Double) where
   (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"       -- | concatenate "," to seperate the elements of array in prettify
+
+{-|
+Instance which belongs to approximable class for 2D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
 
 instance Approximable (Array (Int, Int) (Complex Double)) where
   (~=) ::
@@ -98,13 +153,22 @@ instance Approximable (Array (Int, Int) (Complex Double)) where
     Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"    -- | concatenate "," to seperate the elements of array in prettify
+
+{-|
+Instance which belongs to approximable class for 3D array with double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
 
 instance Approximable (Array (Int, Int, Int) Double) where
   (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"    -- | concatenate "," to seperate the elements of array in prettify
+{-|
+Instance which belongs to approximable class for 3D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+-} 
 
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
   (~=) ::
@@ -113,14 +177,18 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
     Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
-    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"    -- | concatenate "," to seperate the elements of array in prettify
 
--- | These should be commented properly.
+-- | [TODO] These should be commented properly.
+-- | [TODO] Definition of evaluable class
 class Evaluable d rc output | d rc -> output where
   eval :: ValMaps -> Expression d rc -> output
 
--- |
-instance Evaluable Scalar R Double where
+-- | Instances will be constructed automatically by Haskell using the default declaration in class definition
+
+-- | Instance of the class Evaluable evaluating a Real scalar as a type of Double
+
+-- | [TODO] valmap and defining eval?instance Evaluable Scalar R Double where
   eval :: ValMaps -> Expression Scalar R -> Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
@@ -130,17 +198,20 @@ instance Evaluable Scalar R Double where
             Just (VScalar val) -> val
             _ -> error "no value associated with the variable"
         Const val -> val
-        Sum R args -> sum . map (eval valMap . expZeroR mp) $ args
-        Mul R args -> product . map (eval valMap . expZeroR mp) $ args
-        Neg R arg -> - (eval valMap $ expZeroR mp arg)
+        Sum R args -> sum . map (eval valMap . expZeroR mp) $ args     -- | sum of a scalar is of the type of R
+        Mul R args -> product . map (eval valMap . expZeroR mp) $ args    -- | mul of a scalar is of the type of R
+        Neg R arg -> - (eval valMap $ expZeroR mp arg)                 -- | Unary minus
         Scale R arg1 arg2 ->
           eval valMap (expZeroR mp arg1)
             * eval valMap (expZeroR mp arg2)
-        Power x arg -> eval valMap (expZeroR mp arg) ^ x
-        Div arg1 arg2 ->
+        Power x arg -> eval valMap (expZeroR mp arg) ^ x      -- | power operator with 2 inputs, power and base 
+        Div arg1 arg2 ->               -- | division operator with 2 inputs
           eval valMap (expZeroR mp arg1)
             / eval valMap (expZeroR mp arg2)
-        Sqrt arg -> sqrt (eval valMap (expZeroR mp arg))
+        Sqrt arg -> sqrt (eval valMap (expZeroR mp arg)) -- | square root
+        {-|
+        trigonometric functions
+         -}
         Sin arg -> sin (eval valMap (expZeroR mp arg))
         Cos arg -> cos (eval valMap (expZeroR mp arg))
         Tan arg -> tan (eval valMap (expZeroR mp arg))
@@ -157,12 +228,14 @@ instance Evaluable Scalar R Double where
         Atanh arg -> atanh (eval valMap (expZeroR mp arg))
         RealPart arg -> realPart (eval valMap (expZeroC mp arg))
         ImagPart arg -> imagPart (eval valMap (expZeroC mp arg))
+        -- | [TODO] Specific definition for inner product?
+        -- | Inner product is associating each pair of vectors with a scalar
         InnerProd R arg1 arg2 ->
           case retrieveShape arg1 mp of
-            [] ->
+            [] ->                 -- | inner product of Scalar
               eval valMap (expZeroR mp arg1)
                 * eval valMap (expZeroR mp arg2)
-            [size] ->
+            [size] ->        -- | inner product of vector that returns the sum over elementwise product of vector elements
               let res1 = evaluate1DReal valMap $ (mp, arg1)
                   res2 = evaluate1DReal valMap $ (mp, arg2)
                in sum
@@ -171,7 +244,7 @@ instance Evaluable Scalar R Double where
                         let x = res1 ! i,
                         let y = res2 ! i
                     ]
-            [size1, size2] ->
+            [size1, size2] ->   -- | inner product returns the sum over elementwise product of 2D matrix elements
               let res1 = evaluate2DReal valMap $ (mp, arg1)
                   res2 = evaluate2DReal valMap $ (mp, arg2)
                in sum
@@ -181,7 +254,7 @@ instance Evaluable Scalar R Double where
                         let x = res1 ! (i, j),
                         let y = res2 ! (i, j)
                     ]
-            [size1, size2, size3] ->
+            [size1, size2, size3] ->     -- | inner product returns the sum over elementwise product of 3D matrix elements
               let res1 = evaluate3DReal valMap $ (mp, arg1)
                   res2 = evaluate3DReal valMap $ (mp, arg2)
                in sum
@@ -192,8 +265,8 @@ instance Evaluable Scalar R Double where
                         let x = res1 ! (i, j, k),
                         let y = res2 ! (i, j, k)
                     ]
-            _ -> error "4D shape?"
-        Piecewise marks conditionArg branchArgs ->
+            _ -> error "4D shape?"     -- | returns error for more than 3D
+        Piecewise marks conditionArg branchArgs ->     -- | [TODO] what is the role of piecewise here?
           let cdt = eval valMap $ expZeroR mp conditionArg
               branches = map (eval valMap . expZeroR mp) branchArgs
            in chooseBranch marks cdt branches
@@ -202,15 +275,20 @@ instance Evaluable Scalar R Double where
             ("expression structure Scalar R is wrong " ++ prettify e)
     | otherwise = error "one r but shape is not [] ??"
 
+-- | Instance of the class Evaluable for evaluating a complex scalar of type double
+-- | [TODO] definition of eval?
+
 instance Evaluable Scalar C (Complex Double) where
   eval :: ValMaps -> Expression Scalar C -> Complex Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
       case retrieveNode n mp of
-        Sum C args -> sum . map (eval valMap . expZeroC mp) $ args
-        Mul C args -> product . map (eval valMap . expZeroC mp) $ args
-        Power x arg -> eval valMap (expZeroC mp arg) ^ x
+        Sum C args -> sum . map (eval valMap . expZeroC mp) $ args   -- | sum of a scalar is of the type of C
+        Mul C args -> product . map (eval valMap . expZeroC mp) $ args   -- | Multiplication of a scalar is of the type of C
+        Power x arg -> eval valMap (expZeroC mp arg) ^ x    -- | evaluation of arg to the power of x
         Neg C arg -> - (eval valMap $ expZeroC mp arg)
+        -- | [TODO] Does that scale the real and imaginary part seperately?
+
         Scale C arg1 arg2 ->
           case retrieveElementType arg1 mp of
             R ->
@@ -219,15 +297,15 @@ instance Evaluable Scalar C (Complex Double) where
             C ->
               eval valMap (expZeroC mp arg1)
                 * eval valMap (expZeroC mp arg2)
-        RealImag arg1 arg2 ->
+        RealImag arg1 arg2 ->    -- | show the real and imaginary part of complex as x + i y
           eval valMap (expZeroR mp arg1)
             :+ eval valMap (expZeroR mp arg2)
-        InnerProd C arg1 arg2 ->
+        InnerProd C arg1 arg2 ->     -- | evaluate the inner product in C
           case retrieveShape arg1 mp of
-            [] ->
+            [] ->      -- | evaluation for a single variable
               eval valMap (expZeroC mp arg1)
                 * conjugate (eval valMap (expZeroC mp arg2))
-            [size] ->
+            [size] ->     -- | inner product evaluation for a vector
               let res1 = evaluate1DComplex valMap $ (mp, arg1)
                   res2 = evaluate1DComplex valMap $ (mp, arg2)
                in sum
@@ -236,7 +314,7 @@ instance Evaluable Scalar C (Complex Double) where
                         let x = res1 ! i,
                         let y = res2 ! i
                     ]
-            [size1, size2] ->
+            [size1, size2] ->      -- | inner product evaluation for 2D matrix
               let res1 = evaluate2DComplex valMap $ (mp, arg1)
                   res2 = evaluate2DComplex valMap $ (mp, arg2)
                in sum
@@ -246,7 +324,7 @@ instance Evaluable Scalar C (Complex Double) where
                         let x = res1 ! (i, j),
                         let y = res2 ! (i, j)
                     ]
-            [size1, size2, size3] ->
+            [size1, size2, size3] ->     -- | inner product evaluation for 3D matrix
               let res1 = evaluate3DComplex valMap $ (mp, arg1)
                   res2 = evaluate3DComplex valMap $ (mp, arg2)
                in sum
@@ -257,7 +335,7 @@ instance Evaluable Scalar C (Complex Double) where
                         let x = res1 ! (i, j, k),
                         let y = res2 ! (i, j, k)
                     ]
-            _ -> error "4D shape?"
+            _ -> error "4D shape?"     -- | returns errors for more than 3 dimension
         Piecewise marks conditionArg branchArgs ->
           let cdt = eval valMap $ expZeroR mp conditionArg
               branches = map (eval valMap . expZeroC mp) branchArgs
@@ -267,7 +345,8 @@ instance Evaluable Scalar C (Complex Double) where
             ("expression structure Scalar C is wrong " ++ prettify e)
     | otherwise = error "One C but shape is not [] ??"
 
--- |
+-- | [TODO] how to comment?
+--
 zipWithA :: Ix x => (a -> b -> c) -> Array x a -> Array x b -> Array x c
 zipWithA f xs ys = listArray (bounds xs) $ zipWith f (elems xs) (elems ys)
 
@@ -275,7 +354,7 @@ foldrElementwise :: Ix ix => (a -> a -> a) -> [Array ix a] -> Array ix a
 foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
--- |
+-- | the expression is undefined, So here undefined 1D Real expressions are evaluated
 evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
   | [size] <- retrieveShape n mp =
@@ -284,8 +363,8 @@ evaluate1DReal valMap (mp, n)
         case Map.lookup name valMap of
           Just (V1D val) -> val
           _ -> error "no value associated with the variable"
-      Const val -> listArray (0, size - 1) $ replicate size val
-      Sum R args ->
+      Const val -> listArray (0, size - 1) $ replicate size val        -- | constant expression
+      Sum R args ->                        
         foldrElementwise (+) . map (evaluate1DReal valMap . (mp,)) $
           args
       Mul R args ->
@@ -330,7 +409,7 @@ evaluate1DReal valMap (mp, n)
               ]
       Rotate [amount] arg ->
         rotate1D size amount (evaluate1DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
+      TwiceReFT arg ->       -- |[TODO]
         let innerRes = evaluate1DReal valMap $ (mp, arg)
             scaleFactor = fromIntegral size / 2
          in listArray
@@ -377,7 +456,7 @@ instance (KnownNat n) => Evaluable n R (Array Int Double) where
   eval :: ValMaps -> Expression n R -> Array Int Double
   eval valMap (Expression n mp) = evaluate1DReal valMap (mp, n)
 
--- |
+-- | evaluate undefined 1D complex expression
 evaluate1DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array Int (Complex Double)
 evaluate1DComplex valMap (mp, n)
@@ -426,7 +505,7 @@ instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
   eval :: ValMaps -> Expression n C -> Array Int (Complex Double)
   eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
 
--- |
+-- | Evaluate 2D undefined input expressions
 evaluate2DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) Double
 evaluate2DReal valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
@@ -545,7 +624,7 @@ instance
   eval :: ValMaps -> Expression '(m, n) R -> Array (Int, Int) Double
   eval valMap (Expression n mp) = evaluate2DReal valMap (mp, n)
 
--- |
+-- | Evaluate 2D undefined complex expression
 evaluate2DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) (Complex Double)
 evaluate2DComplex valMap (mp, n)
@@ -733,13 +812,15 @@ evaluate3DReal valMap (mp, n)
       _ -> error "expression structure Three R is wrong"
   | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
+-- | [TODO] Explanation of this instance
+--
 instance
   (KnownNat m, KnownNat n, KnownNat p) =>
   Evaluable '(m, n, p) R (Array (Int, Int, Int) Double)
   where
   eval :: ValMaps -> Expression '(m, n, p) R -> Array (Int, Int, Int) Double
   eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
-
+-- | evaluate the 3D undefined expression
 evaluate3DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
 evaluate3DComplex valMap (mp, n)
@@ -811,7 +892,7 @@ rotate1D ::
   Array Int a ->
   -- | Rotated array
   Array Int a
-rotate1D size amount arr =
+rotate1D size amount arr =      -- | the elemnts falling off of the length of the 1D array will appear at the beginning of the array
   listArray
     (0, size - 1)
     [arr ! ((i - amount) `mod` size) | i <- [0 .. size - 1]]
@@ -826,7 +907,7 @@ rotate2D ::
   Array (Int, Int) a ->
   -- | Rotated 2d array
   Array (Int, Int) a
-rotate2D (size1, size2) (amount1, amount2) arr =
+rotate2D (size1, size2) (amount1, amount2) arr =    -- | the elemnts falling off of the length of the 2D array will appear at the beginning of the each row or column of the array
   listArray
     ((0, 0), (size1 - 1, size2 - 1))
     [ arr ! ((i - amount1) `mod` size1, (j - amount2) `mod` size2)
@@ -844,7 +925,7 @@ rotate3D ::
   Array (Int, Int, Int) a ->
   -- | Rotated 3d array
   Array (Int, Int, Int) a
-rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
+rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =        -- | the elemnts falling off of the length of the 3D array will appear at the beginning of the each row or column of the array
   listArray
     ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
     [ arr
@@ -857,49 +938,71 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
         k <- [0 .. size3 - 1]
     ]
 
--- |
+
+-- | [TODO] the fourier input is Int in Complex number, can it be float also? or other types?
+-- | Fourier Transform in 1D
+-- | Frequency is just in one dimension
+-- | Consider a real-valued function, S(x), 
+-- | that is integrable on an interval of P, which will be the period of the Fourier series.
+-- | number of cycles is n.
+-- | length of cycle is P/n, and frequency is n/P.
+-- | so for input i the frequency is (2*pi*i*n)/P
 fourierTransform1D ::
   Int -> Array Int (Complex Double) -> Array Int (Complex Double)
 fourierTransform1D size arr =
-  listArray (0, size - 1) [computeX i | i <- [0 .. size - 1]]
+  listArray (0, size - 1) [computeX i | i <- [0 .. size - 1]]    -- | size of fourier tarnsform complex 1D matrix
   where
     computeX i = sum $ zipWithA (*) arr (fourierBasis i)
     fourierBasis i =
-      let frequency n = 2 * pi * fromIntegral (i * n) / fromIntegral size
+      let frequency n = 2 * pi * fromIntegral (i * n) / fromIntegral size   -- | calculating the frequency of fourier series
        in listArray
             (0, size - 1)
-            [ cos (frequency n) :+ (- sin (frequency n))
+            [ cos (frequency n) :+ (- sin (frequency n))   -- | trigonometric form of 1D fourier series
               | n <- [0 .. size - 1]
             ]
 
--- |
+-- | Fourier Transform in 2D
+-- | the frequency should be calculated in 2D
+-- | Consider a real-valued function, S(x), 
+-- | that is integrable on an interval of P, which will be the period of the Fourier series.
+-- | numbber of cycles is n.
+-- | length of cycle is P/n, and frequency is n/P.
+-- | so for input i the frequency is (2*pi*i*n)/P
+-- | the frequency should be calculated in both dimensions for i and j
 fourierTransform2D ::
   (Int, Int) ->
   Array (Int, Int) (Complex Double) ->
   Array (Int, Int) (Complex Double)
-fourierTransform2D (size1, size2) arr =
+fourierTransform2D (size1, size2) arr =       -- | size of fourier tarnsform 2D complex matrix
   listArray
     ((0, 0), (size1 - 1, size2 - 1))
     [computeX i j | i <- [0 .. size1 - 1], j <- [0 .. size2 - 1]]
   where
     computeX i j = sum $ zipWithA (*) arr (fourierBasis i j)
     fourierBasis i j =
-      let frequency m n =
+      let frequency m n =                -- | calculating the frequency of fourier series in 2D as the sum of frequenca in each dimension
             2 * pi * fromIntegral (i * m) / fromIntegral size1
               + 2 * pi * fromIntegral (j * n) / fromIntegral size2
        in listArray
             ((0, 0), (size1 - 1, size2 - 1))
-            [ cos (frequency m n) :+ (- sin (frequency m n))
+            [ cos (frequency m n) :+ (- sin (frequency m n))     -- | trigonometric form of 2D fourier series
               | m <- [0 .. size1 - 1],
                 n <- [0 .. size2 - 1]
             ]
+-- | Fourier Transform in 3D
+-- | the frequency should be calculated in 3D
+-- | Consider a real-valued function, S(x), 
+-- | that is integrable on an interval of P, which will be the period of the Fourier series.
+-- | numbber of cycles is n.
+-- | length of cycle is P/n, and frequency is n/P.
+-- | so for input i the frequency is (2*pi*i*n)/P
+-- | the frequency should be calculated for all dimensions, i , j , k
 
--- |
 fourierTransform3D ::
-  (Int, Int, Int) ->
+  (Int, Int, Int) ->           
   Array (Int, Int, Int) (Complex Double) ->
   Array (Int, Int, Int) (Complex Double)
-fourierTransform3D (size1, size2, size3) arr =
+fourierTransform3D (size1, size2, size3) arr =       -- |  size of fourier tarnsform 3D complex matrix
   listArray
     ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
     [ computeX i j k
@@ -910,13 +1013,13 @@ fourierTransform3D (size1, size2, size3) arr =
   where
     computeX i j k = sum $ zipWithA (*) arr (fourierBasis i j k)
     fourierBasis i j k =
-      let frequency m n p =
+      let frequency m n p =                          -- | calculating the frequency of fourier series in 3D as the sum of frequenca in each dimension
             2 * pi * fromIntegral (i * m) / fromIntegral size1
               + 2 * pi * fromIntegral (j * n) / fromIntegral size2
               + 2 * pi * fromIntegral (k * p) / fromIntegral size3
-       in listArray
-            ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
-            [ cos (frequency m n p) :+ (- sin (frequency m n p))
+       in listArray              
+            ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))        
+            [ cos (frequency m n p) :+ (- sin (frequency m n p))    -- | trigonometric form of 3D fourier series
               | m <- [0 .. size1 - 1],
                 n <- [0 .. size2 - 1],
                 p <- [0 .. size3 - 1]
