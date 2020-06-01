@@ -1,5 +1,5 @@
 {-|
-  This module is for approximation and evaluation of the expressions regarding to the precision
+  This module is for approximation (if the two values are within acceptable numerical error) and evaluation of the expressions 
 -}
 
 module HashedExpression.Interp
@@ -63,10 +63,10 @@ chooseBranch marks val branches
 class
   Show a =>
   Approximable a where
-  (~=) :: a -> a -> Bool            -- | Operator ~= as a function which can be used in infix style to determine the approximability of the input a
+  (~=) :: a -> a -> Bool            -- | (~=) checks if the two values are within acceptable numerical error
   prettifyShow :: a -> String       -- | Prettyprint a string produced by show
 
-infix 4 ~=
+infix 4 ~=      
 
 {-|
    Calculating the reletive error for two double-precision input arguments.
@@ -80,7 +80,7 @@ relativeError a b = abs (a - b) / max (abs a) (abs b)
 
 {-|
 Instance which belongs to approximable class for Double precision inputs.
-It takes 2 double precision inputs and return whether they one could be the approximate of the other by calculating the error.
+It takes 2 double precision inputs and return whether are within acceptable numerical error.
 Returns true if the error is less than the condition value 
 -}
 
@@ -110,7 +110,7 @@ instance Approximable (Complex Double) where
 
 {-|
 Instance which belongs to approximable class for 1D array with Double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and the input arrays be elementwisely within acceptable numerical error.
 -} 
 instance Approximable (Array Int Double) where
   (~=) :: Array Int Double -> Array Int Double -> Bool
@@ -120,7 +120,7 @@ instance Approximable (Array Int Double) where
 
 {-|
 Instance which belongs to approximable class for 1D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
 -} 
 
 -- | [TODO] Shouldn't we seperate the real and imaginary parts here?
@@ -132,7 +132,7 @@ instance Approximable (Array Int (Complex Double)) where
 
 {-|
 Instance which belongs to approximable class for 2D array with double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
 -} 
 
 instance Approximable (Array (Int, Int) Double) where
@@ -143,7 +143,7 @@ instance Approximable (Array (Int, Int) Double) where
 
 {-|
 Instance which belongs to approximable class for 2D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
 -} 
 
 instance Approximable (Array (Int, Int) (Complex Double)) where
@@ -157,7 +157,7 @@ instance Approximable (Array (Int, Int) (Complex Double)) where
 
 {-|
 Instance which belongs to approximable class for 3D array with double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
 -} 
 
 instance Approximable (Array (Int, Int, Int) Double) where
@@ -167,7 +167,7 @@ instance Approximable (Array (Int, Int, Int) Double) where
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]"    -- | concatenate "," to seperate the elements of array in prettify
 {-|
 Instance which belongs to approximable class for 3D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and the operation be elementwisely true for input arrays.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
 -} 
 
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
@@ -181,14 +181,17 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
 
 -- | [TODO] These should be commented properly.
 -- | [TODO] Definition of evaluable class
+
 class Evaluable d rc output | d rc -> output where
-  eval :: ValMaps -> Expression d rc -> output
+  eval :: ValMaps -> Expression d rc -> output   -- |  eval is our built-in interpreter which serves to verify semantic preservation of rewriting
+
 
 -- | Instances will be constructed automatically by Haskell using the default declaration in class definition
 
--- | Instance of the class Evaluable evaluating a Real scalar as a type of Double
+-- | Instance of the class Evaluable, evaluating the input when it is defined as a Real scalar of type Double
 
--- | [TODO] valmap and defining eval?instance Evaluable Scalar R Double where
+-- | [TODO] valmap? 
+instance Evaluable Scalar R Double where
   eval :: ValMaps -> Expression Scalar R -> Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
@@ -275,7 +278,7 @@ class Evaluable d rc output | d rc -> output where
             ("expression structure Scalar R is wrong " ++ prettify e)
     | otherwise = error "one r but shape is not [] ??"
 
--- | Instance of the class Evaluable for evaluating a complex scalar of type double
+-- | Instance of the class Evaluable, evaluating the input when it is defined as a Complex scalar of type Double
 -- | [TODO] definition of eval?
 
 instance Evaluable Scalar C (Complex Double) where
@@ -283,9 +286,9 @@ instance Evaluable Scalar C (Complex Double) where
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
       case retrieveNode n mp of
-        Sum C args -> sum . map (eval valMap . expZeroC mp) $ args   -- | sum of a scalar is of the type of C
-        Mul C args -> product . map (eval valMap . expZeroC mp) $ args   -- | Multiplication of a scalar is of the type of C
-        Power x arg -> eval valMap (expZeroC mp arg) ^ x    -- | evaluation of arg to the power of x
+        Sum C args -> sum . map (eval valMap . expZeroC mp) $ args   -- | sum of a scalar is of the type C
+        Mul C args -> product . map (eval valMap . expZeroC mp) $ args   -- | Multiplication of a scalar is of the type C
+        Power x arg -> eval valMap (expZeroC mp arg) ^ x    -- | power evaluation of arg to the power of x
         Neg C arg -> - (eval valMap $ expZeroC mp arg)
         -- | [TODO] Does that scale the real and imaginary part seperately?
 
@@ -302,7 +305,7 @@ instance Evaluable Scalar C (Complex Double) where
             :+ eval valMap (expZeroR mp arg2)
         InnerProd C arg1 arg2 ->     -- | evaluate the inner product in C
           case retrieveShape arg1 mp of
-            [] ->      -- | evaluation for a single variable
+            [] ->      -- | evaluation for dimention of zero
               eval valMap (expZeroC mp arg1)
                 * conjugate (eval valMap (expZeroC mp arg2))
             [size] ->     -- | inner product evaluation for a vector
@@ -354,7 +357,7 @@ foldrElementwise :: Ix ix => (a -> a -> a) -> [Array ix a] -> Array ix a
 foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
--- | the expression is undefined, So here undefined 1D Real expressions are evaluated
+-- | the expression is undefined, here undefined 1D Real expressions are evaluated
 evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
   | [size] <- retrieveShape n mp =
@@ -363,23 +366,24 @@ evaluate1DReal valMap (mp, n)
         case Map.lookup name valMap of
           Just (V1D val) -> val
           _ -> error "no value associated with the variable"
-      Const val -> listArray (0, size - 1) $ replicate size val        -- | constant expression
-      Sum R args ->                        
+      Const val -> listArray (0, size - 1) $ replicate size val        
+      Sum R args ->                          -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate1DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul R args ->                          -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg))
-      Neg R arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg))   -- | evaluate the power over undefined input arguments
+      Neg R arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)    -- | [TODO] How it negates?
+      Scale R arg1 arg2 ->                                            -- | [TODO] scale
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate1DReal valMap $ (mp, arg2)
-      Div arg1 arg2 ->
+      Div arg1 arg2 ->                              -- | evaluate the Division over undefined input arguments
         zipWithA
           (/)
           (evaluate1DReal valMap $ (mp, arg2))
           (evaluate1DReal valMap $ (mp, arg2))
+      -- | trigonometric functions
       Sqrt arg -> fmap sqrt . evaluate1DReal valMap $ (mp, arg)
       Sin arg -> fmap sin . evaluate1DReal valMap $ (mp, arg)
       Cos arg -> fmap cos . evaluate1DReal valMap $ (mp, arg)
@@ -398,7 +402,7 @@ evaluate1DReal valMap (mp, n)
       RealPart arg -> fmap realPart . evaluate1DComplex valMap $ (mp, arg)
       ImagPart arg -> fmap imagPart . evaluate1DComplex valMap $ (mp, arg)
       -- Rotate rA arg ->
-      Piecewise marks conditionArg branchArgs ->
+      Piecewise marks conditionArg branchArgs ->      -- | [TODO] piecewise?
         let cdt = evaluate1DReal valMap $ (mp, conditionArg)
             branches = map (evaluate1DReal valMap . (mp,)) branchArgs
          in listArray
@@ -418,7 +422,7 @@ evaluate1DReal valMap (mp, n)
                   * (innerRes ! i + innerRes ! ((size - i) `mod` size))
                 | i <- [0 .. size - 1]
               ]
-      TwiceImFT arg ->
+      TwiceImFT arg ->      -- |[TODO]
         let innerRes = evaluate1DReal valMap $ (mp, arg)
             scaleFactor = fromIntegral size / 2
          in listArray
@@ -427,7 +431,7 @@ evaluate1DReal valMap (mp, n)
                   * (innerRes ! i - innerRes ! ((size - i) `mod` size))
                 | i <- [0 .. size - 1]
               ]
-      ReFT arg ->
+      ReFT arg ->     -- |[TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -438,7 +442,7 @@ evaluate1DReal valMap (mp, n)
             let inner = evaluate1DComplex valMap $ (mp, arg)
                 ftResult = fourierTransform1D size inner
              in fmap realPart ftResult
-      ImFT arg ->
+      ImFT arg ->    -- |[TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -451,7 +455,7 @@ evaluate1DReal valMap (mp, n)
              in fmap imagPart ftResult
       _ -> error "expression structure One R is wrong"
   | otherwise = error "one r but shape is not [size] ??"
-
+-- |[TODO]
 instance (KnownNat n) => Evaluable n R (Array Int Double) where
   eval :: ValMaps -> Expression n R -> Array Int Double
   eval valMap (Expression n mp) = evaluate1DReal valMap (mp, n)
@@ -462,15 +466,15 @@ evaluate1DComplex ::
 evaluate1DComplex valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveNode n mp of
-      Sum C args ->
+      Sum C args ->          -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate1DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul C args ->      -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg))
-      Neg C arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg))     -- | evaluate the power over undefined input arguments
+      Neg C arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)        -- |[TODO]
+      Scale C arg1 arg2 ->    -- |[TODO]
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1
@@ -480,12 +484,12 @@ evaluate1DComplex valMap (mp, n)
             let scalar = eval valMap $ expZeroC mp arg1
              in fmap (scalar *) . evaluate1DComplex valMap $
                   (mp, arg2)
-      RealImag arg1 arg2 ->
+      RealImag arg1 arg2 ->. --[TODO]
         zipWithA
           (:+)
           (evaluate1DReal valMap $ (mp, arg1))
           (evaluate1DReal valMap $ (mp, arg2))
-      Piecewise marks conditionArg branchArgs ->
+      Piecewise marks conditionArg branchArgs ->    -- | [TODO]
         let cdt = evaluate1DReal valMap $ (mp, conditionArg)
             branches =
               map (evaluate1DComplex valMap . (mp,)) branchArgs
@@ -495,7 +499,7 @@ evaluate1DComplex valMap (mp, n)
                 | i <- [0 .. size - 1],
                   let chosen = chooseBranch marks (cdt ! i) branches
               ]
-      Rotate [amount] arg ->
+      Rotate [amount] arg ->     -- |[TODO]
         rotate1D size amount (evaluate1DComplex valMap $ (mp, arg))
       _ -> error "expression structure One C is wrong"
   | otherwise = error "one C but shape is not [size] ??"
@@ -517,18 +521,18 @@ evaluate2DReal valMap (mp, n)
       Const val ->
         listArray ((0, 0), (size1 - 1, size2 - 1)) $
           replicate (size1 * size2) val
-      Sum R args ->
+      Sum R args ->                  -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate2DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul R args ->                 -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg))
+      Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg))   -- | evaluate the power over undefined input arguments
       Neg R arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Scale R arg1 arg2 ->        -- |[TODO]
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate2DReal valMap $ (mp, arg2)
-      Div arg1 arg2 ->
+      Div arg1 arg2 ->     -- | [TODO]
         zipWithA
           (/)
           (evaluate2DReal valMap $ (mp, arg2))
@@ -550,7 +554,7 @@ evaluate2DReal valMap (mp, n)
       Atanh arg -> fmap atanh . evaluate2DReal valMap $ (mp, arg)
       RealPart arg -> fmap realPart . evaluate2DComplex valMap $ (mp, arg)
       ImagPart arg -> fmap imagPart . evaluate2DComplex valMap $ (mp, arg)
-      Piecewise marks conditionArg branchArgs ->
+      Piecewise marks conditionArg branchArgs ->     -- | [TODO]
         let cdt = evaluate2DReal valMap $ (mp, conditionArg)
             branches = map (evaluate2DReal valMap . (mp,)) branchArgs
          in listArray
@@ -561,12 +565,12 @@ evaluate2DReal valMap (mp, n)
                   let chosen =
                         chooseBranch marks (cdt ! (i, j)) branches
               ]
-      Rotate [amount1, amount2] arg ->
+      Rotate [amount1, amount2] arg ->     -- |[TODO]
         rotate2D
           (size1, size2)
           (amount1, amount2)
           (evaluate2DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
+      TwiceReFT arg ->      -- |[TODO]
         let innerRes = evaluate2DReal valMap $ (mp, arg)
             scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
          in listArray
@@ -579,7 +583,7 @@ evaluate2DReal valMap (mp, n)
                 | i <- [0 .. size1 - 1],
                   j <- [0 .. size2 - 1]
               ]
-      TwiceImFT arg ->
+      TwiceImFT arg -> -- | [TODO]
         let innerRes = evaluate2DReal valMap $ (mp, arg)
             scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
          in listArray
@@ -592,7 +596,7 @@ evaluate2DReal valMap (mp, n)
                 | i <- [0 .. size1 - 1],
                   j <- [0 .. size2 - 1]
               ]
-      ReFT arg ->
+      ReFT arg ->    -- | [TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -603,7 +607,7 @@ evaluate2DReal valMap (mp, n)
             let inner = evaluate2DComplex valMap $ (mp, arg)
                 ftResult = fourierTransform2D (size1, size2) inner
              in fmap realPart ftResult
-      ImFT arg ->
+      ImFT arg -> -- | [TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -630,15 +634,15 @@ evaluate2DComplex ::
 evaluate2DComplex valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveNode n mp of
-      Sum C args ->
+      Sum C args ->          -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate2DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul C args ->      -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg))
-      Neg C arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg))    -- | evaluate the power over undefined input arguments
+      Neg C arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)      -- | [TODO]
+      Scale C arg1 arg2 ->   -- | [TODO]
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1
@@ -648,12 +652,12 @@ evaluate2DComplex valMap (mp, n)
             let scalar = eval valMap $ expZeroC mp arg1
              in fmap (scalar *) . evaluate2DComplex valMap $
                   (mp, arg2)
-      RealImag arg1 arg2 ->
+      RealImag arg1 arg2 ->  -- | [TODO]
         zipWithA
           (:+)
           (evaluate2DReal valMap $ (mp, arg1))
           (evaluate2DReal valMap $ (mp, arg2))
-      Piecewise marks conditionArg branchArgs ->
+      Piecewise marks conditionArg branchArgs ->  -- | [TODO]
         let cdt = evaluate2DReal valMap $ (mp, conditionArg)
             branches =
               map (evaluate2DComplex valMap . (mp,)) branchArgs
@@ -665,7 +669,7 @@ evaluate2DComplex valMap (mp, n)
                   let chosen =
                         chooseBranch marks (cdt ! (i, j)) branches
               ]
-      Rotate [amount1, amount2] arg ->
+      Rotate [amount1, amount2] arg ->    -- | [TODO]
         rotate2D
           (size1, size2)
           (amount1, amount2)
@@ -680,6 +684,8 @@ instance
   eval ::
     ValMaps -> Expression '(m, n) C -> Array (Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate2DComplex valMap (mp, n)
+  
+-- | Evaluate 3D undefined complex expression
 
 evaluate3DReal ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) Double
@@ -693,18 +699,18 @@ evaluate3DReal valMap (mp, n)
       Const val ->
         listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $
           replicate (size1 * size2 * size3) val
-      Sum R args ->
+      Sum R args ->       -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate3DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul R args ->    -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate3DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg))
+      Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg))   -- | evaluate the power over undefined input arguments
       Neg R arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Scale R arg1 arg2 ->     -- | [TODO]
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate3DReal valMap $ (mp, arg2)
-      Div arg1 arg2 ->
+      Div arg1 arg2 ->      -- | evaluate the division over undefined input arguments
         zipWithA
           (/)
           (evaluate3DReal valMap $ (mp, arg2))
@@ -738,12 +744,12 @@ evaluate3DReal valMap (mp, n)
                   let chosen =
                         chooseBranch marks (cdt ! (i, j, k)) branches
               ]
-      Rotate [amount1, amount2, amount3] arg ->
+      Rotate [amount1, amount2, amount3] arg ->.  -- | [TODO]
         rotate3D
           (size1, size2, size3)
           (amount1, amount2, amount3)
           (evaluate3DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
+      TwiceReFT arg ->        -- | [TODO]
         let innerRes = evaluate3DReal valMap $ (mp, arg)
             scaleFactor =
               fromIntegral size1 * fromIntegral size2
@@ -763,7 +769,7 @@ evaluate3DReal valMap (mp, n)
                   j <- [0 .. size2 - 1],
                   k <- [0 .. size3 - 1]
               ]
-      TwiceImFT arg ->
+      TwiceImFT arg ->   -- | [TODO]
         let innerRes = evaluate3DReal valMap $ (mp, arg)
             scaleFactor =
               fromIntegral size1 * fromIntegral size2
@@ -783,7 +789,7 @@ evaluate3DReal valMap (mp, n)
                   j <- [0 .. size2 - 1],
                   k <- [0 .. size3 - 1]
               ]
-      ReFT arg ->
+      ReFT arg ->    -- | [TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -796,7 +802,7 @@ evaluate3DReal valMap (mp, n)
                 ftResult =
                   fourierTransform3D (size1, size2, size3) inner
              in fmap realPart ftResult
-      ImFT arg ->
+      ImFT arg ->    -- | [TODO]
         case retrieveElementType arg mp of
           R ->
             let inner =
@@ -820,21 +826,22 @@ instance
   where
   eval :: ValMaps -> Expression '(m, n, p) R -> Array (Int, Int, Int) Double
   eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
+  
 -- | evaluate the 3D undefined expression
 evaluate3DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
 evaluate3DComplex valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveNode n mp of
-      Sum C args ->
+      Sum C args ->    -- | evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate3DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul C args ->    -- | evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate3DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg))
-      Neg C arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg)) -- | evaluate the power over undefined input arguments
+      Neg C arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)  -- | [TODO]
+      Scale C arg1 arg2 ->    -- | [TODO]
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1
@@ -844,12 +851,12 @@ evaluate3DComplex valMap (mp, n)
             let scalar = eval valMap $ expZeroC mp arg1
              in fmap (scalar *) . evaluate3DComplex valMap $
                   (mp, arg2)
-      RealImag arg1 arg2 ->
+      RealImag arg1 arg2 ->  -- | [TODO]
         zipWithA
           (:+)
           (evaluate3DReal valMap $ (mp, arg1))
           (evaluate3DReal valMap $ (mp, arg2))
-      Piecewise marks conditionArg branchArgs ->
+      Piecewise marks conditionArg branchArgs ->  -- | [TODO]
         let cdt = evaluate3DReal valMap $ (mp, conditionArg)
             branches =
               map (evaluate3DComplex valMap . (mp,)) branchArgs
@@ -862,7 +869,7 @@ evaluate3DComplex valMap (mp, n)
                   let chosen =
                         chooseBranch marks (cdt ! (i, j, k)) branches
               ]
-      Rotate [amount1, amount2, amount3] arg ->
+      Rotate [amount1, amount2, amount3] arg ->   -- | [TODO]
         rotate3D
           (size1, size2, size3)
           (amount1, amount2, amount3)
@@ -879,6 +886,8 @@ instance
     Expression '(m, n, p) C ->
     Array (Int, Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate3DComplex valMap (mp, n)
+
+-- | Helper functions
 
 -- NOTE: `mod` in Haskell works with negative number, e.g, (-5) `mod` 3 = 1
 
