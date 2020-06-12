@@ -1,0 +1,214 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 766fd1a4471c2948a5cb52ca97a729f242bed09a0bf4574a58aa5aae143a5085
+
+name:           HashedExpression
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/HashedExpression#readme>
+homepage:       https://github.com/githubuser/HashedExpression#readme
+bug-reports:    https://github.com/githubuser/HashedExpression/issues
+author:         McMaster Start Coding
+maintainer:     example@example.com
+copyright:      2019 McMaster Start Coding
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    symphony/AbsHashedLang.hs
+    symphony/ComposOp.hs
+    symphony/ErrM.hs
+    symphony/LayoutHashedLang.hs
+    symphony/LexHashedLang.hs
+    symphony/Main.hs
+    symphony/ParHashedLang.hs
+    symphony/PrintHashedLang.hs
+    symphony/SkelHashedLang.hs
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/HashedExpression
+
+library
+  exposed-modules:
+      HashedExpression
+      HashedExpression.Codegen
+      HashedExpression.Codegen.CSIMD
+      HashedExpression.Codegen.CSimple
+      HashedExpression.Derivative
+      HashedExpression.Derivative.Partial
+      HashedExpression.Embed.FFTW
+      HashedExpression.Internal.CollectDifferential
+      HashedExpression.Internal.Expression
+      HashedExpression.Internal.Hash
+      HashedExpression.Internal.Inner
+      HashedExpression.Internal.Node
+      HashedExpression.Internal.Normalize
+      HashedExpression.Internal.Pattern
+      HashedExpression.Internal.Plot
+      HashedExpression.Internal.Utils
+      HashedExpression.Interp
+      HashedExpression.Operation
+      HashedExpression.Prettify
+      HashedExpression.Problem
+      HashedExpression.Value
+  other-modules:
+      Paths_HashedExpression
+  hs-source-dirs:
+      src
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      QuickCheck
+    , array
+    , base
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , easyplot
+    , extra
+    , filepath
+    , mtl
+    , process
+    , split
+    , string-interpolate
+    , text
+    , time
+    , utility-ht
+  default-language: Haskell2010
+
+executable HashedExpression-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_HashedExpression
+  hs-source-dirs:
+      app
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      HashedExpression
+    , QuickCheck
+    , array
+    , base
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , easyplot
+    , extra
+    , filepath
+    , hspec
+    , mtl
+    , process
+    , split
+    , string-interpolate
+    , text
+    , time
+    , utility-ht
+  default-language: Haskell2010
+
+executable symphony
+  main-is: Main.hs
+  other-modules:
+      AbsHashedLang
+      ComposOp
+      ErrM
+      LayoutHashedLang
+      LexHashedLang
+      LexHashedLang
+      ParHashedLang
+      ParHashedLang
+      PrintHashedLang
+      SkelHashedLang
+      Symphony.Common
+      Symphony.Entry
+      Symphony.Exp
+      Symphony.Symphony
+      Paths_HashedExpression
+  hs-source-dirs:
+      symphony
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      HashedExpression
+    , JuicyPixels
+    , QuickCheck
+    , array
+    , base
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , easyplot
+    , extra
+    , filepath
+    , mtl
+    , optparse-applicative
+    , process
+    , regex-posix
+    , split
+    , string-interpolate
+    , text
+    , time
+    , utility-ht
+  default-language: Haskell2010
+
+test-suite HashedExpression-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      CollectSpec
+      Commons
+      CSimpleSpec
+      InterpSpec
+      NormalizeEval.OneCSpec
+      NormalizeEval.OneRSpec
+      NormalizeEval.ScalarCSpec
+      NormalizeEval.ScalarRSpec
+      NormalizeSpec
+      ProblemSpec
+      StructureSpec
+      Var
+      Paths_HashedExpression
+  hs-source-dirs:
+      test
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      HUnit
+    , HashedExpression
+    , QuickCheck
+    , array
+    , base
+    , binary
+    , bytestring
+    , containers
+    , deepseq
+    , easyplot
+    , extra
+    , filepath
+    , hspec
+    , mtl
+    , process
+    , split
+    , string-interpolate
+    , text
+    , time
+    , utility-ht
+  default-language: Haskell2010
