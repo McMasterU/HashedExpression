@@ -1,3 +1,14 @@
+{-|
+Module      :  HashedExpression.Codegen.CSimple
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module provides a backend for c code generation (the interface being provided by 'HashedExpression.Codegen') that provides no
+parallelization (i.e no threading or SIMD)
+-}
 module HashedExpression.Codegen.CSimple where
 
 import Control.Monad (forM_, when)
@@ -30,12 +41,12 @@ import Prelude hiding ((!!))
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
 
--- Offset w.r.t "ptr"
+-- | Offset w.r.t "ptr"
 type Address = Int
 
 type NodeID = Int
 
--- e.g: i, j, k
+-- | e.g: i, j, k
 type Index = Text
 
 data CSimpleCodegen
