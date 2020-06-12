@@ -1,3 +1,16 @@
+{-|
+Module      :  HashedExpression.Internal.Normalize
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module contains functionality for normalizing an 'Expression' using a variety of rewrite rules designed primarily to simplify and
+reduce computation when evaluating. Currently there is no proof of confluence, however confluence is suspected
+
+TODO haddock: should we summerize rewrite rules here???
+-}
 module HashedExpression.Internal.Normalize
   ( normalize,
     normalizingTransformation,
@@ -38,6 +51,26 @@ import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
 import Prelude hiding ((^), product, sum)
 import qualified Prelude
+
+-- | Predefined holes used for pattern matching with 'Pattern'
+[p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
+
+-- | Predefined holes used for pattern matching with 'PPowerHole'
+[alpha, beta, gamma] = map PPowerHole [1 .. 3]
+
+-- | Predefined holes used for pattern matching with 'PRotateAmountHole'
+[amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
+
+-- | Predefined holes used for pattern matching with 'PListHole'
+[xs,ys] = map (PListHole id) [1,2]
+
+-- | Constant pattern x ^ 1
+powerOne :: PatternPower
+powerOne = PPowerConst 1
+
+-- | Constant pattern x ^ 0
+powerZero :: PatternPower
+powerZero = PPowerConst 0
 
 -- | For debugging a single normalizier rule
 makeTrans ::
@@ -205,19 +238,19 @@ dotProductRules =
     x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y)
   ]
 
--- | Rules for distributivity of scale, multiplication and dot product over sum
+-- | Rules for distributivity of scale, multiplication and dot product over sumP
 --
 --   This mostly consists of rules to bring leading multiplicands inside a sum, as one would expect.
 distributiveRules :: [Substitution]
 distributiveRules =
-  [ x * sum ys |.~~~~~~> sum (mapL (x *) ys),
-    sum ys * x |.~~~~~~> sum (mapL (* x) ys),
-    x <.> sum ys |.~~~~~~> sum (mapL (x <.>) ys),
-    sum ys <.> x |.~~~~~~> sum (mapL (<.> x) ys),
-    x *. sum ys |.~~~~~~> sum (mapL (x *.) ys),
-    negate (sum ys) |.~~~~~~> sum (mapL negate ys),
-    restOfProduct ~* sum ys |.~~~~~~> sum (mapL (restOfProduct ~*) ys),
-    sum ys *. x |.~~~~~~> sum (mapL (*. x) ys)
+  [ x * sumP ys |.~~~~~~> sumP (mapL (x *) ys),
+    sumP ys * x |.~~~~~~> sumP (mapL (* x) ys),
+    x <.> sumP ys |.~~~~~~> sumP (mapL (x <.>) ys),
+    sumP ys <.> x |.~~~~~~> sumP (mapL (<.> x) ys),
+    x *. sumP ys |.~~~~~~> sumP (mapL (x *.) ys),
+    negate (sumP ys) |.~~~~~~> sumP (mapL negate ys),
+    restOfProduct ~* sumP ys |.~~~~~~> sumP (mapL (restOfProduct ~*) ys),
+    sumP ys *. x |.~~~~~~> sumP (mapL (*. x) ys)
   ]
 
 -- | Rules for Fourier transform
@@ -232,8 +265,8 @@ fourierTransformRules =
     imFT zero |.~~~~~~> zero,
     twiceImFT zero |.~~~~~~> zero,
     twiceReFT zero |.~~~~~~> zero,
-    reFT (sum xs) |.~~~~~~> sum (mapL reFT xs),
-    imFT (sum xs) |.~~~~~~> sum (mapL imFT xs),
+    reFT (sumP xs) |.~~~~~~> sumP (mapL reFT xs),
+    imFT (sumP xs) |.~~~~~~> sumP (mapL imFT xs),
     imFT (reFT x) |. isReal x ~~~~~~> zero,
     reFT (imFT x) |. isReal x ~~~~~~> zero,
     imFT (reFT x) |. isCovector x ~~~~~~> zero,
@@ -283,8 +316,8 @@ rotateRules =
   [ rotate amount (s *. x) |.~~~~~~> s *. rotate amount x,
     rotate amount1 (rotate amount2 x) |.~~~~~~> rotate (amount1 + amount2) x,
     rotate amount x |. zeroAmount amount ~~~~~~> x,
-    rotate amount (sum xs) |.~~~~~~> sum (mapL (rotate amount) xs),
-    rotate amount (product xs) |.~~~~~~> product (mapL (rotate amount) xs),
+    rotate amount (sumP xs) |.~~~~~~> sumP (mapL (rotate amount) xs),
+    rotate amount (productP xs) |.~~~~~~> productP (mapL (rotate amount) xs),
     rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y,
     rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y)
   ]
@@ -298,7 +331,7 @@ zeroOneSumProdRules exp@(mp, n) =
     Sum _ ns
       -- to make sure filter (not . isZero mp) ns is not empty
       | all (isZero mp) ns -> just $ head ns
-      -- if the sum has any zero, remove them
+      -- if the sumP has any zero, remove them
       -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
       | any (isZero mp) ns ->
         sum_ . map just . filter (not . isZero mp) $ ns
@@ -318,12 +351,12 @@ zeroOneSumProdRules exp@(mp, n) =
 
 -- | Rules for collapsing 'Sum' and 'Mul'
 --
---   For example, if a sum or product consists of only one entry, it can be extracted.
+--   For example, if a sumP or product consists of only one entry, it can be extracted.
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
     Sum _ ns
-      -- if the sum has only one, collapse it
+      -- if the sumP has only one, collapse it
       -- sum(x) -> x
       | length ns == 1 -> just $ head ns
     Mul _ ns
@@ -334,13 +367,13 @@ collapseSumProdRules exp@(mp, n) =
 
 -- | Rules for flattening 'Sum' and 'Mul'.
 --
---   For example, if sum or product contains sub-sum or sub-product, flatten them out. This is analogous to the `concat`
+--   For example, if sumP or product contains sub-sum or sub-product, flatten them out. This is analogous to the `concat`
 --   function on lists.
 flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
   case retrieveNode n mp of
     Sum _ ns ->
-      -- if the sum contains any sum, just flatten them out
+      -- if the sumP contains any sumP, just flatten them out
       -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
       sum_ . map just . concatMap (pullSumOperands mp) $ ns
     Mul _ ns ->
@@ -351,7 +384,7 @@ flattenSumProdRules exp@(mp, n) =
 
 -- | Rules for grouping constants
 --
---   If there is more than one constant in a sum or a product, group them together to reduce complexity.
+--   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
@@ -432,7 +465,7 @@ combinePowerRules exp@(mp, n)
     just innerN ^ (outerVal * innerVal)
   | otherwise = just n
 
--- | Rules for power of sum and power of 'RealImag'
+-- | Rules for power of sumP and power of 'RealImag'
 --
 --   * (a+b)^2 should be (a+b)*(a+b)
 --   * (a +: b) ^ 2 should be (a +: b) * (a +: b)
