@@ -1,3 +1,15 @@
+{-|
+Module      :  HashedExpression.Internal.CollectDifferential
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module exists solely to factor terms around their differentials. When properly factored, the term multiplying
+a differential (say dx) is it's corresponding parital derivative (i.e derivative w.r.t x)
+-}
+
 module HashedExpression.Internal.CollectDifferential
   ( collectDifferentials,
   )
@@ -32,9 +44,29 @@ import HashedExpression.Prettify
 import Prelude hiding ((^), product, sum)
 import qualified Prelude
 
--- | Precondition: (satisfied by first applying normalizier)
--- - No complex in the input (:+, xRe, xIm)
--- - Scale is pushed to the outer most layer and real scalars are group together in a product
+-- | Predefined holes using for pattern matching with 'Pattern'
+[p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
+
+-- | Predefined holes used for pattern matching with 'PRotateAmountHole'
+[amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
+
+-- | Predefined holes used for pattern matching with 'PListHole'
+[xs,ys] = map (PListHole id) [1,2]
+
+-- | Factors terms around differentials. When computing derivatives with 'exteriorDerivative', differential operators are
+--   dispersed among the expression as computed, to determine the parital derivatives you need to collect like terms.
+--   For example:
+--
+--   @
+--    y*dx + x*dy + 2.0*dx
+--    => (2.0+y)*dx + x*dy
+--   @
+--   Preconditions (satisfied by first applying normalizier):
+--
+--     * No complex in the input (:+, xRe, xIm)
+--
+--     * Scale is pushed to the outer most layer and real scalars are group together in a product
+--   TODO haddock: are these precondtiions not preconditinos because calling normalize first fixes them??
 collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
 collectDifferentials = wrap . applyRules . unwrap . normalize
   where
@@ -52,7 +84,7 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
 inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
--- |
+-- | Convert a 'Modification' to a 'Transformation' by applying it recursively *WITHOUT* a topological reordering
 toRecursiveCollecting :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
@@ -61,7 +93,7 @@ toRecursiveCollecting = toTransformation . toRecursive NoReorder
 restructure :: Transformation
 restructure =
   multipleTimes 1000 . chain $
-    [ toMultiplyIfPossible, --
+    [ toMultiplyIfPossible,
       toRecursiveCollecting $ fromModification flattenSumProdRules
     ]
 
@@ -75,7 +107,7 @@ splitCovectorProdRules exp@(mp, n) =
        in prodRest * just differential
     _ -> just n
 
--- |
+-- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
   multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
@@ -124,8 +156,8 @@ groupByDVar exp@(mp, n) =
 aggregateByDVar :: Transformation
 aggregateByDVar =
   chain . map (toRecursiveCollecting . fromSubstitution) $
-    [ sum (mapL (* y) xs) |. isDVar y ~~~~~~> sum xs * y,
-      sum (mapL (<.> y) xs) |. isDVar y ~~~~~~> sum xs <.> y
+    [ sumP (mapL (* y) xs) |. isDVar y ~~~~~~> sumP xs * y,
+      sumP (mapL (<.> y) xs) |. isDVar y ~~~~~~> sumP xs <.> y
     ]
 
 -- | Normalize each partial derivative

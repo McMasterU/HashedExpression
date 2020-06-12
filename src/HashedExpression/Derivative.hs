@@ -1,5 +1,27 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-|
+Module      :  HashedExpression.Derivative
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module contains all the functionality needed to symbolically compute the derivatives of a 'Expression'. Deriviatives are computed using
+Exterior Differential Calculus, a coordinate-independent system of understanding differential systems. There are strong parallels with the
+development of algebraic data types and pure functions to tame the complexity and bring transparency to programming. Differential terms
+reprented by 'dVar' (dx,dy, etc) often seen as placeholders in calculus are given meaning, resulting in simple algebriac rules to performing
+implicit differentiation.
+
+Computing an exterior derivative on an expression @Expression d R@ will result in a @Expression d Covector@, i.e a 'Covector' field
+(also known as 1-form). This will contain 'dVar' terms representing where implicit differentiation has occurred. See 'CollectDifferential'
+to factor like terms for producing partial derivatives
+
+
+TODO haddock: do we also sdupport reverse AD?? where??
+-}
+
 module HashedExpression.Derivative
   ( exteriorDerivative,
     derivativeAllVars,
@@ -27,18 +49,32 @@ import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import Prelude hiding ((^))
 
--- | Exterior derivative
-exteriorDerivative ::
-  (DimensionType d) =>
-  -- | Variables
-  Set String ->
-  -- | Expression
-  Expression d R ->
-  Expression d Covector
+-- | Compute the exterior derivative w.r.t the given variable identifiers (the 'String' wrapped by 'Var'). This transforms a real expression
+--   @Expression d R@ into @Expression d Covector@ (an expression with 'DVar' terms). This is because we compute derivatives symbolically
+--   using exterior algebra, so derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field. For example,
+--
+--  >>> let [x,y] = [variable "x",variable "y"]
+--  >>> prettify $ exteriorDerivative (Set.fromList ["x","y"]) (2*x + y)
+--  "((2.0*dx)+dy) :: Covector"
+--
+--  Note: the partial derivatives are the terms scaling the differential variables (i.e 'DVar',dx,dy,etc), however you may need to factor them
+--  first using 'collectDifferentials'
+exteriorDerivative :: (DimensionType d) =>
+                      -- | Variable Identifiers to take derivative w.r.t
+                      Set String ->
+                      -- | Expression to take derivative on
+                      Expression d R ->
+                      -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
+                      Expression d Covector
 exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 
--- | Take derivative with all vars
-derivativeAllVars :: DimensionType d => Expression d R -> Expression d Covector
+-- | Same as 'exteriorDerivative' except automatically perform derivative w.r.t all variables. Since derivatives are computed symbolically using
+--   exterior algebra, derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field.
+derivativeAllVars :: DimensionType d =>
+                     -- | Expression to take derivative on
+                     Expression d R ->
+                      -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
+                     Expression d Covector
 derivativeAllVars expr =
   exteriorDerivative (Set.fromList . map fst $ expressionVarNodes expr) expr
 
@@ -46,20 +82,21 @@ derivativeAllVars expr =
 coerce :: Expression d1 et1 -> Expression d2 et2
 coerce (Expression n mp) = Expression n mp
 
--- | Hidden const to represent many dimensions
+-- | Creates an 'Expression' that's a singular 'Const' of a specified 'Shape' and value
 c :: (DimensionType d) => Shape -> Double -> Expression d R
 c shape val = Expression h (IM.fromList [(h, node)])
   where
     node = (shape, Const val)
     h = hash node
 
+-- | Creates an 'Expression' that's a singular 'Const' of value 1.0
 oneOf :: (DimensionType d) => Shape -> Expression d R
 oneOf shape = Expression h (IM.fromList [(h, node)])
   where
     node = (shape, Const 1)
     h = hash node
 
--- | Hidden exterior derivative
+-- | Hidden computation for exterior derivative
 hiddenDerivative :: Set String -> Expression d R -> Expression d Covector
 hiddenDerivative vars (Expression n mp) = coerce res
   where
@@ -217,12 +254,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
         TwiceImFT arg -> d1Input TwiceImFT arg
         _ -> error $ show node
 
--------------------------------------------------------------------------------
-
--- |
--------------------------------------------------------------------------------
-
--- | Wise-multiply a number with a covector
+-- | Element-wise multiply a number with a covector
 (|*|) ::
   (DimensionType d) =>
   Expression d R ->
