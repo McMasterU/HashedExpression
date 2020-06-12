@@ -8,60 +8,63 @@ Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
 Portability :  unportable
 
-Inner HashedExpression functionality, contains transformations
-and combinators for manually manipulating HashedExpressions
+Inner HashedExpression functionality, contains transformations and combinators for manually manipulating HashedExpressions.
 -}
 
 module HashedExpression.Internal.Inner
-  ( -- * Helper Functions for Constructing 'Expression' Combinators / Operators
+  ( -- * Expression Builders
     apply,
+    applyBinary,
+    applyNary,
+    applyConditionAry,
     unwrap,
     wrap,
     mulMany,
     sumMany,
-    hasShape,
-    applyBinary,
-    applyNary,
-    applyConditionAry,
+    -- * Operation Outcomes
+    ElementOutcome (..),
+    D_,
+    ET_,
+    OperationOption (..),
+    NodeOutcome (..),
     binary,
     binaryET,
-    conditionAry,
     applyUnary,
     unary,
     unaryET,
     naryET,
-    -- * Types for Fixing ElementType and Dimension Outcomes With Helpers
-    ElementOutcome (..),
-    D_,
-    ET_,
+    conditionAry,
+    hasShape,
+    -- * Expression Transformations
+    Transformation,
+    toTransformation,
+    Modification,
+    fromModification,
+    OperandOrder (..),
+    toRecursive,
+    multipleTimes,
+    removeUnreachable,
+    -- * Expression Changes
+    Change,
     const_,
     num_,
     product_,
-    diffConst,
-    topologicalSort,
-    topologicalSortManyRoots,
-    ExpressionDiff (..),
-    Transformation,
-    Change,
-    Modification,
-    fromModification,
-    withContext,
-    just,
     sum_,
-    toTransformation,
-    multipleTimes,
-    OperandOrder (..),
-    toRecursive,
-    combineChildrenDiffs,
-    removeUnreachable,
+    just,
+    -- * Expression Diffs
+    ExpressionDiff (..),
+    applyDiff,
+    diffConst,
     mulManyDiff,
     sumManyDiff,
-    applyDiff,
     noChange,
+    combineChildrenDiffs,
+    -- * Other
+    topologicalSort,
+    topologicalSortManyRoots,
     expressionVarNodes,
     varNodesWithId,
     containsFTNode,
-    introduceZeroPartialDerivatives,
   )
 where
 
@@ -89,62 +92,62 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Expression Builders
+-- --------------------------------------------------------------------------------------------------------------------
 
--- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
---   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
---   (such as exterior derivatives)
-data D_
-  deriving (Typeable, Dimension)
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'.
+apply :: OperationOption -- ^ describes changes in 'Dimension' or 'ElementType'
+      -> [(ExpressionMap, NodeID)] -- ^ the operands (unwrapped 'Expression')
+      -> (ExpressionMap, NodeID) -- ^ the resulting (unwrapped) 'Expression'
+apply option exprs =
+  addEntryWithContext mergedMap mergedMap option (map snd exprs)
+  where
+    mergedMap = IM.unions . map fst $ exprs
 
--- | 'D_' is a placeholder type with no real Shape (i.e dimension/size). The method
---   'toShape' should never actually be evaluated on this instance
-instance ToShape D_ where
-  toShape =
-    error "D_ is a place holder, init variable for D_ is not applicable"
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a list of 'Expression' (operands) using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
+--   of 'Expression'
+applyNary :: HasCallStack
+          => OperationOption -- ^ describes changes in 'Dimension' or 'ElementType'
+          -> [Expression d1 et1] -- ^ the operands
+          -> Expression d2 et2 -- ^ the resulting 'Expression'
+applyNary option = wrap . apply option . map unwrap
 
--- | Placeholder for any element type, useful for performing symbolic computation on an 'Expression'
---   that requires a fixed type in the element type parameter but the actual element type is irrelavent
-data ET_
-  deriving (Typeable, ElementType)
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
+--   of 'Expression' and a fixed (binary) arity
+applyBinary :: HasCallStack
+            => OperationOption -- ^ describes changes in 'Dimension' or 'ElementType'
+            -> Expression d1 et1 -- ^ the "left" operand
+            -> Expression d2 et2 -- ^ the "right" operand
+            -> Expression d3 et3 -- ^ the resulting 'Expression'
+applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
 
--- | A union type to select either a default 'ElementType' or a specific one.
---   Default selection follows a priority chain 'R' < 'C' < 'Covector', choosing the first valid type
-data ElementOutcome
-  = ElementSpecific ET -- ^ force a specifc 'ElementType'
-  | ElementDefault -- ^ select prioritized valid element ('R' < 'C' < 'Covector')
+-- | Helper function that generalizes the construction of 'Expression' operators that transform
+--   a input 'Expression' using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
+--   of 'Expression' and a fixed (unary) arity
+applyUnary :: HasCallStack
+           => OperationOption -- ^ describes changes in 'Dimension' or 'ElementType'
+           -> Expression d1 et1 -- ^ the operand
+           -> Expression d2 et2 -- ^ the resulting 'Expression'
+applyUnary option e1 = wrap . apply option $ [unwrap e1]
 
--- | Possible outcomes effecting 'Dimension' and 'ElementType' when applying an operator.
---   Because of piecewise functions, constructing combinators for 'Expression' can be complicated due to
---   operator application resulting in conditionals
-data OperationOption
-  = Normal NodeOutcome ShapeOutcome -- ^ application has a normal outcome
-  | Condition (ConditionArg -> [BranchArg] -> Node) -- ^ application outcome depends on condition (piecewise function)
 
--- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
---   different cases for inferring 'DimensionType' and 'ElementType' of the resulting 'Node' need to be considered.
---   The following data type contains constructors covering these cases, the are used in normal control flow by
---   'OperationOption'
---   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
-data NodeOutcome
-  = OpOne (Arg -> Node) -- ^ Unary Operator, 'ElementType' irrelavent
-  | OpOneElement (ET -> Arg -> Node) ElementOutcome -- ^ Unary Operator, 'ElementType' included
-  | OpTwo (Arg -> Arg -> Node) -- ^ Binary Operator, 'ElementType' irrelavent
-  | OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome -- ^ Binary Operator, 'ElementType' included
-  | OpMany (Args -> Node) -- ^ N-Ary Operator, 'ElementType' irrelavent
-  | OpManyElement (ET -> Args -> Node) ElementOutcome -- ^ N-Ary Operator, 'ElementType' included
-
--- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
---   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
---   The following data type contains constructors covering these cases, the are used in normal control flow by
---   'OperationOption'
-data ShapeOutcome
-  = ShapeSpecific Shape -- ^ provide a specific 'Shape'
-  | ShapeDefault -- ^ automatically select the 'Shape' with the longest length
-  | ShapeBranches -- ^ select the shape of a 'BranchArg' (used in piecewise functions)
-
--- | TODO Haddock: Check if 2 different nodes from 2 maps have the same hash
-safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
-safeUnion = IM.union
+-- | Helper function that generalizes the construction of 'Expression' functions that
+--   are piecewise, requiring a operand 'Expression' to serve as a conditional (or selector)
+--   of other operands (branches)
+applyConditionAry :: OperationOption -- ^ describes changes in 'Dimension' or 'ElementType'
+                  -> Expression d et1 -- ^ the conditional/selector operand
+                  -> [Expression d et2] -- ^ operands (branches) that could be selected
+                  -> Expression d et2 -- ^ the resulting 'Expression'
+applyConditionAry option e branches =
+  wrap . apply option $ unwrap e : map unwrap branches
 
 -- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
 unwrap :: Expression d et -> (ExpressionMap, NodeID)
@@ -154,16 +157,20 @@ unwrap (Expression n mp) = (mp, n)
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a list of 'ExpressionMap' (arguments) using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'
-apply :: OperationOption -- ^ describes how an operators may change 'Dimension' or 'ElementType'
-      -> [(ExpressionMap, NodeID)] -- ^ the operators arguments
-      -> (ExpressionMap, NodeID) -- ^ the resulting 'Expression' (unwrapped)
-apply option exprs =
-  addEntryWithContext mergedMap mergedMap option (map snd exprs)
-  where
-    mergedMap = IM.unions . map fst $ exprs
+-- | Generic N-Ary multiplication operator, constructed using 'apply'
+--   with 'ElementDefault' to default to the 'ElementType' of it's arguments
+mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
+mulMany = apply $ naryET Mul ElementDefault
+
+-- | Generic N-Ary addition operator, constructed using 'apply'
+--   with 'ElementDefault' to default to the 'ElementType' of it's arguments
+sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
+sumMany = apply $ naryET Sum ElementDefault
+
+-- TODO is this needed?
+-- Check if 2 different nodes from 2 maps have the same hash
+safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
+safeUnion = IM.union
 
 -- | Generate a new 'ExpressionMap' with a new root 'Node' and 'NodeID' from a merged 'ExpressionMap' (of arguments)
 addEntryWithContext :: ExpressionMap -- ^ merged map of all
@@ -212,158 +219,236 @@ addEntryWithContext contextMp mp (Condition op) ns@(conditionN : branchesNs) =
       node = op conditionN branchesNs
    in addInternal mp (shape, node)
 
--- | General multiplication and sum
-mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-mulMany = apply $ naryET Mul ElementDefault
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Operation Outcomes
+-- --------------------------------------------------------------------------------------------------------------------
 
-sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-sumMany = apply $ naryET Sum ElementDefault
+-- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
+--   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
+--   (such as exterior derivatives)
+data D_
+  deriving (Typeable, Dimension)
 
--- |
+-- | 'D_' is a placeholder type with no real Shape (i.e dimension/size). The method
+--   'toShape' should never actually be evaluated on this instance
+instance ToShape D_ where
+  toShape =
+    error "D_ is a place holder, init variable for D_ is not applicable"
+
+-- | Placeholder for any element type, useful for performing symbolic computation on an 'Expression'
+--   that requires a fixed type in the element type parameter but the actual element type is irrelavent
+data ET_
+  deriving (Typeable, ElementType)
+
+-- | A union type to select either a default 'ElementType' or a specific one.
+--   Default selection follows a priority chain 'R' < 'C' < 'Covector', choosing the first valid type
+data ElementOutcome
+  = ElementSpecific ET -- ^ force a specifc 'ElementType'
+  | ElementDefault -- ^ select prioritized valid element ('R' < 'C' < 'Covector')
+
+-- | Possible outcomes effecting 'Dimension' and 'ElementType' when applying an operator.
+--   Because of piecewise functions, constructing combinators for 'Expression' can be complicated due to
+--   operator application resulting in conditionals. See the functions 'binary', 'unary', 'nary' and 'conditionAry'
+--   for constructing generic OperationOption's
+data OperationOption
+  = Normal NodeOutcome ShapeOutcome -- ^ application has a normal outcome
+  | Condition (ConditionArg -> [BranchArg] -> Node) -- ^ application outcome depends on condition (piecewise function)
+
+-- | Transform an 'OperationOption' to have a specific 'Shape'.
+--   Useful for constructing an 'OperationOption' in conjunction with the 'unary', 'binary' and 'nary' functions that
+--   default to 'ShapeDefault'. For example, one could construct an Inner Product operator for scalars like so
+--
+-- @
+--  innerOp = binaryET InnerProd (ElementSpecific R) `hasShape` []
+-- @
 hasShape :: OperationOption -> Shape -> OperationOption
 hasShape (Normal nodeOutcome _) specificShape =
   Normal nodeOutcome (ShapeSpecific specificShape)
 hasShape option _ = option
 
-applyBinary ::
-  HasCallStack =>
-  OperationOption ->
-  Expression d1 et1 ->
-  Expression d2 et2 ->
-  Expression d3 et3
-applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
+-- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
+--   different cases for inferring 'DimensionType' and 'ElementType' of the resulting 'Node' need to be considered.
+--   The following data type contains constructors covering these cases, the are used in normal control flow by
+--   'OperationOption'
+--   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
+data NodeOutcome
+  = OpOne (Arg -> Node) -- ^ Unary Operator, 'ElementType' irrelavent
+  | OpOneElement (ET -> Arg -> Node) ElementOutcome -- ^ Unary Operator, 'ElementType' included
+  | OpTwo (Arg -> Arg -> Node) -- ^ Binary Operator, 'ElementType' irrelavent
+  | OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome -- ^ Binary Operator, 'ElementType' included
+  | OpMany (Args -> Node) -- ^ N-Ary Operator, 'ElementType' irrelavent
+  | OpManyElement (ET -> Args -> Node) ElementOutcome -- ^ N-Ary Operator, 'ElementType' included
 
-applyUnary ::
-  HasCallStack => OperationOption -> Expression d1 et1 -> Expression d2 et2
-applyUnary option e1 = wrap . apply option $ [unwrap e1]
+-- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
+--   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
+--   The following data type contains constructors covering these cases, the are used in normal control flow by
+--   'OperationOption'
+data ShapeOutcome
+  = ShapeSpecific Shape -- ^ provide a specific 'Shape'
+  | ShapeDefault -- ^ automatically select the 'Shape' with the longest length
+  | ShapeBranches -- ^ select the shape of a 'BranchArg' (used in piecewise functions)
 
-applyNary ::
-  HasCallStack =>
-  OperationOption ->
-  [Expression d1 et1] ->
-  Expression d2 et2
-applyNary option = wrap . apply option . map unwrap
-
-applyConditionAry ::
-  OperationOption ->
-  Expression d et1 ->
-  [Expression d et2] ->
-  Expression d et2
-applyConditionAry option e branches =
-  wrap . apply option $ unwrap e : map unwrap branches
-
--- | binary operations
-binary :: (Arg -> Arg -> Node) -> OperationOption
+-- | Construct a 'OperationOption' for a generic binary operator (of implicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpTwo' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapDefault'
+binary :: (Arg -> Arg -> Node) -- ^ a constructor of 'Node'
+       -> OperationOption -- ^ result
 binary op = Normal (OpTwo op) ShapeDefault
 
-binaryET :: (ET -> Arg -> Arg -> Node) -> ElementOutcome -> OperationOption
+-- | Construct a 'OperationOption' for a generic binary operator (of explicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpTwoElement' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
+binaryET :: (ET -> Arg -> Arg -> Node) -- ^ constructor of 'Node'
+         -> ElementOutcome -- ^ specific 'ElementType' or default
+         -> OperationOption -- ^ result
 binaryET op elm = Normal (OpTwoElement op elm) ShapeDefault
 
--- | unary operations
-unary :: (Arg -> Node) -> OperationOption
+-- | Construct a 'OperationOption' for a generic unary operator (of implicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpOne' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
+unary :: (Arg -> Node) -- ^ constructor of 'Node'
+      -> OperationOption -- ^ result
 unary op = Normal (OpOne op) ShapeDefault
 
-unaryET :: (ET -> Arg -> Node) -> ElementOutcome -> OperationOption
+-- | Construct a 'OperationOption' for a generic unary operator (of explicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpOneElement' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
+unaryET :: (ET -> Arg -> Node) -- ^ constructor of 'Node'
+        -> ElementOutcome -- ^ specific 'ElementType' or default
+        -> OperationOption -- ^ result
 unaryET op elm = Normal (OpOneElement op elm) ShapeDefault
 
--- | n-ary operations
-nary :: (Args -> Node) -> OperationOption
+-- | Construct a 'OperationOption' for a generic n-Ary operator (of implicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpMany' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
+nary :: (Args -> Node) -- ^ constructor of 'Node'
+     -> OperationOption -- ^ result
 nary op = Normal (OpMany op) ShapeDefault
 
-naryET :: (ET -> Args -> Node) -> ElementOutcome -> OperationOption
+-- | Construct a 'OperationOption' for a generic unary operator (of explicit 'ElementType').
+--   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpManyElement' constructor.
+--   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
+naryET :: (ET -> Args -> Node) -- ^ constructor of 'Node'
+       -> ElementOutcome -- ^ specific 'ElementType' or default
+       -> OperationOption -- ^ result
 naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 
--- | branch operation
+-- | Construct a 'OperationOption' for a generic piecewise function (of implicit 'ElementType').
+--   A simple alias for the 'Condition' construtor
 conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
 conditionAry = Condition
 
--- |
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Expression Transformations
+-- --------------------------------------------------------------------------------------------------------------------
+
+-- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
+--   Construct using the 'toTransformation' function
+type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+
+-- | Take a function from a (unwrapped) 'Expression' to an 'ExpressionDiff' and create
+--   a transformation. See 'fromModification' for turning a 'Modification' into a 'Transformation'
+toTransformation :: ((ExpressionMap, NodeID) -> ExpressionDiff) -- ^ argument provided by 'fromModification'
+                 -> Transformation -- ^ resulting transformation
+toTransformation normalizer exp@(mp, n) =
+  let diff = normalizer exp
+      newMp = IM.union mp (extraEntries diff)
+      newN = newRootId diff
+   in (newMp, newN)
+
+-- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
+--   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
+type Modification = (ExpressionMap, NodeID) -> Change
+
+-- | Takes a 'Modification' and returns a corresponding function
+fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
+fromModification mkDiff exp@(mp, n) = mkDiff exp mp
+
+-- | Operand order in the operation
+data OperandOrder
+  = Reorder
+  | NoReorder
+  deriving (Eq)
+
+-- | Used to apply rules (which can be generated with 'fromModification') to every 'Node' in an 'Expression' bottom up
+toRecursive :: OperandOrder -- ^ apply in topological order or not
+            -> ((ExpressionMap, NodeID) -> ExpressionDiff) -- ^ rule applied to a single 'Node'
+            -> ((ExpressionMap, NodeID) -> ExpressionDiff) -- ^ resulting rule applied to every 'Node'
+toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+  where
+    topoOrder = topologicalSort exp
+    f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
+    f diffs nId =
+      let children = nodeArgs $ retrieveNode nId mp
+          childrenDiffs = map (fromJust . flip IM.lookup diffs) children
+          nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
+          newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
+          ExpressionDiff exEntries newId = smp newExp
+          diff =
+            ExpressionDiff
+              (IM.union exEntries (extraEntries nodeDiff))
+              newId
+       in IM.insert nId diff diffs
+    diffs = foldl' f IM.empty topoOrder
+
+-- | Remove unreachable nodes
+removeUnreachable :: Transformation
+removeUnreachable (mp, n) =
+  let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
+      reducedMap =
+        IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
+   in (reducedMap, n)
+
+-- | Apply a 'Transformation' maximum k times, or stop if the expression doesn't change
+multipleTimes :: Int -- ^ k number of max iterations
+              -> Transformation -- ^ original 'Transformation'
+              -> Transformation -- ^ resulting combined 'Transformation'
+multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
+  where
+    go 0 _ curExp = curExp
+    go k lastExp curExp
+      | snd lastExp == snd curExp = curExp
+      | otherwise = go (k - 1) curExp (smp curExp)
+
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Expression Changes
+-- --------------------------------------------------------------------------------------------------------------------
+
+-- | The Change type allows the creation of combinators for expressing alterations to an 'Expression' with respect
+--   to a base 'ExpressionMap'. For example, combinators like 'sum_' will create will create a new 'ExpressionMap' with
+--   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
+--   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
+type Change = ExpressionMap -> ExpressionDiff
+
+-- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
 const_ :: Shape -> Double -> Change
 const_ shape val mp = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
 
--- |
+-- | The 'Change' created when adding a single 'Scalar' constant
 num_ :: Double -> Change
 num_ = const_ []
 
--- |
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
+-- | Multiply a list of 'Change' together into a single 'Change'
+product_ :: [Change] -> Change
+product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
 
--- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
--- unreachable nodes will be ignored
-topologicalSort :: (ExpressionMap, NodeID) -> [NodeID]
-topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
+-- | Sum a list of 'Change' together into a single 'Change'
+sum_ :: [Change] -> Change
+sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
 
--- | Topological sort, but with many roots
-topologicalSortManyRoots :: (ExpressionMap, [NodeID]) -> [NodeID]
-topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
-  where
-    n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
-    toPos nId = fromJust $ IM.lookup nId n2Pos
-    len = IM.size n2Pos
-    adj nId = nodeArgs $ retrieveNode nId mp
-    topoOrder =
-      runSTUArray $ do
-        marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
-        order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
-        cnt <- newSTRef 0 :: ST s (STRef s Int)
-        let dfs u = do
-              let arrayPos = toPos u
-              writeArray marked arrayPos True
-              forM_ (adj u) $ \v -> do
-                isMarked <- readArray marked (toPos v)
-                unless isMarked $ dfs v
-              cntVal <- readSTRef cnt
-              writeArray order cntVal u
-              writeSTRef cnt (cntVal + 1)
-        forM_ ns $ \n -> do
-          isMarked <- readArray marked (toPos n)
-          unless isMarked $ dfs n
-        return order
-
--- | Modification will return an ExpressionDiff instead of the whole Expression to speed things up
--- What ExpressionDiff stands for?
-data ExpressionDiff
-  = ExpressionDiff
-      { extraEntries :: ExpressionMap, -- Extra entries we need to add to the original Expression Map
-        newRootId :: NodeID -- New root of the expression (can change, can be the same)
-      }
-  deriving (Eq, Ord, Show)
-
--- | Transformation type, we can combine them, chain them, apply them n times using nest, ...
-type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
-
--- | Change w.r.t original expression map
-type Change = ExpressionMap -> ExpressionDiff
-
--- | Modification type, given an expression, it will give a difference (i.e, extraEntries in the ExpressionMap, and
--- the new index of the root expression) between the modified and original expression
-type Modification = (ExpressionMap, NodeID) -> Change
-
--- |
-fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
-fromModification mkDiff exp@(mp, n) = mkDiff exp mp
-
--- |
-withContext :: ExpressionMap -> Change -> ExpressionDiff
-withContext = flip ($)
-
--- |
+-- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
 just :: NodeID -> Change
 just nId _ = ExpressionDiff IM.empty nId
 
--- |
 instance Num Change where
   (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
   negate change mp = applyDiff mp (unaryET Neg ElementDefault) [change mp]
   (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
-  signum = error "N/A"
-  abs = error "TODO"
-  fromInteger = error "N/A"
+  signum = error "The Change of signum is currently unimplemented"
+  abs = error "The Change of abs is currently unimplemented"
+  fromInteger = error "The change of fromInteger is currently unimplemented"
 
 instance Fractional Change where
   (/) change1 change2 = change1 * (change2 ^ (-1))
@@ -385,12 +470,6 @@ instance Floating Change where
   asinh change mp = applyDiff mp (unary Asinh) [change mp]
   acosh change mp = applyDiff mp (unary Acosh) [change mp]
   atanh change mp = applyDiff mp (unary Atanh) [change mp]
-
-sum_ :: [Change] -> Change
-sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
-
-product_ :: [Change] -> Change
-product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
 
 instance PowerOp Change Int where
   (^) change alpha mp = applyDiff mp (unary (Power alpha)) [change mp]
@@ -420,53 +499,57 @@ instance PiecewiseOp Change Change where
     applyDiff mp (conditionAry (Piecewise marks)) . map ($ mp) $
       condition : branches
 
--- |
-toTransformation :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
-toTransformation normalizer exp@(mp, n) =
-  let diff = normalizer exp
-      newMp = IM.union mp (extraEntries diff)
-      newN = newRootId diff
-   in (newMp, newN)
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Expression Diffs
+-- --------------------------------------------------------------------------------------------------------------------
 
--- | Apply maximum k times, or stop if the expression doesn't change
-multipleTimes :: Int -> Transformation -> Transformation
-multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
+-- | When performing a 'Change' on an 'ExpressionMap', the extra entries created by the change
+--   (i.e not included in the original 'ExpressionMap') and a new root 'NodeID' are stored in the ExpressionDiff type
+data ExpressionDiff
+  = ExpressionDiff
+      { extraEntries :: ExpressionMap, -- ^ Extra entries we need to add to the original Expression Map
+        newRootId :: NodeID -- ^ New root of the expression (can change, can be the same)
+      }
+  deriving (Eq, Ord, Show)
+
+-- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
+--   other 'ExpressionDiff'
+applyDiff :: ExpressionMap -- ^ the base map to find diffs w.r.t
+          -> OperationOption -- ^ the operation to apply
+          -> [ExpressionDiff] -- ^ the operands (also in diff to the base map)
+          -> ExpressionDiff -- ^ the result (combined diffs with new nodes)
+applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
   where
-    go 0 _ curExp = curExp
-    go k lastExp curExp
-      | snd lastExp == snd curExp = curExp
-      | otherwise = go (k - 1) curExp (smp curExp)
+    mergedExtraEntries = IM.unions . map extraEntries $ operands
+    updatedContextMp = IM.union mergedExtraEntries contextMp
+    ns = map newRootId operands
+    (resExtraEntries, resRootId) =
+      addEntryWithContext updatedContextMp mergedExtraEntries option ns
 
--- | Operand order in the operation
-data OperandOrder
-  = Reorder
-  | NoReorder
-  deriving (Eq)
-
--- | Turn a a recursive one, i.e, apply rules to every node in the expression bottom up
-toRecursive ::
-  OperandOrder ->
-  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  ((ExpressionMap, NodeID) -> ExpressionDiff)
-toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+-- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
+diffConst :: Shape -> Double -> ExpressionDiff
+diffConst shape val = ExpressionDiff mp n
   where
-    topoOrder = topologicalSort exp
-    f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
-    f diffs nId =
-      let children = nodeArgs $ retrieveNode nId mp
-          childrenDiffs = map (fromJust . flip IM.lookup diffs) children
-          nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
-          newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-          ExpressionDiff exEntries newId = smp newExp
-          diff =
-            ExpressionDiff
-              (IM.union exEntries (extraEntries nodeDiff))
-              newId
-       in IM.insert nId diff diffs
-    diffs = foldl' f IM.empty topoOrder
+    (mp, n) = aConst shape val
+
+-- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
+mulManyDiff :: ExpressionMap -- ^ base map to find diff w.r.t
+            -> [ExpressionDiff] -- ^ operands
+            -> ExpressionDiff -- ^ combined operands with new entries
+mulManyDiff contextMp = applyDiff contextMp (naryET Mul ElementDefault)
+
+-- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
+sumManyDiff :: ExpressionMap -- ^ base map to find diff w.r.t
+            -> [ExpressionDiff]  -- ^ operands
+            -> ExpressionDiff  -- ^ combined operands with new entries
+sumManyDiff contextMp = applyDiff contextMp (naryET Sum ElementDefault)
+
+-- | The ExpressionDiff corresponding to no change in this node
+noChange :: NodeID -> ExpressionDiff
+noChange = ExpressionDiff IM.empty
 
 -- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
--- and return the combined difference
+--   and return the combined difference
 combineChildrenDiffs ::
   OperandOrder ->
   ExpressionMap ->
@@ -550,38 +633,47 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
                 (option `hasShape` oldShape)
                 sortedChildrenDiffs
 
--- | Remove unreachable nodes
-removeUnreachable :: Transformation
-removeUnreachable (mp, n) =
-  let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
-      reducedMap =
-        IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
-   in (reducedMap, n)
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Other
+-- --------------------------------------------------------------------------------------------------------------------
 
--- |
-mulManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (naryET Mul ElementDefault)
+-- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
+--   unreachable nodes will be ignored
+topologicalSort :: (ExpressionMap, NodeID) -- ^ unwrapped 'Expression'
+                -> [NodeID] -- ^ list in topological order (independent to dependent)
+topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
--- |
-sumManyDiff :: ExpressionMap -> [ExpressionDiff] -> ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (naryET Sum ElementDefault)
-
--- |
-applyDiff ::
-  ExpressionMap -> OperationOption -> [ExpressionDiff] -> ExpressionDiff
-applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
+-- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
+--   unreachable nodes will be ignored
+topologicalSortManyRoots :: (ExpressionMap, [NodeID]) -- ^ many rooted unwrapped 'Expression'
+                         -> [NodeID] -- ^ list in topological order (independent to dependent)
+topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
   where
-    mergedExtraEntries = IM.unions . map extraEntries $ operands
-    updatedContextMp = IM.union mergedExtraEntries contextMp
-    ns = map newRootId operands
-    (resExtraEntries, resRootId) =
-      addEntryWithContext updatedContextMp mergedExtraEntries option ns
+    n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
+    toPos nId = fromJust $ IM.lookup nId n2Pos
+    len = IM.size n2Pos
+    adj nId = nodeArgs $ retrieveNode nId mp
+    topoOrder =
+      runSTUArray $ do
+        marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
+        order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
+        cnt <- newSTRef 0 :: ST s (STRef s Int)
+        let dfs u = do
+              let arrayPos = toPos u
+              writeArray marked arrayPos True
+              forM_ (adj u) $ \v -> do
+                isMarked <- readArray marked (toPos v)
+                unless isMarked $ dfs v
+              cntVal <- readSTRef cnt
+              writeArray order cntVal u
+              writeSTRef cnt (cntVal + 1)
+        forM_ ns $ \n -> do
+          isMarked <- readArray marked (toPos n)
+          unless isMarked $ dfs n
+        return order
 
--- | The ExpressionDiff corresponding to no change in this node
-noChange :: NodeID -> ExpressionDiff
-noChange = ExpressionDiff IM.empty
 
--- | All Var nodes in the Expression
+-- | Retrieves all 'Var' nodes in an 'Expression'
 expressionVarNodes :: (DimensionType d, ElementType et) => Expression d et -> [(String, NodeID)]
 expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
@@ -590,6 +682,7 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
       | Var varName <- retrieveNode nId mp = Just (varName, nId)
       | otherwise = Nothing
 
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
 varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
   where
@@ -597,7 +690,7 @@ varNodesWithId mp = mapMaybe collect . IM.keys $ mp
       | Var varName <- retrieveNode nId mp = Just (varName, nId)
       | otherwise = Nothing
 
--- | If expression map contains any FT node
+-- | Predicate determining if a 'ExpressionMap' contains a FT operation
 containsFTNode :: ExpressionMap -> Bool
 containsFTNode mp = any isFT $ IM.elems mp
   where
@@ -609,25 +702,3 @@ containsFTNode mp = any isFT $ IM.elems mp
         TwiceReFT _ -> True
         _ -> False
 
--- | A function might be treated as function of variables that does not appears (like constraint of
--- optimization problem) so we want to pad zero partial derivative
--- (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
-introduceZeroPartialDerivatives ::
-  [(String, Shape)] ->
-  Expression Scalar Covector ->
-  Expression Scalar Covector
-introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
-  let isD name nId
-        | DVar varName <- retrieveNode nId mp,
-          varName == name =
-          True
-        | otherwise = False
-      alreadyExist name = any (isD name) . IM.keys $ mp
-      makePart (name, shape)
-        | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
-      listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
-   in wrap $
-        case retrieveNode n mp of
-          Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
-          _ -> sumMany $ (mp, n) : listToInsert
