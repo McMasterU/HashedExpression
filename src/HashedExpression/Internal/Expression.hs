@@ -8,8 +8,8 @@ Maintainer  :  anandc@mcmaster.ca
 Stability   :  provisional
 Portability :  unportable
 
-The @Expression@ data type is the core data structure of the HashedExpresion library.
-This module contains all necessary definitions for constructing the Expression type.
+The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
+constructing the Expression type.
 -}
 
 module HashedExpression.Internal.Expression

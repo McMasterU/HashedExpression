@@ -1,3 +1,15 @@
+{-|
+Module      :  HashedExpression.Internal.Node
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
+Node, returning a Node's arguments, returning a Node's shape, etc
+-}
+
 module HashedExpression.Internal.Node
   ( nodeElementType,
     nodeTypeWeight,
@@ -19,8 +31,11 @@ import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
--- | Helpers functions for Expression nodes
-nodeElementType :: HasCallStack => Node -> ExpressionMap -> ET
+-- | Compute the ElementType (i.e 'R','C','Covector') of a 'Node' (requires the base 'ExpressionMap' as context)
+nodeElementType :: HasCallStack
+                => Node -- ^ Node to find the ElementType of
+                -> ExpressionMap -- ^ base Expression containing the Node
+                -> ET -- ^ resulting ElementType
 nodeElementType node mp =
   case node of
     Var _ -> R
@@ -67,10 +82,13 @@ nodeElementType node mp =
       | retrieveElementType arg mp == Covector -> Covector
       | otherwise -> R
 
--- | For ordering things inside Sum or Product so we can write rules like
+-- | For ordering things inside 'Sum' or 'Product' so we can write rules like
+--
+-- @
 --   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
 --   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
 --   ...
+-- @
 nodeTypeWeight :: HasCallStack => Node -> Int
 nodeTypeWeight node =
   case node of
@@ -109,11 +127,11 @@ nodeTypeWeight node =
     TwiceReFT {} -> 30
     TwiceImFT {} -> 31
 
--- |
+-- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameNodeType :: HasCallStack => Node -> Node -> Bool
 sameNodeType node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
 
--- | Get list of arguments of this node
+-- | Retrieve the parameters (i.e 'Args') attached to a given 'Node'
 nodeArgs :: Node -> Args
 nodeArgs node =
   case node of
@@ -152,7 +170,7 @@ nodeArgs node =
     TwiceReFT arg -> [arg]
     TwiceImFT arg -> [arg]
 
--- | Auxiliary functions for operations
+-- | Retrieve a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveNode #-}
 retrieveNode :: HasCallStack => NodeID -> ExpressionMap -> Node
 retrieveNode n mp =
@@ -160,6 +178,7 @@ retrieveNode n mp =
     Just (_, node) -> node
     _ -> error "node not in map"
 
+-- | Retrieve a 'Internal' structure (i.e a 'Node' with it's 'Shape') from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveInternal #-}
 retrieveInternal :: HasCallStack => NodeID -> ExpressionMap -> Internal
 retrieveInternal n mp =
@@ -167,6 +186,7 @@ retrieveInternal n mp =
     Just internal -> internal
     _ -> error "node not in map"
 
+-- | Retrieve the ElementType (i.e 'R','C','Covector') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveElementType #-}
 retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
 retrieveElementType n mp =
@@ -174,6 +194,7 @@ retrieveElementType n mp =
     Just (_, node) -> nodeElementType node mp
     _ -> error "expression not in map"
 
+-- | Retrieve the 'Shape' of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveShape #-}
 retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
 retrieveShape n mp =
@@ -181,7 +202,7 @@ retrieveShape n mp =
     Just (dim, _) -> dim
     _ -> error "expression not in map"
 
--- |
+-- | Retrieve the 'ElementType' (i.e 'R','C','Covector') of a 'Expression'
 {-# INLINE expressionElementType #-}
 expressionElementType :: HasCallStack => Expression d et -> ET
 expressionElementType (Expression n mp) =
@@ -189,6 +210,7 @@ expressionElementType (Expression n mp) =
     Just (_, node) -> nodeElementType node mp
     _ -> error "expression not in map"
 
+-- | Retrieve the 'Shape' of a 'Expression'
 {-# INLINE expressionShape #-}
 expressionShape :: HasCallStack => Expression d et -> Shape
 expressionShape (Expression n mp) =
@@ -196,6 +218,7 @@ expressionShape (Expression n mp) =
     Just (dim, _) -> dim
     _ -> error "expression not in map"
 
+-- | Retrieve the 'Internal' structure (i.e a 'Node' and it's 'Shape') of a 'Expression'
 {-# INLINE expressionInternal #-}
 expressionInternal :: HasCallStack => Expression d et -> Internal
 expressionInternal (Expression n mp) =
@@ -203,6 +226,7 @@ expressionInternal (Expression n mp) =
     Just internal -> internal
     _ -> error "expression not in map"
 
+-- | Retrieve the root 'Node' a 'Expression'
 {-# INLINE expressionNode #-}
 expressionNode :: HasCallStack => Expression d et -> Node
 expressionNode (Expression n mp) =
