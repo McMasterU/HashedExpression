@@ -1,12 +1,89 @@
--------------------------------------------------------------------------------
+{-|
+Module      :  HashedExpression.Internal.Pattern
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
 
--------------------------------------------------------------------------------
+Helper functions/instances to make pattern guards involving Expressions easier to read.
+Traditional pattern matching on a 'Expression' is difficult because 'Node' arguments are in hashed form, use this
+data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
+'Transformation', for example
 
--- |
--- (c) 2014 Christopher Kumar Anand
--- Helper functions/instances to make pattern guards involving Expressions
--- easier to read.
-module HashedExpression.Internal.Pattern where
+  * Create Patterns
+
+ @
+  x = map PHole 1
+  one = PConst 1.0
+ @
+  * Create a Substitution
+
+ @
+  substitution = x * one |.~~~~~~> x
+ @
+
+  * Create a Transformation
+
+ @
+  import HashedExpression.Internal.Inner
+  toTransformation $ toRecursive Reorder $ fromSubstitution substitution
+ @
+-}
+
+module HashedExpression.Internal.Pattern
+  ( -- * Substitution
+    Substitution,
+    fromSubstitution,
+    (~~~~~~>),
+    (|.~~~~~~>),
+    (|.),
+    -- * Patterns
+    Pattern (..),
+    GuardedPattern (..),
+    PatternPower (..),
+    PatternRotateAmount (..),
+    Capture,
+    MulRestOp (..),
+    SumRestOp (..),
+    num,
+    zero,
+    one,
+    scalar,
+    scalarOne,
+    scalarZero,
+    imFT,
+    reFT,
+    twiceImFT,
+    twiceReFT,
+    restOfProduct,
+    restOfSum,
+    -- * PatternList
+    PatternList (..),
+    mapL,
+    headL,
+    sumP,
+    productP,
+    branches,
+    piecewise_,
+    -- * Conditions
+    Condition,
+    isNot,
+    (&&.),
+    (||.),
+    allTheSame,
+    isScalar,
+    isDVar,
+    isConst,
+    isNotConst,
+    isCovector,
+    isReal,
+    isComplex,
+    sameElementType,
+    zeroAmount,
+    sameAmount,
+  )
+where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
@@ -17,104 +94,196 @@ import Data.Maybe
 import Debug.Trace (trace, traceShowId)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Inner
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import Prelude (Bool)
-import Prelude (Bool)
 import Prelude hiding ((^))
 import qualified Prelude
 
--- | Pattern for normalizier
-type Capture = Int
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Substitution
+-- --------------------------------------------------------------------------------------------------------------------
 
-type ListCapture = Int
+-- | A Substitution matches a pattern that fulfills a condition (provided via a 'GuardedPattern'), and replaces it with a different pattern
+--   (provided via 'Pattern')
+type Substitution = (GuardedPattern, Pattern)
 
-type PowerCapture = Int
+-- | View a 'Substitution' as a 'ExpressionDiff' with respect to an unwrapped 'Expression'. Use this as the first step
+--   to converting a 'Substitution' to a 'Transformation'. For example,
+--
+-- @
+--  import HashedExpression.Internal.Inner
+--
+--  subToTrans :: Substitution -> Transformation
+--  subToTrans sub = toTransformation $ toRecursive Reorder $ fromSubstitution sub
+-- @
+fromSubstitution :: Substitution -> ((ExpressionMap, NodeID) -> ExpressionDiff)
+fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
+  | Just match <- match exp pattern,
+    condition exp match =
+    buildFromPattern exp match replacementPattern
+  | otherwise = noChange n
 
-type RotateAmountCapture = Int
+-- | Create a 'Substitution' that matches a 'Pattern' (automatically converting into a 'GuardedPattern' that's always true) and
+--   replaces it with another 'Pattern'
+(|.~~~~~~>) :: Pattern -- ^ find match
+            -> Pattern -- ^ replacement
+            -> Substitution -- ^ combined result
+(|.~~~~~~>) pattern replacement =
+  (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
--- | List holes to captures many elements
-data PatternList
-  = PListHole (Pattern -> Pattern) ListCapture
+-- | Create a 'Substitution' that matches a 'GuardedPattern' (a 'Pattern' that only matches upon fulfilling a condition) and
+--   replaces it with another 'Pattern'
+(~~~~~~>) :: GuardedPattern -- ^ find a match
+          -> Pattern -- ^ replacement
+          -> Substitution -- ^ combined result
+(~~~~~~>) gPattern replacement = (gPattern, replacement)
+
+infix 0 |.~~~~~~>, ~~~~~~>
+
+-- | Turn a 'Pattern' into a 'GuardedPattern' (so it only matches upon fulfilling a condition)
+(|.) :: Pattern -- ^ original pattern
+     -> Condition -- ^ condition to be fulfilled
+     -> GuardedPattern -- ^ combined result
+(|.) pattern condition = GP pattern condition
+
+infixl 1 |.
+
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Patterns
+-- --------------------------------------------------------------------------------------------------------------------
+
+-- | This data type contains constructors for representing different patterns a 'Node' in a 'Expression' may contain.
+--   Match any 'Node' to a hole using 'PHole', to distinguish between holes each must be given a unique identifier (i.e 'Capture')
+--   TODO haddock: why do we have some ops wrapping PatternList and the same ops with [Pattern]
+data Pattern
+  = PHole Capture -- ^ hole with a identifier (i.e 'Capture')
+  | PRef NodeID -- ^ direct reference to a node in the expression
+  | PHead PatternList -- ^ reference to the head of a 'PatternList'
+  | PSumList PatternList -- ^ sum via 'PatternList'
+  | PMulList PatternList -- ^ multiply via 'PatternList'
+  | PConst Double -- ^ constant
+  | PScalarConst Double -- ^ scalar Const used in RHS
+  | PSum [Pattern] -- ^ summation operator
+  | PMul [Pattern] -- ^ multiplication operator
+  | PNeg Pattern -- ^ negation operator
+  | PScale Pattern Pattern -- ^ scale a Pattern by another Pattern
+  | PDiv Pattern Pattern -- ^ division
+  | PSqrt Pattern -- ^ square Root operator
+  | PSin Pattern -- ^ sin operator
+  | PCos Pattern -- ^ cos operator
+  | PTan Pattern -- ^ tan operator
+  | PExp Pattern -- ^ exp operator
+  | PLog Pattern -- ^ log operator
+  | PSinh Pattern -- ^ sinh operator
+  | PCosh Pattern -- ^ cosh operator
+  | PTanh Pattern -- ^ tanh operator
+  | PAsin Pattern -- ^ asin operator
+  | PAcos Pattern -- ^ acos operator
+  | PAtan Pattern -- ^ atan operator
+  | PAsinh Pattern -- ^ asinh operator
+  | PAcosh Pattern -- ^ acosh operator
+  | PAtanh Pattern -- ^ atanh operator
+  | PRealImag Pattern Pattern -- ^ pattern inside real and imaginary parts of a complex number
+  | PRealPart Pattern -- ^ pattern that has a real part extraction operator applied to it
+  | PImagPart Pattern -- ^ pattern that has a imaginary part extraction operator applied to it
+  | PInnerProd Pattern Pattern -- ^ pattern that has a inner product operator applied to it
+  | PPiecewise Pattern PatternList -- ^ pattern that has a piecewise
+  | PMulRest Capture [Pattern] -- ^ a hole that is the rest of a multiplication
+  | PSumRest Capture [Pattern] -- ^ a hole taht is the rest of a summation
+  | PPower Pattern PatternPower -- ^ pattern that has a power operator with a 'PatternPower' applied to it
+  | PRotate PatternRotateAmount Pattern -- ^ pattern that has a rotate operator with a 'PatternRotateAmount' applied to it
+  | PReFT Pattern -- ^ pattern that has a real fourier transform applied to it
+  | PImFT Pattern -- ^ pattern that has a imaginary fourier transform applied to it
+  | PTwiceReFT Pattern -- ^ pattern that has a real fourier transform applied to it twice
+  | PTwiceImFT Pattern -- ^ pattern that has a imaginary fourier transform applied to it twice
   deriving (Show)
 
 instance Show (Pattern -> Pattern) where
   show p = "(Pattern -> Pattern)"
 
+-- | A 'Pattern' that only matches when it fullfills a 'Condition'
+data GuardedPattern
+  = GP Pattern Condition
+
 -- | Pattern power to capture the alpha in x ^ alpha
 data PatternPower
-  = PPowerHole PowerCapture
+  = PPowerHole Capture
   | PPowerConst Int
   | PPowerMul PatternPower PatternPower
   | PPowerSum PatternPower PatternPower
   deriving (Show)
 
--- | PatternRotateAmount to capture the amount in (rotate amount x)
+-- | PatternRotateAmount to capture the amount x in (rotate amount x)
 data PatternRotateAmount
-  = PRotateAmountHole RotateAmountCapture
+  = PRotateAmountHole Capture
   | PRotateAmountSum PatternRotateAmount PatternRotateAmount
   | PRotateAmountNegate PatternRotateAmount
   deriving (Show)
 
--- |
-data Pattern
-  = PHole Capture
-  | -- Ref to a node in the expression
-    PRef Int
-  | -- Ref to head of the list captures:
-    PHead PatternList
-  | PSumList PatternList
-  | PMulList PatternList
-  | PConst Double
-  | PScalarConst Double -- Pattern for scalar const used in RHS
-  | PSum [Pattern]
-  | PMul [Pattern]
-  | PNeg Pattern
-  | PScale Pattern Pattern
-  | PDiv Pattern Pattern
-  | PSqrt Pattern
-  | PSin Pattern
-  | PCos Pattern
-  | PTan Pattern
-  | PExp Pattern
-  | PLog Pattern
-  | PSinh Pattern
-  | PCosh Pattern
-  | PTanh Pattern
-  | PAsin Pattern
-  | PAcos Pattern
-  | PAtan Pattern
-  | PAsinh Pattern
-  | PAcosh Pattern
-  | PAtanh Pattern
-  | PRealImag Pattern Pattern
-  | PRealPart Pattern
-  | PImagPart Pattern
-  | PInnerProd Pattern Pattern
-  | PPiecewise Pattern PatternList
-  | PMulRest ListCapture [Pattern]
-  | PSumRest ListCapture [Pattern]
-  | PPower Pattern PatternPower
-  | PRotate PatternRotateAmount Pattern
-  | PReFT Pattern
-  | PImFT Pattern
-  | PTwiceReFT Pattern
-  | PTwiceImFT Pattern
-  deriving (Show)
+-- | 'Pattern' holes are identified uniquely by a Capture id
+type Capture = Int
 
--- |
+
+-- | Pattern that matches to a given Constant (wrapper around 'PConst')
+num :: Double -> Pattern
+num = PConst
+
+-- | Pattern that matches to the Constant 0 (wrapper around 'PScalarConst')
+zero :: Pattern
+zero = PConst 0
+
+-- | Pattern that matches to the Constant 1 (wrapper around 'PScalarConst')
+one :: Pattern
+one = PConst 1
+
+-- | Pattern that matches to a given Scalar Constant (wrapper around 'PScalarConst')
+scalar :: Double -> Pattern
+scalar = PScalarConst
+
+-- | Pattern that matches to the Scalar Constant 1 (wrapper around 'PScalarConst')
+scalarOne :: Pattern
+scalarOne = PScalarConst 1
+
+-- | Pattern that matches to the Scalar Constant 0 (wrapper around 'PScalarConst')
+scalarZero :: Pattern
+scalarZero = PScalarConst 0
+
+-- | pattern that has a real fourier transform applied to it (wrapper for 'PReFT')
+reFT :: Pattern -> Pattern
+reFT = PReFT
+
+-- | pattern that has a imaginary fourier transform applied to it (wrapper for 'PImFT')
+imFT :: Pattern -> Pattern
+imFT = PImFT
+
+-- | pattern that has a real fourier transform applied to it twice (wrapper for 'PTwiceReFT')
+twiceReFT :: Pattern -> Pattern
+twiceReFT = PTwiceReFT
+
+-- | pattern that has a imaginary fourier transform applied to it twice (wrapper for 'PTwiceImFT')
+twiceImFT :: Pattern -> Pattern
+twiceImFT = PTwiceImFT
+
+-- | Predefined hole for capturing the tail of a product (with hardcoded 'Capture' id 239)
+restOfProduct :: Pattern
+restOfProduct = PMulRest 239 []
+
+-- | Predefined hole for capturing the tail of a summation (with hardcoded 'Capture' id 2391)
+restOfSum :: Pattern
+restOfSum = PSumRest 2391 []
+
 infixl 7 ~*
-
-infixl 6 ~+
-
+-- | Create holes that are the tail of a series of multiplications
 class MulRestOp a b c | a b -> c where
   (~*) :: a -> b -> c
 
 instance MulRestOp Pattern Pattern Pattern where
   (~*) (PMulRest listCapture ps) p = PMulRest listCapture (ps ++ [p])
 
+infixl 6 ~+
+-- | Create holes that are the tail of a series of summation
 class SumRestOp a b c | a b -> c where
   (~+) :: a -> b -> c
 
@@ -124,7 +293,6 @@ instance SumRestOp Pattern Pattern Pattern where
 instance SumRestOp Pattern PatternList PatternList where
   (~+) rest (PListHole fs listHole) = PListHole ((rest ~+) . fs) listHole
 
--- | Pattern
 instance Num Pattern where
   (+) wh1 wh2 = PSum [wh1, wh2]
   negate = PNeg
@@ -169,139 +337,88 @@ instance PowerOp Pattern PatternPower where
 instance RotateOp PatternRotateAmount Pattern where
   rotate = PRotate
 
--- | Pattern List
-mapL :: (Pattern -> Pattern) -> PatternList -> PatternList
-mapL f (PListHole fs listCapture) = PListHole (f . fs) listCapture
 
--- | Pattern Power
 instance Num PatternPower where
   (+) = PPowerMul
   (*) = PPowerMul
 
--- | Pattern Rotate Amount
 instance Num PatternRotateAmount where
   (+) = PRotateAmountSum
   negate = PRotateAmountNegate
 
--- | Discrete fourier transform
-reFT :: Pattern -> Pattern
-reFT = PReFT
+-- --------------------------------------------------------------------------------------------------------------------
+-- * PatternList
+-- --------------------------------------------------------------------------------------------------------------------
 
-imFT :: Pattern -> Pattern
-imFT = PImFT
+-- | Capture a list of associated 'Pattern'
+--   TODO haddock: what is the functional parameter for? we seem to always use id
+data PatternList
+  = PListHole (Pattern -> Pattern) Capture
+  deriving (Show)
 
-twiceReFT :: Pattern -> Pattern
-twiceReFT = PTwiceReFT
+-- | Map a function over a 'PatternList'
+mapL :: (Pattern -> Pattern) -> PatternList -> PatternList
+mapL f (PListHole fs listCapture) = PListHole (f . fs) listCapture
 
-twiceImFT :: Pattern -> Pattern
-twiceImFT = PTwiceImFT
+-- | Take the head of a 'PatternList'
+headL :: PatternList -> Pattern
+headL = PHead
 
--- | Guarded patterns for normalizier
-data GuardedPattern
-  = GP Pattern Condition
+-- | Product operation over 'PatternList'
+productP :: PatternList -> Pattern
+productP = PMulList
 
-type Substitution = (GuardedPattern, Pattern)
+-- | Summation operation over 'PatternList'
+sumP :: PatternList -> Pattern
+sumP = PSumList
 
--- | Turn HashedPattern to a normalizier
-fromSubstitution :: Substitution -> (ExpressionMap, NodeID) -> ExpressionDiff
-fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
-  | Just match <- match exp pattern,
-    condition exp match =
-    buildFromPattern exp match replacementPattern
-  | otherwise = noChange n
+-- | Piecewise function over a 'PatternList'
+piecewise_ :: Pattern -> PatternList -> Pattern
+piecewise_ = PPiecewise
 
--- | Helper to make pattern and replacement without condition
-(|.~~~~~~>) :: Pattern -> Pattern -> Substitution
-(|.~~~~~~>) pattern replacement =
-  (GP pattern $ Prelude.const (Prelude.const True), replacement)
+-- | Branch over a 'PatternList'
+branches :: PatternList
+branches = PListHole id 2
 
-infix 0 |.~~~~~~>, ~~~~~~>
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Conditions
+-- --------------------------------------------------------------------------------------------------------------------
 
-(~~~~~~>) :: GuardedPattern -> Pattern -> Substitution
-(~~~~~~>) gPattern replacement = (gPattern, replacement)
-
-(|.) :: Pattern -> Condition -> GuardedPattern
-(|.) pattern condition = GP pattern condition
-
-infixl 1 |.
-
+-- | TODO haddock: how is this a condition???
 type Condition = (ExpressionMap, NodeID) -> Match -> Bool
 
--- |
-(&&.) :: Condition -> Condition -> Condition
-(&&.) condition1 condition2 expr match =
-  condition1 expr match && condition2 expr match
-
--- |
-isNot :: Condition -> Condition
-isNot condition expr match = not $ condition expr match
-
 infixl 8 &&.
+infixl 8 ||.
 
--- |
+-- | 'Condition' combinator, Logical Or
 (||.) :: Condition -> Condition -> Condition
 (||.) condition1 condition2 expr match =
   condition1 expr match || condition2 expr match
 
--- |
-isScalar :: Pattern -> Condition
-isScalar p exp match =
-  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-      originMp = fst exp
-   in retrieveShape newRootId (IM.union extraEntries originMp) == []
+-- | 'Condition' combinator, Logical And
+(&&.) :: Condition -> Condition -> Condition
+(&&.) condition1 condition2 expr match =
+  condition1 expr match && condition2 expr match
 
--- |
-isConst :: Pattern -> Condition
-isConst p exp match =
-  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-      originMp = fst exp
-   in case retrieveNode newRootId (IM.union extraEntries originMp) of
-        Const _ -> True
-        _ -> False
+-- | 'Condition' combinator, Logical Negation
+isNot :: Condition -> Condition
+isNot condition expr match = not $ condition expr match
 
--- |
-isNotConst :: Pattern -> Condition
-isNotConst p exp match = not $ isConst p exp match
-
--- |
-isReal :: Pattern -> Condition
-isReal p exp match =
-  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-      originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp) == R
-
--- |
-isComplex :: Pattern -> Condition
-isComplex p exp match =
-  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-      originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp) == C
-
--- |
-isCovector :: Pattern -> Condition
-isCovector p exp match =
-  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-      originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp)
-        == Covector
-
--- |
-sameElementType :: [Pattern] -> Condition
-sameElementType ps exp match = allEqual . map getET $ ps
-  where
-    getET p =
-      let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
-          originMp = fst exp
-       in retrieveElementType newRootId (IM.union extraEntries originMp)
-
--- |
+-- | Returns True iff all captures in a 'PatternList' are the same 'NodeID'
 allTheSame :: PatternList -> Condition
 allTheSame pl@(PListHole _ listCapture) exp match
   | Just nIds <- Map.lookup listCapture . listCapturesMap $ match =
     allEqual nIds
   | otherwise = False
 
--- |
+-- | Returns True iff the 'Pattern' capture is a 'Scalar'
+isScalar :: Pattern -> Condition
+isScalar p exp match =
+  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+      originMp = fst exp
+   in retrieveShape newRootId (IM.union extraEntries originMp) == []
+
+-- | Returns True iff the 'Pattern' capture is a 'DVar'
 isDVar :: Pattern -> Condition
 isDVar p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
@@ -310,87 +427,81 @@ isDVar p exp match =
         DVar _ -> True
         _ -> False
 
--- |
+-- | Returns True iff the 'Pattern' capture is a 'Scalar'
+isConst :: Pattern -> Condition
+isConst p exp match =
+  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+      originMp = fst exp
+   in case retrieveNode newRootId (IM.union extraEntries originMp) of
+        Const _ -> True
+        _ -> False
+
+-- | Returns True iff the 'Pattern' captured is NOT a 'Const'
+isNotConst :: Pattern -> Condition
+isNotConst p exp match = not $ isConst p exp match
+
+-- | Returns True iff the 'Pattern' captured has a Real (i.e 'R') 'ElementType'
+isReal :: Pattern -> Condition
+isReal p exp match =
+  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+      originMp = fst exp
+   in retrieveElementType newRootId (IM.union extraEntries originMp) == R
+
+-- | Returns True iff the 'Pattern' captured has a Complex (i.e 'C') 'ElementType'
+isComplex :: Pattern -> Condition
+isComplex p exp match =
+  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+      originMp = fst exp
+   in retrieveElementType newRootId (IM.union extraEntries originMp) == C
+
+-- | Returns True iff the 'Pattern' captured has a 'Covector' 'ElementType'
+isCovector :: Pattern -> Condition
+isCovector p exp match =
+  let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+      originMp = fst exp
+   in retrieveElementType newRootId (IM.union extraEntries originMp)
+        == Covector
+
+-- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
+sameElementType :: [Pattern] -> Condition
+sameElementType ps exp match = allEqual . map getET $ ps
+  where
+    getET p =
+      let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
+          originMp = fst exp
+       in retrieveElementType newRootId (IM.union extraEntries originMp)
+
+-- | Returns True iff the 'PatternRotateAmount' captured has a value of 0
 zeroAmount :: PatternRotateAmount -> Condition
 zeroAmount pra exp match =
   let rotateAmount = buildFromPatternRotateAmount match pra
    in all (== 0) rotateAmount
 
--- |
+-- | Returns True iff both 'PatternRotateAmount' captured have the same value
 sameAmount :: PatternRotateAmount -> PatternRotateAmount -> Condition
 sameAmount pra1 pra2 exp match =
   let rotateAmount1 = buildFromPatternRotateAmount match pra1
       rotateAmount2 = buildFromPatternRotateAmount match pra2
    in rotateAmount1 == rotateAmount2
 
--- |
-[p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
-one :: Pattern
-one = PConst 1
-
-zero :: Pattern
-zero = PConst 0
-
-powerOne :: PatternPower
-powerOne = PPowerConst 1
-
-powerZero :: PatternPower
-powerZero = PPowerConst 0
-
-[alpha, beta, gamma] = map PPowerHole [1 .. 3]
-
-scalarOne :: Pattern
-scalarOne = PScalarConst 1
-
-scalarZero :: Pattern
-scalarZero = PScalarConst 0
-
-scalar :: Double -> Pattern
-scalar = PScalarConst
-
-num :: Double -> Pattern
-num = PConst
-
--- |
-ys :: PatternList
-ys = PListHole id 1
-
-xs :: PatternList
-xs = PListHole id 2
-
-sum :: PatternList -> Pattern
-sum = PSumList
-
-product :: PatternList -> Pattern
-product = PMulList
-
--- |
-piecewise_ :: Pattern -> PatternList -> Pattern
-piecewise_ = PPiecewise
-
-branches :: PatternList
-branches = PListHole id 2
-
-headL :: PatternList -> Pattern
-headL = PHead
-
--- |
-restOfProduct :: Pattern
-restOfProduct = PMulRest 239 []
-
-restOfSum :: Pattern
-restOfSum = PSumRest 2391 []
-
--- |
-[amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
+-- --------------------------------------------------------------------------------------------------------------------
+-- * Matching Internals
+-- --------------------------------------------------------------------------------------------------------------------
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
--- the inner actual nodes
--- e.g: matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
---      matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
---      matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
-matchList :: ExpressionMap -> [Int] -> PatternList -> Maybe Match
+--   the inner actual nodes, e.g
+--
+-- @
+--   matchList [a + (b * x), a + (b * y), a + (b * z)] (PatternList: (a + (b * _)) ---> Just [x, y, z]
+--   matchList [x, y, z, t] (PatternList: (_)) = Just [x, y, z, t]
+--   matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
+-- @
+-- TODO haddock: the capture is always minBound??? this has to be an issue
+matchList :: ExpressionMap -- ^ from base 'Expression'
+          -> [Int] -- ^ TODO haddock: should be NodeID??
+          -> PatternList -- ^ patterns to match to?
+          -> Maybe Match -- ^ potentially a 'Match' with a filled 'listCapturesMap' attribute
 matchList mp ns (PListHole fs listCapture)
   | all isJust maybeSubMatches,
     let subMatches = catMaybes maybeSubMatches,
@@ -412,23 +523,26 @@ matchList mp ns (PListHole fs listCapture)
     nIds subMatches =
       catMaybes . map (Map.lookup uniqueCapture . capturesMap) $ subMatches
 
--- | Match is the result we get when match an Expression against a Pattern
-type NodeId = Int
-
+-- | the 'Int' value n in any expression x^n
 type PowerValue = Int
 
+-- | A wrapper for different 'Map' that associate a capture (i.e hole identifier) to matched 'NodeID'. The function 'match' will
+--   return this type if it succesfully matches a 'Expression' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
+--   a pattern. For example, 'PHole' wraps a 'Int' identifier, so we need a 'Map' that associates those identifiers to 'NodeID'
 data Match
   = Match
-      { capturesMap :: Map Capture NodeId, -- A given capture corresponds to a node id
-        listCapturesMap :: Map ListCapture [NodeId], -- A given list capture corresponds to a list of node ids
-        powerCapturesMap :: Map PowerCapture PowerValue, -- A given power capture corresponds to a power value
-        rotateAmountCapturesMap :: Map RotateAmountCapture RotateAmount -- A given rotate amount capture corresponds to a rotate amount
+      { capturesMap :: Map Capture NodeID, -- ^ Associates 'PHole' identifiers to corresponding matched 'NodeID'
+        listCapturesMap :: Map Capture [NodeID], -- ^ Associates 'PListHole' identifiers to corresponding matched 'NodeID'
+        powerCapturesMap :: Map Capture PowerValue, -- ^ Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+        rotateAmountCapturesMap :: Map Capture RotateAmount -- ^ Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
       }
   deriving (Show)
 
+-- | A 'Match' data constructor with all empty 'Map' for entries
 emptyMatch :: Match
 emptyMatch = Match Map.empty Map.empty Map.empty Map.empty
 
+-- | Take the union of each of the 'Map' wrapped by a 'Match' data constructor
 unionMatch :: Match -> Match -> Match
 unionMatch match1 match2 =
   Match
@@ -540,11 +654,12 @@ match (mp, n) outerWH =
         (TwiceImFT arg, PTwiceImFT sp) -> recursiveAndCombine [arg] [sp]
         _ -> Nothing
 
--- |
+-- | Turn a 'Pattern' transformation into a 'Pattern' reference
 turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
--- |
+-- | Find a 'PowerValue' corresponding to a 'PatternPower' that was already
+--   found in a 'Match'
 buildFromPatternPower :: Match -> PatternPower -> PowerValue
 buildFromPatternPower match pp =
   case pp of
@@ -559,7 +674,8 @@ buildFromPatternPower match pp =
       (buildFromPatternPower match pp1)
         + (buildFromPatternPower match pp2)
 
--- |
+-- | Find a 'RotateAmount' corresponding to a 'PatternRotateAmount' that was already
+--   found in a 'Match'
 buildFromPatternRotateAmount :: Match -> PatternRotateAmount -> RotateAmount
 buildFromPatternRotateAmount match pra =
   case pra of
@@ -575,7 +691,8 @@ buildFromPatternRotateAmount match pra =
     PRotateAmountNegate pra ->
       map negate (buildFromPatternRotateAmount match pra)
 
--- |
+-- | Find many 'ExpressionDiff' corresponding to 'PatternList' w.r.t a base (unwrapped) 'Expression' that were already
+--   found in a 'Match'
 buildFromPatternList ::
   (ExpressionMap, NodeID) -> Match -> PatternList -> [ExpressionDiff]
 buildFromPatternList exp match (PListHole fs listCapture)
@@ -583,9 +700,10 @@ buildFromPatternList exp match (PListHole fs listCapture)
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
     error
-      "ListCapture not in the Map ListCapture [Int] which should never happens"
+      "Capture not in the Map Capture [Int] which should never happens"
 
--- |
+-- | Find a 'ExpressionDiff' corresponding to 'PatternList' w.r.t a base (unwrapped) 'Expression' that was already
+--   found in a 'Match'
 buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> ExpressionDiff
 buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
   where
