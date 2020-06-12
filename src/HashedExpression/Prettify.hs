@@ -1,3 +1,14 @@
+{-|
+Module      :  HashedExpression.Prettify
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module contains functionality for printing an 'Expression' in a readable (i.e pretty) format. This can be very
+useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
+-}
 module HashedExpression.Prettify
   ( prettify,
     prettifyDebug,
@@ -17,14 +28,14 @@ import Data.Typeable
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 
--- |
 unwrap :: Expression d et -> (ExpressionMap, NodeID)
 unwrap (Expression n mp) = (mp, n)
 
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
--- | Pretty exp
+-- | Automatically print a prettified expression (using 'prettify') to stdout.
+--   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
 showExp ::
   forall d rc.
   (Typeable d, Typeable rc) =>
@@ -32,6 +43,7 @@ showExp ::
   IO ()
 showExp = putStrLn . prettify
 
+-- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
 prettify ::
   forall d rc.
   (Typeable d, Typeable rc) =>
@@ -46,10 +58,13 @@ prettify e@(Expression n mp) =
       typeName = " :: " ++ dimensionStr ++ (show . typeRep $ (Proxy :: Proxy rc))
    in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
--- | Pretty exp to a string that can be paste to editor
+-- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
+--   ghci as long as you define corresponding variable identifiers
 showExpDebug :: forall d rc. (Typeable d, Typeable rc) => Expression d rc -> IO ()
 showExpDebug = putStrLn . prettifyDebug
 
+-- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
+--   ghci as long as you define corresponding variable identifiers
 prettifyDebug :: Expression d rc -> String
 prettifyDebug e@(Expression n mp) =
   let shape = expressionShape e
@@ -62,12 +77,13 @@ allEntries (Expression n mp) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
 
+-- | Print every entry (invididually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
 allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
 allEntriesDebug (mp, n) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
 
--- |
+-- | Print every entry (invididually) of an 'Expression'
 showAllEntries :: forall d rc. Expression d rc -> IO ()
 showAllEntries e = do
   putStrLn "--------------------------"
@@ -76,12 +92,14 @@ showAllEntries e = do
   where
     mkString (n, str) = show n ++ " --> " ++ str
 
--- |
+-- | same as 'prettify' without any overhead
 debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
 
--- |
-hiddenPrettify :: Bool -> (ExpressionMap, NodeID) -> T.Text
+-- | auxillary function for computing pretty format of an 'Expression'
+hiddenPrettify :: Bool -- ^ retain syntactically valid (for use in ghci)
+               -> (ExpressionMap, NodeID) -- ^ (unwrapped) expression to be prettified
+               -> T.Text -- ^ resulting "pretty" expression
 hiddenPrettify pastable (mp, n) =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]

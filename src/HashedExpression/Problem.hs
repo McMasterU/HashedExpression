@@ -1,3 +1,16 @@
+{-|
+Module      :  HashedExpression.Problem
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module provides a interface for representing continuous optimization problems using HashedExpression. Represent an optimization problem
+through the 'constructProblem' function, which will return a 'ProblemResult' structure that will wrap a 'Problem' structure if a valid
+problem was able to be constructed. Use the 'Problem' structure in conjunction with the 'HashedExpression.Codegen' module to generate c code
+for solving with your c code solver of choice
+-}
 module HashedExpression.Problem where
 
 import qualified Data.IntMap as IM
@@ -50,7 +63,7 @@ data BoxConstraint
 
 -- | A scalar constraint in an optimization problem
 --
---   A scalar constraint is... TODO Dandoh: maybe an explanation of what it is?
+--   A scalar constraint is... TODO haddock: maybe an explanation of what it is?
 data ScalarConstraint
   = ScalarConstraint
       { -- | The node ID of the constraint
@@ -229,10 +242,36 @@ data ProblemResult
   | -- | The problem is invalid, here is the reason
     ProblemInvalid String
   | -- | The problem has no variables
-    NoVariables -- TODO - what about feasibility problems given constraints?
+    NoVariables -- TODO haddock: - what about feasibility problems given constraints?
   deriving (Show)
 
 -------------------------------------------------------------------------------
+
+-- | A function might be treated as function of variables that does not appears (like constraint of
+-- optimization problem) so we want to pad zero partial derivative
+--
+-- @
+--  (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
+-- @
+introduceZeroPartialDerivatives ::
+  [(String, Shape)] ->
+  Expression Scalar Covector ->
+  Expression Scalar Covector
+introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
+  let isD name nId
+        | DVar varName <- retrieveNode nId mp,
+          varName == name =
+          True
+        | otherwise = False
+      alreadyExist name = any (isD name) . IM.keys $ mp
+      makePart (name, shape)
+        | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
+      listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
+   in wrap $
+        case retrieveNode n mp of
+          Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
+          _ -> sumMany $ (mp, n) : listToInsert
 
 -- | Construct a Problem from given objective function and constraints
 constructProblem :: Expression Scalar R -> [String] -> Constraint -> ProblemResult
