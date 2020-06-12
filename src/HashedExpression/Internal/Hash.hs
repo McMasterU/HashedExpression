@@ -1,3 +1,16 @@
+{-|
+Module      :  HashedExpression.Internal.Hash
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+Every 'NodeID' in a 'ExpressionMap' is computed using a generated hash value. This module contains all the funcitonality necessary to compute
+hash values and check for collisions. Currently, we use a String Hashing based algorithm for our hash function, for details see here
+ https://cp-algorithms.com/string/string-hashing.html
+-}
+
 module HashedExpression.Internal.Hash
   ( hash,
     addInternal,
@@ -11,12 +24,11 @@ import Data.List (intercalate)
 import Debug.Trace (traceShowId)
 import HashedExpression.Internal.Expression hiding ((*), (+), (-))
 
--- | modulo and radix for base-hashing
--- See https://cp-algorithms.com/string/string-hashing.html
+-- | hardcorded modulos used in hash function (i.e 'hashString')
 modulo :: Int
 modulo = 253931039382791
 
--- | Hash string consists of alphabet and numeric
+-- | hardcorded radix used in hash function (i.e 'hashString')
 radix :: Int
 radix = 83
 
@@ -42,7 +54,8 @@ rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 separator :: String
 separator = "a"
 
--- | HasHash instances
+-- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
+--   specific 'NodeID')
 hash :: Internal -> Int
 hash (shape, node) =
   let hashString' s =
@@ -94,11 +107,11 @@ hash (shape, node) =
         TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
         TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
 
--- |
+-- | Check the outcome of a generated hash value
 data HashOutcome
-  = IsClash
-  | IsDuplicate Int
-  | IsNew Int
+  = IsClash  -- ^ clashes with an old hash
+  | IsDuplicate Int -- ^ duplicate of a hash (able to reuse)
+  | IsNew Int -- ^ new hash value
   deriving (Eq, Show, Ord)
 
 hashOutcome :: ExpressionMap -> Internal -> Int -> HashOutcome
@@ -110,7 +123,7 @@ hashOutcome mp new newHash =
         then IsDuplicate newHash
         else IsClash
 
--- |
+-- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
 addInternal :: ExpressionMap -> Internal -> (ExpressionMap, NodeID)
 addInternal mp e =
   case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
@@ -118,6 +131,7 @@ addInternal mp e =
     (IsNew h : _) -> (IM.insert h e mp, h)
     _ -> error "addEntry everything clashed!"
 
+-- | Create a unique 'NodeID' with an accompanying (singleton) 'ExpressionMap' from a standalone 'Node'
 fromNode :: Internal -> (ExpressionMap, NodeID)
 fromNode e = (mp, h)
   where

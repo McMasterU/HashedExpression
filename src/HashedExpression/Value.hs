@@ -1,3 +1,19 @@
+{-|
+Module      :  HashedExpression.Value
+Copyright   :  (c) OCA 2020
+License     :  MIT (see the LICENSE file)
+Maintainer  :  anandc@mcmaster.ca
+Stability   :  provisional
+Portability :  unportable
+
+This module contains functionality for defining values to be subbed into a 'Expression'. An 'Expression' is provided values via a 'ValMap',
+which should be constructed like any other 'Map', for example
+
+@
+ valMap = fromList [("x",v1),("y",v2),....]
+@
+where @"x","y"@ are variable identifiers and @v1,v2@ are of type 'Val'
+-}
 module HashedExpression.Value where
 
 import Data.Array
@@ -12,7 +28,7 @@ type Dataset = String
 data DataFile
   = -- | File path to plaintext data file from your solver
     TXT FilePath
-  | -- | HDF5 requires the name of the data set in the data file
+  | -- | HDF5 requires the name of the data set in the data file,
     --   C supports hdf5, we want npy too but haven't found any npy reader library for C
     HDF5 FilePath Dataset
   deriving (Eq, Show, Ord)
