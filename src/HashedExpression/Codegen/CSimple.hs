@@ -255,6 +255,7 @@ instance Codegen CSimpleConfig where
               [ defineStuffs,
                 constraintCodes,
                 readValsCodes,
+                writeVarCodes,
                 evaluatingCodes,
                 evaluateObjectiveCodes,
                 evaluatePartialDerivativesCodes,
@@ -306,7 +307,7 @@ instance Codegen CSimpleConfig where
       objectiveOffset = cAddress objectiveId
       -- For both variables and values
       readValCodeEach (name, nId)
-        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
+        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset ++ ";") val
         | otherwise =
           scoped
             [ [i|printf("Init value for #{name} is not provided, generating random for #{name} ... \\n");|],
@@ -318,6 +319,15 @@ instance Codegen CSimpleConfig where
         where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
+      -------------------------------------------------------------------------------
+      writeVarCodeEach (name,nId) = [
+               [i|for (i = 0; i < #{product shape}; i++){|]
+              ,[i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|]
+              ,"}"
+              ]
+        where
+           offset = cAddress nId
+           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       defineStuffs :: Code
       defineStuffs =
@@ -423,7 +433,14 @@ instance Codegen CSimpleConfig where
           ++ ["  srand(time(NULL));"] --
           ++ scoped (concatMap readValCodeEach vs)
           ++ ["}"] --
-          -------------------------------------------------------------------------------
+      -------------------------------------------------------------------------------
+      writeVarCodes =
+        ["void print_vars() {"]
+          ++ [[i|  fp = fopen("solutions.out","w");|]]
+          ++ scoped (concatMap writeVarCodeEach vs)
+          ++ ["  fclose(fp);"
+             ,"}"]
+      -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
           ++ scoped (evaluating codegen $ objectiveId : map partialDerivativeId variables)
@@ -443,6 +460,7 @@ instance Codegen CSimpleConfig where
       evaluateScalarConstraintsJacobianCodes =
         ["void evaluate_scalar_constraints_jacobian()"]
           ++ scoped (evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
+      -------------------------------------------------------------------------------
 
 toShapeString :: Shape -> T.Text
 toShapeString shape
