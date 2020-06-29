@@ -307,7 +307,7 @@ instance Codegen CSimpleConfig where
       objectiveOffset = cAddress objectiveId
       -- For both variables and values
       readValCodeEach (name, nId)
-        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset ++ ";") val
+        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
           scoped
             [ [i|printf("Init value for #{name} is not provided, generating random for #{name} ... \\n");|],
@@ -436,8 +436,8 @@ instance Codegen CSimpleConfig where
       -------------------------------------------------------------------------------
       writeVarCodes =
         ["void print_vars() {"]
-          ++ [[i|  fp = fopen("solutions.out","w");|]]
-          ++ scoped (concatMap writeVarCodeEach vs)
+          ++ [[i|  FILE *fp = fopen("solutions.out","w");|]]
+          ++ scoped (["  int i;"] ++ concatMap writeVarCodeEach vs)
           ++ ["  fclose(fp);"
              ,"}"]
       -------------------------------------------------------------------------------
@@ -475,7 +475,7 @@ toShapeString shape
 generateReadValuesCode :: (String, Int) -> String -> Val -> Code
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> scoped ["*(" <> T.pack address <> ") = " <> showT value]
+    VScalar value -> scoped ["*(" <> T.pack address <> ") = " <> showT value <> ";"]
     V1D _ -> readFileText (T.pack name <> ".txt")
     V2D _ -> readFileText (T.pack name <> ".txt")
     V3D _ -> readFileText (T.pack name <> ".txt")
