@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <lbfgs.h>
 #include <string.h>
 
 #define M 10

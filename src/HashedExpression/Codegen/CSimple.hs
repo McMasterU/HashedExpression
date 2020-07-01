@@ -504,7 +504,7 @@ generateReadValuesCode (name, size) address val =
         [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} ... \\n");|],
           "hid_t file, dset;",
           [i|file = H5Fopen("#{filePath}", H5F_ACC_RDONLY, H5P_DEFAULT);|],
-          [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);"|],
+          [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);|],
           [i|H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, #{address});|],
           "H5Fclose (file);",
           "H5Dclose (dset);"
