@@ -26,9 +26,9 @@ import HashedExpression.Internal.Expression
     ET (..),
     Expression (..),
     ExpressionMap,
-    Node (..),
     NodeID,
     NodeID,
+    Op (..),
     R,
     Scalar,
   )
@@ -173,7 +173,7 @@ instance Evaluable Scalar R Double where
   eval :: ValMaps -> Expression Scalar R -> Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
-      case retrieveNode n mp of
+      case retrieveOp n mp of
         Var name ->
           case Map.lookup name valMap of
             Just (VScalar val) -> val
@@ -262,7 +262,7 @@ instance Evaluable Scalar C (Complex Double) where
   eval :: ValMaps -> Expression Scalar C -> Complex Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
-      case retrieveNode n mp of
+      case retrieveOp n mp of
         Sum C args -> sum . map (eval valMap . expZeroC mp) $ args --  sum of a scalar is of the type C
         Mul C args -> product . map (eval valMap . expZeroC mp) $ args --  Multiplication of a scalar is of the type C
         Power x arg -> eval valMap (expZeroC mp arg) ^ x --  power evaluation of arg to the power of x
@@ -340,7 +340,7 @@ foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
   | [size] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Var name ->
         case Map.lookup name valMap of
           Just (V1D val) -> val
@@ -447,7 +447,7 @@ evaluate1DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array Int (Complex Double)
 evaluate1DComplex valMap (mp, n)
   | [size] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Sum C args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate1DComplex valMap . (mp,)) $
@@ -496,7 +496,7 @@ instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
 evaluate2DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) Double
 evaluate2DReal valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Var name ->
         case Map.lookup name valMap of
           Just (V2D val) -> val
@@ -618,7 +618,7 @@ evaluate2DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) (Complex Double)
 evaluate2DComplex valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Sum C args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate2DComplex valMap . (mp,)) $
@@ -677,7 +677,7 @@ evaluate3DReal ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) Double
 evaluate3DReal valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Var name ->
         case Map.lookup name valMap of
           Just (V3D val) -> val
@@ -816,7 +816,7 @@ evaluate3DComplex ::
   ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
 evaluate3DComplex valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
-    case retrieveNode n mp of
+    case retrieveOp n mp of
       Sum C args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate3DComplex valMap . (mp,)) $

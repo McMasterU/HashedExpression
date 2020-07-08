@@ -17,8 +17,8 @@ module HashedExpression.Internal.Expression
     --   each 'Node' is either an atomic value like variables and constants or
     --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
     --   assuring reuse of common subexpressions
-    Node (..),
-    Internal,
+    Op (..),
+    Node,
     NodeID,
     ExpressionMap,
     Expression (..),
@@ -82,11 +82,11 @@ import Prelude hiding ((^))
 
 -- | The bulk of an 'Expression' is a collection of 'Node' (with their dimensions), in
 --   a Map indexed 'NodeID' (a generated hash value)
-type ExpressionMap = IntMap Internal
+type ExpressionMap = IntMap Node
 
--- | The internals of an 'Expression' are a collection of 'Node' with
+-- | The internals of an 'Expression' are a collection of 'Op' with
 --   their dimensions
-type Internal = (Shape, Node)
+type Node = (Shape, Op)
 
 -- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
 --   Used as the index/key to perform a lookup in 'ExpressionMap'
@@ -112,9 +112,8 @@ data Expression d et
 
 type role Expression nominal nominal
 
--- | The Node type provides constructors for variables, constants and operators used to create expressions.
---   The 'ExpressionMap' that is the content of an 'Expression' is a map from 'NodeID' to 'Node'
-data Node
+-- | The Op type provides constructors for variables, constants and operators used to create expressions.
+data Op
   = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
     Var String
   | -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
@@ -130,7 +129,6 @@ data Node
   | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
     Neg ET Arg
   | -- | scaling, overloaded via 'VectorSpaceOp'
-    -- TODO Haddock: remove? why?
     Scale ET Arg Arg
   | -- | division operator, wrapped by @Expression d R@
     Div Arg Arg
@@ -175,15 +173,14 @@ data Node
   | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
     Piecewise [Double] ConditionArg [BranchArg]
   | -- | rotate transformation, rotates vector elements by 'RotateAmount'
-    -- TODO Haddock: why real and imag FT??
     Rotate RotateAmount Arg
-  | -- | real fourier transform
+  | -- | real part of fourier transform
     ReFT Arg
-  | -- | imag fourier transform
+  | -- | imag part of fourier transform
     ImFT Arg
-  | -- | real fourier transform, performed twice
+  | -- | real part of fourier transform, performed twice
     TwiceReFT Arg
-  | -- | imag fourier transform, performed twice
+  | -- | imag part of fourier transform, performed twice
     TwiceImFT Arg
   deriving (Show, Eq, Ord)
 

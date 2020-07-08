@@ -30,16 +30,16 @@ prop_DVarStayAlone exp = property
   where
     collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
-      | Const 0 <- retrieveNode nId mp = True
-      | Mul Covector [_, cId] <- retrieveNode nId mp,
-        DVar _ <- retrieveNode cId mp =
+      | Const 0 <- retrieveOp nId mp = True
+      | Mul Covector [_, cId] <- retrieveOp nId mp,
+        DVar _ <- retrieveOp cId mp =
         True
-      | InnerProd Covector _ cId <- retrieveNode nId mp,
-        DVar _ <- retrieveNode cId mp =
+      | InnerProd Covector _ cId <- retrieveOp nId mp,
+        DVar _ <- retrieveOp cId mp =
         True
       | otherwise = False
     property =
-      case retrieveNode rootId mp of
+      case retrieveOp rootId mp of
         Sum Covector ns -> all isDVarAlone ns
         _ -> isDVarAlone rootId
 
@@ -62,16 +62,16 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
     collectedExp@(Expression rootId mp) =
       collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
-      | Const 0 <- retrieveNode nId mp = True
-      | Mul Covector [_, cId] <- retrieveNode nId mp,
-        DVar _ <- retrieveNode cId mp =
+      | Const 0 <- retrieveOp nId mp = True
+      | Mul Covector [_, cId] <- retrieveOp nId mp,
+        DVar _ <- retrieveOp cId mp =
         True
-      | InnerProd Covector _ cId <- retrieveNode nId mp,
-        DVar _ <- retrieveNode cId mp =
+      | InnerProd Covector _ cId <- retrieveOp nId mp,
+        DVar _ <- retrieveOp cId mp =
         True
       | otherwise = False
     property =
-      case retrieveNode rootId mp of
+      case retrieveOp rootId mp of
         Sum Covector ns -> all isDVarAlone ns
         _ -> isDVarAlone rootId
 

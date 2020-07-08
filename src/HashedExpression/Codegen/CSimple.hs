@@ -27,8 +27,8 @@ import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
 import HashedExpression.Embed.FFTW (fftUtils)
 import HashedExpression.Internal (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
-import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, Node (..), NumType, Shape, exMap)
-import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
+import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, NumType, Op (..), Shape, exMap)
+import HashedExpression.Internal.Node (opElementType, retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
 import HashedExpression.Value
@@ -88,8 +88,8 @@ elseif condition codes = [[i|else if (#{condition})|]] ++ scoped codes
 else_ :: Code -> Code
 else_ codes = ["else"] ++ scoped codes
 
-initCodegen :: CodegenInit -> CSimpleConfig -> CSimpleCodegen
-initCodegen (CodegenInit mp consecutiveIDs) _ =
+initCodegen :: CSimpleConfig -> ExpressionMap -> [NodeID] -> CSimpleCodegen
+initCodegen _ mp consecutiveIDs =
   CSimpleCodegen
     { cExpressionMap = mp,
       cAddress = addressMap,
@@ -101,8 +101,8 @@ initCodegen (CodegenInit mp consecutiveIDs) _ =
   where
     (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
     f (addressMap, curSize) nID =
-      let (shape, node) = retrieveInternal nID mp
-          et = nodeElementType node mp
+      let (shape, node) = retrieveNode nID mp
+          et = opElementType node mp
        in case et of
             R -> (IM.insert nID curSize addressMap, curSize + product shape)
             C -> (IM.insert nID curSize addressMap, curSize + 2 * product shape)
@@ -134,8 +134,8 @@ evaluating CSimpleCodegen {..} rootIDs =
     len nID = product (retrieveShape nID cExpressionMap)
     genCode :: Int -> Code
     genCode n =
-      let (shape, node) = retrieveInternal n cExpressionMap
-       in case node of
+      let (shape, op) = retrieveNode n cExpressionMap
+       in case op of
             Var _ -> []
             Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
             Sum R args ->
@@ -300,7 +300,7 @@ instance Codegen CSimpleConfig where
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
       -------------------------------------------------------------------------------
-      codegen@CSimpleCodegen {..} = initCodegen (CodegenInit expressionMap (map nodeId variables)) config
+      codegen@CSimpleCodegen {..} = initCodegen config expressionMap (map nodeId variables)
       variableOffsets = map (cAddress . nodeId) variables
       partialDerivativeOffsets = map (cAddress . partialDerivativeId) variables
       objectiveOffset = cAddress objectiveId

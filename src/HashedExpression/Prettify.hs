@@ -50,7 +50,7 @@ prettify ::
   String
 prettify e@(Expression n mp) =
   let shape = expressionShape e
-      node = expressionNode e
+      node = expressionOp e
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
@@ -67,7 +67,7 @@ showExpDebug = putStrLn . prettifyDebug
 prettifyDebug :: Expression d rc -> String
 prettifyDebug e@(Expression n mp) =
   let shape = expressionShape e
-      node = expressionNode e
+      node = expressionOp e
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 -- | All the entries of the expression
@@ -106,7 +106,7 @@ hiddenPrettify ::
 hiddenPrettify pastable (mp, n) =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]
-      node = retrieveNode n mp
+      node = retrieveOp n mp
       innerPrettify = hiddenPrettify pastable . (mp,)
       shapeSignature
         | pastable = ""

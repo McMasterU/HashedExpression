@@ -28,7 +28,7 @@ partialDerivative f mx = case maybeVariable mx of
   Just (x, shape) ->
     let df = exteriorDerivative (Set.fromList [x]) f
         Expression nID mp = collectDifferentials df
-     in case retrieveNode nID mp of
+     in case retrieveOp nID mp of
           Const 0 -> constWithShape shape 0
           Mul Covector [partialID, _] -> wrap (mp, partialID)
           InnerProd Covector partialID _ -> wrap (mp, partialID)

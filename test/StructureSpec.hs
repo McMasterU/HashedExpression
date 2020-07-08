@@ -46,7 +46,7 @@ prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
     exp = Expression n mp :: Expression D_ ET_
     ok exp =
       let sortedNodeId = topologicalSort (mp, n)
-          dependencies n = nodeArgs $ retrieveNode n mp
+          dependencies n = opArgs $ retrieveOp n mp
           withChildren = zip sortedNodeId (map dependencies sortedNodeId)
           prop (nId, childrenIds) = all (isAfter sortedNodeId nId) childrenIds
        in noDuplicate sortedNodeId && all prop withChildren
@@ -61,14 +61,14 @@ prop_TopologicalSortManyRoots xs
     mergedMap = IM.unions . map (fst . getWrappedExp) $ xs
     roots = map (snd . getWrappedExp) xs
     sortedNodeId = topologicalSortManyRoots (mergedMap, roots)
-    dependencies n = nodeArgs $ retrieveNode n mergedMap
+    dependencies n = opArgs $ retrieveOp n mergedMap
     withChildren = zip sortedNodeId (map dependencies sortedNodeId)
     prop (nId, childrenIds) = all (isAfter sortedNodeId nId) childrenIds
 
 -- |
 prop_StructureScalarC :: Expression Scalar C -> Bool
 prop_StructureScalarC exp
-  | RealImag _ _ <- retrieveNode n mp = True
+  | RealImag _ _ <- retrieveOp n mp = True
   | otherwise = False
   where
     (Expression n mp) = normalize exp
@@ -76,7 +76,7 @@ prop_StructureScalarC exp
 -- |
 prop_StructureOneC :: Expression Default1D C -> Bool
 prop_StructureOneC exp
-  | RealImag _ _ <- retrieveNode n mp = True
+  | RealImag _ _ <- retrieveOp n mp = True
   | otherwise = False
   where
     (Expression n mp) = normalize exp

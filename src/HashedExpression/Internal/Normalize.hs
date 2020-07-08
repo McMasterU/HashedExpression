@@ -132,11 +132,11 @@ toMultiplyIfPossible :: Transformation
 toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
   where
     rule exp@(mp, n)
-      | Scale et scalar scalee <- retrieveNode n mp,
+      | Scale et scalar scalee <- retrieveOp n mp,
         et /= C,
         isScalarShape (retrieveShape scalee mp) =
         just scalar * just scalee
-      | InnerProd et arg1 arg2 <- retrieveNode n mp,
+      | InnerProd et arg1 arg2 <- retrieveOp n mp,
         isScalarShape (retrieveShape arg1 mp),
         isScalarShape (retrieveShape arg2 mp),
         et /= C =
@@ -326,7 +326,7 @@ rotateRules =
 --   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
-  case retrieveNode n mp of
+  case retrieveOp n mp of
     Sum _ ns
       -- to make sure filter (not . isZero mp) ns is not empty
       | all (isZero mp) ns -> just $ head ns
@@ -353,7 +353,7 @@ zeroOneSumProdRules exp@(mp, n) =
 --   For example, if a sumP or product consists of only one entry, it can be extracted.
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
-  case retrieveNode n mp of
+  case retrieveOp n mp of
     Sum _ ns
       -- if the sumP has only one, collapse it
       -- sum(x) -> x
@@ -370,7 +370,7 @@ collapseSumProdRules exp@(mp, n) =
 --   function on lists.
 flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
-  case retrieveNode n mp of
+  case retrieveOp n mp of
     Sum _ ns ->
       -- if the sumP contains any sumP, just flatten them out
       -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
@@ -387,7 +387,7 @@ flattenSumProdRules exp@(mp, n) =
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
-   in case retrieveNode n mp of
+   in case retrieveOp n mp of
         Sum _ ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
@@ -408,16 +408,16 @@ groupConstantsRules exp@(mp, n) =
 --   * Sum [x,x,y] -> Sum [2 *. x,y]
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
-  | Sum _ ns <- retrieveNode n mp =
+  | Sum _ ns <- retrieveOp n mp =
     sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
-      | Scale _ scalerN scaleeN <- retrieveNode nId mp,
-        Const val <- retrieveNode scalerN mp =
+      | Scale _ scalerN scaleeN <- retrieveOp nId mp,
+        Const val <- retrieveOp scalerN mp =
         (scaleeN, val)
-      | Neg _ negateeN <- retrieveNode nId mp = (negateeN, -1)
+      | Neg _ negateeN <- retrieveOp nId mp = (negateeN, -1)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
@@ -433,18 +433,18 @@ combineTermsRules exp@(mp, n)
 --   * Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
-  | Mul _ ns <- retrieveNode n mp =
+  | Mul _ ns <- retrieveOp n mp =
     product_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
-      | Power value powerel <- retrieveNode nId mp = (powerel, value)
+      | Power value powerel <- retrieveOp nId mp = (powerel, value)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn (x, px) (y, py)
-      | Sum _ _ <- retrieveNode x mp = False
-      | Sum _ _ <- retrieveNode y mp = False
+      | Sum _ _ <- retrieveOp x mp = False
+      | Sum _ _ <- retrieveOp y mp = False
       | C <- retrieveElementType x mp = False
       | C <- retrieveElementType y mp = False
       | otherwise = x == y
@@ -459,8 +459,8 @@ combineTermsRulesProd exp@(mp, n)
 --   * (x^2)^-1 -> x^-2
 combinePowerRules :: Modification
 combinePowerRules exp@(mp, n)
-  | Power outerVal outerN <- retrieveNode n mp,
-    Power innerVal innerN <- retrieveNode outerN mp =
+  | Power outerVal outerN <- retrieveOp n mp,
+    Power innerVal innerN <- retrieveOp outerN mp =
     just innerN ^ (outerVal * innerVal)
   | otherwise = just n
 
@@ -470,14 +470,14 @@ combinePowerRules exp@(mp, n)
 --   * (a +: b) ^ 2 should be (a +: b) * (a +: b)
 powerSumRealImagRules :: Modification
 powerSumRealImagRules exp@(mp, n)
-  | Power val nId <- retrieveNode n mp,
+  | Power val nId <- retrieveOp n mp,
     isSumOrRealImag nId =
     replicateMul val nId
   | otherwise = just n
   where
     isSumOrRealImag nId
-      | Sum _ _ <- retrieveNode nId mp = True
-      | RealImag _ _ <- retrieveNode nId mp = True
+      | Sum _ _ <- retrieveOp nId mp = True
+      | RealImag _ _ <- retrieveOp nId mp = True
       | otherwise = False
     replicateMul val nId
       | val > 1 = product_ . replicate val $ just nId
@@ -489,8 +489,8 @@ powerSumRealImagRules exp@(mp, n)
 --   * (a*b*c)^k should be a^k * b^k * c^k
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
-  | Power val nId <- retrieveNode n mp,
-    Mul _ args <- retrieveNode nId mp =
+  | Power val nId <- retrieveOp n mp,
+    Mul _ args <- retrieveOp nId mp =
     product_ . map ((^ val) . just) $ args
   | otherwise = just n
 
@@ -499,8 +499,8 @@ powerProdRules exp@(mp, n)
 --   * (a*.b)^2 should be a^2 *. b^2
 powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
-  | Power val nId <- retrieveNode n mp,
-    Scale et scalar scalee <- retrieveNode nId mp,
+  | Power val nId <- retrieveOp n mp,
+    Scale et scalar scalee <- retrieveOp nId mp,
     val > 0 =
     (just scalar ^ val) *. (just scalee ^ val)
   | otherwise = just n
@@ -510,7 +510,7 @@ powerScaleRules exp@(mp, n)
 --   * (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
 combineRealScalarRules :: Modification
 combineRealScalarRules exp@(mp, n)
-  | Mul R ns <- retrieveNode n mp,
+  | Mul R ns <- retrieveOp n mp,
     let extracted = map extract ns,
     any (isJust . snd) extracted =
     let combinedScalars = product_ . catMaybes $ map snd extracted
@@ -519,9 +519,9 @@ combineRealScalarRules exp@(mp, n)
   | otherwise = just n
   where
     extract nId
-      | Scale _ scalar scalee <- retrieveNode nId mp =
+      | Scale _ scalar scalee <- retrieveOp nId mp =
         (just scalee, Just $ just scalar)
-      | Neg R negatee <- retrieveNode nId mp =
+      | Neg R negatee <- retrieveOp nId mp =
         (just negatee, Just $ num_ (-1))
       | otherwise = (just nId, Nothing)
 
@@ -544,11 +544,11 @@ evaluateIfPossibleRules exp@(mp, n) =
     -- TODO: sin, sos, ...
     _ -> just n
   where
-    (shape, node) = retrieveInternal n mp
+    (shape, node) = retrieveNode n mp
     getVal nId
-      | Const val <- retrieveNode nId mp = Just val
+      | Const val <- retrieveOp nId mp = Just val
       | otherwise = Nothing
-    pulledVals = mapM getVal . nodeArgs $ node
+    pulledVals = mapM getVal . opArgs $ node
     res = const_ shape
 
 -- | Rules to normalize rotations
@@ -556,7 +556,7 @@ evaluateIfPossibleRules exp@(mp, n) =
 --   This ensures that rotateAmount in each direction always lie within (0, dim - 1)
 normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
-  | (shape, Rotate amount arg) <- retrieveInternal n mp = rotate (zipWith mod amount shape) $ just arg
+  | (shape, Rotate amount arg) <- retrieveNode n mp = rotate (zipWith mod amount shape) $ just arg
   | otherwise = just n
 
 -- | Rules for negative zeroes
@@ -565,7 +565,7 @@ normalizeRotateRules exp@(mp, n)
 --   Thus, instead we convert those to `Const (0.0)`.
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
-  | (shape, Const val) <- retrieveInternal n mp,
+  | (shape, Const val) <- retrieveNode n mp,
     val == 0.0 || val == (-0.0) =
     const_ shape 0
   | otherwise = just n
@@ -577,7 +577,7 @@ negativeZeroRules exp@(mp, n)
 --   * if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
 expandPiecewiseRealImag :: Modification
 expandPiecewiseRealImag exp@(mp, n)
-  | Piecewise marks condition branches <- retrieveNode n mp,
+  | Piecewise marks condition branches <- retrieveOp n mp,
     Just reIms <- mapM extract branches =
     let (reIds, imIds) = unzip reIms
         cdt = just condition
@@ -587,7 +587,7 @@ expandPiecewiseRealImag exp@(mp, n)
   | otherwise = just n
   where
     extract nId
-      | RealImag re im <- retrieveNode nId mp = Just (re, im)
+      | RealImag re im <- retrieveOp nId mp = Just (re, im)
       | otherwise = Nothing
 
 -- | Rules for expanding piecewise functions
@@ -595,7 +595,7 @@ expandPiecewiseRealImag exp@(mp, n)
 --   For example: `if x < 1 then x + 1 else x + y = (x + 1) * (if x < 1 then 1 else 0) + (x + y) * (if x < 1 then 0 else 1)`
 pullOutPiecewiseRules :: Modification
 pullOutPiecewiseRules exp@(mp, n)
-  | Piecewise marks condition branches <- retrieveNode n mp,
+  | Piecewise marks condition branches <- retrieveOp n mp,
     et /= C,
     not (isAllZeroExceptOne branches) =
     let branchWithPiecewise idx branch =
@@ -625,7 +625,7 @@ pullOutPiecewiseRules exp@(mp, n)
 -- operation. We can simplify this further as `twiceReFT(x) + twiceImFT(x) = (size(x) / 2) *. x`.
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
-  | Sum R sumands <- retrieveNode n mp,
+  | Sum R sumands <- retrieveOp n mp,
     Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands,
     Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
     let rest = map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
@@ -636,21 +636,21 @@ twiceReFTAndImFTRules exp@(mp, n)
   | otherwise = just n
   where
     isTwiceReFT nId
-      | TwiceReFT inner <- retrieveNode nId mp = Just (1, nId, inner)
-      | Scale R scalarId scaleeId <- retrieveNode nId mp,
-        Const val <- retrieveNode scalarId mp,
-        TwiceReFT inner <- retrieveNode scaleeId mp =
+      | TwiceReFT inner <- retrieveOp nId mp = Just (1, nId, inner)
+      | Scale R scalarId scaleeId <- retrieveOp nId mp,
+        Const val <- retrieveOp scalarId mp,
+        TwiceReFT inner <- retrieveOp scaleeId mp =
         Just (val, nId, inner)
       | otherwise = Nothing
     isTwiceImFTof innerArg scaleFactor nId
-      | TwiceImFT x <- retrieveNode nId mp,
+      | TwiceImFT x <- retrieveOp nId mp,
         scaleFactor == 1,
         x == innerArg =
         True
-      | Scale R scalarId scaleeId <- retrieveNode nId mp,
-        Const val <- retrieveNode scalarId mp,
+      | Scale R scalarId scaleeId <- retrieveOp nId mp,
+        Const val <- retrieveOp scalarId mp,
         val == scaleFactor,
-        TwiceImFT x <- retrieveNode scaleeId mp,
+        TwiceImFT x <- retrieveOp scaleeId mp,
         x == innerArg =
         True
       | otherwise = False

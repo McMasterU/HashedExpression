@@ -61,8 +61,7 @@ data BoxConstraint
       (Val, Val) -- (lower, upper)
 
 -- | A scalar constraint in an optimization problem
---
---   A scalar constraint is... TODO haddock: maybe an explanation of what it is?
+-- is a constraint in a form: LB <= f(variables) <= UB where LB, f(variables), UB are scalar real values
 data ScalarConstraint
   = ScalarConstraint
       { -- | The node ID of the constraint
@@ -125,17 +124,17 @@ inf = 1 / 0
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
 partialDerivativeMaps :: Expression Scalar Covector -> Map String NodeID
 partialDerivativeMaps df@(Expression dfId dfMp) =
-  case retrieveNode dfId dfMp of
+  case retrieveOp dfId dfMp of
     Sum Covector ns -> Map.fromList $ mapMaybe getPartial ns
     _ -> Map.fromList $ mapMaybe getPartial [dfId]
   where
     getPartial :: NodeID -> Maybe (String, NodeID)
     getPartial nId
-      | Mul Covector [partialId, dId] <- retrieveNode nId dfMp,
-        DVar name <- retrieveNode dId dfMp =
+      | Mul Covector [partialId, dId] <- retrieveOp nId dfMp,
+        DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
-      | InnerProd Covector partialId dId <- retrieveNode nId dfMp,
-        DVar name <- retrieveNode dId dfMp =
+      | InnerProd Covector partialId dId <- retrieveOp nId dfMp,
+        DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
       | otherwise = Nothing
 
@@ -220,7 +219,7 @@ getValCS cs =
 -- | Returns True if the value is a box constraint, false otherwise
 isBoxConstraint :: ConstraintStatement -> Bool
 isBoxConstraint cs =
-  case retrieveNode n mp of
+  case retrieveOp n mp of
     Var var -> True
     _ -> False
   where
@@ -258,7 +257,7 @@ introduceZeroPartialDerivatives ::
   Expression Scalar Covector
 introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
   let isD name nId
-        | DVar varName <- retrieveNode nId mp,
+        | DVar varName <- retrieveOp nId mp,
           varName == name =
           True
         | otherwise = False
@@ -268,7 +267,7 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
         | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
       listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
-        case retrieveNode n mp of
+        case retrieveOp n mp of
           Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
           _ -> sumMany $ (mp, n) : listToInsert
 
@@ -341,13 +340,13 @@ constructProblem objectiveFunction varList constraint
             toBoxConstraint cs =
               case cs of
                 Lower (mp, n) val ->
-                  let Var name = retrieveNode n mp
+                  let Var name = retrieveOp n mp
                    in BoxLower name val
                 Upper (mp, n) val ->
-                  let Var name = retrieveNode n mp
+                  let Var name = retrieveOp n mp
                    in BoxUpper name val
                 Between (mp, n) vals ->
-                  let Var name = retrieveNode n mp
+                  let Var name = retrieveOp n mp
                    in BoxBetween name vals
         -------------------------------------------------------------------------------
         boxConstraints = extractBoxConstraint constraint
@@ -408,7 +407,7 @@ constructProblem objectiveFunction varList constraint
         Constraint cs -> firstJust checkConstraint cs
     checkConstraint :: ConstraintStatement -> Maybe String
     checkConstraint cs =
-      case retrieveInternal n mp of
+      case retrieveNode n mp of
         (_, Var var) -- if it is a var, then should be box constraint
           | not (Set.member var varsSet) -> Just $ var ++ " is not a variable"
           | any (not . compatible (variableShape var)) (getValCS cs) ->

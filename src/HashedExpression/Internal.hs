@@ -199,9 +199,9 @@ safeUnion = IM.union
 
 -- | Generate a new 'ExpressionMap' with a new root 'Node' and 'NodeID' from a merged 'ExpressionMap' (of arguments)
 addEntryWithContext ::
-  -- | merged map of all
+  -- | The context expression map, use for additional lookup
   ExpressionMap ->
-  -- | TODO Haddock: is this not redundant?
+  -- | The merged expression map of operands
   ExpressionMap ->
   -- | describes how an operators may change 'Dimension' or 'ElementType'
   OperationOption ->
@@ -212,12 +212,16 @@ addEntryWithContext ::
 addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
   let highestShape :: [(ExpressionMap, NodeID)] -> Shape
       highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
+      -------------------------------------------------------------------------------
       highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
       highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
+      -------------------------------------------------------------------------------
       highestElementType :: [(ExpressionMap, NodeID)] -> ET
       highestElementType = maximum . map (uncurry $ flip retrieveElementType)
+      -------------------------------------------------------------------------------
       highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
       highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
+      -------------------------------------------------------------------------------
       shape :: Shape
       shape = case shapeOutcome of
         ShapeSpecific s -> s
@@ -226,7 +230,7 @@ addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
       elementType elementOutcome = case elementOutcome of
         ElementSpecific et -> et
         _ -> highestElementTypeWithContext contextMp ns
-      node :: Node
+      node :: Op
       node =
         case (nodeOutcome, ns) of
           (OpOne op, [arg]) -> op arg
@@ -281,7 +285,7 @@ data OperationOption
   = -- | application has a normal outcome
     Normal NodeOutcome ShapeOutcome
   | -- | application outcome depends on condition (piecewise function)
-    Condition (ConditionArg -> [BranchArg] -> Node)
+    Condition (ConditionArg -> [BranchArg] -> Op)
 
 -- | Transform an 'OperationOption' to have a specific 'Shape'.
 --   Useful for constructing an 'OperationOption' in conjunction with the 'unary', 'binary' and 'nary' functions that
@@ -302,17 +306,17 @@ hasShape option _ = option
 --   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
 data NodeOutcome
   = -- | Unary Operator, 'ElementType' irrelavent
-    OpOne (Arg -> Node)
+    OpOne (Arg -> Op)
   | -- | Unary Operator, 'ElementType' included
-    OpOneElement (ET -> Arg -> Node) ElementOutcome
+    OpOneElement (ET -> Arg -> Op) ElementOutcome
   | -- | Binary Operator, 'ElementType' irrelavent
-    OpTwo (Arg -> Arg -> Node)
+    OpTwo (Arg -> Arg -> Op)
   | -- | Binary Operator, 'ElementType' included
-    OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome
+    OpTwoElement (ET -> Arg -> Arg -> Op) ElementOutcome
   | -- | N-Ary Operator, 'ElementType' irrelavent
-    OpMany (Args -> Node)
+    OpMany (Args -> Op)
   | -- | N-Ary Operator, 'ElementType' included
-    OpManyElement (ET -> Args -> Node) ElementOutcome
+    OpManyElement (ET -> Args -> Op) ElementOutcome
 
 -- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
 --   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
@@ -331,7 +335,7 @@ data ShapeOutcome
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapDefault'
 binary ::
   -- | a constructor of 'Node'
-  (Arg -> Arg -> Node) ->
+  (Arg -> Arg -> Op) ->
   OperationOption -- result
 binary op = Normal (OpTwo op) ShapeDefault
 
@@ -340,7 +344,7 @@ binary op = Normal (OpTwo op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 binaryET ::
   -- | constructor of 'Node'
-  (ET -> Arg -> Arg -> Node) ->
+  (ET -> Arg -> Arg -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -352,7 +356,7 @@ binaryET op elm = Normal (OpTwoElement op elm) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 unary ::
   -- | constructor of 'Node'
-  (Arg -> Node) ->
+  (Arg -> Op) ->
   -- | result
   OperationOption
 unary op = Normal (OpOne op) ShapeDefault
@@ -362,7 +366,7 @@ unary op = Normal (OpOne op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 unaryET ::
   -- | constructor of 'Node'
-  (ET -> Arg -> Node) ->
+  (ET -> Arg -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -374,7 +378,7 @@ unaryET op elm = Normal (OpOneElement op elm) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 nary ::
   -- | constructor of 'Node'
-  (Args -> Node) ->
+  (Args -> Op) ->
   -- | result
   OperationOption
 nary op = Normal (OpMany op) ShapeDefault
@@ -384,7 +388,7 @@ nary op = Normal (OpMany op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 naryET ::
   -- | constructor of 'Node'
-  (ET -> Args -> Node) ->
+  (ET -> Args -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -393,7 +397,7 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 
 -- | Construct a 'OperationOption' for a generic piecewise function (of implicit 'ElementType').
 --   A simple alias for the 'Condition' construtor
-conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
+conditionAry :: (ConditionArg -> [BranchArg] -> Op) -> OperationOption
 conditionAry = Condition
 
 -- --------------------------------------------------------------------------------------------------------------------
@@ -443,7 +447,7 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
     f diffs nId =
-      let children = nodeArgs $ retrieveNode nId mp
+      let children = opArgs $ retrieveOp nId mp
           childrenDiffs = map (fromJust . flip IM.lookup diffs) children
           nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
           newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
@@ -690,8 +694,8 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
       TwiceReFT _ -> combine (unary TwiceReFT)
       TwiceImFT _ -> combine (unary TwiceImFT)
   where
-    (oldShape, oldNode) = retrieveInternal n contextMp
-    oldChildren = nodeArgs oldNode
+    (oldShape, oldNode) = retrieveNode n contextMp
+    oldChildren = opArgs oldNode
     newChildren = map newRootId childrenDiffs
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     combine option =
@@ -702,7 +706,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
             | Just (_, node) <-
                 IM.lookup (newRootId diff) combinedExtraEntries =
               node
-          nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
+          nodeType diff1 diff2 = sameOp (getNode diff1) (getNode diff2)
           weight diff = nodeTypeWeight $ getNode diff
           sortArgs =
             concatMap (sortWith newRootId)
@@ -710,7 +714,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
               . sortWith weight
           sortedChildrenDiffs = sortArgs childrenDiffs
        in if oldChildren == map newRootId sortedChildrenDiffs
-            && all (== IM.empty) (map extraEntries sortedChildrenDiffs)
+            && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
             then noChange n
             else
               applyDiff
@@ -744,7 +748,7 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
     len = IM.size n2Pos
-    adj nId = nodeArgs $ retrieveNode nId mp
+    adj nId = opArgs $ retrieveOp nId mp
     topoOrder =
       runSTUArray $ do
         marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
@@ -770,7 +774,7 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
     collect nId
-      | Var varName <- retrieveNode nId mp = Just (varName, nId)
+      | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
@@ -778,7 +782,7 @@ varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
   where
     collect nId
-      | Var varName <- retrieveNode nId mp = Just (varName, nId)
+      | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation
