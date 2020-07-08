@@ -107,7 +107,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
     one = constWithShape @D_ shape 1
     dOne nId = unwrap . hiddenDerivative' $ Expression nId mp
     -- d(g(x)) = g(d(x))
-    d1Input :: (Arg -> Node) -> Arg -> Expression d Covector
+    d1Input :: (Arg -> Op) -> Arg -> Expression d Covector
     d1Input opType arg =
       let df = hiddenDerivative' (Expression arg mp)
        in applyUnary (unary opType) df

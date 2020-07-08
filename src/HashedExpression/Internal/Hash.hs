@@ -54,7 +54,7 @@ separator = "a"
 
 -- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
 --   specific 'NodeID')
-hash :: Internal -> Int
+hash :: Node -> Int
 hash (shape, node) =
   let hashString' s =
         hashString $
@@ -115,7 +115,7 @@ data HashOutcome
     IsNew Int
   deriving (Eq, Show, Ord)
 
-hashOutcome :: ExpressionMap -> Internal -> Int -> HashOutcome
+hashOutcome :: ExpressionMap -> Node -> Int -> HashOutcome
 hashOutcome mp new newHash =
   case IM.lookup newHash mp of
     Nothing -> IsNew newHash
@@ -125,7 +125,7 @@ hashOutcome mp new newHash =
         else IsClash
 
 -- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
-addInternal :: ExpressionMap -> Internal -> (ExpressionMap, NodeID)
+addInternal :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
 addInternal mp e =
   case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
     (IsDuplicate h : _) -> (mp, h)
@@ -133,7 +133,7 @@ addInternal mp e =
     _ -> error "addEntry everything clashed!"
 
 -- | Create a unique 'NodeID' with an accompanying (singleton) 'ExpressionMap' from a standalone 'Node'
-fromNode :: Internal -> (ExpressionMap, NodeID)
+fromNode :: Node -> (ExpressionMap, NodeID)
 fromNode e = (mp, h)
   where
     h = hash e

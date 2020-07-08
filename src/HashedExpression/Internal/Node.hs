@@ -33,7 +33,7 @@ import HashedExpression.Internal.Expression
 nodeElementType ::
   HasCallStack =>
   -- | Node to find the ElementType of
-  Node ->
+  Op ->
   -- | base Expression containing the Node
   ExpressionMap ->
   -- | resulting ElementType
@@ -91,7 +91,7 @@ nodeElementType node mp =
 --   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
 --   ...
 -- @
-nodeTypeWeight :: HasCallStack => Node -> Int
+nodeTypeWeight :: HasCallStack => Op -> Int
 nodeTypeWeight node =
   case node of
     Var {} -> 1
@@ -130,11 +130,11 @@ nodeTypeWeight node =
     TwiceImFT {} -> 31
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
-sameNodeType :: HasCallStack => Node -> Node -> Bool
+sameNodeType :: HasCallStack => Op -> Op -> Bool
 sameNodeType node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
 
 -- | Retrieve the parameters (i.e 'Args') attached to a given 'Node'
-nodeArgs :: Node -> Args
+nodeArgs :: Op -> Args
 nodeArgs node =
   case node of
     Var _ -> []
@@ -174,7 +174,7 @@ nodeArgs node =
 
 -- | Retrieve a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveNode #-}
-retrieveNode :: HasCallStack => NodeID -> ExpressionMap -> Node
+retrieveNode :: HasCallStack => NodeID -> ExpressionMap -> Op
 retrieveNode n mp =
   case IM.lookup n mp of
     Just (_, node) -> node
@@ -182,7 +182,7 @@ retrieveNode n mp =
 
 -- | Retrieve a 'Internal' structure (i.e a 'Node' with it's 'Shape') from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveInternal #-}
-retrieveInternal :: HasCallStack => NodeID -> ExpressionMap -> Internal
+retrieveInternal :: HasCallStack => NodeID -> ExpressionMap -> Node
 retrieveInternal n mp =
   case IM.lookup n mp of
     Just internal -> internal
@@ -222,7 +222,7 @@ expressionShape (Expression n mp) =
 
 -- | Retrieve the 'Internal' structure (i.e a 'Node' and it's 'Shape') of a 'Expression'
 {-# INLINE expressionInternal #-}
-expressionInternal :: HasCallStack => Expression d et -> Internal
+expressionInternal :: HasCallStack => Expression d et -> Node
 expressionInternal (Expression n mp) =
   case IM.lookup n mp of
     Just internal -> internal
@@ -230,7 +230,7 @@ expressionInternal (Expression n mp) =
 
 -- | Retrieve the root 'Node' a 'Expression'
 {-# INLINE expressionNode #-}
-expressionNode :: HasCallStack => Expression d et -> Node
+expressionNode :: HasCallStack => Expression d et -> Op
 expressionNode (Expression n mp) =
   case IM.lookup n mp of
     Just (_, node) -> node

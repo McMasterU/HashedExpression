@@ -11,7 +11,7 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Graphics.EasyPlot
 import HashedExpression.Internal.Expression
   ( Expression,
-    Node (..),
+    Op (..),
     R,
     Scalar,
     exMap,

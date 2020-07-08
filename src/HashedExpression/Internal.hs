@@ -230,7 +230,7 @@ addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
       elementType elementOutcome = case elementOutcome of
         ElementSpecific et -> et
         _ -> highestElementTypeWithContext contextMp ns
-      node :: Node
+      node :: Op
       node =
         case (nodeOutcome, ns) of
           (OpOne op, [arg]) -> op arg
@@ -285,7 +285,7 @@ data OperationOption
   = -- | application has a normal outcome
     Normal NodeOutcome ShapeOutcome
   | -- | application outcome depends on condition (piecewise function)
-    Condition (ConditionArg -> [BranchArg] -> Node)
+    Condition (ConditionArg -> [BranchArg] -> Op)
 
 -- | Transform an 'OperationOption' to have a specific 'Shape'.
 --   Useful for constructing an 'OperationOption' in conjunction with the 'unary', 'binary' and 'nary' functions that
@@ -306,17 +306,17 @@ hasShape option _ = option
 --   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
 data NodeOutcome
   = -- | Unary Operator, 'ElementType' irrelavent
-    OpOne (Arg -> Node)
+    OpOne (Arg -> Op)
   | -- | Unary Operator, 'ElementType' included
-    OpOneElement (ET -> Arg -> Node) ElementOutcome
+    OpOneElement (ET -> Arg -> Op) ElementOutcome
   | -- | Binary Operator, 'ElementType' irrelavent
-    OpTwo (Arg -> Arg -> Node)
+    OpTwo (Arg -> Arg -> Op)
   | -- | Binary Operator, 'ElementType' included
-    OpTwoElement (ET -> Arg -> Arg -> Node) ElementOutcome
+    OpTwoElement (ET -> Arg -> Arg -> Op) ElementOutcome
   | -- | N-Ary Operator, 'ElementType' irrelavent
-    OpMany (Args -> Node)
+    OpMany (Args -> Op)
   | -- | N-Ary Operator, 'ElementType' included
-    OpManyElement (ET -> Args -> Node) ElementOutcome
+    OpManyElement (ET -> Args -> Op) ElementOutcome
 
 -- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
 --   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
@@ -335,7 +335,7 @@ data ShapeOutcome
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapDefault'
 binary ::
   -- | a constructor of 'Node'
-  (Arg -> Arg -> Node) ->
+  (Arg -> Arg -> Op) ->
   OperationOption -- result
 binary op = Normal (OpTwo op) ShapeDefault
 
@@ -344,7 +344,7 @@ binary op = Normal (OpTwo op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 binaryET ::
   -- | constructor of 'Node'
-  (ET -> Arg -> Arg -> Node) ->
+  (ET -> Arg -> Arg -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -356,7 +356,7 @@ binaryET op elm = Normal (OpTwoElement op elm) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 unary ::
   -- | constructor of 'Node'
-  (Arg -> Node) ->
+  (Arg -> Op) ->
   -- | result
   OperationOption
 unary op = Normal (OpOne op) ShapeDefault
@@ -366,7 +366,7 @@ unary op = Normal (OpOne op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 unaryET ::
   -- | constructor of 'Node'
-  (ET -> Arg -> Node) ->
+  (ET -> Arg -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -378,7 +378,7 @@ unaryET op elm = Normal (OpOneElement op elm) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 nary ::
   -- | constructor of 'Node'
-  (Args -> Node) ->
+  (Args -> Op) ->
   -- | result
   OperationOption
 nary op = Normal (OpMany op) ShapeDefault
@@ -388,7 +388,7 @@ nary op = Normal (OpMany op) ShapeDefault
 --   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
 naryET ::
   -- | constructor of 'Node'
-  (ET -> Args -> Node) ->
+  (ET -> Args -> Op) ->
   -- | specific 'ElementType' or default
   ElementOutcome ->
   -- | result
@@ -397,7 +397,7 @@ naryET op elm = Normal (OpManyElement op elm) ShapeDefault
 
 -- | Construct a 'OperationOption' for a generic piecewise function (of implicit 'ElementType').
 --   A simple alias for the 'Condition' construtor
-conditionAry :: (ConditionArg -> [BranchArg] -> Node) -> OperationOption
+conditionAry :: (ConditionArg -> [BranchArg] -> Op) -> OperationOption
 conditionAry = Condition
 
 -- --------------------------------------------------------------------------------------------------------------------
