@@ -170,7 +170,6 @@ primitive2DC ::
   Gen (Expression '(m, n) C, Vars)
 primitive2DC = liftE2 (+:) <$> primitive2DR @m @n <*> primitive2DR @m @n
 
---type  = 10
 -------------------------------------------------------------------------------
 genScalarR ::
   forall default1D default2D1 default2D2.
@@ -180,12 +179,12 @@ genScalarR ::
 genScalarR size
   | size == 0 = primitiveScalarR
   | otherwise =
-    let sub = genScalarR @default1D @default2D1 @default2D2 (size `div` 10)
-        subC = genScalarC @default1D @default2D1 @default2D2 (size `div` 10)
-        sub1D = gen1DR @default1D @default2D1 @default2D2 (size `div` 10)
-        sub2D = gen2DR @default1D @default2D1 @default2D2 (size `div` 10)
+    let sub = genScalarR @default1D @default2D1 @default2D2 (size `div` 20)
+        subC = genScalarC @default1D @default2D1 @default2D2 (size `div` 20)
+        sub1D = gen1DR @default1D @default2D1 @default2D2 (size `div` 20)
+        sub2D = gen2DR @default1D @default2D1 @default2D2 (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
@@ -218,12 +217,12 @@ genScalarC ::
 genScalarC size
   | size == 0 = primitiveScalarC
   | otherwise =
-    let sub = genScalarC @default1D @default2D1 @default2D2 (size `div` 10)
-        subR = genScalarR @default1D @default2D1 @default2D2 (size `div` 10)
-        sub1D = gen1DC @default1D @default2D1 @default2D2 (size `div` 10)
-        sub2D = gen2DC @default1D @default2D1 @default2D2 (size `div` 10)
+    let sub = genScalarC @default1D @default2D1 @default2D2 (size `div` 20)
+        subR = genScalarR @default1D @default2D1 @default2D2 (size `div` 20)
+        sub1D = gen1DC @default1D @default2D1 @default2D2 (size `div` 20)
+        sub2D = gen2DC @default1D @default2D1 @default2D2 (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
@@ -255,11 +254,11 @@ gen1DR ::
 gen1DR size
   | size == 0 = primitive1DR
   | otherwise =
-    let sub = gen1DR @n @default2D1 @default2D2 (size `div` 10)
-        subC = gen1DC @n @default2D1 @default2D2 (size `div` 10)
-        subScalar = genScalarR @n @default2D1 @default2D2 (size `div` 10)
+    let sub = gen1DR @n @default2D1 @default2D2 (size `div` 20)
+        subC = gen1DC @n @default2D1 @default2D2 (size `div` 20)
+        subScalar = genScalarR @n @default2D1 @default2D2 (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
@@ -295,11 +294,11 @@ gen1DC ::
 gen1DC size
   | size == 0 = primitive1DC
   | otherwise =
-    let sub = gen1DC @n @default2D1 @default2D2 (size `div` 10)
-        subR = gen1DR @n @default2D1 @default2D2 (size `div` 10)
-        subScalar = genScalarC @n @default2D1 @default2D2 (size `div` 10)
+    let sub = gen1DC @n @default2D1 @default2D2 (size `div` 20)
+        subR = gen1DR @n @default2D1 @default2D2 (size `div` 20)
+        subScalar = genScalarC @n @default2D1 @default2D2 (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
@@ -333,11 +332,11 @@ gen2DR ::
 gen2DR size
   | size == 0 = primitive2DR
   | otherwise =
-    let sub = gen2DR @default1D @m @n (size `div` 10)
-        subC = gen2DC @default1D @m @n (size `div` 10)
-        subScalar = genScalarR @default1D @m @n (size `div` 10)
+    let sub = gen2DR @default1D @m @n (size `div` 20)
+        subC = gen2DC @default1D @m @n (size `div` 20)
+        subScalar = genScalarR @default1D @m @n (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
@@ -374,11 +373,11 @@ gen2DC ::
 gen2DC size
   | size == 0 = primitive2DC
   | otherwise =
-    let sub = gen2DC @default1D @m @n (size `div` 10)
-        subR = gen2DR @default1D @m @n (size `div` 10)
-        subScalar = genScalarC @default1D @m @n (size `div` 10)
+    let sub = gen2DC @default1D @m @n (size `div` 20)
+        subR = gen2DR @default1D @m @n (size `div` 20)
+        subScalar = genScalarC @default1D @m @n (size `div` 20)
         fromPiecewise = do
-          numBranches <- elements [2 .. 4]
+          numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary

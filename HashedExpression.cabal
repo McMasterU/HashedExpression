@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 53b87d48a38207d994544e662203067361ddb0f3604b75f976bb73117612dc9d
+-- hash: 75d7c2e25695ec1d37fca70884ac8cff0945e5b787cdd1c1749d53d36c2ec9c6
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -174,10 +174,6 @@ test-suite HashedExpression-test
       Commons
       CSimpleSpec
       InterpSpec
-      NormalizeEval.OneCSpec
-      NormalizeEval.OneRSpec
-      NormalizeEval.ScalarCSpec
-      NormalizeEval.ScalarRSpec
       NormalizeSpec
       ProblemSpec
       StructureSpec

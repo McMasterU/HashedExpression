@@ -5,27 +5,27 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import Prelude hiding (const)
 
-type Default1D = 10
+type Default1D = 4
 
 defaultDim1D = valueFromNat @Default1D
 
-type Default2D1 = 12
+type Default2D1 = 5
 
 default1stDim2D = valueFromNat @Default2D1
 
-type Default2D2 = 13
+type Default2D2 = 6
 
 default2ndDim2D = valueFromNat @Default2D2
 
-type Default3D1 = 10
+type Default3D1 = 5
 
 default1stDim3D = valueFromNat @Default3D1
 
-type Default3D2 = 10
+type Default3D2 = 5
 
 default2ndDim3D = valueFromNat @Default3D2
 
-type Default3D3 = 10
+type Default3D3 = 5
 
 default3rdDim3D = valueFromNat @Default3D3
 
