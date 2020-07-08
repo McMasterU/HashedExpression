@@ -26,15 +26,6 @@ data GenResult
   | -- | Success, write all the necessary files in a given file path
     Success (String -> IO ())
 
--- | The initial state of a code generation
-data CodegenInit
-  = CodegenInit
-      { -- | The ExpressionMap containing the expression to generate
-        codegenExMap :: ExpressionMap,
-        -- FIXME: not sure what this is
-        codegenConsecutiveIDs :: [Int]
-        -- more common options here
-      }
 
 -- | The type class for code generating
 class Codegen configs where

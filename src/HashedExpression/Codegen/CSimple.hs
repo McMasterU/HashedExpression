@@ -88,8 +88,8 @@ elseif condition codes = [[i|else if (#{condition})|]] ++ scoped codes
 else_ :: Code -> Code
 else_ codes = ["else"] ++ scoped codes
 
-initCodegen :: CodegenInit -> CSimpleConfig -> CSimpleCodegen
-initCodegen (CodegenInit mp consecutiveIDs) _ =
+initCodegen :: CSimpleConfig -> ExpressionMap -> [NodeID] -> CSimpleCodegen
+initCodegen _ mp consecutiveIDs =
   CSimpleCodegen
     { cExpressionMap = mp,
       cAddress = addressMap,
@@ -300,7 +300,7 @@ instance Codegen CSimpleConfig where
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
       -------------------------------------------------------------------------------
-      codegen@CSimpleCodegen {..} = initCodegen (CodegenInit expressionMap (map nodeId variables)) config
+      codegen@CSimpleCodegen {..} = initCodegen config expressionMap (map nodeId variables)
       variableOffsets = map (cAddress . nodeId) variables
       partialDerivativeOffsets = map (cAddress . partialDerivativeId) variables
       objectiveOffset = cAddress objectiveId

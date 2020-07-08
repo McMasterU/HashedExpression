@@ -199,9 +199,9 @@ safeUnion = IM.union
 
 -- | Generate a new 'ExpressionMap' with a new root 'Node' and 'NodeID' from a merged 'ExpressionMap' (of arguments)
 addEntryWithContext ::
-  -- | merged map of all
+  -- | The context expression map, use for additional lookup
   ExpressionMap ->
-  -- | TODO Haddock: is this not redundant?
+  -- | The merged expression map of operands
   ExpressionMap ->
   -- | describes how an operators may change 'Dimension' or 'ElementType'
   OperationOption ->
@@ -212,12 +212,16 @@ addEntryWithContext ::
 addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
   let highestShape :: [(ExpressionMap, NodeID)] -> Shape
       highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
+      -------------------------------------------------------------------------------
       highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
       highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
+      -------------------------------------------------------------------------------
       highestElementType :: [(ExpressionMap, NodeID)] -> ET
       highestElementType = maximum . map (uncurry $ flip retrieveElementType)
+      -------------------------------------------------------------------------------
       highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
       highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
+      -------------------------------------------------------------------------------
       shape :: Shape
       shape = case shapeOutcome of
         ShapeSpecific s -> s
@@ -710,7 +714,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
               . sortWith weight
           sortedChildrenDiffs = sortArgs childrenDiffs
        in if oldChildren == map newRootId sortedChildrenDiffs
-            && all (== IM.empty) (map extraEntries sortedChildrenDiffs)
+            && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
             then noChange n
             else
               applyDiff
