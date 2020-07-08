@@ -129,7 +129,6 @@ data Op
   | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
     Neg ET Arg
   | -- | scaling, overloaded via 'VectorSpaceOp'
-    -- TODO Haddock: remove? why?
     Scale ET Arg Arg
   | -- | division operator, wrapped by @Expression d R@
     Div Arg Arg
@@ -174,15 +173,14 @@ data Op
   | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
     Piecewise [Double] ConditionArg [BranchArg]
   | -- | rotate transformation, rotates vector elements by 'RotateAmount'
-    -- TODO Haddock: why real and imag FT??
     Rotate RotateAmount Arg
-  | -- | real fourier transform
+  | -- | real part of fourier transform
     ReFT Arg
-  | -- | imag fourier transform
+  | -- | imag part of fourier transform
     ImFT Arg
-  | -- | real fourier transform, performed twice
+  | -- | real part of fourier transform, performed twice
     TwiceReFT Arg
-  | -- | imag fourier transform, performed twice
+  | -- | imag part of fourier transform, performed twice
     TwiceImFT Arg
   deriving (Show, Eq, Ord)
 

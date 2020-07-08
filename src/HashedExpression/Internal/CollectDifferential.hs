@@ -59,12 +59,12 @@ import qualified Prelude
 --    y*dx + x*dy + 2.0*dx
 --    => (2.0+y)*dx + x*dy
 --   @
---   Preconditions (satisfied by first applying normalizier):
+-- 
+--   Note: after normalize:
 --
 --     * No complex in the input (:+, xRe, xIm)
 --
 --     * Scale is pushed to the outer most layer and real scalars are group together in a product
---   TODO haddock: are these precondtiions not preconditinos because calling normalize first fixes them??
 collectDifferentials :: Expression Scalar Covector -> Expression Scalar Covector
 collectDifferentials = wrap . applyRules . unwrap . normalize
   where

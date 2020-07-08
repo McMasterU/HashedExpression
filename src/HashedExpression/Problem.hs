@@ -60,9 +60,9 @@ data BoxConstraint
       String -- The name of the bound
       (Val, Val) -- (lower, upper)
 
--- | A scalar constraint in an optimization problem
+-- | A scalar constraint in an optimization problem 
+-- is a constraint in a form: LB <= f(variables) <= UB where LB, f(variables), UB are scalar real values 
 --
---   A scalar constraint is... TODO haddock: maybe an explanation of what it is?
 data ScalarConstraint
   = ScalarConstraint
       { -- | The node ID of the constraint

@@ -18,8 +18,8 @@ module HashedExpression.Internal.Node
     retrieveNode,
     retrieveShape,
     expressionElementType,
-    expressionInternal,
     expressionNode,
+    expressionOp,
     expressionShape,
   )
 where
@@ -220,18 +220,18 @@ expressionShape (Expression n mp) =
     Just (dim, _) -> dim
     _ -> error "expression not in map"
 
--- | Retrieve the 'Internal' structure (i.e a 'Node' and it's 'Shape') of a 'Expression'
-{-# INLINE expressionInternal #-}
-expressionInternal :: HasCallStack => Expression d et -> Node
-expressionInternal (Expression n mp) =
+-- | Retrieve the 'Node' 
+{-# INLINE expressionNode #-}
+expressionNode :: HasCallStack => Expression d et -> Node
+expressionNode (Expression n mp) =
   case IM.lookup n mp of
     Just internal -> internal
     _ -> error "expression not in map"
 
--- | Retrieve the root 'Node' a 'Expression'
-{-# INLINE expressionNode #-}
-expressionNode :: HasCallStack => Expression d et -> Op
-expressionNode (Expression n mp) =
+-- | Retrieve the Op of an expression
+{-# INLINE expressionOp #-}
+expressionOp :: HasCallStack => Expression d et -> Op
+expressionOp (Expression n mp) =
   case IM.lookup n mp of
     Just (_, node) -> node
     _ -> error "expression not in map"
