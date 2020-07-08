@@ -52,9 +52,10 @@ module HashedExpression
     -- * Derivatives
     exteriorDerivative,
     derivativeAllVars,
+    prettify
   )
 where
--- TODO export prettify
+import HashedExpression.Prettify
 import HashedExpression.Derivative
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression

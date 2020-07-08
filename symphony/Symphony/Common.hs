@@ -35,14 +35,6 @@ data Context
         consts :: Consts
       }
 
-infixl 8 @>
-
-(@>) :: Maybe a -> Maybe a -> Maybe a
-x @> y =
-  case x of
-    Just _ -> x
-    Nothing -> y
-
 -- | Utils
 getShape :: (ExpressionMap, NodeID) -> HE.Shape
 getShape (mp, n) = HN.retrieveShape n mp
