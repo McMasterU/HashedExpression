@@ -376,8 +376,10 @@ class VectorSpaceOp a b where
 class ComplexRealOp r c | r -> c, c -> r where
   -- | construct complex data from real / imaginary parts
   (+:) :: r -> r -> c
+
   -- | extract real part from complex data
   xRe :: c -> r
+
   -- | extract imaginary part from complex data
   xIm :: c -> r
 

@@ -19,7 +19,6 @@ import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.String.Interpolate as I
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
@@ -30,7 +29,6 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
-import HashedExpression.Prettify (showExp, showExpDebug)
 import HashedExpression.Value
 import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)
