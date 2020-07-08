@@ -1,6 +1,7 @@
 module Symphony.Exp where
 
 import AbsHashedLang
+import Control.Applicative ((<|>))
 import Control.Monad (when)
 import Control.Monad.Except
 import Data.List (intercalate)
@@ -9,9 +10,9 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
+import HashedExpression.Internal
 import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
-import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Internal.Utils as HU
 import qualified HashedExpression.Operation as HO
@@ -65,7 +66,7 @@ constructExp context shapeInfo exp =
           | otherwise -> throwError $ ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
         EIdent (PIdent (idPos, name)) -> retrieveExpFromIdent context (idPos, name)
         EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
-          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
+          let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -81,7 +82,7 @@ constructExp context shapeInfo exp =
           return $ add operand1 operand2
         ERealImag exp1 (TokenReIm (opPos, _)) exp2 -> do
           let inferredShape =
-                inferShape context exp1 @> inferShape context exp2 @> shapeInfo
+                inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -97,14 +98,14 @@ constructExp context shapeInfo exp =
             $ ErrorWithPosition "Numtype of operand 2 is not real" opPos
           return $ reIm operand1 operand2
         ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
-          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
+          let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape operand1 operand2 "Shape mismatched: trying to subtract 2 vectors with different shape" opPos
           checkSameNumType operand1 operand2 "Numtype mismatched: trying to subtract 2 vectors with different numtype" opPos
           return $ add operand1 (scale (HU.aConst [] (-1)) operand2)
         EMul exp1 (TokenMul (opPos, _)) exp2 -> do
-          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
+          let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -119,7 +120,7 @@ constructExp context shapeInfo exp =
             opPos
           return $ multiply operand1 operand2
         EDiv exp1 (TokenDiv (opPos, _)) exp2 -> do
-          let inferredShape = inferShape context exp1 @> inferShape context exp2 @> shapeInfo
+          let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape
@@ -134,7 +135,7 @@ constructExp context shapeInfo exp =
             opPos
           return $ multiply operand1 (app (Power (-1)) operand2)
         EScale exp1 (TokenScale (opPos, _)) exp2 -> do
-          let inferredShape = inferShape context exp1 @> shapeInfo
+          let inferredShape = inferShape context exp1 <|> shapeInfo
           operand1 <- constructExp context (Just []) exp1
           operand2 <- constructExp context inferredShape exp2
           when (getShape operand1 /= [])
@@ -150,7 +151,7 @@ constructExp context shapeInfo exp =
           return $ scale operand1 operand2
         EDot exp1 (TokenDot (opPos, _)) exp2 -> do
           let inferredShape =
-                inferShape context exp1 @> inferShape context exp2
+                inferShape context exp1 <|> inferShape context exp2
           operand1 <- constructExp context inferredShape exp1
           operand2 <- constructExp context inferredShape exp2
           checkSameShape

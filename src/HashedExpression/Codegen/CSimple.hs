@@ -1,14 +1,13 @@
-{-|
-Module      :  HashedExpression.Codegen.CSimple
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module provides a backend for c code generation (the interface being provided by 'HashedExpression.Codegen') that provides no
-parallelization (i.e no threading or SIMD)
--}
+-- |
+-- Module      :  HashedExpression.Codegen.CSimple
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module provides a backend for c code generation (the interface being provided by 'HashedExpression.Codegen') that provides no
+-- parallelization (i.e no threading or SIMD)
 module HashedExpression.Codegen.CSimple where
 
 import Control.Monad (forM_, when)
@@ -27,13 +26,13 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
 import HashedExpression.Embed.FFTW (fftUtils)
+import HashedExpression.Internal (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
 import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, Node (..), NumType, Shape, exMap)
-import HashedExpression.Internal.Inner (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
 import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
-import System.FilePath
 import HashedExpression.Value
+import System.FilePath
 import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
@@ -320,14 +319,14 @@ instance Codegen CSimpleConfig where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      writeVarCodeEach (name,nId) = [
-               [i|for (i = 0; i < #{product shape}; i++){|]
-              ,[i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|]
-              ,"}"
-              ]
+      writeVarCodeEach (name, nId) =
+        [ [i|for (i = 0; i < #{product shape}; i++){|],
+          [i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|],
+          "}"
+        ]
         where
-           offset = cAddress nId
-           shape = retrieveShape nId expressionMap
+          offset = cAddress nId
+          shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       defineStuffs :: Code
       defineStuffs =
@@ -433,13 +432,14 @@ instance Codegen CSimpleConfig where
           ++ ["  srand(time(NULL));"] --
           ++ scoped (concatMap readValCodeEach vs)
           ++ ["}"] --
-      -------------------------------------------------------------------------------
+          -------------------------------------------------------------------------------
       writeVarCodes =
         ["void print_vars() {"]
           ++ [[i|  FILE *fp = fopen("solutions.out","w");|]]
           ++ scoped (["  int i;"] ++ concatMap writeVarCodeEach vs)
-          ++ ["  fclose(fp);"
-             ,"}"]
+          ++ [ "  fclose(fp);",
+               "}"
+             ]
       -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
@@ -460,7 +460,8 @@ instance Codegen CSimpleConfig where
       evaluateScalarConstraintsJacobianCodes =
         ["void evaluate_scalar_constraints_jacobian()"]
           ++ scoped (evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
-      -------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
 
 toShapeString :: Shape -> T.Text
 toShapeString shape

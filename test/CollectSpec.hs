@@ -9,9 +9,9 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Debug.Trace (traceShow)
 import HashedExpression.Derivative
+import HashedExpression.Internal (D_, ET_, topologicalSort, unwrap)
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Inner (D_, ET_, topologicalSort, unwrap)
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils

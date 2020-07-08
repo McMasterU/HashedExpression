@@ -1,36 +1,34 @@
-{-|
-Module      :  HashedExpression.Internal.Pattern
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-Helper functions/instances to make pattern guards involving Expressions easier to read.
-Traditional pattern matching on a 'Expression' is difficult because 'Node' arguments are in hashed form, use this
-data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
-'Transformation', for example
-
-  * Create Patterns
-
- @
-  x = map PHole 1
-  one = PConst 1.0
- @
-  * Create a Substitution
-
- @
-  substitution = x * one |.~~~~~~> x
- @
-
-  * Create a Transformation
-
- @
-  import HashedExpression.Internal.Inner
-  toTransformation $ toRecursive Reorder $ fromSubstitution substitution
- @
--}
-
+-- |
+-- Module      :  HashedExpression.Internal.Pattern
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- Helper functions/instances to make pattern guards involving Expressions easier to read.
+-- Traditional pattern matching on a 'Expression' is difficult because 'Node' arguments are in hashed form, use this
+-- data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
+-- 'Transformation', for example
+--
+--   * Create Patterns
+--
+--  @
+--   x = map PHole 1
+--   one = PConst 1.0
+--  @
+--   * Create a Substitution
+--
+--  @
+--   substitution = x * one |.~~~~~~> x
+--  @
+--
+--   * Create a Transformation
+--
+--  @
+--   import HashedExpression.Internal
+--   toTransformation $ toRecursive Reorder $ fromSubstitution substitution
+--  @
 module HashedExpression.Internal.Pattern
   ( -- * Substitution
     Substitution,
@@ -38,6 +36,7 @@ module HashedExpression.Internal.Pattern
     (~~~~~~>),
     (|.~~~~~~>),
     (|.),
+
     -- * Patterns
     Pattern (..),
     GuardedPattern (..),
@@ -58,6 +57,7 @@ module HashedExpression.Internal.Pattern
     twiceReFT,
     restOfProduct,
     restOfSum,
+
     -- * PatternList
     PatternList (..),
     mapL,
@@ -66,6 +66,7 @@ module HashedExpression.Internal.Pattern
     productP,
     branches,
     piecewise_,
+
     -- * Conditions
     Condition,
     isNot,
@@ -92,8 +93,8 @@ import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
@@ -102,6 +103,7 @@ import Prelude hiding ((^))
 import qualified Prelude
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Substitution
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -113,7 +115,7 @@ type Substitution = (GuardedPattern, Pattern)
 --   to converting a 'Substitution' to a 'Transformation'. For example,
 --
 -- @
---  import HashedExpression.Internal.Inner
+--  import HashedExpression.Internal
 --
 --  subToTrans :: Substitution -> Transformation
 --  subToTrans sub = toTransformation $ toRecursive Reorder $ fromSubstitution sub
@@ -127,30 +129,43 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
 
 -- | Create a 'Substitution' that matches a 'Pattern' (automatically converting into a 'GuardedPattern' that's always true) and
 --   replaces it with another 'Pattern'
-(|.~~~~~~>) :: Pattern -- ^ find match
-            -> Pattern -- ^ replacement
-            -> Substitution -- ^ combined result
+(|.~~~~~~>) ::
+  -- | find match
+  Pattern ->
+  -- | replacement
+  Pattern ->
+  -- | combined result
+  Substitution
 (|.~~~~~~>) pattern replacement =
   (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
 -- | Create a 'Substitution' that matches a 'GuardedPattern' (a 'Pattern' that only matches upon fulfilling a condition) and
 --   replaces it with another 'Pattern'
-(~~~~~~>) :: GuardedPattern -- ^ find a match
-          -> Pattern -- ^ replacement
-          -> Substitution -- ^ combined result
+(~~~~~~>) ::
+  -- | find a match
+  GuardedPattern ->
+  -- | replacement
+  Pattern ->
+  -- | combined result
+  Substitution
 (~~~~~~>) gPattern replacement = (gPattern, replacement)
 
 infix 0 |.~~~~~~>, ~~~~~~>
 
 -- | Turn a 'Pattern' into a 'GuardedPattern' (so it only matches upon fulfilling a condition)
-(|.) :: Pattern -- ^ original pattern
-     -> Condition -- ^ condition to be fulfilled
-     -> GuardedPattern -- ^ combined result
+(|.) ::
+  -- | original pattern
+  Pattern ->
+  -- | condition to be fulfilled
+  Condition ->
+  -- | combined result
+  GuardedPattern
 (|.) pattern condition = GP pattern condition
 
 infixl 1 |.
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Patterns
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -158,46 +173,86 @@ infixl 1 |.
 --   Match any 'Node' to a hole using 'PHole', to distinguish between holes each must be given a unique identifier (i.e 'Capture')
 --   TODO haddock: why do we have some ops wrapping PatternList and the same ops with [Pattern]
 data Pattern
-  = PHole Capture -- ^ hole with a identifier (i.e 'Capture')
-  | PRef NodeID -- ^ direct reference to a node in the expression
-  | PHead PatternList -- ^ reference to the head of a 'PatternList'
-  | PSumList PatternList -- ^ sum via 'PatternList'
-  | PMulList PatternList -- ^ multiply via 'PatternList'
-  | PConst Double -- ^ constant
-  | PScalarConst Double -- ^ scalar Const used in RHS
-  | PSum [Pattern] -- ^ summation operator
-  | PMul [Pattern] -- ^ multiplication operator
-  | PNeg Pattern -- ^ negation operator
-  | PScale Pattern Pattern -- ^ scale a Pattern by another Pattern
-  | PDiv Pattern Pattern -- ^ division
-  | PSqrt Pattern -- ^ square Root operator
-  | PSin Pattern -- ^ sin operator
-  | PCos Pattern -- ^ cos operator
-  | PTan Pattern -- ^ tan operator
-  | PExp Pattern -- ^ exp operator
-  | PLog Pattern -- ^ log operator
-  | PSinh Pattern -- ^ sinh operator
-  | PCosh Pattern -- ^ cosh operator
-  | PTanh Pattern -- ^ tanh operator
-  | PAsin Pattern -- ^ asin operator
-  | PAcos Pattern -- ^ acos operator
-  | PAtan Pattern -- ^ atan operator
-  | PAsinh Pattern -- ^ asinh operator
-  | PAcosh Pattern -- ^ acosh operator
-  | PAtanh Pattern -- ^ atanh operator
-  | PRealImag Pattern Pattern -- ^ pattern inside real and imaginary parts of a complex number
-  | PRealPart Pattern -- ^ pattern that has a real part extraction operator applied to it
-  | PImagPart Pattern -- ^ pattern that has a imaginary part extraction operator applied to it
-  | PInnerProd Pattern Pattern -- ^ pattern that has a inner product operator applied to it
-  | PPiecewise Pattern PatternList -- ^ pattern that has a piecewise
-  | PMulRest Capture [Pattern] -- ^ a hole that is the rest of a multiplication
-  | PSumRest Capture [Pattern] -- ^ a hole taht is the rest of a summation
-  | PPower Pattern PatternPower -- ^ pattern that has a power operator with a 'PatternPower' applied to it
-  | PRotate PatternRotateAmount Pattern -- ^ pattern that has a rotate operator with a 'PatternRotateAmount' applied to it
-  | PReFT Pattern -- ^ pattern that has a real fourier transform applied to it
-  | PImFT Pattern -- ^ pattern that has a imaginary fourier transform applied to it
-  | PTwiceReFT Pattern -- ^ pattern that has a real fourier transform applied to it twice
-  | PTwiceImFT Pattern -- ^ pattern that has a imaginary fourier transform applied to it twice
+  = -- | hole with a identifier (i.e 'Capture')
+    PHole Capture
+  | -- | direct reference to a node in the expression
+    PRef NodeID
+  | -- | reference to the head of a 'PatternList'
+    PHead PatternList
+  | -- | sum via 'PatternList'
+    PSumList PatternList
+  | -- | multiply via 'PatternList'
+    PMulList PatternList
+  | -- | constant
+    PConst Double
+  | -- | scalar Const used in RHS
+    PScalarConst Double
+  | -- | summation operator
+    PSum [Pattern]
+  | -- | multiplication operator
+    PMul [Pattern]
+  | -- | negation operator
+    PNeg Pattern
+  | -- | scale a Pattern by another Pattern
+    PScale Pattern Pattern
+  | -- | division
+    PDiv Pattern Pattern
+  | -- | square Root operator
+    PSqrt Pattern
+  | -- | sin operator
+    PSin Pattern
+  | -- | cos operator
+    PCos Pattern
+  | -- | tan operator
+    PTan Pattern
+  | -- | exp operator
+    PExp Pattern
+  | -- | log operator
+    PLog Pattern
+  | -- | sinh operator
+    PSinh Pattern
+  | -- | cosh operator
+    PCosh Pattern
+  | -- | tanh operator
+    PTanh Pattern
+  | -- | asin operator
+    PAsin Pattern
+  | -- | acos operator
+    PAcos Pattern
+  | -- | atan operator
+    PAtan Pattern
+  | -- | asinh operator
+    PAsinh Pattern
+  | -- | acosh operator
+    PAcosh Pattern
+  | -- | atanh operator
+    PAtanh Pattern
+  | -- | pattern inside real and imaginary parts of a complex number
+    PRealImag Pattern Pattern
+  | -- | pattern that has a real part extraction operator applied to it
+    PRealPart Pattern
+  | -- | pattern that has a imaginary part extraction operator applied to it
+    PImagPart Pattern
+  | -- | pattern that has a inner product operator applied to it
+    PInnerProd Pattern Pattern
+  | -- | pattern that has a piecewise
+    PPiecewise Pattern PatternList
+  | -- | a hole that is the rest of a multiplication
+    PMulRest Capture [Pattern]
+  | -- | a hole taht is the rest of a summation
+    PSumRest Capture [Pattern]
+  | -- | pattern that has a power operator with a 'PatternPower' applied to it
+    PPower Pattern PatternPower
+  | -- | pattern that has a rotate operator with a 'PatternRotateAmount' applied to it
+    PRotate PatternRotateAmount Pattern
+  | -- | pattern that has a real fourier transform applied to it
+    PReFT Pattern
+  | -- | pattern that has a imaginary fourier transform applied to it
+    PImFT Pattern
+  | -- | pattern that has a real fourier transform applied to it twice
+    PTwiceReFT Pattern
+  | -- | pattern that has a imaginary fourier transform applied to it twice
+    PTwiceImFT Pattern
   deriving (Show)
 
 instance Show (Pattern -> Pattern) where
@@ -224,7 +279,6 @@ data PatternRotateAmount
 
 -- | 'Pattern' holes are identified uniquely by a Capture id
 type Capture = Int
-
 
 -- | Pattern that matches to a given Constant (wrapper around 'PConst')
 num :: Double -> Pattern
@@ -275,6 +329,7 @@ restOfSum :: Pattern
 restOfSum = PSumRest 2391 []
 
 infixl 7 ~*
+
 -- | Create holes that are the tail of a series of multiplications
 class MulRestOp a b c | a b -> c where
   (~*) :: a -> b -> c
@@ -283,6 +338,7 @@ instance MulRestOp Pattern Pattern Pattern where
   (~*) (PMulRest listCapture ps) p = PMulRest listCapture (ps ++ [p])
 
 infixl 6 ~+
+
 -- | Create holes that are the tail of a series of summation
 class SumRestOp a b c | a b -> c where
   (~+) :: a -> b -> c
@@ -337,7 +393,6 @@ instance PowerOp Pattern PatternPower where
 instance RotateOp PatternRotateAmount Pattern where
   rotate = PRotate
 
-
 instance Num PatternPower where
   (+) = PPowerMul
   (*) = PPowerMul
@@ -347,6 +402,7 @@ instance Num PatternRotateAmount where
   negate = PRotateAmountNegate
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * PatternList
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -381,6 +437,7 @@ branches :: PatternList
 branches = PListHole id 2
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Conditions
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -388,6 +445,7 @@ branches = PListHole id 2
 type Condition = (ExpressionMap, NodeID) -> Match -> Bool
 
 infixl 8 &&.
+
 infixl 8 ||.
 
 -- | 'Condition' combinator, Logical Or
@@ -484,8 +542,8 @@ sameAmount pra1 pra2 exp match =
       rotateAmount2 = buildFromPatternRotateAmount match pra2
    in rotateAmount1 == rotateAmount2
 
-
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Matching Internals
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -498,10 +556,15 @@ sameAmount pra1 pra2 exp match =
 --   matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
 -- @
 -- TODO haddock: the capture is always minBound??? this has to be an issue
-matchList :: ExpressionMap -- ^ from base 'Expression'
-          -> [Int] -- ^ TODO haddock: should be NodeID??
-          -> PatternList -- ^ patterns to match to?
-          -> Maybe Match -- ^ potentially a 'Match' with a filled 'listCapturesMap' attribute
+matchList ::
+  -- | from base 'Expression'
+  ExpressionMap ->
+  -- | TODO haddock: should be NodeID??
+  [Int] ->
+  -- | patterns to match to?
+  PatternList ->
+  -- | potentially a 'Match' with a filled 'listCapturesMap' attribute
+  Maybe Match
 matchList mp ns (PListHole fs listCapture)
   | all isJust maybeSubMatches,
     let subMatches = catMaybes maybeSubMatches,
@@ -531,10 +594,14 @@ type PowerValue = Int
 --   a pattern. For example, 'PHole' wraps a 'Int' identifier, so we need a 'Map' that associates those identifiers to 'NodeID'
 data Match
   = Match
-      { capturesMap :: Map Capture NodeID, -- ^ Associates 'PHole' identifiers to corresponding matched 'NodeID'
-        listCapturesMap :: Map Capture [NodeID], -- ^ Associates 'PListHole' identifiers to corresponding matched 'NodeID'
-        powerCapturesMap :: Map Capture PowerValue, -- ^ Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
-        rotateAmountCapturesMap :: Map Capture RotateAmount -- ^ Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+      { -- | Associates 'PHole' identifiers to corresponding matched 'NodeID'
+        capturesMap :: Map Capture NodeID,
+        -- | Associates 'PListHole' identifiers to corresponding matched 'NodeID'
+        listCapturesMap :: Map Capture [NodeID],
+        -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+        powerCapturesMap :: Map Capture PowerValue,
+        -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+        rotateAmountCapturesMap :: Map Capture RotateAmount
       }
   deriving (Show)
 

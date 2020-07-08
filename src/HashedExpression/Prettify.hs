@@ -1,14 +1,13 @@
-{-|
-Module      :  HashedExpression.Prettify
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module contains functionality for printing an 'Expression' in a readable (i.e pretty) format. This can be very
-useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
--}
+-- |
+-- Module      :  HashedExpression.Prettify
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module contains functionality for printing an 'Expression' in a readable (i.e pretty) format. This can be very
+-- useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
 module HashedExpression.Prettify
   ( prettify,
     prettifyDebug,
@@ -97,9 +96,13 @@ debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
 
 -- | auxillary function for computing pretty format of an 'Expression'
-hiddenPrettify :: Bool -- ^ retain syntactically valid (for use in ghci)
-               -> (ExpressionMap, NodeID) -- ^ (unwrapped) expression to be prettified
-               -> T.Text -- ^ resulting "pretty" expression
+hiddenPrettify ::
+  -- | retain syntactically valid (for use in ghci)
+  Bool ->
+  -- | (unwrapped) expression to be prettified
+  (ExpressionMap, NodeID) ->
+  -- | resulting "pretty" expression
+  T.Text
 hiddenPrettify pastable (mp, n) =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]

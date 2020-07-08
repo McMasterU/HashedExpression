@@ -9,14 +9,14 @@ import Control.Monad (replicateM_)
 import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Inner
+import HashedExpression.Internal
   ( D_,
     ET_,
     topologicalSort,
     topologicalSortManyRoots,
     unwrap,
   )
+import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils

@@ -1,25 +1,23 @@
-{-|
-Module      :  HashedExpression
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module exports everything needed to build and evaluate HashedExpressions;
-including all HashedExpression operators, derivative functions, eval methods
-and normalization. For example,
-
-@
- x = variable "x"
- y = variable "y"
- expr = x + y
-@
-
-the above code creates a simple HashedExpression using the
-'variable' constructor method and taking advantage of the 'Num' class instance
-
--}
+-- |
+-- Module      :  HashedExpression
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module exports everything needed to build and evaluate HashedExpressions;
+-- including all HashedExpression operators, derivative functions, eval methods
+-- and normalization. For example,
+--
+-- @
+--  x = variable "x"
+--  y = variable "y"
+--  expr = x + y
+-- @
+--
+-- the above code creates a simple HashedExpression using the
+-- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
   ( -- * Expression Constructors
     Expression,
@@ -35,6 +33,7 @@ module HashedExpression
     ComplexRealOp (..),
     RotateOp (..),
     InnerProductSpaceOp (..),
+
     -- * Combinators
     constant,
     constant1D,
@@ -47,18 +46,22 @@ module HashedExpression
     sum,
     product,
     normalize,
+
     -- * Evaluation
     Evaluable (..),
+
     -- * Derivatives
     exteriorDerivative,
     derivativeAllVars,
+    prettify,
   )
 where
--- TODO export prettify
+
 import HashedExpression.Derivative
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Normalize
 import HashedExpression.Interp
 import HashedExpression.Operation
+import HashedExpression.Prettify
 import Prelude hiding ((^))

@@ -24,8 +24,8 @@ import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed.FFTW
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding (InnerProductSpaceOp (..))
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils

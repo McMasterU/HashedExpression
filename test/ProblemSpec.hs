@@ -25,9 +25,9 @@ import qualified Data.Text.IO as TIO
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Derivative
+import HashedExpression.Internal
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils

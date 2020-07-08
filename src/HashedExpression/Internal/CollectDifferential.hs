@@ -1,15 +1,13 @@
-{-|
-Module      :  HashedExpression.Internal.CollectDifferential
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module exists solely to factor terms around their differentials. When properly factored, the term multiplying
-a differential (say dx) is it's corresponding parital derivative (i.e derivative w.r.t x)
--}
-
+-- |
+-- Module      :  HashedExpression.Internal.CollectDifferential
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module exists solely to factor terms around their differentials. When properly factored, the term multiplying
+-- a differential (say dx) is it's corresponding parital derivative (i.e derivative w.r.t x)
 module HashedExpression.Internal.CollectDifferential
   ( collectDifferentials,
   )
@@ -32,9 +30,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Pattern
@@ -51,7 +49,7 @@ import qualified Prelude
 [amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
 
 -- | Predefined holes used for pattern matching with 'PListHole'
-[xs,ys] = map (PListHole id) [1,2]
+[xs, ys] = map (PListHole id) [1, 2]
 
 -- | Factors terms around differentials. When computing derivatives with 'exteriorDerivative', differential operators are
 --   dispersed among the expression as computed, to determine the parital derivatives you need to collect like terms.

@@ -1,15 +1,13 @@
-{-|
-Module      :  HashedExpression.Internal.Node
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
-Node, returning a Node's arguments, returning a Node's shape, etc
--}
-
+-- |
+-- Module      :  HashedExpression.Internal.Node
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
+-- Node, returning a Node's arguments, returning a Node's shape, etc
 module HashedExpression.Internal.Node
   ( nodeElementType,
     nodeTypeWeight,
@@ -32,10 +30,14 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
 -- | Compute the ElementType (i.e 'R','C','Covector') of a 'Node' (requires the base 'ExpressionMap' as context)
-nodeElementType :: HasCallStack
-                => Node -- ^ Node to find the ElementType of
-                -> ExpressionMap -- ^ base Expression containing the Node
-                -> ET -- ^ resulting ElementType
+nodeElementType ::
+  HasCallStack =>
+  -- | Node to find the ElementType of
+  Node ->
+  -- | base Expression containing the Node
+  ExpressionMap ->
+  -- | resulting ElementType
+  ET
 nodeElementType node mp =
   case node of
     Var _ -> R
