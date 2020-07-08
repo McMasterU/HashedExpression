@@ -7,9 +7,9 @@ import Data.List (intercalate)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import HashedExpression.Internal
 import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
-import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Operation as HO
 import qualified HashedExpression.Value as HV

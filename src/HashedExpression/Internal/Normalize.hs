@@ -1,16 +1,15 @@
-{-|
-Module      :  HashedExpression.Internal.Normalize
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module contains functionality for normalizing an 'Expression' using a variety of rewrite rules designed primarily to simplify and
-reduce computation when evaluating. Currently there is no proof of confluence, however confluence is suspected
-
-TODO haddock: should we summerize rewrite rules here???
--}
+-- |
+-- Module      :  HashedExpression.Internal.Normalize
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module contains functionality for normalizing an 'Expression' using a variety of rewrite rules designed primarily to simplify and
+-- reduce computation when evaluating. Currently there is no proof of confluence, however confluence is suspected
+--
+-- TODO haddock: should we summerize rewrite rules here???
 module HashedExpression.Internal.Normalize
   ( normalize,
     normalizingTransformation,
@@ -41,9 +40,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Utils
@@ -62,7 +61,7 @@ import qualified Prelude
 [amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
 
 -- | Predefined holes used for pattern matching with 'PListHole'
-[xs,ys] = map (PListHole id) [1,2]
+[xs, ys] = map (PListHole id) [1, 2]
 
 -- | Constant pattern x ^ 1
 powerOne :: PatternPower

@@ -1,16 +1,14 @@
-{-|
-Module      :  HashedExpression.Internal.Hash
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-Every 'NodeID' in a 'ExpressionMap' is computed using a generated hash value. This module contains all the funcitonality necessary to compute
-hash values and check for collisions. Currently, we use a String Hashing based algorithm for our hash function, for details see here
- https://cp-algorithms.com/string/string-hashing.html
--}
-
+-- |
+-- Module      :  HashedExpression.Internal.Hash
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- Every 'NodeID' in a 'ExpressionMap' is computed using a generated hash value. This module contains all the funcitonality necessary to compute
+-- hash values and check for collisions. Currently, we use a String Hashing based algorithm for our hash function, for details see here
+--  https://cp-algorithms.com/string/string-hashing.html
 module HashedExpression.Internal.Hash
   ( hash,
     addInternal,
@@ -109,9 +107,12 @@ hash (shape, node) =
 
 -- | Check the outcome of a generated hash value
 data HashOutcome
-  = IsClash  -- ^ clashes with an old hash
-  | IsDuplicate Int -- ^ duplicate of a hash (able to reuse)
-  | IsNew Int -- ^ new hash value
+  = -- | clashes with an old hash
+    IsClash
+  | -- | duplicate of a hash (able to reuse)
+    IsDuplicate Int
+  | -- | new hash value
+    IsNew Int
   deriving (Eq, Show, Ord)
 
 hashOutcome :: ExpressionMap -> Internal -> Int -> HashOutcome

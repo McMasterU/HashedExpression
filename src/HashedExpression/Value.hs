@@ -1,19 +1,18 @@
-{-|
-Module      :  HashedExpression.Value
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module contains functionality for defining values to be subbed into a 'Expression'. An 'Expression' is provided values via a 'ValMap',
-which should be constructed like any other 'Map', for example
-
-@
- valMap = fromList [("x",v1),("y",v2),....]
-@
-where @"x","y"@ are variable identifiers and @v1,v2@ are of type 'Val'
--}
+-- |
+-- Module      :  HashedExpression.Value
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module contains functionality for defining values to be subbed into a 'Expression'. An 'Expression' is provided values via a 'ValMap',
+-- which should be constructed like any other 'Map', for example
+--
+-- @
+--  valMap = fromList [("x",v1),("y",v2),....]
+-- @
+-- where @"x","y"@ are variable identifiers and @v1,v2@ are of type 'Val'
 module HashedExpression.Value where
 
 import Data.Array

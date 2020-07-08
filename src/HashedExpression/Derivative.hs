@@ -1,27 +1,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-|
-Module      :  HashedExpression.Derivative
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module contains all the functionality needed to symbolically compute the derivatives of a 'Expression'. Deriviatives are computed using
-Exterior Differential Calculus, a coordinate-independent system of understanding differential systems. There are strong parallels with the
-development of algebraic data types and pure functions to tame the complexity and bring transparency to programming. Differential terms
-reprented by 'dVar' (dx,dy, etc) often seen as placeholders in calculus are given meaning, resulting in simple algebriac rules to performing
-implicit differentiation.
-
-Computing an exterior derivative on an expression @Expression d R@ will result in a @Expression d Covector@, i.e a 'Covector' field
-(also known as 1-form). This will contain 'dVar' terms representing where implicit differentiation has occurred. See 'CollectDifferential'
-to factor like terms for producing partial derivatives
-
-
-TODO haddock: do we also sdupport reverse AD?? where??
--}
-
+-- |
+-- Module      :  HashedExpression.Derivative
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module contains all the functionality needed to symbolically compute the derivatives of a 'Expression'. Deriviatives are computed using
+-- Exterior Differential Calculus, a coordinate-independent system of understanding differential systems. There are strong parallels with the
+-- development of algebraic data types and pure functions to tame the complexity and bring transparency to programming. Differential terms
+-- reprented by 'dVar' (dx,dy, etc) often seen as placeholders in calculus are given meaning, resulting in simple algebriac rules to performing
+-- implicit differentiation.
+--
+-- Computing an exterior derivative on an expression @Expression d R@ will result in a @Expression d Covector@, i.e a 'Covector' field
+-- (also known as 1-form). This will contain 'dVar' terms representing where implicit differentiation has occurred. See 'CollectDifferential'
+-- to factor like terms for producing partial derivatives
+--
+--
+-- TODO haddock: do we also sdupport reverse AD?? where??
 module HashedExpression.Derivative
   ( exteriorDerivative,
     derivativeAllVars,
@@ -33,6 +31,7 @@ import Data.List.HT (removeEach)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding
   ( (*),
     (+),
@@ -42,7 +41,6 @@ import HashedExpression.Internal.Expression hiding
     negate,
   )
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
@@ -59,22 +57,24 @@ import Prelude hiding ((^))
 --
 --  Note: the partial derivatives are the terms scaling the differential variables (i.e 'DVar',dx,dy,etc), however you may need to factor them
 --  first using 'collectDifferentials'
-exteriorDerivative :: (DimensionType d) =>
-                      -- | Variable Identifiers to take derivative w.r.t
-                      Set String ->
-                      -- | Expression to take derivative on
-                      Expression d R ->
-                      -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
-                      Expression d Covector
+exteriorDerivative ::
+  (DimensionType d) =>
+  -- | Variable Identifiers to take derivative w.r.t
+  Set String ->
+  -- | Expression to take derivative on
+  Expression d R ->
+  -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
+  Expression d Covector
 exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 
 -- | Same as 'exteriorDerivative' except automatically perform derivative w.r.t all variables. Since derivatives are computed symbolically using
 --   exterior algebra, derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field.
-derivativeAllVars :: DimensionType d =>
-                     -- | Expression to take derivative on
-                     Expression d R ->
-                      -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
-                     Expression d Covector
+derivativeAllVars ::
+  DimensionType d =>
+  -- | Expression to take derivative on
+  Expression d R ->
+  -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
+  Expression d Covector
 derivativeAllVars expr =
   exteriorDerivative (Set.fromList . map fst $ expressionVarNodes expr) expr
 

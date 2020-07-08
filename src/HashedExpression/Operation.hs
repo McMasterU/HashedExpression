@@ -1,17 +1,16 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-{-|
-Module      :  HashedExpression.Operation
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module overloads and redefines operations to use with expressions,
-defining additional operations as necessary as well as providing the means
-to create multidimensional constants and variables
--}
+-- |
+-- Module      :  HashedExpression.Operation
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module overloads and redefines operations to use with expressions,
+-- defining additional operations as necessary as well as providing the means
+-- to create multidimensional constants and variables
 module HashedExpression.Operation where
 
 import Data.Array
@@ -21,15 +20,14 @@ import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, natVal)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding ((*), (+), (-), NumOp (..))
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Inner
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
-  -- | This is the power method
   (^) :: Expression d et -> Int -> Expression d et
   (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
 
@@ -46,21 +44,17 @@ fromDouble value = Expression h (fromList [(h, node)])
 
 -- | Basic operations on Num class expressions with dimension constraint `d`
 instance ToShape d => Num (Expression d R) where
-  -- | Sum two expressions iff they have the same dimension
   e1 + e2 =
     let op = naryET Sum ElementDefault `hasShape` expressionShape e1
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  -- | Multiply two expressions iff they have the same dimension
   e1 * e2 =
     let op = naryET Mul ElementDefault `hasShape` expressionShape e1
      in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  -- | Unary minus applied to an expression
   negate =
     let op = unaryET Neg ElementDefault
      in applyUnary $ unaryET Neg ElementDefault
-  -- | Integer to real-number expression
+
   fromInteger val = fromDouble $ fromIntegral val
-  -- | Absolute value of expression
   abs = error "TODO: abs"
   signum = error "Not applicable to tensor"
 
@@ -71,11 +65,8 @@ instance ToShape d => Num (Expression d R) where
 --    let e2 = (fromRational 12) :: Expression Scalar R
 --    e1 / e2
 -- @
-
 instance ToShape d => Fractional (Expression d R) where
-  -- | Divide two compatible expressions of dimension `d`
   e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
-  -- | Rational number to Fractional expression
   fromRational r = fromDouble $ fromRational r
 
 -- | Represent common functions for real-number floating-point expressions with dimension constraint `d`
@@ -165,7 +156,6 @@ instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression
 --   xIm exp
 --  @
 instance (DimensionType d) => ComplexRealOp (Expression d R) (Expression d C) where
-
   (+:) :: Expression d R -> Expression d R -> Expression d C
   (+:) e1 e2 =
     let op = binary RealImag

@@ -23,9 +23,9 @@ import Data.Tuple.HT (fst3)
 import ErrM
 import HashedExpression.Codegen
 import qualified HashedExpression.Codegen.CSimple as CSimple
+import HashedExpression.Internal
 import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, Node (..), NodeID)
-import HashedExpression.Internal.Inner
 import qualified HashedExpression.Internal.Node as HN
 import HashedExpression.Internal.Utils
 import qualified HashedExpression.Operation as HO

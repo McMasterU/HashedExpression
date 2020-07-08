@@ -1,14 +1,13 @@
-{-|
-Module      :  HashedExpression.Codegen
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-This module provides the interface for performing c code generation. Use this is conjunction with a backend
-(like 'HashedExpression.Codegen.CSimple'), which will provide a corresponding instance for the 'Codegen' class
--}
+-- |
+-- Module      :  HashedExpression.Codegen
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This module provides the interface for performing c code generation. Use this is conjunction with a backend
+-- (like 'HashedExpression.Codegen.CSimple'), which will provide a corresponding instance for the 'Codegen' class
 module HashedExpression.Codegen where
 
 import Data.Text (Text)

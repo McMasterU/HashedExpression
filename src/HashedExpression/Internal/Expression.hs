@@ -1,19 +1,18 @@
 {-# LANGUAGE ConstraintKinds #-}
 
-{-|
-Module      :  HashedExpression.Internal.Expression
-Copyright   :  (c) OCA 2020
-License     :  MIT (see the LICENSE file)
-Maintainer  :  anandc@mcmaster.ca
-Stability   :  provisional
-Portability :  unportable
-
-The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
-constructing the Expression type.
--}
-
+-- |
+-- Module      :  HashedExpression.Internal.Expression
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
+-- constructing the Expression type.
 module HashedExpression.Internal.Expression
   ( -- * Expression Type
+
     -- | The Expression data structure is collection of 'Node', where
     --   each 'Node' is either an atomic value like variables and constants or
     --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
@@ -27,7 +26,9 @@ module HashedExpression.Internal.Expression
     Args,
     BranchArg,
     ConditionArg,
+
     -- * Expression Element Types
+
     -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
     --   can be numeric values (i.e real or complex values), or a covector object
     --   (used to perform exterior differentiation)
@@ -37,7 +38,9 @@ module HashedExpression.Internal.Expression
     ElementType,
     NumType,
     Covector,
+
     -- * Expression Dimensions
+
     -- | The following types and classes are used to contrain and inquire about
     --   vector dimensions of Expressions
     Dimension,
@@ -47,7 +50,9 @@ module HashedExpression.Internal.Expression
     DimensionType,
     VectorSpace,
     InnerProductSpace,
+
     -- * Generic Combinators
+
     -- | The following classes define 'Expression' operators that can be overloaded to directly
     --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
     PowerOp (..),
@@ -71,9 +76,9 @@ import GHC.TypeLits (KnownNat, Nat, natVal)
 import Prelude hiding ((^))
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Expression Type
 -- --------------------------------------------------------------------------------------------------------------------
-
 
 -- | The bulk of an 'Expression' is a collection of 'Node' (with their dimensions), in
 --   a Map indexed 'NodeID' (a generated hash value)
@@ -96,11 +101,12 @@ type NodeID = Int
 --    variable "x" :: Expression Scalar R
 --    constant1D @10 1 :: Expression 10 R
 -- @
---
 data Expression d et
   = Expression
-      { exRootID ::Int, -- ^ index to the topological root of ExpressionMap
-        exMap :: ExpressionMap -- ^ Map of all 'Node' indexable by 'NodeID'
+      { -- | index to the topological root of ExpressionMap
+        exRootID :: Int,
+        -- | Map of all 'Node' indexable by 'NodeID'
+        exMap :: ExpressionMap
       }
   deriving (Show, Eq, Ord, Typeable)
 
@@ -109,42 +115,76 @@ type role Expression nominal nominal
 -- | The Node type provides constructors for variables, constants and operators used to create expressions.
 --   The 'ExpressionMap' that is the content of an 'Expression' is a map from 'NodeID' to 'Node'
 data Node
-  = Var String -- ^ variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
-  | DVar String -- ^ differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
-  | Const Double -- ^ constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
-  | Sum ET Args -- ^ element-wise sum
-  | Mul ET Args -- ^ multiply, overloaded via 'Dimension'
-  | Power Int Arg -- ^ power to, overloaded via 'PowerOp'
-  | Neg ET Arg -- ^ negation, wrapped byf @Expression d R@ or @Expression d C@
-  | Scale ET Arg Arg -- ^ scaling, overloaded via 'VectorSpaceOp'
-  -- TODO Haddock: remove? why?
-  | Div Arg Arg -- ^ division operator, wrapped by @Expression d R@
-  | Sqrt Arg -- ^ square root operator, wrapped by @Expression d R@
-  | Sin Arg -- ^ sin operator, wrapped by @Expression d R@
-  | Cos Arg -- ^ cos operator, wrapped by @Expression d R@
-  | Tan Arg -- ^ tan operator, wrapped by @Expression d R@
-  | Exp Arg -- ^ exp operator, wrapped by @Expression d R@
-  | Log Arg -- ^ log operator, wrapped by @Expression d R@
-  | Sinh Arg -- ^ sinh operator, wrapped by @Expression d R@
-  | Cosh Arg -- ^ cosh operator, wrapped by @Expression d R@
-  | Tanh Arg -- ^ tanh operator, wrapped by @Expression d R@
-  | Asin Arg -- ^ asin operator, wrapped by @Expression d R@
-  | Acos Arg -- ^ acos operator, wrapped by @Expression d R@
-  | Atan Arg -- ^ atan operator, wrapped by @Expression d R@
-  | Asinh Arg -- ^ asinh operator, wrapped by @Expression d R@
-  | Acosh Arg -- ^ acosh operator, wrapped by @Expression d R@
-  | Atanh Arg -- ^ atanh operator, wrapped by @Expression d R@
-  | RealImag Arg Arg -- ^ construct a complex value from real and imagine parts, respectively, wrapped by @Expression d C@
-  | RealPart Arg -- ^ extract real from complex (transforms @Expression d C@ to @Expression d R@)
-  | ImagPart Arg -- ^ extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
-  | InnerProd ET Arg Arg -- ^ inner product operator, overload via 'InnerProductSpace'
-  | Piecewise [Double] ConditionArg [BranchArg] -- ^ piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
-  | Rotate RotateAmount Arg -- ^ rotate transformation, rotates vector elements by 'RotateAmount'
-  -- TODO Haddock: why real and imag FT??
-  | ReFT Arg -- ^ real fourier transform
-  | ImFT Arg -- ^ imag fourier transform
-  | TwiceReFT Arg -- ^ real fourier transform, performed twice
-  | TwiceImFT Arg -- ^ imag fourier transform, performed twice
+  = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
+    Var String
+  | -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
+    DVar String
+  | -- | constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
+    Const Double
+  | -- | element-wise sum
+    Sum ET Args
+  | -- | multiply, overloaded via 'Dimension'
+    Mul ET Args
+  | -- | power to, overloaded via 'PowerOp'
+    Power Int Arg
+  | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
+    Neg ET Arg
+  | -- | scaling, overloaded via 'VectorSpaceOp'
+    -- TODO Haddock: remove? why?
+    Scale ET Arg Arg
+  | -- | division operator, wrapped by @Expression d R@
+    Div Arg Arg
+  | -- | square root operator, wrapped by @Expression d R@
+    Sqrt Arg
+  | -- | sin operator, wrapped by @Expression d R@
+    Sin Arg
+  | -- | cos operator, wrapped by @Expression d R@
+    Cos Arg
+  | -- | tan operator, wrapped by @Expression d R@
+    Tan Arg
+  | -- | exp operator, wrapped by @Expression d R@
+    Exp Arg
+  | -- | log operator, wrapped by @Expression d R@
+    Log Arg
+  | -- | sinh operator, wrapped by @Expression d R@
+    Sinh Arg
+  | -- | cosh operator, wrapped by @Expression d R@
+    Cosh Arg
+  | -- | tanh operator, wrapped by @Expression d R@
+    Tanh Arg
+  | -- | asin operator, wrapped by @Expression d R@
+    Asin Arg
+  | -- | acos operator, wrapped by @Expression d R@
+    Acos Arg
+  | -- | atan operator, wrapped by @Expression d R@
+    Atan Arg
+  | -- | asinh operator, wrapped by @Expression d R@
+    Asinh Arg
+  | -- | acosh operator, wrapped by @Expression d R@
+    Acosh Arg
+  | -- | atanh operator, wrapped by @Expression d R@
+    Atanh Arg
+  | -- | construct a complex value from real and imagine parts, respectively, wrapped by @Expression d C@
+    RealImag Arg Arg
+  | -- | extract real from complex (transforms @Expression d C@ to @Expression d R@)
+    RealPart Arg
+  | -- | extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
+    ImagPart Arg
+  | -- | inner product operator, overload via 'InnerProductSpace'
+    InnerProd ET Arg Arg
+  | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
+    Piecewise [Double] ConditionArg [BranchArg]
+  | -- | rotate transformation, rotates vector elements by 'RotateAmount'
+    -- TODO Haddock: why real and imag FT??
+    Rotate RotateAmount Arg
+  | -- | real fourier transform
+    ReFT Arg
+  | -- | imag fourier transform
+    ImFT Arg
+  | -- | real fourier transform, performed twice
+    TwiceReFT Arg
+  | -- | imag fourier transform, performed twice
+    TwiceImFT Arg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -161,17 +201,20 @@ type ConditionArg = NodeID
 --   of a 'ConditionArg' expression
 type BranchArg = NodeID
 
-
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Expression Element Types
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
 --   Represents Real, Complex, and Covector values with R, C, Covector respectively
 data ET
-  = R  -- ^ Real Elements
-  | C  -- ^ Complex Elements
-  | Covector -- ^ Covector (contains 'DVar' operator) Elements
+  = -- | Real Elements
+    R
+  | -- | Complex Elements
+    C
+  | -- | Covector (contains 'DVar' operator) Elements
+    Covector
   deriving (Show, Eq, Ord)
 
 -- | Type representation of 'ElementType' for Real values
@@ -189,7 +232,6 @@ data C
 data Covector
   deriving (ElementType, Typeable)
 
-
 -- | Class used to constrain 'Expression' operations by the type of element
 --   (i.e Real, Complex or Covector). See 'ET' for the corresponding data representation.
 class ElementType et
@@ -199,6 +241,7 @@ class ElementType et
 class ElementType et => NumType et
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Expression Dimensions
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -312,6 +355,7 @@ type Shape = [Int]
 type RotateAmount = [Int]
 
 -- --------------------------------------------------------------------------------------------------------------------
+
 -- * Generic Combinators
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -319,7 +363,6 @@ type RotateAmount = [Int]
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class PowerOp a b | a -> b where
   (^) :: a -> b -> a
-
 
 -- | Interface for scaling (i.e vector scaling) combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
@@ -331,9 +374,12 @@ class VectorSpaceOp a b where
 -- | Interface for complex combinators for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class ComplexRealOp r c | r -> c, c -> r where
-  (+:) :: r -> r -> c -- ^ construct complex data from real / imaginary parts
-  xRe :: c -> r -- ^ extract real part from complex data
-  xIm :: c -> r -- ^ extract imaginary part from complex data
+  -- | construct complex data from real / imaginary parts
+  (+:) :: r -> r -> c
+  -- | extract real part from complex data
+  xRe :: c -> r
+  -- | extract imaginary part from complex data
+  xIm :: c -> r
 
 -- | Interface for Inner Product combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
@@ -360,4 +406,3 @@ infixl 6 +:
 infixl 8 *., `scale`, <.>
 
 infixl 8 ^
-
