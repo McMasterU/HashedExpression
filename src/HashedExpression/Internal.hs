@@ -447,7 +447,7 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
     topoOrder = topologicalSort exp
     f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
     f diffs nId =
-      let children = nodeArgs $ retrieveNode nId mp
+      let children = opArgs $ retrieveOp nId mp
           childrenDiffs = map (fromJust . flip IM.lookup diffs) children
           nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
           newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
@@ -694,8 +694,8 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
       TwiceReFT _ -> combine (unary TwiceReFT)
       TwiceImFT _ -> combine (unary TwiceImFT)
   where
-    (oldShape, oldNode) = retrieveInternal n contextMp
-    oldChildren = nodeArgs oldNode
+    (oldShape, oldNode) = retrieveNode n contextMp
+    oldChildren = opArgs oldNode
     newChildren = map newRootId childrenDiffs
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     combine option =
@@ -706,7 +706,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
             | Just (_, node) <-
                 IM.lookup (newRootId diff) combinedExtraEntries =
               node
-          nodeType diff1 diff2 = sameNodeType (getNode diff1) (getNode diff2)
+          nodeType diff1 diff2 = sameOp (getNode diff1) (getNode diff2)
           weight diff = nodeTypeWeight $ getNode diff
           sortArgs =
             concatMap (sortWith newRootId)
@@ -748,7 +748,7 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     toPos nId = fromJust $ IM.lookup nId n2Pos
     len = IM.size n2Pos
-    adj nId = nodeArgs $ retrieveNode nId mp
+    adj nId = opArgs $ retrieveOp nId mp
     topoOrder =
       runSTUArray $ do
         marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
@@ -774,7 +774,7 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
     collect nId
-      | Var varName <- retrieveNode nId mp = Just (varName, nId)
+      | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
@@ -782,7 +782,7 @@ varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
   where
     collect nId
-      | Var varName <- retrieveNode nId mp = Just (varName, nId)
+      | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation

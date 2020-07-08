@@ -103,7 +103,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
     hiddenDerivative' :: Expression d R -> Expression d Covector
     hiddenDerivative' = hiddenDerivative vars
     exteriorDerivative' = exteriorDerivative vars
-    (shape, node) = retrieveInternal n mp
+    (shape, node) = retrieveNode n mp
     one = constWithShape @D_ shape 1
     dOne nId = unwrap . hiddenDerivative' $ Expression nId mp
     -- d(g(x)) = g(d(x))

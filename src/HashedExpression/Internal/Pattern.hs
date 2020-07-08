@@ -481,7 +481,7 @@ isDVar :: Pattern -> Condition
 isDVar p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in case retrieveNode newRootId (IM.union extraEntries originMp) of
+   in case retrieveOp newRootId (IM.union extraEntries originMp) of
         DVar _ -> True
         _ -> False
 
@@ -490,7 +490,7 @@ isConst :: Pattern -> Condition
 isConst p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in case retrieveNode newRootId (IM.union extraEntries originMp) of
+   in case retrieveOp newRootId (IM.union extraEntries originMp) of
         Const _ -> True
         _ -> False
 
@@ -632,7 +632,7 @@ match (mp, n) outerWH =
           all isJust subMatches =
           Just . catMatch . catMaybes $ subMatches
         | otherwise = Nothing
-   in case (retrieveNode n mp, outerWH) of
+   in case (retrieveOp n mp, outerWH) of
         (_, PHole capture) ->
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
         (Const c, PConst whc)

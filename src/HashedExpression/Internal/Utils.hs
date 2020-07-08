@@ -108,7 +108,7 @@ isScalarShape = null
 -- |
 pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
-  | (shape, Const c) <- retrieveInternal n mp = Just (shape, c)
+  | (shape, Const c) <- retrieveNode n mp = Just (shape, c)
   | otherwise = Nothing
 
 -- |
@@ -120,39 +120,39 @@ pullConstants mp ns
 -- |
 isZero :: ExpressionMap -> NodeID -> Bool
 isZero mp nId
-  | Const 0 <- retrieveNode nId mp = True
-  | RealImag arg1 arg2 <- retrieveNode nId mp,
-    Const 0 <- retrieveNode arg1 mp,
-    Const 0 <- retrieveNode arg2 mp =
+  | Const 0 <- retrieveOp nId mp = True
+  | RealImag arg1 arg2 <- retrieveOp nId mp,
+    Const 0 <- retrieveOp arg1 mp,
+    Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
 
 -- |
 isOne :: ExpressionMap -> NodeID -> Bool
 isOne mp nId
-  | Const 1 <- retrieveNode nId mp = True
-  | RealImag arg1 arg2 <- retrieveNode nId mp,
-    Const 1 <- retrieveNode arg1 mp,
-    Const 0 <- retrieveNode arg2 mp =
+  | Const 1 <- retrieveOp nId mp = True
+  | RealImag arg1 arg2 <- retrieveOp nId mp,
+    Const 1 <- retrieveOp arg1 mp,
+    Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
 
 -- |
 isConstant :: ExpressionMap -> NodeID -> Bool
 isConstant mp nId
-  | Const _ <- retrieveNode nId mp = True
+  | Const _ <- retrieveOp nId mp = True
   | otherwise = False
 
 -- |
 pullSumOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullSumOperands mp nId
-  | Sum _ operands <- retrieveNode nId mp = operands
+  | Sum _ operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
 pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
-  | Mul _ operands <- retrieveNode nId mp = operands
+  | Mul _ operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
@@ -174,7 +174,7 @@ showT = T.pack . show
 
 -- |
 maybeVariable :: DimensionType d => Expression d R -> Maybe (String, Shape)
-maybeVariable (Expression nID mp) = case retrieveInternal nID mp of
+maybeVariable (Expression nID mp) = case retrieveNode nID mp of
   (shape, Var name) -> Just (name, shape)
   _ -> Nothing
 

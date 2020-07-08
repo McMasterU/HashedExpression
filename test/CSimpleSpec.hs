@@ -86,7 +86,7 @@ singleExpressionCProgram valMaps expr =
         vars :: [(Int, String)]
         vars =
           let toVar nId
-                | Var varName <- retrieveNode nId mp = Just (nId, varName)
+                | Var varName <- retrieveOp nId mp = Just (nId, varName)
                 | otherwise = Nothing
            in mapMaybe toVar . IM.keys $ mp
         codesForVar :: (Int, String) -> Code

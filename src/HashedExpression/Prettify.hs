@@ -106,7 +106,7 @@ hiddenPrettify ::
 hiddenPrettify pastable (mp, n) =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]
-      node = retrieveNode n mp
+      node = retrieveOp n mp
       innerPrettify = hiddenPrettify pastable . (mp,)
       shapeSignature
         | pastable = ""
