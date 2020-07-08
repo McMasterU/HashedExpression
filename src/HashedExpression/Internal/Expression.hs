@@ -113,7 +113,6 @@ data Expression d et
 type role Expression nominal nominal
 
 -- | The Op type provides constructors for variables, constants and operators used to create expressions.
---
 data Op
   = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
     Var String

@@ -25,7 +25,7 @@ import HashedExpression.Codegen
 import qualified HashedExpression.Codegen.CSimple as CSimple
 import HashedExpression.Internal
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Op (..), NodeID)
+import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
 import qualified HashedExpression.Internal.Node as HN
 import HashedExpression.Internal.Utils
 import qualified HashedExpression.Operation as HO

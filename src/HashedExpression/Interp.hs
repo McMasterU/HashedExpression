@@ -26,9 +26,9 @@ import HashedExpression.Internal.Expression
     ET (..),
     Expression (..),
     ExpressionMap,
+    NodeID,
+    NodeID,
     Op (..),
-    NodeID,
-    NodeID,
     R,
     Scalar,
   )

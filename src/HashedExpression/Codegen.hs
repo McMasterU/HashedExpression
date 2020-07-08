@@ -26,7 +26,6 @@ data GenResult
   | -- | Success, write all the necessary files in a given file path
     Success (String -> IO ())
 
-
 -- | The type class for code generating
 class Codegen configs where
   generateProblemCode :: configs -> Problem -> ValMaps -> GenResult

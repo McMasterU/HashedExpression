@@ -12,7 +12,7 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import HashedExpression.Internal
 import qualified HashedExpression.Internal.Expression as HE
-import HashedExpression.Internal.Expression (ExpressionMap, Op (..), NodeID)
+import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Internal.Utils as HU
 import qualified HashedExpression.Operation as HO

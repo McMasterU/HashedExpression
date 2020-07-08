@@ -27,7 +27,7 @@ import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
 import HashedExpression.Embed.FFTW (fftUtils)
 import HashedExpression.Internal (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
-import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, Op (..), NumType, Shape, exMap)
+import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, NumType, Op (..), Shape, exMap)
 import HashedExpression.Internal.Node (nodeElementType, retrieveElementType, retrieveInternal, retrieveNode, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
