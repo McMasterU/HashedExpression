@@ -11,7 +11,7 @@
 --  https://cp-algorithms.com/string/string-hashing.html
 module HashedExpression.Internal.Hash
   ( hash,
-    addInternal,
+    addNode,
     fromNode,
   )
 where
@@ -125,8 +125,8 @@ hashOutcome mp new newHash =
         else IsClash
 
 -- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
-addInternal :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
-addInternal mp e =
+addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
+addNode mp e =
   case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
     (IsDuplicate h : _) -> (mp, h)
     (IsNew h : _) -> (IM.insert h e mp, h)

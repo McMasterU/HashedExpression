@@ -31,16 +31,18 @@ prop_DVarStayAlone exp = property
     collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
       | Const 0 <- retrieveOp nId mp = True
-      | Mul Covector [_, cId] <- retrieveOp nId mp,
+      | Mul [_, cId] <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar _ <- retrieveOp cId mp =
         True
-      | InnerProd Covector _ cId <- retrieveOp nId mp,
+      | InnerProd _ cId <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar _ <- retrieveOp cId mp =
         True
       | otherwise = False
     property =
       case retrieveOp rootId mp of
-        Sum Covector ns -> all isDVarAlone ns
+        Sum ns -> all isDVarAlone ns
         _ -> isDVarAlone rootId
 
 --        | DVar _ <- retrieveNode nId mp = True
@@ -51,7 +53,7 @@ prop_DVarAppearOnce exp = property
     getDVarNames node
       | DVar name <- node = [name]
       | otherwise = []
-    allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
+    allDVarNames = concatMap (getDVarNames . (\(s, et, op) -> op)) . IM.elems $ mp
     property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
 
 prop_DVarStayAloneWithOneR ::
@@ -63,16 +65,18 @@ prop_DVarStayAloneWithOneR exp1 exp2 = property
       collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
       | Const 0 <- retrieveOp nId mp = True
-      | Mul Covector [_, cId] <- retrieveOp nId mp,
+      | Mul [_, cId] <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar _ <- retrieveOp cId mp =
         True
-      | InnerProd Covector _ cId <- retrieveOp nId mp,
+      | InnerProd _ cId <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar _ <- retrieveOp cId mp =
         True
       | otherwise = False
     property =
       case retrieveOp rootId mp of
-        Sum Covector ns -> all isDVarAlone ns
+        Sum ns -> all isDVarAlone ns
         _ -> isDVarAlone rootId
 
 prop_DVarAppearOnceWithOneR ::
@@ -84,7 +88,7 @@ prop_DVarAppearOnceWithOneR exp1 exp2 = property
     getDVarNames node
       | DVar name <- node = [name]
       | otherwise = []
-    allDVarNames = concatMap (getDVarNames . snd) . IM.elems $ mp
+    allDVarNames = concatMap (getDVarNames . (\(s, et, op) -> op)) . IM.elems $ mp
     property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
 
 spec :: Spec

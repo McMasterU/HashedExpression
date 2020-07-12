@@ -77,10 +77,10 @@ addEntryWithContextTo contextMp spec args mp =
             toOp condition branches
           )
         _ -> error "Unfaithful with operation spec"
-   in -- TODO: rename addInternal
-      addInternal mp (shape, et, op)
+   in addNode mp (shape, et, op)
 
 -------------------------------------------------------------------------------
+
 -- | Generic N-Ary multiplication operator, constructed using 'apply'
 --   with 'ElementDefault' to default to the 'ElementType' of it's arguments
 mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
@@ -191,7 +191,7 @@ toTransformation ::
   -- | argument provided by 'fromModification'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
   -- | resulting transformation
-  Transformation 
+  Transformation
 toTransformation normalizer exp@(mp, n) =
   let diff = normalizer exp
       newMp = IM.union mp (extraEntries diff)
@@ -269,7 +269,7 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 --   to a base 'ExpressionMap'. For example, combinators like 'sum_' will create will create a new 'ExpressionMap' with
 --   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
 --   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
--- 
+--
 -- ExpressionDiff in the MonadReader ExpressionMap
 type Change = ExpressionMap -> ExpressionDiff
 
@@ -489,7 +489,6 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
             then noChange n
             else applyDiff contextMp option sortedChildrenDiffs
 
-
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Other
@@ -564,4 +563,3 @@ containsFTNode mp = any isFT $ IM.elems mp
         TwiceImFT _ -> True
         TwiceReFT _ -> True
         _ -> False
-

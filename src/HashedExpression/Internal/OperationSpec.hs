@@ -3,7 +3,9 @@
 
 module HashedExpression.Internal.OperationSpec where
 
+import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Utils
 
 data UnarySpec
   = UnarySpec
@@ -33,112 +35,241 @@ data ConditionarySpec
         decideET :: ET -> [ET] -> ET
       }
 
-data OperationSpec = Unary UnarySpec | Binary BinarySpec | Nary NarySpec | ConditionAry ConditionarySpec
+data OperationSpec
+  = Unary UnarySpec
+  | Binary BinarySpec
+  | Nary NarySpec
+  | ConditionAry ConditionarySpec
 
-specSum :: NarySpec
-specSum = undefined
+requireSame :: (HasCallStack, Ord a) => [a] -> b -> b
+requireSame xs y
+  | allEqual xs = y
+  | otherwise = error "must be equal"
 
-specMul :: NarySpec
-specMul = undefined
+-- |
+defaultUnary :: HasCallStack => (Arg -> Op) -> [ET] -> UnarySpec
+defaultUnary f allowedETs = UnarySpec {toOp = f, decideShape = id, decideET = decideET}
+  where
+    decideET et
+      | et `elem` allowedETs = et
+      | otherwise = error "Element type is not allowed"
 
-specMulBinary :: BinarySpec
-specMulBinary = undefined
+-- |
+defaultBinary :: HasCallStack => (Arg -> Arg -> Op) -> [ET] -> BinarySpec
+defaultBinary f allowedETs = BinarySpec {toOp = f, decideShape = req, decideET = decideET}
+  where
+    req x y = requireSame [x, y] x
+    decideET x y
+      | x `elem` allowedETs = requireSame [x, y] x
+      | otherwise = error "Element type is not allowed"
 
-specSumBinary :: BinarySpec
-specSumBinary = undefined
+specSum :: HasCallStack => NarySpec
+specSum =
+  NarySpec
+    { toOp = Sum,
+      decideShape = \xs -> requireSame xs $ head xs,
+      decideET = \xs -> requireSame xs $ head xs
+    }
 
-specMulCovector :: BinarySpec
-specMulCovector = undefined
+specMul :: HasCallStack => NarySpec
+specMul =
+  NarySpec
+    { toOp = Mul,
+      decideShape = \xs -> requireSame xs $ head xs,
+      decideET = \xs -> requireSame xs $ head xs
+    }
 
-specScaleCovector :: BinarySpec
-specScaleCovector = undefined
+specMulBinary :: HasCallStack => BinarySpec
+specMulBinary = defaultBinary (\x y -> Mul [x, y]) [R, C]
 
-specInnerProdCovector :: BinarySpec
-specInnerProdCovector = undefined
+specSumBinary :: HasCallStack => BinarySpec
+specSumBinary = defaultBinary (\x y -> Sum [x, y]) [R, C, Covector]
 
-specPower :: Int -> UnarySpec
-specPower = undefined
+specMulCovector :: HasCallStack => BinarySpec
+specMulCovector =
+  BinarySpec
+    { toOp = \x y -> Mul [x, y],
+      decideShape = \x y -> requireSame [x, y] x,
+      decideET = decideET
+    }
+  where
+    decideET x y
+      | x == R && y == Covector = Covector
+      | otherwise = error "First operand must be R, second must be Covector"
 
-specNeg :: UnarySpec
-specNeg = undefined
+specScaleCovector :: HasCallStack => BinarySpec
+specScaleCovector =
+  BinarySpec
+    { toOp = Scale,
+      decideShape = decideShape,
+      decideET = decideET
+    }
+  where
+    decideShape x y
+      | null x = y
+      | otherwise = error "First operand must be scalar"
+    decideET x y
+      | x == R && y == Covector = Covector
+      | otherwise = error "First operand must be R, second must be Covector"
 
-specScale :: BinarySpec
-specScale = undefined
+specInnerProdCovector :: HasCallStack => BinarySpec
+specInnerProdCovector =
+  BinarySpec
+    { toOp = InnerProd,
+      decideShape = \x y -> requireSame [x, y] [],
+      decideET = decideET
+    }
+  where
+    decideET x y
+      | x == R && y == Covector = Covector
+      | otherwise = error "First operand must be R, second must be Covector"
 
-specDiv :: BinarySpec
-specDiv = undefined
+specPower :: HasCallStack => Int -> UnarySpec
+specPower alpha = defaultUnary (Power alpha) [R, C]
 
-specSqrt :: UnarySpec
-specSqrt = undefined
+specNeg :: HasCallStack => UnarySpec
+specNeg = defaultUnary Neg [R, C, Covector]
 
-specSin :: UnarySpec
-specSin = undefined
+specScale :: HasCallStack => BinarySpec
+specScale =
+  BinarySpec
+    { toOp = Scale,
+      decideShape = decideShape,
+      decideET = decideET
+    }
+  where
+    decideShape x y
+      | null x = y
+      | otherwise = error "First operand must be scalar"
+    decideET x y
+      | x == R = y
+      | x == C && y == C = C
+      | otherwise = error "Violate scaling element type constraint"
 
-specCos :: UnarySpec
-specCos = undefined
+specDiv :: HasCallStack => BinarySpec
+specDiv = defaultBinary Div [R]
 
-specTan :: UnarySpec
-specTan = undefined
+specSqrt :: HasCallStack => UnarySpec
+specSqrt = defaultUnary Sqrt [R]
 
-specExp :: UnarySpec
-specExp = undefined
+specSin :: HasCallStack => UnarySpec
+specSin = defaultUnary Sin [R]
 
-specLog :: UnarySpec
-specLog = undefined
+specCos :: HasCallStack => UnarySpec
+specCos = defaultUnary Cos [R]
 
-specSinh :: UnarySpec
-specSinh = undefined
+specTan :: HasCallStack => UnarySpec
+specTan = defaultUnary Tan [R]
 
-specCosh :: UnarySpec
-specCosh = undefined
+specExp :: HasCallStack => UnarySpec
+specExp = defaultUnary Exp [R]
 
-specTanh :: UnarySpec
-specTanh = undefined
+specLog :: HasCallStack => UnarySpec
+specLog = defaultUnary Log [R]
 
-specAsin :: UnarySpec
-specAsin = undefined
+specSinh :: HasCallStack => UnarySpec
+specSinh = defaultUnary Sinh [R]
 
-specAcos :: UnarySpec
-specAcos = undefined
+specCosh :: HasCallStack => UnarySpec
+specCosh = defaultUnary Cosh [R]
 
-specAtan :: UnarySpec
-specAtan = undefined
+specTanh :: HasCallStack => UnarySpec
+specTanh = defaultUnary Tanh [R]
 
-specAsinh :: UnarySpec
-specAsinh = undefined
+specAsin :: HasCallStack => UnarySpec
+specAsin = defaultUnary Asin [R]
 
-specAcosh :: UnarySpec
-specAcosh = undefined
+specAcos :: HasCallStack => UnarySpec
+specAcos = defaultUnary Acos [R]
 
-specAtanh :: UnarySpec
-specAtanh = undefined
+specAtan :: HasCallStack => UnarySpec
+specAtan = defaultUnary Atan [R]
 
-specRealImag :: BinarySpec
-specRealImag = undefined
+specAsinh :: HasCallStack => UnarySpec
+specAsinh = defaultUnary Asinh [R]
 
-specRealPart :: UnarySpec
-specRealPart = undefined
+specAcosh :: HasCallStack => UnarySpec
+specAcosh = defaultUnary Acosh [R]
 
-specImagPart :: UnarySpec
-specImagPart = undefined
+specAtanh :: HasCallStack => UnarySpec
+specAtanh = defaultUnary Atanh [R]
 
-specInnerProd :: BinarySpec
-specInnerProd = undefined
+specRealImag :: HasCallStack => BinarySpec
+specRealImag =
+  BinarySpec {toOp = RealImag, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape x y = requireSame [x, y] x
+    decideET x y
+      | x == R && y == R = C
+      | otherwise = error "2 operands must be real"
 
-specPiecewise :: [Double] -> ConditionarySpec
-specPiecewise = undefined
+specRealPart :: HasCallStack => UnarySpec
+specRealPart =
+  UnarySpec {toOp = RealPart, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == C = R
+      | otherwise = error "Must be complex"
 
-specRotate :: RotateAmount -> UnarySpec
-specRotate = undefined
+specImagPart :: HasCallStack => UnarySpec
+specImagPart =
+  UnarySpec {toOp = ImagPart, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == C = R
+      | otherwise = error "Must be complex"
 
-specReFT :: UnarySpec
-specReFT = undefined
+specInnerProd :: HasCallStack => BinarySpec
+specInnerProd =
+  BinarySpec
+    { toOp = InnerProd,
+      decideShape = decideShape,
+      decideET = decideET
+    }
+  where
+    decideShape x y = requireSame [x, y] []
+    decideET x y = requireSame [x, y] x
 
-specImFT :: UnarySpec
-specImFT = undefined
+specPiecewise :: HasCallStack => [Double] -> ConditionarySpec
+specPiecewise marks =
+  ConditionarySpec {toOp = Piecewise marks, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape condition branches = requireSame (condition : branches) condition
+    decideET condition branches
+      | condition == R && length branches == length marks + 1 = head branches
+      | otherwise = error "Condition must be real and number of branches must equal number of marks + 1"
 
-specTwiceReFT :: UnarySpec
-specTwiceReFT = undefined
+specRotate :: HasCallStack => RotateAmount -> UnarySpec
+specRotate ra = defaultUnary (Rotate ra) [R, C, Covector]
 
-specTwiceImFT :: UnarySpec
-specTwiceImFT = undefined
+specReFT :: HasCallStack => UnarySpec
+specReFT =
+  UnarySpec {toOp = ReFT, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == R || x == C = R
+      | otherwise = error "Must be real or complex"
+
+specImFT :: HasCallStack => UnarySpec
+specImFT =
+  UnarySpec {toOp = ImFT, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == R || x == C = R
+      | otherwise = error "Must be real or complex"
+
+specTwiceReFT :: HasCallStack => UnarySpec
+specTwiceReFT =
+  UnarySpec {toOp = TwiceReFT, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == R || x == C = R
+      | otherwise = error "Must be real or complex"
+
+specTwiceImFT :: HasCallStack => UnarySpec
+specTwiceImFT =
+  UnarySpec {toOp = TwiceImFT, decideShape = id, decideET = decideET}
+  where
+    decideET x
+      | x == R || x == C = R
+      | otherwise = error "Must be real or complex"
