@@ -26,21 +26,20 @@ import Test.Hspec
 import Test.Hspec.Runner
 import Var
 
-main :: IO ()
-main = do 
-  let x = variable2D @10 @10 "x"
-  let f = x <.> (constant2D @10 @10 2)
-  showExp f
-  showExp $ derivativeAllVars f
-
 --main :: IO ()
---main = do
---  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
---    describe "ProblemSpec" ProblemSpec.spec
-    
---    describe "NormalizeSpec" NormalizeSpec.spec
---    describe "HashedInterpSpec" InterpSpec.spec
---    describe "HashedCollectSpec" CollectSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
---    describe "CSimpleSpec" CSimpleSpec.spec
+--main = do 
+--  let x = variable2D @10 @10 "x"
+--  let f = x <.> (constant2D @10 @10 2)
+--  showExp f
+--  showExp $ derivativeAllVars f
+
+main :: IO ()
+main = do
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
+    describe "ProblemSpec" ProblemSpec.spec
+    describe "NormalizeSpec" NormalizeSpec.spec
+    describe "HashedInterpSpec" InterpSpec.spec
+    describe "HashedCollectSpec" CollectSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
+    describe "CSimpleSpec" CSimpleSpec.spec

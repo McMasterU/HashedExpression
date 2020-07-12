@@ -54,6 +54,12 @@ import qualified Prelude
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
+zero :: Pattern
+zero = PConst 0.0 90
+
+one :: Pattern
+one = PConst 1.0 91
+
 -- | Predefined holes used for pattern matching with 'PPowerHole'
 [alpha, beta, gamma] = map PPowerHole [1 .. 3]
 
@@ -98,23 +104,23 @@ normalizingTransformation = secondPass . firstPass
         map
           (toRecursiveSimplification . fromModification)
           [
---            evaluateIfPossibleRules,
---            groupConstantsRules,
---            combineTermsRules,
---            combineTermsRulesProd,
---            powerProdRules,
---            powerScaleRules,
---            combinePowerRules,
---            powerSumRealImagRules,
---            combineRealScalarRules,
---            flattenSumProdRules,
---            zeroOneSumProdRules,
---            collapseSumProdRules,
---            normalizeRotateRules,
+            evaluateIfPossibleRules,
+            groupConstantsRules,
+            combineTermsRules,
+            combineTermsRulesProd,
+            powerProdRules,
+            powerScaleRules,
+            combinePowerRules,
+            powerSumRealImagRules,
+            combineRealScalarRules,
+            flattenSumProdRules,
+            zeroOneSumProdRules,
+            collapseSumProdRules,
+            normalizeRotateRules,
 --            negativeZeroRules,
---            pullOutPiecewiseRules,
---            expandPiecewiseRealImag,
---            twiceReFTAndImFTRules
+            pullOutPiecewiseRules,
+            expandPiecewiseRealImag,
+            twiceReFTAndImFTRules
           ]
           ++ [ rulesFromPattern, --
                removeUnreachable
@@ -161,7 +167,7 @@ rulesFromPattern :: Transformation
 rulesFromPattern =
   chain . map (toRecursiveSimplification . fromSubstitution) . concat $
     [ complexNumRules,
---      zeroOneRules,
+      zeroOneRules,
       scaleRules,
       dotProductRules,
       distributiveRules,
@@ -189,9 +195,10 @@ zeroOneRules =
     x *. zero |.~~~~~~> zero,
     one *. x |.~~~~~~> x,
     x + zero |.~~~~~~> x,
-    zero + x |.~~~~~~> x,
-    x <.> zero |.~~~~~~> scalarZero,
-    zero <.> x |.~~~~~~> scalarZero
+    zero + x |.~~~~~~> x
+-- TODO: re-implement
+--    x <.> zero |.~~~~~~> scalarZero,
+--    zero <.> x |.~~~~~~> scalarZero
   ]
 
 -- | Rules related to the scaling operation
@@ -261,6 +268,7 @@ fourierTransformRules :: [Substitution]
 fourierTransformRules =
   [ reFT (x +: y) |.~~~~~~> reFT x - imFT y,
     imFT (x +: y) |.~~~~~~> imFT x + reFT y,
+    -- TODO: re-implement ?
     reFT zero |.~~~~~~> zero,
     imFT zero |.~~~~~~> zero,
     twiceImFT zero |.~~~~~~> zero,
@@ -299,12 +307,12 @@ exponentRules =
     exp zero |.~~~~~~> one
   ]
 
--- | Miscallaneous rules for negations and exponentials
+-- | Miscellaneous rules
 --
---   This includes turning a negated operand (e.g. scalar, vector, etc) into the scaling of that operand by -1.
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |.~~~~~~> scalar (-1) *. x, --
+  [
+--  negate x |.~~~~~~> scalar (-1) *. x, --
     (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
   ]
 
@@ -323,7 +331,7 @@ rotateRules =
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
---
+-- TODO: re-implement
 --   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
@@ -385,6 +393,7 @@ flattenSumProdRules exp@(mp, n) =
 -- | Rules for grouping constants
 --
 --   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
+-- TODO: possibly re-implement
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
@@ -566,6 +575,7 @@ normalizeRotateRules exp@(mp, n)
 --
 --   This is to avoid having `Const (-0.0)` show up, which is considered different than `Const (0.0)`.
 --   Thus, instead we convert those to `Const (0.0)`.
+-- TODO: re-implement
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
   | (shape, _, Const val) <- retrieveNode n mp,

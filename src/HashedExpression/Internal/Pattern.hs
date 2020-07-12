@@ -45,12 +45,6 @@ module HashedExpression.Internal.Pattern
     Capture,
     MulRestOp (..),
     SumRestOp (..),
-    num,
-    zero,
-    one,
-    scalar,
-    scalarOne,
-    scalarZero,
     imFT,
     reFT,
     twiceImFT,
@@ -185,9 +179,7 @@ data Pattern
   | -- | multiply via 'PatternList'
     PMulList PatternList
   | -- | constant
-    PConst Double
-  | -- | scalar Const used in RHS
-    PScalarConst Double
+    PConst Double Capture
   | -- | summation operator
     PSum [Pattern]
   | -- | multiplication operator
@@ -281,30 +273,6 @@ data PatternRotateAmount
 -- | 'Pattern' holes are identified uniquely by a Capture id
 type Capture = Int
 
--- | Pattern that matches to a given Constant (wrapper around 'PConst')
-num :: Double -> Pattern
-num = PConst
-
--- | Pattern that matches to the Constant 0 (wrapper around 'PScalarConst')
-zero :: Pattern
-zero = PConst 0
-
--- | Pattern that matches to the Constant 1 (wrapper around 'PScalarConst')
-one :: Pattern
-one = PConst 1
-
--- | Pattern that matches to a given Scalar Constant (wrapper around 'PScalarConst')
-scalar :: Double -> Pattern
-scalar = PScalarConst
-
--- | Pattern that matches to the Scalar Constant 1 (wrapper around 'PScalarConst')
-scalarOne :: Pattern
-scalarOne = PScalarConst 1
-
--- | Pattern that matches to the Scalar Constant 0 (wrapper around 'PScalarConst')
-scalarZero :: Pattern
-scalarZero = PScalarConst 0
-
 -- | pattern that has a real fourier transform applied to it (wrapper for 'PReFT')
 reFT :: Pattern -> Pattern
 reFT = PReFT
@@ -357,13 +325,11 @@ instance Num Pattern where
 
 instance Fractional Pattern where
   (/) = PDiv
-  fromRational = PConst . fromRational
 
 instance VectorSpaceOp Pattern Pattern where
   scale = PScale
 
 instance Floating Pattern where
-  pi = PConst pi
   sqrt = PSqrt
   exp = PExp
   log = PLog
@@ -636,8 +602,9 @@ match (mp, n) outerWH =
    in case (retrieveOp n mp, outerWH) of
         (_, PHole capture) ->
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
-        (Const c, PConst whc)
-          | c == whc -> Just emptyMatch
+        (Const c, PConst whc capture)
+          | c == whc ->
+            Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
         (Sum args, PSum whs) -> recursiveAndCombine args whs
         (Sum args, PSumList pl@(PListHole _ listCapture)) ->
           matchList mp args pl
@@ -785,8 +752,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
           | otherwise ->
             error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
-        PConst val -> diffConst (retrieveShape originalN originalMp) val
-        PScalarConst val -> diffConst [] val
+        PConst val capture
+          | Just nId <- Map.lookup capture (capturesMap match) ->
+            noChange nId
+          | otherwise ->
+            error "Capture not in the Map Capture Int which should never happen"
         PSumList ptl ->
           sumManyDiff originalMp . buildFromPatternList exp match $ ptl
         PMulList ptl ->
