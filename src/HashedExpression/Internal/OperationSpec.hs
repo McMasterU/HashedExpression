@@ -41,10 +41,10 @@ data OperationSpec
   | Nary NarySpec
   | ConditionAry ConditionarySpec
 
-requireSame :: (HasCallStack, Ord a) => [a] -> b -> b
+requireSame :: (HasCallStack, Ord a, Show a) => [a] -> b -> b
 requireSame xs y
   | allEqual xs = y
-  | otherwise = error "must be equal"
+  | otherwise = error $ "must be equal "  ++ show xs
 
 -- |
 defaultUnary :: HasCallStack => (Arg -> Op) -> [ET] -> UnarySpec
@@ -76,53 +76,13 @@ specMul =
   NarySpec
     { toOp = Mul,
       decideShape = \xs -> requireSame xs $ head xs,
-      decideET = \xs -> requireSame xs $ head xs
-    }
-
-specMulBinary :: HasCallStack => BinarySpec
-specMulBinary = defaultBinary (\x y -> Mul [x, y]) [R, C]
-
-specSumBinary :: HasCallStack => BinarySpec
-specSumBinary = defaultBinary (\x y -> Sum [x, y]) [R, C, Covector]
-
-specMulCovector :: HasCallStack => BinarySpec
-specMulCovector =
-  BinarySpec
-    { toOp = \x y -> Mul [x, y],
-      decideShape = \x y -> requireSame [x, y] x,
       decideET = decideET
     }
-  where
-    decideET x y
-      | x == R && y == Covector = Covector
-      | otherwise = error "First operand must be R, second must be Covector"
-
-specScaleCovector :: HasCallStack => BinarySpec
-specScaleCovector =
-  BinarySpec
-    { toOp = Scale,
-      decideShape = decideShape,
-      decideET = decideET
-    }
-  where
-    decideShape x y
-      | null x = y
-      | otherwise = error "First operand must be scalar"
-    decideET x y
-      | x == R && y == Covector = Covector
-      | otherwise = error "First operand must be R, second must be Covector"
-
-specInnerProdCovector :: HasCallStack => BinarySpec
-specInnerProdCovector =
-  BinarySpec
-    { toOp = InnerProd,
-      decideShape = \x y -> requireSame [x, y] [],
-      decideET = decideET
-    }
-  where
-    decideET x y
-      | x == R && y == Covector = Covector
-      | otherwise = error "First operand must be R, second must be Covector"
+  where 
+    decideET :: [ET] -> ET
+    decideET [R, Covector] = Covector
+    decideET [Covector, R] = Covector
+    decideET xs = requireSame xs $ head xs
 
 specPower :: HasCallStack => Int -> UnarySpec
 specPower alpha = defaultUnary (Power alpha) [R, C]
@@ -141,10 +101,13 @@ specScale =
     decideShape x y
       | null x = y
       | otherwise = error "First operand must be scalar"
-    decideET x y
-      | x == R = y
-      | x == C && y == C = C
-      | otherwise = error "Violate scaling element type constraint"
+    decideET :: ET -> ET -> ET
+    decideET R Covector = Covector
+    decideET Covector R = Covector
+    decideET R y = y
+    decideET C C = C
+    decideET _ _ = error "Scaling invalid et"
+
 
 specDiv :: HasCallStack => BinarySpec
 specDiv = defaultBinary Div [R]
@@ -228,7 +191,11 @@ specInnerProd =
     }
   where
     decideShape x y = requireSame [x, y] []
-    decideET x y = requireSame [x, y] x
+    decideET R Covector = Covector
+    decideET Covector R = Covector
+    decideET x y 
+      | x == y = x
+      | otherwise = error "invalid dot product"
 
 specPiecewise :: HasCallStack => [Double] -> ConditionarySpec
 specPiecewise marks =

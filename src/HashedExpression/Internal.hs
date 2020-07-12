@@ -389,6 +389,7 @@ diffConst shape val = ExpressionDiff mp n
 
 -- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
 mulManyDiff ::
+  HasCallStack => 
   -- | base map to find diff w.r.t
   ExpressionMap ->
   -- | operands
@@ -399,6 +400,7 @@ mulManyDiff contextMp = applyDiff contextMp (Nary specMul)
 
 -- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
 sumManyDiff ::
+  HasCallStack =>
   -- | base map to find diff w.r.t
   ExpressionMap ->
   -- | operands

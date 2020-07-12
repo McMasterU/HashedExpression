@@ -97,23 +97,24 @@ normalizingTransformation = secondPass . firstPass
       multipleTimes 1000 . chain $
         map
           (toRecursiveSimplification . fromModification)
-          [ evaluateIfPossibleRules,
-            groupConstantsRules,
-            combineTermsRules,
-            combineTermsRulesProd,
-            powerProdRules,
-            powerScaleRules,
-            combinePowerRules,
-            powerSumRealImagRules,
-            combineRealScalarRules,
-            flattenSumProdRules,
-            zeroOneSumProdRules,
-            collapseSumProdRules,
-            normalizeRotateRules,
-            negativeZeroRules,
-            pullOutPiecewiseRules,
-            expandPiecewiseRealImag,
-            twiceReFTAndImFTRules
+          [
+--            evaluateIfPossibleRules,
+--            groupConstantsRules,
+--            combineTermsRules,
+--            combineTermsRulesProd,
+--            powerProdRules,
+--            powerScaleRules,
+--            combinePowerRules,
+--            powerSumRealImagRules,
+--            combineRealScalarRules,
+--            flattenSumProdRules,
+--            zeroOneSumProdRules,
+--            collapseSumProdRules,
+--            normalizeRotateRules,
+--            negativeZeroRules,
+--            pullOutPiecewiseRules,
+--            expandPiecewiseRealImag,
+--            twiceReFTAndImFTRules
           ]
           ++ [ rulesFromPattern, --
                removeUnreachable
@@ -160,7 +161,7 @@ rulesFromPattern :: Transformation
 rulesFromPattern =
   chain . map (toRecursiveSimplification . fromSubstitution) . concat $
     [ complexNumRules,
-      zeroOneRules,
+--      zeroOneRules,
       scaleRules,
       dotProductRules,
       distributiveRules,

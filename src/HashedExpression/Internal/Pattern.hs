@@ -783,7 +783,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
           | Just nId <- Map.lookup capture (capturesMap match) ->
             noChange nId
           | otherwise ->
-            error "Capture not in the Map Capture Int which should never happens"
+            error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
         PConst val -> diffConst (retrieveShape originalN originalMp) val
         PScalarConst val -> diffConst [] val

@@ -177,5 +177,5 @@ normalizeEachPartialDerivative exp@(mp, n) =
         Mul [partialDeriv, dVar] | retrieveElementType nId mp == Covector ->
           mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         InnerProd partialDeriv dVar | retrieveElementType nId mp == Covector ->
-          apply (Binary specInnerProdCovector) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+          apply (Binary specInnerProd) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         a -> error $ show a

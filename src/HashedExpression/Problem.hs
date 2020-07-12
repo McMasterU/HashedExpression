@@ -267,7 +267,7 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
       alreadyExist name = any (isD name) . IM.keys $ mp
       makePart (name, shape)
         | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (Binary specMulCovector) [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (Nary specMul) [aConst shape 0, dVarWithShape shape name]
       listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
         case retrieveOp n mp of

@@ -47,6 +47,8 @@ import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import Prelude hiding ((^))
+import Debug.Trace (traceShowId, traceShow)
+import HashedExpression.Prettify
 
 -- | Compute the exterior derivative w.r.t the given variable identifiers (the 'String' wrapped by 'Var'). This transforms a real expression
 --   @Expression d R@ into @Expression d Covector@ (an expression with 'DVar' terms). This is because we compute derivatives symbolically
@@ -248,7 +250,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
   Expression d R ->
   Expression d Covector ->
   Expression d Covector
-(|*|) e1 e2 = wrap $ apply (Binary specMulCovector) [unwrap e1, unwrap e2]
+(|*|) e1 e2 = wrap $ apply (Nary specMul) [unwrap e1, unwrap e2]
 
 -- | Our defined custom dot product with covector - it's more like multiply wise and then add
 -- up all the elements
@@ -257,7 +259,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
   Expression d R ->
   Expression d Covector ->
   Expression Scalar Covector
-(|<.>|) e1 e2 = wrap $ apply (Binary specInnerProdCovector) [unwrap e1, unwrap e2]
+(|<.>|) e1 e2 = wrap $ apply (Binary specInnerProd) [unwrap e1, unwrap e2]
 
 -- | Our defined custom scale with Covector, ds |*.| f is like multiply every element of f with ds
 (|*.|) ::
@@ -265,7 +267,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
   Expression Scalar Covector ->
   Expression d R ->
   Expression d Covector
-(|*.|) e1 e2 = wrap $ apply (Binary specScaleCovector) [unwrap e1, unwrap e2]
+(|*.|) e1 e2 = wrap $ apply (Binary specScale) [unwrap e1, unwrap e2]
 
 infixl 7 |*|
 
