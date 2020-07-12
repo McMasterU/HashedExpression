@@ -33,7 +33,7 @@ scalarVariables :: Function -> [String]
 scalarVariables (Function exp values) = mapMaybe toScalarVariable entries
   where
     entries = IM.elems . exMap $ exp
-    toScalarVariable (shape, node)
+    toScalarVariable (shape, _, node)
       | Var name <- node,
         null shape,
         not $ Map.member name values =

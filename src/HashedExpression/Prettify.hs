@@ -114,7 +114,7 @@ hiddenPrettify pastable (mp, n) =
           case shape of
             [] -> ""
             [x] -> T.concat ["[", T.pack . show $ x, "]"]
-            [x, y] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]"]
+            [x, y] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]" ]
             [x, y, z] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]", "[", T.pack . show $ z, "]"]
             _ -> error "Haven't deal with more than 3-dimension"
    in case node of
@@ -159,7 +159,7 @@ hiddenPrettify pastable (mp, n) =
               RealImag arg1 arg2 -> T.concat [innerPrettify arg1, "+:", innerPrettify arg2]
               RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
               ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
-              InnerProd et arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
+              InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
               Piecewise marks conditionArg branches ->
                 let printBranches = T.intercalate ", " . map innerPrettify $ branches
                  in T.concat ["piecewise ", T.pack . show $ marks, " ", innerPrettify conditionArg, " [", printBranches, "]"]

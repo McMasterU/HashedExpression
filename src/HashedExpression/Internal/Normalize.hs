@@ -132,14 +132,14 @@ toMultiplyIfPossible :: Transformation
 toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
   where
     rule exp@(mp, n)
-      | Scale et scalar scalee <- retrieveOp n mp,
-        et /= C,
+      | Scale scalar scalee <- retrieveOp n mp,
+        retrieveElementType n mp /= C,
         isScalarShape (retrieveShape scalee mp) =
         just scalar * just scalee
-      | InnerProd et arg1 arg2 <- retrieveOp n mp,
+      | InnerProd arg1 arg2 <- retrieveOp n mp,
         isScalarShape (retrieveShape arg1 mp),
         isScalarShape (retrieveShape arg2 mp),
-        et /= C =
+        retrieveElementType n mp /= C =
         just arg1 * just arg2
       | otherwise = just n
 
@@ -327,14 +327,14 @@ rotateRules =
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
-    Sum _ ns
+    Sum ns
       -- to make sure filter (not . isZero mp) ns is not empty
       | all (isZero mp) ns -> just $ head ns
       -- if the sumP has any zero, remove them
       -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
       | any (isZero mp) ns ->
         sum_ . map just . filter (not . isZero mp) $ ns
-    Mul _ ns
+    Mul ns
       -- to make sure filter (not . isOne mp) ns is not empty
       | all (isOne mp) ns -> just $ head ns
       -- if the product has any one, remove them
@@ -354,11 +354,11 @@ zeroOneSumProdRules exp@(mp, n) =
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
-    Sum _ ns
+    Sum ns
       -- if the sumP has only one, collapse it
       -- sum(x) -> x
       | length ns == 1 -> just $ head ns
-    Mul _ ns
+    Mul ns
       -- if the mul has only one, collapse it
       -- product(x) -> x
       | length ns == 1 -> just $ head ns
@@ -371,11 +371,11 @@ collapseSumProdRules exp@(mp, n) =
 flattenSumProdRules :: Modification
 flattenSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
-    Sum _ ns ->
+    Sum ns ->
       -- if the sumP contains any sumP, just flatten them out
       -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
       sum_ . map just . concatMap (pullSumOperands mp) $ ns
-    Mul _ ns ->
+    Mul ns ->
       -- if the prod contains any prod, just flatten them out
       -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
       product_ . map just . concatMap (pullProdOperands mp) $ ns
@@ -388,12 +388,12 @@ groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
    in case retrieveOp n mp of
-        Sum _ ns
+        Sum ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
             let total = const_ shape . Prelude.sum $ cs ->
             sum_ $ total : (map just . filter (not . isConstant mp) $ ns)
-        Mul _ ns
+        Mul ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
             let total = const_ shape . Prelude.product $ cs ->
@@ -408,16 +408,16 @@ groupConstantsRules exp@(mp, n) =
 --   * Sum [x,x,y] -> Sum [2 *. x,y]
 combineTermsRules :: Modification
 combineTermsRules exp@(mp, n)
-  | Sum _ ns <- retrieveOp n mp =
+  | Sum ns <- retrieveOp n mp =
     sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
     applyDiff' = applyDiff mp
     cntAppr nId
-      | Scale _ scalerN scaleeN <- retrieveOp nId mp,
+      | Scale scalerN scaleeN <- retrieveOp nId mp,
         Const val <- retrieveOp scalerN mp =
         (scaleeN, val)
-      | Neg _ negateeN <- retrieveOp nId mp = (negateeN, -1)
+      | Neg negateeN <- retrieveOp nId mp = (negateeN, -1)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
@@ -433,7 +433,7 @@ combineTermsRules exp@(mp, n)
 --   * Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
 combineTermsRulesProd :: Modification
 combineTermsRulesProd exp@(mp, n)
-  | Mul _ ns <- retrieveOp n mp =
+  | Mul ns <- retrieveOp n mp =
     product_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
@@ -443,8 +443,8 @@ combineTermsRulesProd exp@(mp, n)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn (x, px) (y, py)
-      | Sum _ _ <- retrieveOp x mp = False
-      | Sum _ _ <- retrieveOp y mp = False
+      | Sum _ <- retrieveOp x mp = False
+      | Sum _ <- retrieveOp y mp = False
       | C <- retrieveElementType x mp = False
       | C <- retrieveElementType y mp = False
       | otherwise = x == y
@@ -476,7 +476,7 @@ powerSumRealImagRules exp@(mp, n)
   | otherwise = just n
   where
     isSumOrRealImag nId
-      | Sum _ _ <- retrieveOp nId mp = True
+      | Sum _ <- retrieveOp nId mp = True
       | RealImag _ _ <- retrieveOp nId mp = True
       | otherwise = False
     replicateMul val nId
@@ -490,7 +490,7 @@ powerSumRealImagRules exp@(mp, n)
 powerProdRules :: Modification
 powerProdRules exp@(mp, n)
   | Power val nId <- retrieveOp n mp,
-    Mul _ args <- retrieveOp nId mp =
+    Mul args <- retrieveOp nId mp =
     product_ . map ((^ val) . just) $ args
   | otherwise = just n
 
@@ -500,7 +500,7 @@ powerProdRules exp@(mp, n)
 powerScaleRules :: Modification
 powerScaleRules exp@(mp, n)
   | Power val nId <- retrieveOp n mp,
-    Scale et scalar scalee <- retrieveOp nId mp,
+    Scale scalar scalee <- retrieveOp nId mp,
     val > 0 =
     (just scalar ^ val) *. (just scalee ^ val)
   | otherwise = just n
@@ -510,7 +510,8 @@ powerScaleRules exp@(mp, n)
 --   * (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
 combineRealScalarRules :: Modification
 combineRealScalarRules exp@(mp, n)
-  | Mul R ns <- retrieveOp n mp,
+  | Mul ns <- retrieveOp n mp,
+    retrieveElementType n mp == R,
     let extracted = map extract ns,
     any (isJust . snd) extracted =
     let combinedScalars = product_ . catMaybes $ map snd extracted
@@ -519,9 +520,10 @@ combineRealScalarRules exp@(mp, n)
   | otherwise = just n
   where
     extract nId
-      | Scale _ scalar scalee <- retrieveOp nId mp =
+      | Scale scalar scalee <- retrieveOp nId mp =
         (just scalee, Just $ just scalar)
-      | Neg R negatee <- retrieveOp nId mp =
+      | Neg negatee <- retrieveOp nId mp,
+        retrieveElementType nId mp == R =
         (just negatee, Just $ num_ (-1))
       | otherwise = (just nId, Nothing)
 
@@ -530,21 +532,21 @@ combineRealScalarRules exp@(mp, n)
 --   For instance, we can combine constants in 'Sum' and 'Mul' using regular Haskell arithmetic.
 evaluateIfPossibleRules :: Modification
 evaluateIfPossibleRules exp@(mp, n) =
-  case (node, pulledVals) of
-    (Sum R _, Just vals) -> res $ Prelude.sum vals
-    (Mul R _, Just vals) -> res $ Prelude.product vals
-    (Scale R _ _, Just [val1, val2]) -> res $ val1 * val2
-    (Neg R _, Just [val])
+  case (retrieveElementType n mp, node, pulledVals) of
+    (R, Sum _, Just vals) -> res $ Prelude.sum vals
+    (R, Mul _, Just vals) -> res $ Prelude.product vals
+    (R, Scale _ _, Just [val1, val2]) -> res $ val1 * val2
+    (R, Neg _, Just [val])
       | val /= 0 -> res (- val)
       | otherwise -> res 0
-    (Power x _, Just [val]) -> res $ val ** fromIntegral x
-    (InnerProd R arg1 arg2, Just [val1, val2]) ->
+    (R, Power x _, Just [val]) -> res $ val ** fromIntegral x
+    (R, InnerProd arg1 arg2, Just [val1, val2]) ->
       res $ val1 * val2 * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
-    (Rotate _ _, Just [val]) -> res val
+    (R, Rotate _ _, Just [val]) -> res val
     -- TODO: sin, sos, ...
     _ -> just n
   where
-    (shape, node) = retrieveNode n mp
+    (shape, _, node) = retrieveNode n mp
     getVal nId
       | Const val <- retrieveOp nId mp = Just val
       | otherwise = Nothing
@@ -556,7 +558,7 @@ evaluateIfPossibleRules exp@(mp, n) =
 --   This ensures that rotateAmount in each direction always lie within (0, dim - 1)
 normalizeRotateRules :: Modification
 normalizeRotateRules exp@(mp, n)
-  | (shape, Rotate amount arg) <- retrieveNode n mp = rotate (zipWith mod amount shape) $ just arg
+  | (shape, _, Rotate amount arg) <- retrieveNode n mp = rotate (zipWith mod amount shape) $ just arg
   | otherwise = just n
 
 -- | Rules for negative zeroes
@@ -565,7 +567,7 @@ normalizeRotateRules exp@(mp, n)
 --   Thus, instead we convert those to `Const (0.0)`.
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
-  | (shape, Const val) <- retrieveNode n mp,
+  | (shape, _, Const val) <- retrieveNode n mp,
     val == 0.0 || val == (-0.0) =
     const_ shape 0
   | otherwise = just n
@@ -625,7 +627,8 @@ pullOutPiecewiseRules exp@(mp, n)
 -- operation. We can simplify this further as `twiceReFT(x) + twiceImFT(x) = (size(x) / 2) *. x`.
 twiceReFTAndImFTRules :: Modification
 twiceReFTAndImFTRules exp@(mp, n)
-  | Sum R sumands <- retrieveOp n mp,
+  | Sum sumands <- retrieveOp n mp,
+    retrieveElementType n mp == R,
     Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands,
     Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
     let rest = map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
@@ -637,7 +640,8 @@ twiceReFTAndImFTRules exp@(mp, n)
   where
     isTwiceReFT nId
       | TwiceReFT inner <- retrieveOp nId mp = Just (1, nId, inner)
-      | Scale R scalarId scaleeId <- retrieveOp nId mp,
+      | Scale scalarId scaleeId <- retrieveOp nId mp,
+        retrieveElementType nId mp == R,
         Const val <- retrieveOp scalarId mp,
         TwiceReFT inner <- retrieveOp scaleeId mp =
         Just (val, nId, inner)
@@ -647,7 +651,8 @@ twiceReFTAndImFTRules exp@(mp, n)
         scaleFactor == 1,
         x == innerArg =
         True
-      | Scale R scalarId scaleeId <- retrieveOp nId mp,
+      | Scale scalarId scaleeId <- retrieveOp nId mp,
+        retrieveElementType nId mp == R,
         Const val <- retrieveOp scalarId mp,
         val == scaleFactor,
         TwiceImFT x <- retrieveOp scaleeId mp,

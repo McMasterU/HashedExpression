@@ -169,7 +169,7 @@ data Op
   | -- | extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
     ImagPart Arg
   | -- | inner product operator, overload via 'InnerProductSpace'
-    InnerProd ET Arg Arg
+    InnerProd Arg Arg
   | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
     Piecewise [Double] ConditionArg [BranchArg]
   | -- | rotate transformation, rotates vector elements by 'RotateAmount'

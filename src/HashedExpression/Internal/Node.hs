@@ -163,7 +163,7 @@ opArgs node =
     RealImag arg1 arg2 -> [arg1, arg2]
     RealPart arg -> [arg]
     ImagPart arg -> [arg]
-    InnerProd _ arg1 arg2 -> [arg1, arg2]
+    InnerProd arg1 arg2 -> [arg1, arg2]
     Piecewise _ conditionArg branches -> conditionArg : branches
     Rotate _ arg -> [arg]
     ReFT arg -> [arg]

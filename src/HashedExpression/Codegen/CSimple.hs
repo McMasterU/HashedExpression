@@ -28,7 +28,7 @@ import HashedExpression.Codegen
 import HashedExpression.Embed.FFTW (fftUtils)
 import HashedExpression.Internal (containsFTNode, topologicalSortManyRoots, unwrap, varNodesWithId)
 import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, NumType, Op (..), Shape, exMap)
-import HashedExpression.Internal.Node (opElementType, retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
+import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
 import HashedExpression.Value
@@ -101,8 +101,7 @@ initCodegen _ mp consecutiveIDs =
   where
     (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
     f (addressMap, curSize) nID =
-      let (shape, node) = retrieveNode nID mp
-          et = opElementType node mp
+      let (shape, et, node) = retrieveNode nID mp
        in case et of
             R -> (IM.insert nID curSize addressMap, curSize + product shape)
             C -> (IM.insert nID curSize addressMap, curSize + 2 * product shape)
@@ -134,19 +133,19 @@ evaluating CSimpleCodegen {..} rootIDs =
     len nID = product (retrieveShape nID cExpressionMap)
     genCode :: Int -> Code
     genCode n =
-      let (shape, op) = retrieveNode n cExpressionMap
+      let (shape, _, op) = retrieveNode n cExpressionMap
        in case op of
             Var _ -> []
             Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
-            Sum R args ->
+            Sum args ->
               let sumAt i = T.intercalate " + " $ map (!! i) args
                in for i (len n) [[I.i|#{n !! i} = #{sumAt i};|]]
-            Mul R args ->
+            Mul args ->
               let prodAt i = T.intercalate " * " $ map (!! i) args
                in for i (len n) [[I.i|#{n !! i} = #{prodAt i};|]]
             Power x arg -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
-            Neg R arg -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
-            Scale R scalar arg -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
+            Neg arg -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
+            Scale scalar arg -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
             Div arg1 arg2 -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
             Sqrt arg -> for i (len n) [[I.i|#{n !! i} = sqrt(#{arg !! i});|]]
             Sin arg -> for i (len n) [[I.i|#{n !! i} = sin(#{arg !! i});|]]
@@ -166,7 +165,7 @@ evaluating CSimpleCodegen {..} rootIDs =
             RealImag arg1 arg2 ->
               for i (len n) [[I.i|#{n !! i} = #{arg1 !! i};|]]
                 ++ for i (len n) [[I.i|#{n `imAt` i} = #{arg2 !! i};|]]
-            InnerProd R arg1 arg2
+            InnerProd arg1 arg2
               | null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
               | otherwise ->
                 let initCodes = [[I.i|double acc = 0;|]]

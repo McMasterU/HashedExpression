@@ -96,6 +96,7 @@ import Debug.Trace (trace, traceShowId)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import Prelude (Bool)
@@ -637,10 +638,10 @@ match (mp, n) outerWH =
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
         (Const c, PConst whc)
           | c == whc -> Just emptyMatch
-        (Sum _ args, PSum whs) -> recursiveAndCombine args whs
-        (Sum _ args, PSumList pl@(PListHole _ listCapture)) ->
+        (Sum args, PSum whs) -> recursiveAndCombine args whs
+        (Sum args, PSumList pl@(PListHole _ listCapture)) ->
           matchList mp args pl
-        (Sum _ args, PSumRest listCapture ps)
+        (Sum args, PSumRest listCapture ps)
           | length args > length ps,
             let (rest, normalParts) =
                   splitAt (length args - length ps) args,
@@ -652,10 +653,10 @@ match (mp, n) outerWH =
                         Map.fromList [(listCapture, rest)]
                     } ->
             Just $ unionMatch matchNormalParts matchListPart
-        (Mul _ args, PMul whs) -> recursiveAndCombine args whs
-        (Mul _ args, PMulList pl@(PListHole _ listCapture)) ->
+        (Mul args, PMul whs) -> recursiveAndCombine args whs
+        (Mul args, PMulList pl@(PListHole _ listCapture)) ->
           matchList mp args pl
-        (Mul _ args, PMulRest listCapture ps)
+        (Mul args, PMulRest listCapture ps)
           | length args > (length ps),
             let (rest, normalParts) =
                   splitAt (length args - length ps) args,
@@ -667,8 +668,8 @@ match (mp, n) outerWH =
                         Map.fromList [(listCapture, rest)]
                     } ->
             Just $ unionMatch matchNormalParts matchListPart
-        (Neg _ arg, PNeg sp) -> recursiveAndCombine [arg] [sp]
-        (Scale _ arg1 arg2, PScale sp1 sp2) ->
+        (Neg arg, PNeg sp) -> recursiveAndCombine [arg] [sp]
+        (Scale arg1 arg2, PScale sp1 sp2) ->
           recursiveAndCombine [arg1, arg2] [sp1, sp2]
         (Div arg1 arg2, PDiv sp1 sp2) ->
           recursiveAndCombine [arg1, arg2] [sp1, sp2]
@@ -691,7 +692,7 @@ match (mp, n) outerWH =
           recursiveAndCombine [arg1, arg2] [sp1, sp2]
         (RealPart arg, PRealPart sp) -> recursiveAndCombine [arg] [sp]
         (ImagPart arg, PImagPart sp) -> recursiveAndCombine [arg] [sp]
-        (InnerProd _ arg1 arg2, PInnerProd sp1 sp2) ->
+        (InnerProd arg1 arg2, PInnerProd sp1 sp2) ->
           recursiveAndCombine [arg1, arg2] [sp1, sp2]
         (Piecewise _ conditionArg branchArgs, PPiecewise sp pl@(PListHole _ listCapture))
           | Just matchBranches <- matchList mp branchArgs pl,
@@ -766,8 +767,7 @@ buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
-    error
-      "Capture not in the Map Capture [Int] which should never happens"
+    error "Capture not in the Map Capture [Int] which should never happens"
 
 -- | Find a 'ExpressionDiff' corresponding to 'PatternList' w.r.t a base (unwrapped) 'Expression' that was already
 --   found in a 'Match'
@@ -783,8 +783,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
           | Just nId <- Map.lookup capture (capturesMap match) ->
             noChange nId
           | otherwise ->
-            error
-              "Capture not in the Map Capture Int which should never happens"
+            error "Capture not in the Map Capture Int which should never happens"
         PHead pl -> head $ buildFromPatternList exp match pl
         PConst val -> diffConst (retrieveShape originalN originalMp) val
         PScalarConst val -> diffConst [] val
@@ -795,37 +794,34 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
         PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
         PMul sps -> mulManyDiff originalMp . map buildFromPattern' $ sps
         PNeg sp ->
-          applyDiff' (unaryET Neg ElementDefault) [buildFromPattern' sp]
+          applyDiff' (Unary specNeg) [buildFromPattern' sp]
         PScale sp1 sp2 ->
-          applyDiff' (binaryET Scale ElementDefault) $
-            map buildFromPattern' [sp1, sp2]
+          applyDiff' (Binary specScale) $ map buildFromPattern' [sp1, sp2]
         PDiv sp1 sp2 ->
-          applyDiff' (binary Div) $ map buildFromPattern' [sp1, sp2]
-        PSqrt sp -> applyDiff' (unary Sqrt) [buildFromPattern' sp]
-        PSin sp -> applyDiff' (unary Sin) [buildFromPattern' sp]
-        PCos sp -> applyDiff' (unary Cos) [buildFromPattern' sp]
-        PTan sp -> applyDiff' (unary Tan) [buildFromPattern' sp]
-        PExp sp -> applyDiff' (unary Exp) [buildFromPattern' sp]
-        PLog sp -> applyDiff' (unary Log) [buildFromPattern' sp]
-        PSinh sp -> applyDiff' (unary Sinh) [buildFromPattern' sp]
-        PCosh sp -> applyDiff' (unary Cosh) [buildFromPattern' sp]
-        PTanh sp -> applyDiff' (unary Tanh) [buildFromPattern' sp]
-        PAsin sp -> applyDiff' (unary Asin) [buildFromPattern' sp]
-        PAcos sp -> applyDiff' (unary Acos) [buildFromPattern' sp]
-        PAtan sp -> applyDiff' (unary Atan) [buildFromPattern' sp]
-        PAsinh sp -> applyDiff' (unary Asinh) [buildFromPattern' sp]
-        PAcosh sp -> applyDiff' (unary Acosh) [buildFromPattern' sp]
-        PAtanh sp -> applyDiff' (unary Atanh) [buildFromPattern' sp]
+          applyDiff' (Binary specDiv) $ map buildFromPattern' [sp1, sp2]
+        PSqrt sp -> applyDiff' (Unary specSqrt) [buildFromPattern' sp]
+        PSin sp -> applyDiff' (Unary specSin) [buildFromPattern' sp]
+        PCos sp -> applyDiff' (Unary specCos) [buildFromPattern' sp]
+        PTan sp -> applyDiff' (Unary specTan) [buildFromPattern' sp]
+        PExp sp -> applyDiff' (Unary specExp) [buildFromPattern' sp]
+        PLog sp -> applyDiff' (Unary specLog) [buildFromPattern' sp]
+        PSinh sp -> applyDiff' (Unary specSinh) [buildFromPattern' sp]
+        PCosh sp -> applyDiff' (Unary specCosh) [buildFromPattern' sp]
+        PTanh sp -> applyDiff' (Unary specTanh) [buildFromPattern' sp]
+        PAsin sp -> applyDiff' (Unary specAsin) [buildFromPattern' sp]
+        PAcos sp -> applyDiff' (Unary specAcos) [buildFromPattern' sp]
+        PAtan sp -> applyDiff' (Unary specAtan) [buildFromPattern' sp]
+        PAsinh sp -> applyDiff' (Unary specAsinh) [buildFromPattern' sp]
+        PAcosh sp -> applyDiff' (Unary specAcosh) [buildFromPattern' sp]
+        PAtanh sp -> applyDiff' (Unary specAtanh) [buildFromPattern' sp]
         PRealImag sp1 sp2 ->
-          applyDiff' (binary RealImag) $ map buildFromPattern' [sp1, sp2]
-        PRealPart sp -> applyDiff' (unary RealPart) [buildFromPattern' sp]
-        PImagPart sp -> applyDiff' (unary ImagPart) [buildFromPattern' sp]
+          applyDiff' (Binary specRealImag) $ map buildFromPattern' [sp1, sp2]
+        PRealPart sp -> applyDiff' (Unary specRealPart) [buildFromPattern' sp]
+        PImagPart sp -> applyDiff' (Unary specImagPart) [buildFromPattern' sp]
         PInnerProd sp1 sp2 ->
-          applyDiff' (binaryET InnerProd ElementDefault `hasShape` []) $
-            map buildFromPattern' [sp1, sp2]
+          applyDiff' (Binary specInnerProd) $ map buildFromPattern' [sp1, sp2]
         PPiecewise _ _ ->
-          error
-            "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
+          error "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
         PMulRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
             mulManyDiff originalMp $
@@ -836,16 +832,12 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
               (map noChange $ ns) ++ map (buildFromPattern') sps
         PPower sp pp ->
           let val = buildFromPatternPower match pp
-           in applyDiff' (unary (Power val)) [buildFromPattern' sp]
+           in applyDiff' (Unary (specPower val)) [buildFromPattern' sp]
         PRotate pra sp ->
           let rotateAmount = buildFromPatternRotateAmount match pra
-           in applyDiff'
-                (unary (Rotate rotateAmount))
-                [buildFromPattern' sp]
-        PReFT sp -> applyDiff' (unary ReFT) [buildFromPattern' sp]
-        PImFT sp -> applyDiff' (unary ImFT) [buildFromPattern' sp]
-        PTwiceReFT sp -> applyDiff' (unary TwiceReFT) [buildFromPattern' sp]
-        PTwiceImFT sp -> applyDiff' (unary TwiceImFT) [buildFromPattern' sp]
-        _ ->
-          error
-            "The right hand-side of substitution has something that we don't support yet"
+           in applyDiff' (Unary (specRotate rotateAmount)) [buildFromPattern' sp]
+        PReFT sp -> applyDiff' (Unary specReFT) [buildFromPattern' sp]
+        PImFT sp -> applyDiff' (Unary specImFT) [buildFromPattern' sp]
+        PTwiceReFT sp -> applyDiff' (Unary specTwiceReFT) [buildFromPattern' sp]
+        PTwiceImFT sp -> applyDiff' (Unary specTwiceImFT) [buildFromPattern' sp]
+        _ -> error "The right hand-side of substitution has something that we don't support yet"

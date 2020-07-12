@@ -13,6 +13,7 @@
 module HashedExpression.Problem where
 
 import qualified Data.IntMap as IM
+import HashedExpression.Internal.OperationSpec
 import Data.List (find, intercalate, sortBy, sortOn)
 import Data.List.Extra (firstJust)
 import qualified Data.Map as Map
@@ -125,15 +126,17 @@ inf = 1 / 0
 partialDerivativeMaps :: Expression Scalar Covector -> Map String NodeID
 partialDerivativeMaps df@(Expression dfId dfMp) =
   case retrieveOp dfId dfMp of
-    Sum Covector ns -> Map.fromList $ mapMaybe getPartial ns
+    Sum ns | retrieveElementType dfId dfMp == Covector -> Map.fromList $ mapMaybe getPartial ns
     _ -> Map.fromList $ mapMaybe getPartial [dfId]
   where
     getPartial :: NodeID -> Maybe (String, NodeID)
     getPartial nId
-      | Mul Covector [partialId, dId] <- retrieveOp nId dfMp,
+      | Mul [partialId, dId] <- retrieveOp nId dfMp,
+        retrieveElementType nId dfMp == Covector,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
-      | InnerProd Covector partialId dId <- retrieveOp nId dfMp,
+      | InnerProd partialId dId <- retrieveOp nId dfMp,
+        retrieveElementType nId dfMp == Covector,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
       | otherwise = Nothing
@@ -264,11 +267,11 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
       alreadyExist name = any (isD name) . IM.keys $ mp
       makePart (name, shape)
         | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (Binary specMulCovector) [aConst shape 0, dVarWithShape shape name]
       listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
         case retrieveOp n mp of
-          Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
+          Sum ns | retrieveElementType n mp == Covector -> sumMany $ map (mp,) ns ++ listToInsert
           _ -> sumMany $ (mp, n) : listToInsert
 
 -- | Construct a Problem from given objective function and constraints
@@ -408,12 +411,12 @@ constructProblem objectiveFunction varList constraint
     checkConstraint :: ConstraintStatement -> Maybe String
     checkConstraint cs =
       case retrieveNode n mp of
-        (_, Var var) -- if it is a var, then should be box constraint
+        (_, _, Var var) -- if it is a var, then should be box constraint
           | not (Set.member var varsSet) -> Just $ var ++ " is not a variable"
           | any (not . compatible (variableShape var)) (getValCS cs) ->
             Just $ "Bound for " ++ var ++ " is not in the right shape"
           | otherwise -> Nothing
-        ([], _)
+        ([], _, _)
           | any (not . compatible []) (getValCS cs) ->
             Just "Scalar expression must be bounded by scalar value"
           | otherwise -> Nothing

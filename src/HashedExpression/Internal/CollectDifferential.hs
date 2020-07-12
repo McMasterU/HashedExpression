@@ -30,6 +30,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -99,10 +100,11 @@ restructure =
 splitCovectorProdRules :: Modification
 splitCovectorProdRules exp@(mp, n) =
   case retrieveOp n mp of
-    Mul Covector ns ->
-      let ([differential], reals) = partition ((== Covector) . flip retrieveElementType mp) ns
-          prodRest = product_ . map just $ reals
-       in prodRest * just differential
+    Mul ns
+      | retrieveElementType n mp == Covector ->
+        let ([differential], reals) = partition ((== Covector) . flip retrieveElementType mp) ns
+            prodRest = product_ . map just $ reals
+         in prodRest * just differential
     _ -> just n
 
 -- | Move dVar out of operations (like reFT) that would prevent factoring
@@ -127,18 +129,21 @@ separateDVarAlone =
 groupByDVar :: Modification
 groupByDVar exp@(mp, n) =
   case retrieveOp n mp of
-    Sum Covector ns ->
-      let groups = groupBy sameDVar . sortWith getDVar . filter (not . isZero mp) $ ns
-       in sum_ . map (sum_ . map mulOneIfAlone) $ groups
+    Sum ns
+      | retrieveElementType n mp == Covector ->
+        let groups = groupBy sameDVar . sortWith getDVar . filter (not . isZero mp) $ ns
+         in sum_ . map (sum_ . map mulOneIfAlone) $ groups
     _ -> mulOneIfAlone n
   where
     getDVar :: Int -> String
     getDVar nId
       | DVar name <- retrieveOp nId mp = name
-      | Mul Covector [_, cId] <- retrieveOp nId mp,
+      | Mul [_, cId] <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar name <- retrieveOp cId mp =
         name
-      | InnerProd Covector _ cId <- retrieveOp nId mp,
+      | InnerProd _ cId <- retrieveOp nId mp,
+        retrieveElementType nId mp == Covector,
         DVar name <- retrieveOp cId mp =
         name
       | otherwise = error $ "Collect D: " ++ debugPrint (mp, nId)
@@ -162,18 +167,15 @@ aggregateByDVar =
 normalizeEachPartialDerivative :: Transformation
 normalizeEachPartialDerivative exp@(mp, n) =
   case retrieveOp n mp of
-    Sum Covector ns -> sumMany $ map normalizeEach ns
-    InnerProd Covector _ _ -> normalizeEach n
-    Mul Covector _ -> normalizeEach n
+    Sum ns | retrieveElementType n mp == Covector -> sumMany $ map normalizeEach ns
+    InnerProd _ _ | retrieveElementType n mp == Covector -> normalizeEach n
+    Mul _ | retrieveElementType n mp == Covector -> normalizeEach n
     _ -> (mp, n)
   where
     normalizeEach nId =
       case retrieveOp nId mp of
-        Mul Covector [partialDeriv, dVar] ->
-          mulMany
-            [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
-        InnerProd Covector partialDeriv dVar ->
-          apply
-            (binaryET InnerProd ElementDefault `hasShape` [])
-            [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        Mul [partialDeriv, dVar] | retrieveElementType nId mp == Covector ->
+          mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        InnerProd partialDeriv dVar | retrieveElementType nId mp == Covector ->
+          apply (Binary specInnerProdCovector) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         a -> error $ show a
