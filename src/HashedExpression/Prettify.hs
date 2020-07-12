@@ -130,16 +130,16 @@ hiddenPrettify pastable (mp, n) =
         _ ->
           wrapParentheses $
             case node of
-              Sum _ args
+              Sum args
                 | pastable -> T.concat ["sum [", T.intercalate ", " . map innerPrettify $ args, "]"]
                 | otherwise -> T.intercalate "+" . map innerPrettify $ args
-              Mul _ args
+              Mul args
                 | pastable -> T.concat ["prod [", T.intercalate ", " . map innerPrettify $ args, "]"]
                 | otherwise -> T.intercalate "*" . map innerPrettify $ args
-              Neg _ arg
+              Neg arg
                 | pastable -> T.concat ["negate", wrapParentheses $ innerPrettify arg]
                 | otherwise -> T.concat ["-", wrapParentheses $ innerPrettify arg]
-              Scale _ arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
+              Scale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
               Div arg1 arg2 -> T.concat [innerPrettify arg1, "/", innerPrettify arg2]
               Sqrt arg -> T.concat ["sqrt", wrapParentheses $ innerPrettify arg]
               Sin arg -> T.concat ["sin", wrapParentheses $ innerPrettify arg]

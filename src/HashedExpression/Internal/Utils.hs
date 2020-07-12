@@ -92,13 +92,13 @@ ensureSameShapeList es after
 constWithShape :: Shape -> Double -> Expression d R
 constWithShape shape val = Expression h (IM.fromList [(h, node)])
   where
-    node = (shape, Const val)
+    node = (shape, R, Const val)
     h = hash node
 
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = (IM.fromList [(h, node)], h)
   where
-    node = (shape, Var name)
+    node = (shape, R, Var name)
     h = hash node
 
 -- |
@@ -108,7 +108,7 @@ isScalarShape = null
 -- |
 pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
-  | (shape, Const c) <- retrieveNode n mp = Just (shape, c)
+  | (shape, R, Const c) <- retrieveNode n mp = Just (shape, c)
   | otherwise = Nothing
 
 -- |
@@ -146,27 +146,27 @@ isConstant mp nId
 -- |
 pullSumOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullSumOperands mp nId
-  | Sum _ operands <- retrieveOp nId mp = operands
+  | Sum operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
 pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
-  | Mul _ operands <- retrieveOp nId mp = operands
+  | Mul operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
 aConst :: Shape -> Double -> (ExpressionMap, NodeID)
 aConst shape val = (IM.fromList [(h, node)], h)
   where
-    node = (shape, Const val)
+    node = (shape, R, Const val)
     h = hash node
 
 -- |
 dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 dVarWithShape shape name = (IM.fromList [(h, node)], h)
   where
-    node = (shape, DVar name)
+    node = (shape, Covector, DVar name)
     h = hash node
 
 showT :: Show a => a -> T.Text
@@ -175,7 +175,8 @@ showT = T.pack . show
 -- |
 maybeVariable :: DimensionType d => Expression d R -> Maybe (String, Shape)
 maybeVariable (Expression nID mp) = case retrieveNode nID mp of
-  (shape, Var name) -> Just (name, shape)
+  (shape, R, Var name) -> Just (name, shape)
+  (shape, _, Var name) -> error "Why is this happening?"
   _ -> Nothing
 
 -------------------------------------------------------------------------------
