@@ -9,8 +9,7 @@
 -- This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
 -- Node, returning a Node's arguments, returning a Node's shape, etc
 module HashedExpression.Internal.Node
-  ( opElementType,
-    nodeTypeWeight,
+  ( nodeTypeWeight,
     sameOp,
     opArgs,
     retrieveElementType,
@@ -30,59 +29,59 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
 -- | Compute the ElementType (i.e 'R','C','Covector') of an 'Op' (requires the base 'ExpressionMap' as context)
-opElementType ::
-  HasCallStack =>
-  -- | Node to find the ElementType of
-  Op ->
-  -- | base Expression containing the Node
-  ExpressionMap ->
-  -- | resulting ElementType
-  ET
-opElementType op mp =
-  case op of
-    Var _ -> R
-    DVar _ -> Covector
-    Const _ -> R
-    Sum et _ -> et
-    Mul et _ -> et
-    Power _ arg -> retrieveElementType arg mp
-    Neg et _ -> et
-    Scale et _ _ -> et
-    Div _ _ -> R
-    Sqrt _ -> R
-    Sin _ -> R
-    Cos _ -> R
-    Tan _ -> R
-    Exp _ -> R
-    Log _ -> R
-    Sinh _ -> R
-    Cosh _ -> R
-    Tanh _ -> R
-    Asin _ -> R
-    Acos _ -> R
-    Atan _ -> R
-    Asinh _ -> R
-    Acosh _ -> R
-    Atanh _ -> R
-    RealImag _ _ -> C -- from real and imagine
-    RealPart _ -> R -- extract real part
-    ImagPart _ -> R -- extract imaginary part
-    InnerProd et _ _ -> et
-    Piecewise _ _ branches ->
-      maximum . map (`retrieveElementType` mp) $ branches
-    Rotate _ arg -> retrieveElementType arg mp
-    ReFT arg
-      | retrieveElementType arg mp == Covector -> Covector
-      | otherwise -> R
-    ImFT arg
-      | retrieveElementType arg mp == Covector -> Covector
-      | otherwise -> R
-    TwiceImFT arg
-      | retrieveElementType arg mp == Covector -> Covector
-      | otherwise -> R
-    TwiceReFT arg
-      | retrieveElementType arg mp == Covector -> Covector
-      | otherwise -> R
+-- opElementType ::
+--  HasCallStack =>
+--  -- | Node to find the ElementType of
+--  Op ->
+--  -- | base Expression containing the Node
+--  ExpressionMap ->
+--  -- | resulting ElementType
+--  ET
+-- opElementType op mp =
+--  case op of
+--    Var _ -> R
+--    DVar _ -> Covector
+--    Const _ -> R
+--    Sum et _ -> et
+--    Mul et _ -> et
+--    Power _ arg -> retrieveElementType arg mp
+--    Neg et _ -> et
+--    Scale et _ _ -> et
+--    Div _ _ -> R
+--    Sqrt _ -> R
+--    Sin _ -> R
+--    Cos _ -> R
+--    Tan _ -> R
+--    Exp _ -> R
+--    Log _ -> R
+--    Sinh _ -> R
+--    Cosh _ -> R
+--    Tanh _ -> R
+--    Asin _ -> R
+--    Acos _ -> R
+--    Atan _ -> R
+--    Asinh _ -> R
+--    Acosh _ -> R
+--    Atanh _ -> R
+--    RealImag _ _ -> C -- from real and imagine
+--    RealPart _ -> R -- extract real part
+--    ImagPart _ -> R -- extract imaginary part
+--    InnerProd et _ _ -> et
+--    Piecewise _ _ branches ->
+--      maximum . map (`retrieveElementType` mp) $ branches
+--    Rotate _ arg -> retrieveElementType arg mp
+--    ReFT arg
+--      | retrieveElementType arg mp == Covector -> Covector
+--      | otherwise -> R
+--    ImFT arg
+--      | retrieveElementType arg mp == Covector -> Covector
+--      | otherwise -> R
+--    TwiceImFT arg
+--      | retrieveElementType arg mp == Covector -> Covector
+--      | otherwise -> R
+--    TwiceReFT arg
+--      | retrieveElementType arg mp == Covector -> Covector
+--      | otherwise -> R
 
 -- | For ordering things inside 'Sum' or 'Product' so we can write rules like
 --
@@ -140,11 +139,11 @@ opArgs node =
     Var _ -> []
     DVar _ -> []
     Const _ -> []
-    Sum _ args -> args
-    Mul _ args -> args
+    Sum args -> args
+    Mul args -> args
     Power _ arg -> [arg]
-    Neg _ arg -> [arg]
-    Scale _ arg1 arg2 -> [arg1, arg2]
+    Neg arg -> [arg]
+    Scale arg1 arg2 -> [arg1, arg2]
     Div arg1 arg2 -> [arg1, arg2]
     Sqrt arg -> [arg]
     Sin arg -> [arg]
@@ -177,7 +176,7 @@ opArgs node =
 retrieveOp :: HasCallStack => NodeID -> ExpressionMap -> Op
 retrieveOp n mp =
   case IM.lookup n mp of
-    Just (_, node) -> node
+    Just (_, _, op) -> op
     _ -> error "node not in map"
 
 -- | Retrieve a 'Node' structure (i.e a 'Node' with it's 'Shape') from it's base 'ExpressionMap' and 'NodeID'
@@ -193,7 +192,7 @@ retrieveNode n mp =
 retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
 retrieveElementType n mp =
   case IM.lookup n mp of
-    Just (_, node) -> opElementType node mp
+    Just (_, et, _) -> et
     _ -> error "expression not in map"
 
 -- | Retrieve the 'Shape' of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
@@ -201,7 +200,7 @@ retrieveElementType n mp =
 retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
 retrieveShape n mp =
   case IM.lookup n mp of
-    Just (dim, _) -> dim
+    Just (shape, _, _) -> shape
     _ -> error "expression not in map"
 
 -- | Retrieve the 'ElementType' (i.e 'R','C','Covector') of a 'Expression'
@@ -209,7 +208,7 @@ retrieveShape n mp =
 expressionElementType :: HasCallStack => Expression d et -> ET
 expressionElementType (Expression n mp) =
   case IM.lookup n mp of
-    Just (_, node) -> opElementType node mp
+    Just (_, et, _) -> et
     _ -> error "expression not in map"
 
 -- | Retrieve the 'Shape' of an 'Expression'
@@ -217,7 +216,7 @@ expressionElementType (Expression n mp) =
 expressionShape :: HasCallStack => Expression d et -> Shape
 expressionShape (Expression n mp) =
   case IM.lookup n mp of
-    Just (dim, _) -> dim
+    Just (dim, _, _) -> dim
     _ -> error "expression not in map"
 
 -- | Retrieve the 'Node' of an 'Expression'
@@ -233,5 +232,5 @@ expressionNode (Expression n mp) =
 expressionOp :: HasCallStack => Expression d et -> Op
 expressionOp (Expression n mp) =
   case IM.lookup n mp of
-    Just (_, node) -> node
+    Just (_, _, op) -> op
     _ -> error "expression not in map"

@@ -86,7 +86,7 @@ type ExpressionMap = IntMap Node
 
 -- | The internals of an 'Expression' are a collection of 'Op' with
 --   their dimensions
-type Node = (Shape, Op)
+type Node = (Shape, ET, Op)
 
 -- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
 --   Used as the index/key to perform a lookup in 'ExpressionMap'
@@ -121,15 +121,15 @@ data Op
   | -- | constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
     Const Double
   | -- | element-wise sum
-    Sum ET Args
+    Sum Args
   | -- | multiply, overloaded via 'Dimension'
-    Mul ET Args
+    Mul Args
   | -- | power to, overloaded via 'PowerOp'
     Power Int Arg
   | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
-    Neg ET Arg
+    Neg Arg
   | -- | scaling, overloaded via 'VectorSpaceOp'
-    Scale ET Arg Arg
+    Scale Arg Arg
   | -- | division operator, wrapped by @Expression d R@
     Div Arg Arg
   | -- | square root operator, wrapped by @Expression d R@

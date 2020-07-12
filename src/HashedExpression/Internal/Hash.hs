@@ -55,19 +55,19 @@ separator = "a"
 -- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
 --   specific 'NodeID')
 hash :: Node -> Int
-hash (shape, node) =
+hash (shape, et, node) =
   let hashString' s =
         hashString $
-          (intercalate separator . map show $ shape) ++ separator ++ s
+          (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
         DVar name -> offsetHash 1 . hashString' $ show name
         Const num -> offsetHash 2 . hashString' $ show num
-        Sum et args -> offsetHash 3 . hashString' $ show et ++ (intercalate separator . map show $ args)
-        Mul et args -> offsetHash 4 . hashString' $ show et ++ (intercalate separator . map show $ args)
+        Sum args -> offsetHash 3 . hashString' $ intercalate separator . map show $ args
+        Mul args -> offsetHash 4 . hashString' $ intercalate separator . map show $ args
         Power x arg -> offsetHash 5 . hashString' $ show x ++ "of" ++ show arg
-        Neg et arg -> offsetHash 6 . hashString' $ show et ++ show arg
-        Scale et arg1 arg2 -> offsetHash 7 . hashString' $ show et ++ show arg1 ++ separator ++ show arg2
+        Neg arg -> offsetHash 6 . hashString' $ show arg
+        Scale arg1 arg2 -> offsetHash 7 . hashString' $ show arg1 ++ separator ++ show arg2
         -- MARK: only apply to R
         Div arg1 arg2 -> offsetHash 8 . hashString' $ show arg1 ++ separator ++ show arg2
         Sqrt arg -> offsetHash 9 . hashString' $ show arg
@@ -89,7 +89,7 @@ hash (shape, node) =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProd et arg1 arg2 -> offsetHash 27 . hashString' $ show et ++ show arg1 ++ separator ++ show arg2
+        InnerProd et arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
         -- MARK: Piecewise
         Piecewise marks arg branches ->
           offsetHash 28 . hashString' $
