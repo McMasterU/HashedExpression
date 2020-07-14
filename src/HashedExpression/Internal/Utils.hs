@@ -120,6 +120,11 @@ isZero mp nId
     Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
+  
+-- |
+isDZero :: ExpressionMap -> NodeID -> Bool
+isDZero mp nId = retrieveOp nId mp == DZero
+
 
 -- |
 isOne :: ExpressionMap -> NodeID -> Bool

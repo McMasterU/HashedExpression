@@ -117,10 +117,10 @@ instance ToShape d => Fractional (Expression d C) where
 instance ToShape d => Num (Expression d Covector) where
   e1 + e2 = applyNary specSum [e1, e2]
   negate = applyUnary specNeg
-  (*) = error "Not applicable to 1-form"
-  fromInteger = error "Not applicable to 1-form"
-  abs = error "Not applicable to 1-form"
-  signum = error "Not applicable to 1-form"
+  (*) = error "*: Not applicable to 1-form"
+  fromInteger = error "fromInteger: Not applicable to 1-form"
+  abs = error "abs: Not applicable to 1-form"
+  signum = error "signum: Not applicable to 1-form"
 
 -- | Scale in vector space
 instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression d et) where

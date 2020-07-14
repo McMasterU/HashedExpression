@@ -54,6 +54,8 @@ import qualified Prelude
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
+[dx, dy, dz] = map PHole [20, 21, 22]
+
 zero :: Pattern
 zero = PConst 0.0
 
@@ -121,10 +123,8 @@ normalizingTransformation = secondPass . firstPass
             expandPiecewiseRealImag,
             twiceReFTAndImFTRules
           ]
-          ++ [ rulesFromPattern, --
-               removeUnreachable
-             ]
-    secondPass = toMultiplyIfPossible
+          ++ [rulesFromPattern]
+    secondPass = chain [toMultiplyIfPossible, removeUnreachable]
 
 -- | Turn a modification into a recursive transformation
 toRecursiveSimplification ::
@@ -134,31 +134,30 @@ toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
-toMultiplyIfPossible :: Transformation
-toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
-  where
-    rule exp@(mp, n)
-      | Scale scalar scalee <- retrieveOp n mp,
-        retrieveElementType n mp /= C,
-        isScalarShape (retrieveShape scalee mp) =
-        just scalar * just scalee
-      | InnerProd arg1 arg2 <- retrieveOp n mp,
-        isScalarShape (retrieveShape arg1 mp),
-        isScalarShape (retrieveShape arg2 mp),
-        retrieveElementType n mp /= C =
-        just arg1 * just arg2
-      | otherwise = just n
+-- toMultiplyIfPossible :: Transformation
+-- toMultiplyIfPossible = toRecursiveSimplification . fromModification $ rule
+--  where
+--    rule exp@(mp, n)
+--      | Scale scalar scalee <- retrieveOp n mp,
+--        retrieveElementType n mp /= C,
+--        isScalarShape (retrieveShape scalee mp) =
+--        just scalar * just scalee
+--      | InnerProd arg1 arg2 <- retrieveOp n mp,
+--        isScalarShape (retrieveShape arg1 mp),
+--        isScalarShape (retrieveShape arg2 mp),
+--        retrieveElementType n mp /= C =
+--        just arg1 * just arg2
+--      | otherwise = just n
 
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
-toMultiplyIfPossible1 :: Transformation
-toMultiplyIfPossible1 =
+toMultiplyIfPossible :: Transformation
+toMultiplyIfPossible =
   chain . map (toRecursiveSimplification . fromSubstitution) $
     [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y,
-      x *. y |. isCovector y &&. isScalar y ~~~~~~> x * y,
       x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
       x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
-      x <.> y |. isCovector y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
-      x <.> y |. isCovector x &&. isScalar x &&. isScalar y ~~~~~~> x * y
+      x |*.| dy |. isScalar dy ~~~~~~> x |*| dy,
+      x |<.>| dy |. isScalar x &&. isScalar dy ~~~~~~> x |*| dy
     ]
 
 -- | Create a transformation which combines together the various rules listed in this module.
@@ -196,7 +195,19 @@ zeroOneRules =
     x + zero |.~~~~~~> x,
     zero + x |.~~~~~~> x,
     x <.> zero |.~~~~~~> zero,
-    zero <.> x |.~~~~~~> zero
+    zero <.> x |.~~~~~~> zero,
+    -- Covector
+    zero |*| dx |.~~~~~~> dZero,
+    x |*| dZero |.~~~~~~> dZero,
+    one |*| dx |.~~~~~~> dx,
+    
+    zero |*.| dx |.~~~~~~> dZero,
+    x |*.| dZero |.~~~~~~> dZero,
+    
+    one |*.| dx |.~~~~~~> dx,
+    dZero |.*| x |.~~~~~~> dZero,
+    
+    zero |<.>| dx |.~~~~~~> dZero
   ]
 
 -- | Rules related to the scaling operation
@@ -208,7 +219,11 @@ scaleRules =
     negate (s *. x) |.~~~~~~> s *. negate x,
     xRe (s *. x) |. isReal s ~~~~~~> s *. xRe x,
     xIm (s *. x) |. isReal s ~~~~~~> s *. xIm x,
-    restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
+    restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x),
+    -- Covector
+    x |*.| (y |*.| dz) |.~~~~~~> (x * y) |*.| dz,
+    negate (s |*.| dx) |.~~~~~~> negate s |*.| dx,
+    x |*| (s |*.| dy) |.~~~~~~> (s *. x) |*.| dy
   ]
 
 -- | Rules for operations on complex numbers
@@ -238,9 +253,11 @@ dotProductRules :: [Substitution]
 dotProductRules =
   [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y), --
     x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y),
-    x <.> (s *. y) |. isCovector s ~~~~~~> s *. (x <.> y),
     x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y), -- Conjugate if the scalar is complex
-    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y)
+    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y),
+    -- Covector
+    (s *. x) |<.>| dy |.~~~~~~> s |*.| (x |<.>| dy),
+    x |<.>| (s |*.| dy) |.~~~~~~> s |*.| (x |<.>| dy)
   ]
 
 -- | Rules for distributivity of scale, multiplication and dot product over sumP
@@ -248,14 +265,22 @@ dotProductRules =
 --   This mostly consists of rules to bring leading multiplicands inside a sum, as one would expect.
 distributiveRules :: [Substitution]
 distributiveRules =
-  [ x * sumP ys |.~~~~~~> sumP (mapL (x *) ys),
+  [ -- Multiplication
+    x * sumP ys |.~~~~~~> sumP (mapL (x *) ys),
     sumP ys * x |.~~~~~~> sumP (mapL (* x) ys),
+    restOfProduct ~* sumP ys |.~~~~~~> sumP (mapL (restOfProduct ~*) ys),
+    -- Dot product
     x <.> sumP ys |.~~~~~~> sumP (mapL (x <.>) ys),
     sumP ys <.> x |.~~~~~~> sumP (mapL (<.> x) ys),
+    -- Scaling
     x *. sumP ys |.~~~~~~> sumP (mapL (x *.) ys),
+    sumP ys *. x |.~~~~~~> sumP (mapL (*. x) ys),
     negate (sumP ys) |.~~~~~~> sumP (mapL negate ys),
-    restOfProduct ~* sumP ys |.~~~~~~> sumP (mapL (restOfProduct ~*) ys),
-    sumP ys *. x |.~~~~~~> sumP (mapL (*. x) ys)
+    -- TODO: With covector
+    sumP ys |*| dx |.~~~~~~> sumP (mapL (|*| dx) ys),
+    sumP ys |<.>| dx |.~~~~~~> sumP (mapL (|<.>| dx) ys),
+    sumP ys |*.| dx |.~~~~~~> sumP (mapL (|*.| dx) ys),
+    dx |.*| sumP ys |.~~~~~~> sumP (mapL (dx |.*|) ys)
   ]
 
 -- | Rules for Fourier transform
@@ -266,23 +291,26 @@ fourierTransformRules :: [Substitution]
 fourierTransformRules =
   [ reFT (x +: y) |.~~~~~~> reFT x - imFT y,
     imFT (x +: y) |.~~~~~~> imFT x + reFT y,
-    -- TODO: re-implement ?
     reFT zero |.~~~~~~> zero,
     imFT zero |.~~~~~~> zero,
+    -- TODO: TwiceImFT and TwiceReFT should be in Optimize module
     twiceImFT zero |.~~~~~~> zero,
     twiceReFT zero |.~~~~~~> zero,
     reFT (sumP xs) |.~~~~~~> sumP (mapL reFT xs),
     imFT (sumP xs) |.~~~~~~> sumP (mapL imFT xs),
     imFT (reFT x) |. isReal x ~~~~~~> zero,
     reFT (imFT x) |. isReal x ~~~~~~> zero,
-    imFT (reFT x) |. isCovector x ~~~~~~> zero,
-    reFT (imFT x) |. isCovector x ~~~~~~> zero,
     reFT (s *. x) |. isReal s ~~~~~~> s *. reFT x,
-    reFT (s *. x) |. isCovector s ~~~~~~> s *. reFT x,
     imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x,
-    imFT (s *. x) |. isCovector s ~~~~~~> s *. imFT x,
     reFT (reFT x) |. isReal x ~~~~~~> twiceReFT x,
-    imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x
+    imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x,
+    -- Covector
+    imFT (reFT dx) |. isCovector dx ~~~~~~> dZero,
+    reFT (imFT dx) |. isCovector dx ~~~~~~> dZero,
+    reFT (s |*.| dx) |.~~~~~~> s |*.| reFT x,
+    imFT (s |*.| dx) |.~~~~~~> s |*.| imFT x,
+    reFT (dx |.*| y) |.~~~~~~> dx |.*| reFT y,
+    imFT (dx |.*| y) |.~~~~~~> dx |.*| imFT y
   ]
 
 -- | Rules for piecewise functions
@@ -308,7 +336,8 @@ exponentRules =
 -- | Miscellaneous rules
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |.~~~~~~> (-1 :: Pattern) *. x,
+  [ negate x |. isReal x ||. isComplex x ~~~~~~> (-1 :: Pattern) *. x,
+    negate dx |. isCovector dx ~~~~~~> (-1 :: Pattern) |*.| x,
     (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
   ]
 
@@ -323,7 +352,10 @@ rotateRules =
     rotate amount (sumP xs) |.~~~~~~> sumP (mapL (rotate amount) xs),
     rotate amount (productP xs) |.~~~~~~> productP (mapL (rotate amount) xs),
     rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y,
-    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y)
+    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y),
+    -- Covector
+    rotate amount (s |*.| dx) |.~~~~~~> s |*.| rotate amount dx,
+    rotate amount1 x |<.>| rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x |<.>| y)
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
@@ -338,6 +370,8 @@ zeroOneSumProdRules exp@(mp, n) =
       -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
       | any (isZero mp) ns ->
         sum_ . map just . filter (not . isZero mp) $ ns
+      | any (isDZero mp) ns ->
+        sum_ . map just . filter (not . isDZero mp) $ ns
     Mul ns
       -- to make sure filter (not . isOne mp) ns is not empty
       | all (isOne mp) ns -> just $ head ns
@@ -358,14 +392,8 @@ zeroOneSumProdRules exp@(mp, n) =
 collapseSumProdRules :: Modification
 collapseSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
-    Sum ns
-      -- if the sumP has only one, collapse it
-      -- sum(x) -> x
-      | length ns == 1 -> just $ head ns
-    Mul ns
-      -- if the mul has only one, collapse it
-      -- product(x) -> x
-      | length ns == 1 -> just $ head ns
+    Sum [nID] -> just nID
+    Mul [nID] -> just nID
     _ -> just n
 
 -- | Rules for flattening 'Sum' and 'Mul'.
@@ -386,9 +414,8 @@ flattenSumProdRules exp@(mp, n) =
     _ -> just n
 
 -- | Rules for grouping constants
---
 --   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
--- TODO: possibly re-implement
+-- 
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
@@ -519,7 +546,7 @@ combineRealScalarRules exp@(mp, n)
     retrieveElementType n mp == R,
     let extracted = map extract ns,
     any (isJust . snd) extracted =
-    let combinedScalars = product_ . catMaybes $ map snd extracted
+    let combinedScalars = product_ (mapMaybe snd extracted)
         combinedScalees = product_ $ map fst extracted
      in combinedScalars *. combinedScalees
   | otherwise = just n
@@ -601,6 +628,7 @@ expandPiecewiseRealImag exp@(mp, n)
 -- | Rules for expanding piecewise functions
 --
 --   For example: `if x < 1 then x + 1 else x + y = (x + 1) * (if x < 1 then 1 else 0) + (x + y) * (if x < 1 then 0 else 1)`
+-- 
 pullOutPiecewiseRules :: Modification
 pullOutPiecewiseRules exp@(mp, n)
   | Piecewise marks condition branches <- retrieveOp n mp,
@@ -654,8 +682,7 @@ twiceReFTAndImFTRules exp@(mp, n)
       | otherwise = Nothing
     isTwiceImFTof innerArg scaleFactor nId
       | TwiceImFT x <- retrieveOp nId mp,
-        scaleFactor == 1,
-        x == innerArg =
+        scaleFactor == 1 && x == innerArg =
         True
       | Scale scalarId scaleeId <- retrieveOp nId mp,
         retrieveElementType nId mp == R,

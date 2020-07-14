@@ -61,7 +61,6 @@ hash (shape, et, node) =
           (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
-        DVar name -> offsetHash 1 . hashString' $ show name
         Const num -> offsetHash 2 . hashString' $ show num
         Sum args -> offsetHash 3 . hashString' $ intercalate separator . map show $ args
         Mul args -> offsetHash 4 . hashString' $ intercalate separator . map show $ args
@@ -104,6 +103,14 @@ hash (shape, et, node) =
         ImFT arg -> offsetHash 31 . hashString' $ show arg
         TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
         TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
+        -- Mark: Covector
+        DVar name -> offsetHash 1 . hashString' $ show name
+        DZero -> offsetHash 34. hashString' $ "dzero"
+        MulD arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
+        ScaleD arg1 arg2  -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
+        DScale arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
+        InnerProdD arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
+
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

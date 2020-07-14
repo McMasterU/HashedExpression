@@ -104,10 +104,11 @@ hiddenDerivative vars (Expression n mp) = coerce res
         -- dx = dx if x is in vars, otherwise dzero
         Var name -> fromNode (shape, Covector, if Set.member name vars then DVar name else DZero)
         Const _ -> fromNode (shape, Covector, DZero)
-        Sum args -> sum $ map (d . asR) args
+        Sum args -> applyNary specSum $ map (d . asR) args
         Mul args ->
-          let process (x, rest) = product (map asR rest) |*| d (asR x)
-           in sum $ map process $ removeEach args
+          let process :: (NodeID, [NodeID]) -> Expression D_ Covector
+              process (x, rest) = applyNary specMul (map asR rest) |*| d (asR x)
+           in applyNary specSum $ map process $ removeEach args
         -- d(f ^ a) = df * a * f ^ (a - 1)
         Power x arg ->
           let f = asR arg
@@ -213,9 +214,9 @@ hiddenDerivative vars (Expression n mp) = coerce res
            in one / (one - f * f) |*| df
         InnerProd arg1 arg2 ->
           let f = asR arg1
-              df = d f
+              df = traceShowId $ d f
               g = asR arg2
-              dg = d g
+              dg = traceShowId $ d g
            in coerce $ f |<.>| dg + g |<.>| df
         Piecewise marks conditionArg branches ->
           let conditionExp = asR conditionArg

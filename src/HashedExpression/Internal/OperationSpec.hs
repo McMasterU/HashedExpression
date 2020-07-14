@@ -78,13 +78,8 @@ specMul =
   NarySpec
     { toOp = Mul,
       decideShape = \xs -> assertSame xs $ head xs,
-      decideET = decideET
+      decideET = \xs -> assertSame xs $ head xs
     }
-  where
-    decideET :: [ET] -> ET
-    decideET [R, Covector] = Covector
-    decideET [Covector, R] = Covector
-    decideET xs = assertSame xs $ head xs
 
 specPower :: HasCallStack => Int -> UnarySpec
 specPower alpha = defaultUnary (Power alpha) [R, C]

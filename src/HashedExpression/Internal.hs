@@ -216,7 +216,7 @@ data OperandOrder
 
 -- | Used to apply rules (which can be generated with 'fromModification') to every 'Node' in an 'Expression' bottom up
 toRecursive ::
-  -- | apply in topological order or not
+  -- | Reorder operands or not
   OperandOrder ->
   -- | rule applied to a single 'Node'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
@@ -348,6 +348,19 @@ instance RotateOp RotateAmount Change where
 instance PiecewiseOp Change Change where
   piecewise marks condition branches mp =
     applyDiff mp (ConditionAry (specPiecewise marks)) . map ($ mp) $ condition : branches
+    
+instance MulCovectorOp Change Change Change where
+  (|*|) change1 change2 mp = applyDiff mp (Binary specMulD) [change1 mp, change2 mp]
+
+instance ScaleCovectorOp Change Change Change where
+  (|*.|) change1 change2 mp = applyDiff mp (Binary specScaleD) [change1 mp, change2 mp]
+
+instance CovectorScaleOp Change Change Change where
+  (|.*|) change1 change2 mp = applyDiff mp (Binary specDScale) [change1 mp, change2 mp]
+
+instance InnerProductCovectorOp Change Change Change where
+  (|<.>|) change1 change2 mp = applyDiff mp (Binary specInnerProdD) [change1 mp, change2 mp]
+
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -388,6 +401,11 @@ diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
+    
+dZeroWithShape :: Shape -> ExpressionDiff
+dZeroWithShape shape = ExpressionDiff mp n
+  where 
+    Expression n mp = fromNode (shape, Covector, DZero)
 
 -- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
 mulManyDiff ::
@@ -471,6 +489,11 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
       ImFT _ -> combine (Unary specImFT)
       TwiceReFT _ -> combine (Unary specTwiceReFT)
       TwiceImFT _ -> combine (Unary specTwiceImFT)
+      DZero -> noChange n
+      MulD _ _ -> combine (Binary specMulD)
+      ScaleD {} -> combine (Binary specScaleD)
+      DScale {} -> combine (Binary specDScale)
+      InnerProdD _ _ -> combine (Binary specInnerProdD)
   where
     (oldShape, oldET, oldOp) = retrieveNode n contextMp
     -------------------------------------------------------------------------------

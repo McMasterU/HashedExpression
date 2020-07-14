@@ -119,7 +119,6 @@ hiddenPrettify pastable (mp, n) =
             _ -> error "TODO: not yet support more than 3D"
    in case node of
         Var name -> T.concat [T.pack name]
-        DVar name -> T.concat ["d", T.pack name]
         Const val
           | pastable ->
             case shape of
@@ -127,6 +126,8 @@ hiddenPrettify pastable (mp, n) =
               [x] -> T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
               _ -> T.pack $ show val
           | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
+        DVar name -> T.concat ["d", T.pack name]
+        DZero -> "d0"
         _ ->
           wrapParentheses $
             case node of
@@ -169,3 +170,8 @@ hiddenPrettify pastable (mp, n) =
               ImFT arg -> T.concat ["imFT", wrapParentheses $ innerPrettify arg]
               TwiceReFT arg -> T.concat ["twiceReFT", wrapParentheses $ innerPrettify arg]
               TwiceImFT arg -> T.concat ["twiceImFT", wrapParentheses $ innerPrettify arg]
+              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "*", innerPrettify arg2]
+              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
+              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
+              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
+

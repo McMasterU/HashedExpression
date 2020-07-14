@@ -77,6 +77,7 @@ module HashedExpression.Internal.Pattern
     sameElementType,
     zeroAmount,
     sameAmount,
+    dZero,
   )
 where
 
@@ -248,6 +249,11 @@ data Pattern
     PTwiceReFT Pattern
   | -- | pattern that has a imaginary fourier transform applied to it twice
     PTwiceImFT Pattern
+  | PDZero
+  | PMulD Pattern Pattern
+  | PScaleD Pattern Pattern
+  | PDScale Pattern Pattern
+  | PInnerProdD Pattern Pattern
   deriving (Show)
 
 instance Show (Pattern -> Pattern) where
@@ -286,6 +292,9 @@ imFT = PImFT
 -- | pattern that has a real fourier transform applied to it twice (wrapper for 'PTwiceReFT')
 twiceReFT :: Pattern -> Pattern
 twiceReFT = PTwiceReFT
+
+dZero :: Pattern
+dZero = PDZero
 
 -- | pattern that has a imaginary fourier transform applied to it twice (wrapper for 'PTwiceImFT')
 twiceImFT :: Pattern -> Pattern
@@ -372,6 +381,18 @@ instance Num PatternRotateAmount where
   (+) = PRotateAmountSum
   negate = PRotateAmountNegate
 
+instance MulCovectorOp Pattern Pattern Pattern where
+  (|*|) = PMulD
+
+instance ScaleCovectorOp Pattern Pattern Pattern where
+  (|*.|) = PScaleD
+
+instance CovectorScaleOp Pattern Pattern Pattern where
+  (|.*|) = PDScale
+
+instance InnerProductCovectorOp Pattern Pattern Pattern where
+  (|<.>|) = PInnerProdD
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * PatternList
@@ -379,7 +400,6 @@ instance Num PatternRotateAmount where
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Capture a list of associated 'Pattern'
---   TODO haddock: what is the functional parameter for? we seem to always use id
 --   NT: the functional parameters is for capturing transformation happens to all the element in the captured list
 --   E.g:  `sumP (mapL (* y) xs)` match with (f * g + h * g) gives us {xs -> [f , h], y -> g}
 data PatternList
@@ -416,8 +436,14 @@ branches = PListHole id 2
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | TODO haddock: how is this a condition???
-type Condition = (ExpressionMap, NodeID) -> Match -> Bool
+-- | Check if the match satisfy some properties so that rewrite can happen
+type Condition =
+  -- | The matched expression
+  (ExpressionMap, NodeID) ->
+  -- | The match
+  Match ->
+  -- | Whether this match satisfy the condition
+  Bool
 
 infixl 8 &&.
 
@@ -693,6 +719,11 @@ match (mp, n) outerWH =
         (ImFT arg, PImFT sp) -> recursiveAndCombine [arg] [sp]
         (TwiceReFT arg, PTwiceReFT sp) -> recursiveAndCombine [arg] [sp]
         (TwiceImFT arg, PTwiceImFT sp) -> recursiveAndCombine [arg] [sp]
+        (DZero, PDZero) -> Just emptyMatch
+        (MulD arg1 arg2 , PMulD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (ScaleD arg1 arg2 , PScaleD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (DScale arg1 arg2 , PDScale sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (InnerProdD arg1 arg2 , PInnerProdD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
         _ -> Nothing
 
 -- | Turn a 'Pattern' transformation into a 'Pattern' reference
@@ -749,6 +780,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
   where
     applyDiff' = applyDiff originalMp
     buildFromPattern' :: Shape -> Pattern -> ExpressionDiff
+-- TODO: infer shape to Maybe Shape 
     buildFromPattern' inferredShape pattern =
       case pattern of
         PRef nId -> noChange nId
@@ -812,4 +844,10 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
         PImFT sp -> applyDiff' (Unary specImFT) [buildFromPattern' inferredShape sp]
         PTwiceReFT sp -> applyDiff' (Unary specTwiceReFT) [buildFromPattern' inferredShape sp]
         PTwiceImFT sp -> applyDiff' (Unary specTwiceImFT) [buildFromPattern' inferredShape sp]
+        PDZero -> dZeroWithShape inferredShape
+        PMulD sp1 sp2 -> applyDiff' (Binary specMulD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
+        PScaleD sp1 sp2 -> applyDiff' (Binary specScaleD) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
+        PDScale sp1 sp2 -> applyDiff' (Binary specDScale) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
+        PInnerProdD sp1 sp2 -> applyDiff' (Binary specInnerProd) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
+
         _ -> error "The right hand-side of substitution has something that we don't support yet"

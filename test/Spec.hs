@@ -28,17 +28,17 @@ import Var
 
 --main :: IO ()
 --main = do
---  let x = sum [constant (-1) *. x1, x1, constant 3 *. y1, y1]
---    `shouldNormalizeTo` sum [constant 4 *. y1, z1]
+--  let x = u <.> constant 2.1245607610894996
 --  showExp $ normalize x
+--  showExp $ derivativeAllVars x
 
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
     --    describe "ProblemSpec" ProblemSpec.spec
-    describe "NormalizeSpec" NormalizeSpec.spec
-    describe "HashedInterpSpec" InterpSpec.spec
-  --    describe "HashedCollectSpec" CollectSpec.spec
+--    describe "NormalizeSpec" NormalizeSpec.spec
+--    describe "HashedInterpSpec" InterpSpec.spec
+      describe "HashedCollectSpec" CollectSpec.spec
   --    describe "StructureSpec" StructureSpec.spec
-  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
-    describe "CSimpleSpec" CSimpleSpec.spec
+--  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
+--    describe "CSimpleSpec" CSimpleSpec.spec

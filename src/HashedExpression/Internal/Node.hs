@@ -39,7 +39,6 @@ nodeTypeWeight :: HasCallStack => Op -> Int
 nodeTypeWeight node =
   case node of
     Var {} -> 1
-    DVar {} -> 6666 -- After Scale
     Const {} -> 0
     Sum {} -> 9999 -- Sum at the end
     Mul {} -> 3
@@ -72,6 +71,13 @@ nodeTypeWeight node =
     ImFT {} -> 29
     TwiceReFT {} -> 30
     TwiceImFT {} -> 31
+    DVar {} -> 99999
+    DZero {} -> 99999
+    MulD {} -> 99999
+    ScaleD {} -> 99999
+    DScale {} -> 99999
+    InnerProdD {} -> 99999
+
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool
@@ -115,6 +121,13 @@ opArgs node =
     ImFT arg -> [arg]
     TwiceReFT arg -> [arg]
     TwiceImFT arg -> [arg]
+    DZero -> []
+    MulD arg1 arg2 -> [arg1, arg2]
+    ScaleD arg1 arg2  -> [arg1, arg2]
+    DScale arg1 arg2 -> [arg1, arg2]
+    InnerProdD arg1 arg2 -> [arg1, arg2]
+
+    
 
 -- | Retrieve a 'Op' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveOp #-}
