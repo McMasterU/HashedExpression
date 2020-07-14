@@ -72,8 +72,8 @@ addEntryWithContextTo contextMp spec args mp =
             toOp args
           )
         (ConditionAry (ConditionarySpec toOp decideShape decideET), condition : branches) ->
-          ( decideShape (shapeOf condition) (map shapeOf args),
-            decideET (etOf condition) (map etOf args),
+          ( decideShape (shapeOf condition) (map shapeOf branches),
+            decideET (etOf condition) (map etOf branches),
             toOp condition branches
           )
         _ -> error "Unfaithful with operation spec"

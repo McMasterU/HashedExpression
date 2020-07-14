@@ -109,7 +109,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
           let node =
                 if Set.member name vars
                   then DVar name
-                  else Const 0
+                  else DZero
               (newMap, h) = fromNode (shape, Covector, node)
            in Expression h newMap
         DVar name ->
@@ -120,12 +120,14 @@ hiddenDerivative vars (Expression n mp) = coerce res
               (newMap, h) = fromNode (shape, Covector, node)
            in Expression h newMap
         -- Sum and multiplication are special cases because they involve multiple arguments
-        Sum args -> wrap . sumMany . map dOne $ args
+        -- TODO
+--        Sum args -> wrap . sumMany . map dOne $ args
         -- multiplication rule
-        Mul args ->
-          let mkSub nId = (mp, nId)
-              dEach (each, rest) = mulMany (map mkSub rest ++ [dOne each])
-           in wrap . sumMany . map dEach . removeEach $ args
+        -- TODO
+--        Mul args ->
+--          let mkSub nId = (mp, nId)
+--              dEach (each, rest) = mulMany (map mkSub rest ++ [dOne each])
+--           in wrap . sumMany . map dEach . removeEach $ args
         -- d(f ^ a) = df * a * f ^ (a - 1)
         Power x arg ->
           let f = Expression @D_ arg mp
@@ -139,7 +141,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
               f = Expression @D_ arg2 mp
               ds = hiddenDerivative' s
               df = hiddenDerivative' f
-           in ds |*.| f + s *. df
+           in ds |*.| f + s |*.| df
         Div arg1 arg2 ->
           -- d(f / g) = (g / (g * g)) * df - (f / (g * g)) * dg
           let f = Expression @D_ arg1 mp
@@ -244,31 +246,3 @@ hiddenDerivative vars (Expression n mp) = coerce res
         TwiceImFT arg -> d1Input specTwiceImFT arg
         _ -> error $ show node
 
--- | Element-wise multiply a number with a covector
-(|*|) ::
-  (DimensionType d) =>
-  Expression d R ->
-  Expression d Covector ->
-  Expression d Covector
-(|*|) e1 e2 = wrap $ apply (Nary specMul) [unwrap e1, unwrap e2]
-
--- | Our defined custom dot product with covector - it's more like multiply wise and then add
--- up all the elements
-(|<.>|) ::
-  (DimensionType d) =>
-  Expression d R ->
-  Expression d Covector ->
-  Expression Scalar Covector
-(|<.>|) e1 e2 = wrap $ apply (Binary specInnerProd) [unwrap e1, unwrap e2]
-
--- | Our defined custom scale with Covector, ds |*.| f is like multiply every element of f with ds
-(|*.|) ::
-  (DimensionType d) =>
-  Expression Scalar Covector ->
-  Expression d R ->
-  Expression d Covector
-(|*.|) e1 e2 = wrap $ apply (Binary specScale) [unwrap e1, unwrap e2]
-
-infixl 7 |*|
-
-infixl 8 |<.>|, |*.|

@@ -58,17 +58,11 @@ measureTime action = do
   afterTime <- getCurrentTime
   putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
--- |
-bringMaybeOut :: (Maybe a, Maybe b) -> Maybe (a, b)
-bringMaybeOut (Just x, Just y) = Just (x, y)
-bringMaybeOut _ = Nothing
-
 -- | Check if all elements of the list is equal
 allEqual :: (Eq a) => [a] -> Bool
-allEqual xs = and $ zipWith (==) (safeTail xs) xs
-  where
-    safeTail [] = []
-    safeTail (x : xs) = xs
+allEqual [] = True
+allEqual [x] = True
+allEqual (x:y:xs) = x == y && allEqual (y:xs)
 
 fromR :: Double -> Complex Double
 fromR x = x :+ 0

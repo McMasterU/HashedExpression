@@ -63,6 +63,9 @@ module HashedExpression.Internal.Expression
     RotateOp (..),
     RotateAmount,
     InnerProductSpaceOp (..),
+    MulCovectorOp(..),
+    ScaleCovectorOp(..),
+    InnerProductCovectorOp(..)
   )
 where
 
@@ -116,8 +119,6 @@ type role Expression nominal nominal
 data Op
   = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
     Var String
-  | -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
-    DVar String
   | -- | constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
     Const Double
   | -- | element-wise sum
@@ -182,6 +183,14 @@ data Op
     TwiceReFT Arg
   | -- | imag part of fourier transform, performed twice
     TwiceImFT Arg
+  -- MARK: differential
+  | -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
+    DVar String
+  | DZero
+  | MulD Arg CovectorArg
+  | ScaleD Arg CovectorArg
+  | DScale CovectorArg Arg
+  | InnerProdD Arg CovectorArg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -197,6 +206,9 @@ type ConditionArg = NodeID
 -- | 'Piecewise' functions select from different 'BranchArg' expressions based on the evaluation
 --   of a 'ConditionArg' expression
 type BranchArg = NodeID
+
+
+type CovectorArg = NodeID
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -298,7 +310,7 @@ instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 class VectorSpace d et s
 
 -- | A 'VectorSpace' exists for all 'DimensionType' and 'ElementType' if scaled by a 'R' (Real element type)
-instance (DimensionType d, ElementType et) => VectorSpace d et R
+instance (DimensionType d, NumType et) => VectorSpace d et R
 
 -- | A 'VectorSpace' exists for all 'DimensionType' over 'C' (Complex) vectors and scalings
 instance (DimensionType d) => VectorSpace d C C
@@ -399,9 +411,24 @@ class PiecewiseOp a b where
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class FTOp a b | a -> b where
   ft :: a -> b
+  
+  
+class MulCovectorOp a b c | a b -> c, c -> a, c -> b where 
+  (|*|) :: a -> b -> c
+  
+class ScaleCovectorOp a b c | a b -> c where 
+  (|*.|) :: a -> b -> c 
+
+class InnerProductCovectorOp a b c | a b -> c where
+  (|<.>|) :: a -> b -> c
+ 
 
 infixl 6 +:
 
 infixl 8 *., `scale`, <.>
 
 infixl 8 ^
+
+infixl 7 |*|
+
+infixl 8 |<.>|, |*.|

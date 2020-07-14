@@ -6,34 +6,31 @@ module HashedExpression.Internal.OperationSpec where
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
+import Data.List (sort)
 
-data UnarySpec
-  = UnarySpec
-      { toOp :: Arg -> Op,
-        decideShape :: Shape -> Shape,
-        decideET :: ET -> ET
-      }
+data UnarySpec = UnarySpec
+  { toOp :: Arg -> Op,
+    decideShape :: Shape -> Shape,
+    decideET :: ET -> ET
+  }
 
-data BinarySpec
-  = BinarySpec
-      { toOp :: Arg -> Arg -> Op,
-        decideShape :: Shape -> Shape -> Shape,
-        decideET :: ET -> ET -> ET
-      }
+data BinarySpec = BinarySpec
+  { toOp :: Arg -> Arg -> Op,
+    decideShape :: Shape -> Shape -> Shape,
+    decideET :: ET -> ET -> ET
+  }
 
-data NarySpec
-  = NarySpec
-      { toOp :: [Arg] -> Op,
-        decideShape :: [Shape] -> Shape,
-        decideET :: [ET] -> ET
-      }
+data NarySpec = NarySpec
+  { toOp :: [Arg] -> Op,
+    decideShape :: [Shape] -> Shape,
+    decideET :: [ET] -> ET
+  }
 
-data ConditionarySpec
-  = ConditionarySpec
-      { toOp :: Arg -> [Arg] -> Op,
-        decideShape :: Shape -> [Shape] -> Shape,
-        decideET :: ET -> [ET] -> ET
-      }
+data ConditionarySpec = ConditionarySpec
+  { toOp :: Arg -> [Arg] -> Op,
+    decideShape :: Shape -> [Shape] -> Shape,
+    decideET :: ET -> [ET] -> ET
+  }
 
 data OperationSpec
   = Unary UnarySpec
@@ -44,7 +41,7 @@ data OperationSpec
 requireSame :: (HasCallStack, Ord a, Show a) => [a] -> b -> b
 requireSame xs y
   | allEqual xs = y
-  | otherwise = error $ "must be equal "  ++ show xs
+  | otherwise = error $ "must be equal " ++ show xs
 
 -- |
 defaultUnary :: HasCallStack => (Arg -> Op) -> [ET] -> UnarySpec
@@ -107,7 +104,6 @@ specScale =
     decideET R y = y
     decideET C C = C
     decideET _ _ = error "Scaling invalid et"
-
 
 specDiv :: HasCallStack => BinarySpec
 specDiv = defaultBinary Div [R]
@@ -193,7 +189,7 @@ specInnerProd =
     decideShape x y = requireSame [x, y] []
     decideET R Covector = Covector
     decideET Covector R = Covector
-    decideET x y 
+    decideET x y
       | x == y = x
       | otherwise = error "invalid dot product"
 
@@ -240,3 +236,16 @@ specTwiceImFT =
     decideET x
       | x == R || x == C = R
       | otherwise = error "Must be real or complex"
+
+
+specMulD :: HasCallStack => BinarySpec
+specMulD = BinarySpec {}
+
+specScaleD :: HasCallStack => BinarySpec
+specScaleD = BinarySpec {}
+
+specDScale :: HasCallStack => BinarySpec
+specDScale = BinarySpec {}
+
+specInnerProdD :: HasCallStack => BinarySpec
+specInnerProdD = BinarySpec {}
