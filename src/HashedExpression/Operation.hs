@@ -19,13 +19,12 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, natVal)
 import HashedExpression.Internal
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Expression 
+import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
-
 
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
@@ -199,6 +198,7 @@ sumElements expr = expr <.> one
 instance (DimensionType d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
   piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
+
 --    | not (null marks),
 --      (Set.toList . Set.fromList $ marks) == marks,
 --      length marks + 1 == length branchExps =
@@ -224,20 +224,19 @@ instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
 instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
   ft :: Expression d R -> Expression d C
   ft e = ft (e +: constWithShape (expressionShape e) 0)
-  
 
 instance (DimensionType d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
   x |*| dy = applyBinary specMulD x dy
 
-instance (DimensionType d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where 
+instance (DimensionType d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where
   x |*.| dy = applyBinary specScaleD x dy
 
-instance (DimensionType d) => ScaleCovectorOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where 
-  dx |*.| y = applyBinary specDScale dx y
-  
-instance (DimensionType d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where 
+instance (DimensionType d) => CovectorScaleOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where
+  dx |.*| y = applyBinary specDScale dx y
+
+instance (DimensionType d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where
   x |<.>| dy = applyBinary specInnerProdD x dy
-  
+
 -- |
 instance (ElementType et, KnownNat n) => RotateOp Int (Expression n et) where
   rotate :: Int -> Expression n et -> Expression n et
@@ -253,7 +252,6 @@ instance
   where
   rotate :: (Int, Int, Int) -> Expression '(m, n, p) et -> Expression '(m, n, p) et
   rotate (x, y, z) = applyUnary (specRotate [x, y, z])
-  
 
 -- | Returns an int from a type-level natural
 valueFromNat :: forall n. (KnownNat n) => Int

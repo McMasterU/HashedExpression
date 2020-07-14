@@ -30,17 +30,17 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding ((^), product, sum)
+import Prelude hiding (product, sum, (^))
 import qualified Prelude
 
 -- | Predefined holes using for pattern matching with 'Pattern'
@@ -174,8 +174,10 @@ normalizeEachPartialDerivative exp@(mp, n) =
   where
     normalizeEach nId =
       case retrieveOp nId mp of
-        Mul [partialDeriv, dVar] | retrieveElementType nId mp == Covector ->
-          mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
-        InnerProd partialDeriv dVar | retrieveElementType nId mp == Covector ->
-          apply (Binary specInnerProd) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        Mul [partialDeriv, dVar]
+          | retrieveElementType nId mp == Covector ->
+            mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        InnerProd partialDeriv dVar
+          | retrieveElementType nId mp == Covector ->
+            apply (Binary specInnerProd) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
         a -> error $ show a

@@ -179,6 +179,7 @@ data ET_
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Transformations
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
@@ -263,6 +264,7 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Changes
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | The Change type allows the creation of combinators for expressing alterations to an 'Expression' with respect
@@ -350,17 +352,17 @@ instance PiecewiseOp Change Change where
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Diffs
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | When performing a 'Change' on an 'ExpressionMap', the extra entries created by the change
 --   (i.e not included in the original 'ExpressionMap') and a new root 'NodeID' are stored in the ExpressionDiff type
-data ExpressionDiff
-  = ExpressionDiff
-      { -- | Extra entries we need to add to the original Expression Map
-        extraEntries :: ExpressionMap,
-        -- | New root of the expression (can change, can be the same)
-        newRootId :: NodeID
-      }
+data ExpressionDiff = ExpressionDiff
+  { -- | Extra entries we need to add to the original Expression Map
+    extraEntries :: ExpressionMap,
+    -- | New root of the expression (can change, can be the same)
+    newRootId :: NodeID
+  }
   deriving (Eq, Ord, Show)
 
 -- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
@@ -389,7 +391,7 @@ diffConst shape val = ExpressionDiff mp n
 
 -- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
 mulManyDiff ::
-  HasCallStack => 
+  HasCallStack =>
   -- | base map to find diff w.r.t
   ExpressionMap ->
   -- | operands
@@ -494,6 +496,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Other
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all

@@ -8,8 +8,8 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import HashedExpression.Internal
-import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
+import qualified HashedExpression.Internal.Expression as HE
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Operation as HO
 import qualified HashedExpression.Value as HV
@@ -28,12 +28,11 @@ type Vars = Map String (HE.Shape, Maybe HV.Val)
 -- | (name, shape, value)
 type Consts = Map String (HE.Shape, HV.Val)
 
-data Context
-  = Context
-      { declarations :: Map String (ExpressionMap, NodeID),
-        vars :: Vars,
-        consts :: Consts
-      }
+data Context = Context
+  { declarations :: Map String (ExpressionMap, NodeID),
+    vars :: Vars,
+    consts :: Consts
+  }
 
 -- | Utils
 getShape :: (ExpressionMap, NodeID) -> HE.Shape

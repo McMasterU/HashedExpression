@@ -62,7 +62,7 @@ measureTime action = do
 allEqual :: (Eq a) => [a] -> Bool
 allEqual [] = True
 allEqual [x] = True
-allEqual (x:y:xs) = x == y && allEqual (y:xs)
+allEqual (x : y : xs) = x == y && allEqual (y : xs)
 
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
@@ -176,6 +176,7 @@ maybeVariable (Expression nID mp) = case retrieveNode nID mp of
 -------------------------------------------------------------------------------
 
 -- | MARK: (+)
+
 -------------------------------------------------------------------------------
 instance Num (Array Int Double) where
   (+) arr1 arr2 =

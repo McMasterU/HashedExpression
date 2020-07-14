@@ -24,8 +24,8 @@ import ErrM
 import HashedExpression.Codegen
 import qualified HashedExpression.Codegen.CSimple as CSimple
 import HashedExpression.Internal
-import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
+import qualified HashedExpression.Internal.Expression as HE
 import qualified HashedExpression.Internal.Node as HN
 import HashedExpression.Internal.Utils
 import qualified HashedExpression.Operation as HO
@@ -96,16 +96,16 @@ checkSemantic problem = do
   objectiveExp <- constructExp finalContext (Just []) parseObjectiveExp
   let shape = getShape objectiveExp
       nt = getNT objectiveExp
-  when (shape /= [] || nt /= HE.R)
-    $ throwError
-    $ ErrorWithPosition
-      ( "Objective should be a real scalar, here it is ("
-          ++ toReadable shape
-          ++ ", "
-          ++ show nt
-          ++ ")"
-      )
-      (getBeginningPosition parseObjectiveExp)
+  when (shape /= [] || nt /= HE.R) $
+    throwError $
+      ErrorWithPosition
+        ( "Objective should be a real scalar, here it is ("
+            ++ toReadable shape
+            ++ ", "
+            ++ show nt
+            ++ ")"
+        )
+        (getBeginningPosition parseObjectiveExp)
   liftIO $ putStrLn "Syntax & semantic is correct"
   return $ ValidSymphony objectiveExp vars consts css
 
@@ -208,9 +208,9 @@ getMinimizeBlock (Problem blocks) =
 checkVariableDecl :: Vars -> VariableDecl -> Result Vars
 checkVariableDecl accRes decl = do
   let checkName name pos =
-        when (name `Map.member` accRes)
-          $ throwError
-          $ ErrorWithPosition ("Duplicate declaration of " ++ name) pos
+        when (name `Map.member` accRes) $
+          throwError $
+            ErrorWithPosition ("Duplicate declaration of " ++ name) pos
   case decl of
     VariableNoInit (PIdent (pos, name)) shape -> do
       checkName name pos
@@ -228,12 +228,12 @@ checkVariableDecl accRes decl = do
 checkConstantDecl :: Vars -> Consts -> ConstantDecl -> Result Consts
 checkConstantDecl vars accRes decl = do
   let (ConstantDecl (PIdent (pos, name)) shape val) = decl
-  when (name `Map.member` accRes)
-    $ throwError
-    $ ErrorWithPosition ("Duplicate declaration of " ++ name) pos
-  when (name `Map.member` vars)
-    $ throwError
-    $ ErrorWithPosition (name ++ " already defined as variables") pos
+  when (name `Map.member` accRes) $
+    throwError $
+      ErrorWithPosition ("Duplicate declaration of " ++ name) pos
+  when (name `Map.member` vars) $
+    throwError $
+      ErrorWithPosition (name ++ " already defined as variables") pos
   let heShape = toHEShape shape
   checkVal heShape val
   heVal <- toHEVal heShape val
@@ -252,11 +252,11 @@ checkConstraintDecl context@Context {..} acc decl = do
     case (isVariable exp, bound) of
       (Just varExp, ConstantBound (PIdent (pos, name)))
         | Just (shape, val) <- Map.lookup name consts -> do
-          when (shape /= getShape varExp)
-            $ throwError
-            $ ErrorWithPosition
-              "Shape mismatched: the bound doesn't have same shape as the variable"
-              pos
+          when (shape /= getShape varExp) $
+            throwError $
+              ErrorWithPosition
+                "Shape mismatched: the bound doesn't have same shape as the variable"
+                pos
           return (varExp, val)
         | otherwise ->
           throwError $ ErrorWithPosition (name ++ " not found") pos
@@ -264,19 +264,19 @@ checkConstraintDecl context@Context {..} acc decl = do
         return (varExp, HV.VNum (numToDouble num))
       _ -> do
         scalarExp <- constructExp context Nothing exp
-        when (getShape scalarExp /= [])
-          $ throwError
-          $ ErrorWithPosition
-            ( "Higher-dimension (in)equality is not supported yet, here the expression has shape "
-                ++ toReadable (getShape scalarExp)
-            )
-            (getBeginningPosition exp)
+        when (getShape scalarExp /= []) $
+          throwError $
+            ErrorWithPosition
+              ( "Higher-dimension (in)equality is not supported yet, here the expression has shape "
+                  ++ toReadable (getShape scalarExp)
+              )
+              (getBeginningPosition exp)
         case bound of
           ConstantBound (PIdent (pos, name))
             | Just (shape, val) <- Map.lookup name consts -> do
-              when (shape /= getShape scalarExp)
-                $ throwError
-                $ ErrorWithPosition "The bound must be scalar" pos
+              when (shape /= getShape scalarExp) $
+                throwError $
+                  ErrorWithPosition "The bound must be scalar" pos
               return (scalarExp, val)
             | otherwise ->
               throwError $
@@ -309,15 +309,15 @@ checkConstraintDecl context@Context {..} acc decl = do
 -- | Check immediate declarations
 checkLetDecl :: Context -> LetDecl -> Result Context
 checkLetDecl context@Context {..} (LetDecl (PIdent (pos, name)) exp) = do
-  when (name `Map.member` consts)
-    $ throwError
-    $ ErrorWithPosition (name ++ " already defined as a constant") pos
-  when (name `Map.member` vars)
-    $ throwError
-    $ ErrorWithPosition (name ++ " already defined as a variable") pos
-  when (name `Map.member` declarations)
-    $ throwError
-    $ ErrorWithPosition (name ++ " already taken") pos
+  when (name `Map.member` consts) $
+    throwError $
+      ErrorWithPosition (name ++ " already defined as a constant") pos
+  when (name `Map.member` vars) $
+    throwError $
+      ErrorWithPosition (name ++ " already defined as a variable") pos
+  when (name `Map.member` declarations) $
+    throwError $
+      ErrorWithPosition (name ++ " already taken") pos
   constructedExp <- constructExp context Nothing exp
   let newDeclarations = Map.insert name constructedExp declarations
   return $ context {declarations = newDeclarations}
@@ -347,16 +347,16 @@ toHEVal shape v =
           return
             . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
-            $ concat
-            $ replicate size1
-            $ 1 : replicate (size2 - 1) 0
+            $ concat $
+              replicate size1 $
+                1 : replicate (size2 - 1) 0
         ("LAST_COLUMN_1", [size1, size2]) ->
           return
             . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
-            $ concat
-            $ replicate size1
-            $ replicate (size2 - 1) 0 ++ [1]
+            $ concat $
+              replicate size1 $
+                replicate (size2 - 1) 0 ++ [1]
         ("FIRST_ROW_0", [size1, size2]) ->
           return
             . HV.V2D
@@ -371,22 +371,22 @@ toHEVal shape v =
           return
             . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
-            $ concat
-            $ replicate size1
-            $ 0 : replicate (size2 - 1) 1
+            $ concat $
+              replicate size1 $
+                0 : replicate (size2 - 1) 1
         ("LAST_COLUMN_0", [size1, size2]) ->
           return
             . HV.V2D
             . Array.listArray ((0, 0), (size1 - 1, size2 - 1))
-            $ concat
-            $ replicate size1
-            $ replicate (size2 - 1) 1 ++ [0]
+            $ concat $
+              replicate size1 $
+                replicate (size2 - 1) 1 ++ [0]
         _ ->
-          throwError
-            $ GeneralError
-            $ "Pattern "
-              ++ pattern
-              ++ " is incompatible with the shape or not supported yet"
+          throwError $
+            GeneralError $
+              "Pattern "
+                ++ pattern
+                ++ " is incompatible with the shape or not supported yet"
     ValRandom -> return $ HV.VNum 3
     ValLiteral num -> return $ HV.VNum (numToDouble num)
     ValImage imgPath -> do
@@ -403,11 +403,12 @@ toHEVal shape v =
           if (shape /= [row, col])
             then throwError $ GeneralError $ "image size and variable shape don't match, image size is " ++ show row ++ "x" ++ show col
             else
-              return $ HV.V2D $
-                Array.listArray
-                  ((0, 0), (row - 1, col - 1))
-                  [ toGrayscale r g b
-                    | i <- [0 .. row - 1],
-                      j <- [0 .. col - 1],
-                      let (PixelRGB8 r g b) = pixelAt img j i
-                  ]
+              return $
+                HV.V2D $
+                  Array.listArray
+                    ((0, 0), (row - 1, col - 1))
+                    [ toGrayscale r g b
+                      | i <- [0 .. row - 1],
+                        j <- [0 .. col - 1],
+                        let (PixelRGB8 r g b) = pixelAt img j i
+                    ]

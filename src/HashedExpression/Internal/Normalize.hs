@@ -48,17 +48,17 @@ import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding ((^), product, sum)
+import Prelude hiding (product, sum, (^))
 import qualified Prelude
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
 zero :: Pattern
-zero = PConst 0.0 90
+zero = PConst 0.0
 
 one :: Pattern
-one = PConst 1.0 91
+one = PConst 1.0
 
 -- | Predefined holes used for pattern matching with 'PPowerHole'
 [alpha, beta, gamma] = map PPowerHole [1 .. 3]
@@ -103,8 +103,7 @@ normalizingTransformation = secondPass . firstPass
       multipleTimes 1000 . chain $
         map
           (toRecursiveSimplification . fromModification)
-          [
-            evaluateIfPossibleRules,
+          [ evaluateIfPossibleRules,
             groupConstantsRules,
             combineTermsRules,
             combineTermsRulesProd,
@@ -117,7 +116,7 @@ normalizingTransformation = secondPass . firstPass
             zeroOneSumProdRules,
             collapseSumProdRules,
             normalizeRotateRules,
---            negativeZeroRules,
+            negativeZeroRules,
             pullOutPiecewiseRules,
             expandPiecewiseRealImag,
             twiceReFTAndImFTRules
@@ -195,10 +194,9 @@ zeroOneRules =
     x *. zero |.~~~~~~> zero,
     one *. x |.~~~~~~> x,
     x + zero |.~~~~~~> x,
-    zero + x |.~~~~~~> x
--- TODO: re-implement
---    x <.> zero |.~~~~~~> scalarZero,
---    zero <.> x |.~~~~~~> scalarZero
+    zero + x |.~~~~~~> x,
+    x <.> zero |.~~~~~~> zero,
+    zero <.> x |.~~~~~~> zero
   ]
 
 -- | Rules related to the scaling operation
@@ -308,11 +306,9 @@ exponentRules =
   ]
 
 -- | Miscellaneous rules
---
 otherRules :: [Substitution]
 otherRules =
-  [
---  negate x |.~~~~~~> scalar (-1) *. x, --
+  [ negate x |.~~~~~~> (-1 :: Pattern) *. x,
     (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
   ]
 
@@ -331,7 +327,6 @@ rotateRules =
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
--- TODO: re-implement
 --   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
 zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =

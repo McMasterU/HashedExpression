@@ -100,6 +100,7 @@ import qualified Prelude
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Substitution
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | A Substitution matches a pattern that fulfills a condition (provided via a 'GuardedPattern'), and replaces it with a different pattern
@@ -162,6 +163,7 @@ infixl 1 |.
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Patterns
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | This data type contains constructors for representing different patterns a 'Node' in a 'Expression' may contain.
@@ -179,7 +181,7 @@ data Pattern
   | -- | multiply via 'PatternList'
     PMulList PatternList
   | -- | constant
-    PConst Double Capture
+    PConst Double
   | -- | summation operator
     PSum [Pattern]
   | -- | multiplication operator
@@ -322,9 +324,11 @@ instance Num Pattern where
   (+) wh1 wh2 = PSum [wh1, wh2]
   negate = PNeg
   (*) wh1 wh2 = PMul [wh1, wh2]
+  fromInteger = PConst . fromInteger
 
 instance Fractional Pattern where
   (/) = PDiv
+  fromRational = PConst . fromRational
 
 instance VectorSpaceOp Pattern Pattern where
   scale = PScale
@@ -371,10 +375,13 @@ instance Num PatternRotateAmount where
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * PatternList
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Capture a list of associated 'Pattern'
 --   TODO haddock: what is the functional parameter for? we seem to always use id
+--   NT: the functional parameters is for capturing transformation happens to all the element in the captured list
+--   E.g:  `sumP (mapL (* y) xs)` match with (f * g + h * g) gives us {xs -> [f , h], y -> g}
 data PatternList
   = PListHole (Pattern -> Pattern) Capture
   deriving (Show)
@@ -406,6 +413,7 @@ branches = PListHole id 2
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Conditions
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | TODO haddock: how is this a condition???
@@ -512,6 +520,7 @@ sameAmount pra1 pra2 exp match =
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Matching Internals
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Matches all nodes in the expression to see if they all match the PatternList, if they match, return
@@ -523,12 +532,13 @@ sameAmount pra1 pra2 exp match =
 --   matchList [1 + x, 2 + x, y + x] (PatternList: (a + _)) = Nothing (not the same for all)
 -- @
 -- TODO haddock: the capture is always minBound??? this has to be an issue
+-- TODO: the minBound trick is too avoid other capture, NT: probably should introduce a capture for PatternList as well
 matchList ::
   -- | from base 'Expression'
   ExpressionMap ->
-  -- | TODO haddock: should be NodeID??
-  [Int] ->
-  -- | patterns to match to?
+  -- | List of expressions
+  [NodeID] ->
+  -- | patterns to match to
   PatternList ->
   -- | potentially a 'Match' with a filled 'listCapturesMap' attribute
   Maybe Match
@@ -537,11 +547,11 @@ matchList mp ns (PListHole fs listCapture)
     let subMatches = catMaybes maybeSubMatches,
     let unionSubMatches = foldl1 unionMatch subMatches,
     allEqual $ map otherCaptures subMatches =
-    Just
-      $ unionMatch unionSubMatches
-      $ emptyMatch
-        { listCapturesMap = Map.fromList [(listCapture, nIds subMatches)]
-        }
+    Just $
+      unionMatch unionSubMatches $
+        emptyMatch
+          { listCapturesMap = Map.fromList [(listCapture, nIds subMatches)]
+          }
   | otherwise = Nothing
   where
     uniqueCapture = minBound :: Int
@@ -559,17 +569,16 @@ type PowerValue = Int
 -- | A wrapper for different 'Map' that associate a capture (i.e hole identifier) to matched 'NodeID'. The function 'match' will
 --   return this type if it succesfully matches a 'Expression' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
 --   a pattern. For example, 'PHole' wraps a 'Int' identifier, so we need a 'Map' that associates those identifiers to 'NodeID'
-data Match
-  = Match
-      { -- | Associates 'PHole' identifiers to corresponding matched 'NodeID'
-        capturesMap :: Map Capture NodeID,
-        -- | Associates 'PListHole' identifiers to corresponding matched 'NodeID'
-        listCapturesMap :: Map Capture [NodeID],
-        -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
-        powerCapturesMap :: Map Capture PowerValue,
-        -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
-        rotateAmountCapturesMap :: Map Capture RotateAmount
-      }
+data Match = Match
+  { -- | Associates 'PHole' identifiers to corresponding matched 'NodeID'
+    capturesMap :: Map Capture NodeID,
+    -- | Associates 'PListHole' identifiers to corresponding matched 'NodeID'
+    listCapturesMap :: Map Capture [NodeID],
+    -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+    powerCapturesMap :: Map Capture PowerValue,
+    -- | Associates 'PPowerHole' identifiers to corresponding matched 'NodeID'
+    rotateAmountCapturesMap :: Map Capture RotateAmount
+  }
   deriving (Show)
 
 -- | A 'Match' data constructor with all empty 'Map' for entries
@@ -590,8 +599,7 @@ unionMatch match1 match2 =
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
 match :: (ExpressionMap, NodeID) -> Pattern -> Maybe Match
 match (mp, n) outerWH =
-  let unionBoth (x1, y1) (x2, y2) = (x1 `union` x2, y1 `union` y2)
-      catMatch = foldl unionMatch emptyMatch
+  let catMatch = foldl unionMatch emptyMatch
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
       recursiveAndCombine args whs
         | length args == length whs,
@@ -602,16 +610,14 @@ match (mp, n) outerWH =
    in case (retrieveOp n mp, outerWH) of
         (_, PHole capture) ->
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
-        (Const c, PConst whc capture)
-          | c == whc ->
-            Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
+        (Const c, PConst whc)
+          | c == whc -> Just emptyMatch
         (Sum args, PSum whs) -> recursiveAndCombine args whs
         (Sum args, PSumList pl@(PListHole _ listCapture)) ->
           matchList mp args pl
         (Sum args, PSumRest listCapture ps)
           | length args > length ps,
-            let (rest, normalParts) =
-                  splitAt (length args - length ps) args,
+            let (rest, normalParts) = splitAt (length args - length ps) args,
             length normalParts == length ps,
             Just matchNormalParts <- recursiveAndCombine normalParts ps,
             let matchListPart =
@@ -739,11 +745,11 @@ buildFromPatternList exp match (PListHole fs listCapture)
 -- | Find a 'ExpressionDiff' corresponding to 'PatternList' w.r.t a base (unwrapped) 'Expression' that was already
 --   found in a 'Match'
 buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> ExpressionDiff
-buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
+buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieveShape originalN originalMp)
   where
     applyDiff' = applyDiff originalMp
-    buildFromPattern' :: Pattern -> ExpressionDiff
-    buildFromPattern' pattern =
+    buildFromPattern' :: Shape -> Pattern -> ExpressionDiff
+    buildFromPattern' inferredShape pattern =
       case pattern of
         PRef nId -> noChange nId
         PHole capture
@@ -752,62 +758,58 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern'
           | otherwise ->
             error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
-        PConst val capture
-          | Just nId <- Map.lookup capture (capturesMap match) ->
-            noChange nId
-          | otherwise ->
-            error "Capture not in the Map Capture Int which should never happen"
+        PConst val -> diffConst inferredShape val
         PSumList ptl ->
           sumManyDiff originalMp . buildFromPatternList exp match $ ptl
         PMulList ptl ->
           mulManyDiff originalMp . buildFromPatternList exp match $ ptl
-        PSum sps -> sumManyDiff originalMp . map buildFromPattern' $ sps
-        PMul sps -> mulManyDiff originalMp . map buildFromPattern' $ sps
+        PSum sps -> sumManyDiff originalMp . map (buildFromPattern' inferredShape) $ sps
+        PMul sps -> mulManyDiff originalMp . map (buildFromPattern' inferredShape) $ sps
         PNeg sp ->
-          applyDiff' (Unary specNeg) [buildFromPattern' sp]
+          applyDiff' (Unary specNeg) [buildFromPattern' inferredShape sp]
         PScale sp1 sp2 ->
-          applyDiff' (Binary specScale) $ map buildFromPattern' [sp1, sp2]
+          applyDiff' (Binary specScale) $ [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
         PDiv sp1 sp2 ->
-          applyDiff' (Binary specDiv) $ map buildFromPattern' [sp1, sp2]
-        PSqrt sp -> applyDiff' (Unary specSqrt) [buildFromPattern' sp]
-        PSin sp -> applyDiff' (Unary specSin) [buildFromPattern' sp]
-        PCos sp -> applyDiff' (Unary specCos) [buildFromPattern' sp]
-        PTan sp -> applyDiff' (Unary specTan) [buildFromPattern' sp]
-        PExp sp -> applyDiff' (Unary specExp) [buildFromPattern' sp]
-        PLog sp -> applyDiff' (Unary specLog) [buildFromPattern' sp]
-        PSinh sp -> applyDiff' (Unary specSinh) [buildFromPattern' sp]
-        PCosh sp -> applyDiff' (Unary specCosh) [buildFromPattern' sp]
-        PTanh sp -> applyDiff' (Unary specTanh) [buildFromPattern' sp]
-        PAsin sp -> applyDiff' (Unary specAsin) [buildFromPattern' sp]
-        PAcos sp -> applyDiff' (Unary specAcos) [buildFromPattern' sp]
-        PAtan sp -> applyDiff' (Unary specAtan) [buildFromPattern' sp]
-        PAsinh sp -> applyDiff' (Unary specAsinh) [buildFromPattern' sp]
-        PAcosh sp -> applyDiff' (Unary specAcosh) [buildFromPattern' sp]
-        PAtanh sp -> applyDiff' (Unary specAtanh) [buildFromPattern' sp]
+          applyDiff' (Binary specDiv) $ map (buildFromPattern' inferredShape) [sp1, sp2]
+        PSqrt sp -> applyDiff' (Unary specSqrt) [buildFromPattern' inferredShape sp]
+        PSin sp -> applyDiff' (Unary specSin) [buildFromPattern' inferredShape sp]
+        PCos sp -> applyDiff' (Unary specCos) [buildFromPattern' inferredShape sp]
+        PTan sp -> applyDiff' (Unary specTan) [buildFromPattern' inferredShape sp]
+        PExp sp -> applyDiff' (Unary specExp) [buildFromPattern' inferredShape sp]
+        PLog sp -> applyDiff' (Unary specLog) [buildFromPattern' inferredShape sp]
+        PSinh sp -> applyDiff' (Unary specSinh) [buildFromPattern' inferredShape sp]
+        PCosh sp -> applyDiff' (Unary specCosh) [buildFromPattern' inferredShape sp]
+        PTanh sp -> applyDiff' (Unary specTanh) [buildFromPattern' inferredShape sp]
+        PAsin sp -> applyDiff' (Unary specAsin) [buildFromPattern' inferredShape sp]
+        PAcos sp -> applyDiff' (Unary specAcos) [buildFromPattern' inferredShape sp]
+        PAtan sp -> applyDiff' (Unary specAtan) [buildFromPattern' inferredShape sp]
+        PAsinh sp -> applyDiff' (Unary specAsinh) [buildFromPattern' inferredShape sp]
+        PAcosh sp -> applyDiff' (Unary specAcosh) [buildFromPattern' inferredShape sp]
+        PAtanh sp -> applyDiff' (Unary specAtanh) [buildFromPattern' inferredShape sp]
         PRealImag sp1 sp2 ->
-          applyDiff' (Binary specRealImag) $ map buildFromPattern' [sp1, sp2]
-        PRealPart sp -> applyDiff' (Unary specRealPart) [buildFromPattern' sp]
-        PImagPart sp -> applyDiff' (Unary specImagPart) [buildFromPattern' sp]
+          applyDiff' (Binary specRealImag) $ map (buildFromPattern' inferredShape) [sp1, sp2]
+        PRealPart sp -> applyDiff' (Unary specRealPart) [buildFromPattern' inferredShape sp]
+        PImagPart sp -> applyDiff' (Unary specImagPart) [buildFromPattern' inferredShape sp]
         PInnerProd sp1 sp2 ->
-          applyDiff' (Binary specInnerProd) $ map buildFromPattern' [sp1, sp2]
+          applyDiff' (Binary specInnerProd) $ map (buildFromPattern' inferredShape) [sp1, sp2]
         PPiecewise _ _ ->
           error "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
         PMulRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
             mulManyDiff originalMp $
-              (map noChange ns) ++ map (buildFromPattern') sps
+              (map noChange ns) ++ map (buildFromPattern' inferredShape) sps
         PSumRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
             sumManyDiff originalMp $
-              (map noChange $ ns) ++ map (buildFromPattern') sps
+              (map noChange $ ns) ++ map (buildFromPattern' inferredShape) sps
         PPower sp pp ->
           let val = buildFromPatternPower match pp
-           in applyDiff' (Unary (specPower val)) [buildFromPattern' sp]
+           in applyDiff' (Unary (specPower val)) [buildFromPattern' inferredShape sp]
         PRotate pra sp ->
           let rotateAmount = buildFromPatternRotateAmount match pra
-           in applyDiff' (Unary (specRotate rotateAmount)) [buildFromPattern' sp]
-        PReFT sp -> applyDiff' (Unary specReFT) [buildFromPattern' sp]
-        PImFT sp -> applyDiff' (Unary specImFT) [buildFromPattern' sp]
-        PTwiceReFT sp -> applyDiff' (Unary specTwiceReFT) [buildFromPattern' sp]
-        PTwiceImFT sp -> applyDiff' (Unary specTwiceImFT) [buildFromPattern' sp]
+           in applyDiff' (Unary (specRotate rotateAmount)) [buildFromPattern' inferredShape sp]
+        PReFT sp -> applyDiff' (Unary specReFT) [buildFromPattern' inferredShape sp]
+        PImFT sp -> applyDiff' (Unary specImFT) [buildFromPattern' inferredShape sp]
+        PTwiceReFT sp -> applyDiff' (Unary specTwiceReFT) [buildFromPattern' inferredShape sp]
+        PTwiceImFT sp -> applyDiff' (Unary specTwiceImFT) [buildFromPattern' inferredShape sp]
         _ -> error "The right hand-side of substitution has something that we don't support yet"

@@ -28,7 +28,6 @@ import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
-
 -- | For ordering things inside 'Sum' or 'Product' so we can write rules like
 --
 -- @

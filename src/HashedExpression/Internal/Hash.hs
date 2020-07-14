@@ -20,7 +20,7 @@ import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import Debug.Trace (traceShowId)
-import HashedExpression.Internal.Expression hiding ((*), (+), (-))
+import HashedExpression.Internal.Expression
 
 -- | hardcorded modulos used in hash function (i.e 'hashString')
 modulo :: Int
@@ -133,8 +133,8 @@ addNode mp e =
     _ -> error "addEntry everything clashed!"
 
 -- | Create a unique 'NodeID' with an accompanying (singleton) 'ExpressionMap' from a standalone 'Node'
-fromNode :: Node -> (ExpressionMap, NodeID)
-fromNode e = (mp, h)
+fromNode :: Node -> Expression d et
+fromNode e = Expression h mp
   where
     h = hash e
     mp = IM.insert h e IM.empty

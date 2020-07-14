@@ -27,7 +27,6 @@ import HashedExpression.Internal.Expression
     Expression (..),
     ExpressionMap,
     NodeID,
-    NodeID,
     Op (..),
     R,
     Scalar,
@@ -85,7 +84,7 @@ instance Approximable Double where
   prettifyShow a
     | abs a < 1e-10 = "0" --  in prettify, inputs less than a small condition value consider as zero,
     | otherwise = printf "%.2f" a --  otherwise, it shows the exact input.
-        --  [TODO] Is it a specific condition value for prettify?
+    --  [TODO] Is it a specific condition value for prettify?
 
 {-
 Instance which belongs to approximable class for Complex Double precision inputs.
@@ -191,7 +190,7 @@ instance Evaluable Scalar R Double where
           eval valMap (expZeroR mp arg1)
             / eval valMap (expZeroR mp arg2)
         Sqrt arg -> sqrt (eval valMap (expZeroR mp arg)) --  square root
-                -- trigonometric functions
+        -- trigonometric functions
         Sin arg -> sin (eval valMap (expZeroR mp arg))
         Cos arg -> cos (eval valMap (expZeroR mp arg))
         Tan arg -> tan (eval valMap (expZeroR mp arg))

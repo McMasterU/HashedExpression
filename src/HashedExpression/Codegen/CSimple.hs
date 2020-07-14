@@ -11,7 +11,7 @@
 module HashedExpression.Codegen.CSimple where
 
 import Control.Monad (forM_, when)
-import Data.Array ((!), indices)
+import Data.Array (indices, (!))
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.List (find, foldl', partition, sortOn, tails)
@@ -48,15 +48,14 @@ type NodeID = Int
 -- | e.g: i, j, k
 type Index = Text
 
-data CSimpleCodegen
-  = CSimpleCodegen
-      { cExpressionMap :: ExpressionMap,
-        cAddress :: NodeID -> Address,
-        cMemSize :: Int,
-        (!!) :: NodeID -> Index -> Text,
-        imAt :: NodeID -> Index -> Text,
-        reAt :: NodeID -> Index -> Text
-      }
+data CSimpleCodegen = CSimpleCodegen
+  { cExpressionMap :: ExpressionMap,
+    cAddress :: NodeID -> Address,
+    cMemSize :: Int,
+    (!!) :: NodeID -> Index -> Text,
+    imAt :: NodeID -> Index -> Text,
+    reAt :: NodeID -> Index -> Text
+  }
 
 -------------------------------------------------------------------------------
 
@@ -194,20 +193,23 @@ evaluating CSimpleCodegen {..} rootIDs =
             Rotate [amount1, amount2] arg ->
               let [size1, size2] = shape
                   toIndex i j = [I.i|#{i} * #{size2} + #{j}|]
-               in for i size1 $ for j size2 $
-                    [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
-                      [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
-                      [I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]
-                    ]
+               in for i size1 $
+                    for j size2 $
+                      [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
+                        [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
+                        [I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]
+                      ]
             Rotate [amount1, amount2, amount3] arg ->
               let [size1, size2, size3] = shape
                   toIndex i j k = [I.i|#{i} * #{size2} * #{size3} + #{j} * #{size3} + #{k}|]
-               in for i size1 $ for j size2 $ for k size3 $
-                    [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
-                      [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
-                      [I.i|int ak = (#{k} - #{amount3} + #{size3}) % #{size3}'|],
-                      [I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]
-                    ]
+               in for i size1 $
+                    for j size2 $
+                      for k size3 $
+                        [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
+                          [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
+                          [I.i|int ak = (#{k} - #{amount3} + #{size3}) % #{size3}'|],
+                          [I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]
+                        ]
             TwiceReFT arg ->
               case shape of
                 [size] -> [[I.i|re_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]

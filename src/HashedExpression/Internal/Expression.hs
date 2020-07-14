@@ -63,9 +63,10 @@ module HashedExpression.Internal.Expression
     RotateOp (..),
     RotateAmount,
     InnerProductSpaceOp (..),
-    MulCovectorOp(..),
-    ScaleCovectorOp(..),
-    InnerProductCovectorOp(..)
+    MulCovectorOp (..),
+    ScaleCovectorOp (..),
+    CovectorScaleOp (..),
+    InnerProductCovectorOp (..),
   )
 where
 
@@ -81,6 +82,7 @@ import Prelude hiding ((^))
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Type
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | The bulk of an 'Expression' is a collection of 'Node' (with their dimensions), in
@@ -104,13 +106,12 @@ type NodeID = Int
 --    variable "x" :: Expression Scalar R
 --    constant1D @10 1 :: Expression 10 R
 -- @
-data Expression d et
-  = Expression
-      { -- | index to the topological root of ExpressionMap
-        exRootID :: Int,
-        -- | Map of all 'Node' indexable by 'NodeID'
-        exMap :: ExpressionMap
-      }
+data Expression d et = Expression
+  { -- | index to the topological root of ExpressionMap
+    exRootID :: Int,
+    -- | Map of all 'Node' indexable by 'NodeID'
+    exMap :: ExpressionMap
+  }
   deriving (Show, Eq, Ord, Typeable)
 
 type role Expression nominal nominal
@@ -183,8 +184,9 @@ data Op
     TwiceReFT Arg
   | -- | imag part of fourier transform, performed twice
     TwiceImFT Arg
-  -- MARK: differential
-  | -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
+  | -- MARK: differential
+
+    -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
     DVar String
   | DZero
   | MulD Arg CovectorArg
@@ -207,12 +209,12 @@ type ConditionArg = NodeID
 --   of a 'ConditionArg' expression
 type BranchArg = NodeID
 
-
 type CovectorArg = NodeID
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Element Types
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
@@ -252,6 +254,7 @@ class ElementType et => NumType et
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Dimensions
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | An 'Expression' type is parameterized by two phantom types, the first of which should be 'DimensionType'.
@@ -366,6 +369,7 @@ type RotateAmount = [Int]
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Generic Combinators
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Interface for power (i.e power to) combinator for constructing 'Expression' types. Can be overloaded
@@ -411,17 +415,18 @@ class PiecewiseOp a b where
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class FTOp a b | a -> b where
   ft :: a -> b
-  
-  
-class MulCovectorOp a b c | a b -> c, c -> a, c -> b where 
+
+class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
   (|*|) :: a -> b -> c
-  
-class ScaleCovectorOp a b c | a b -> c where 
-  (|*.|) :: a -> b -> c 
+
+class ScaleCovectorOp a b c | a b -> c where
+  (|*.|) :: a -> b -> c
+
+class CovectorScaleOp a b c | a b -> c where
+  (|.*|) :: a -> b -> c
 
 class InnerProductCovectorOp a b c | a b -> c where
   (|<.>|) :: a -> b -> c
- 
 
 infixl 6 +:
 

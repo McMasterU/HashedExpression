@@ -23,11 +23,10 @@ import System.Process (readProcessWithExitCode)
 
 type FileName = String
 
-data Function
-  = Function
-      { expr :: Expression Scalar R,
-        predefinedValues :: ValMaps
-      }
+data Function = Function
+  { expr :: Expression Scalar R,
+    predefinedValues :: ValMaps
+  }
 
 scalarVariables :: Function -> [String]
 scalarVariables (Function exp values) = mapMaybe toScalarVariable entries

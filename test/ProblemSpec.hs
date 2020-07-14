@@ -16,8 +16,8 @@ import Data.Complex (Complex (..))
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
-import qualified Data.Map.Strict as Map
 import Data.Map.Strict (fromList)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -238,13 +238,14 @@ problemsRepo =
 spec :: Spec
 spec =
   describe "Hash Solver spec " $ do
-    specify "test hand-written problems" $ forM_ problemsRepo $ \(problemResult, expected) ->
-      case (problemResult, expected) of
-        (ProblemInvalid _, True) ->
-          assertFailure "This problem is valid but fail to construct"
-        (ProblemValid _, False) ->
-          assertFailure "This problem is invalid but success to construct"
-        _ -> return ()
+    specify "test hand-written problems" $
+      forM_ problemsRepo $ \(problemResult, expected) ->
+        case (problemResult, expected) of
+          (ProblemInvalid _, True) ->
+            assertFailure "This problem is valid but fail to construct"
+          (ProblemValid _, False) ->
+            assertFailure "This problem is invalid but success to construct"
+          _ -> return ()
     specify "valid problem should be constructed successfully" $
       property prop_constructProblemNoConstraint
     specify "valid box constrained problem should be constructed successfully" $

@@ -91,6 +91,7 @@ spec =
       property prop_StructureScalarC
     specify "Normalize a One C would give the form x +: y" $
       property prop_StructureOneC
+
 --        specify "Check size" $
 --            replicateM_ 35 $ do
 --                let sz = IM.size . exMap

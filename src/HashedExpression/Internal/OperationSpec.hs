@@ -3,10 +3,10 @@
 
 module HashedExpression.Internal.OperationSpec where
 
+import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
-import Data.List (sort)
 
 data UnarySpec = UnarySpec
   { toOp :: Arg -> Op,
@@ -38,10 +38,13 @@ data OperationSpec
   | Nary NarySpec
   | ConditionAry ConditionarySpec
 
-requireSame :: (HasCallStack, Ord a, Show a) => [a] -> b -> b
-requireSame xs y
+-------------------------------------------------------------------------------
+assertSame :: (HasCallStack, Ord a, Show a) => [a] -> b -> b
+assertSame xs y
   | allEqual xs = y
   | otherwise = error $ "must be equal " ++ show xs
+
+-------------------------------------------------------------------------------
 
 -- |
 defaultUnary :: HasCallStack => (Arg -> Op) -> [ET] -> UnarySpec
@@ -55,31 +58,33 @@ defaultUnary f allowedETs = UnarySpec {toOp = f, decideShape = id, decideET = de
 defaultBinary :: HasCallStack => (Arg -> Arg -> Op) -> [ET] -> BinarySpec
 defaultBinary f allowedETs = BinarySpec {toOp = f, decideShape = req, decideET = decideET}
   where
-    req x y = requireSame [x, y] x
+    req x y = assertSame [x, y] x
     decideET x y
-      | x `elem` allowedETs = requireSame [x, y] x
+      | x `elem` allowedETs = assertSame [x, y] x
       | otherwise = error "Element type is not allowed"
+
+-------------------------------------------------------------------------------
 
 specSum :: HasCallStack => NarySpec
 specSum =
   NarySpec
     { toOp = Sum,
-      decideShape = \xs -> requireSame xs $ head xs,
-      decideET = \xs -> requireSame xs $ head xs
+      decideShape = \xs -> assertSame xs $ head xs,
+      decideET = \xs -> assertSame xs $ head xs
     }
 
 specMul :: HasCallStack => NarySpec
 specMul =
   NarySpec
     { toOp = Mul,
-      decideShape = \xs -> requireSame xs $ head xs,
+      decideShape = \xs -> assertSame xs $ head xs,
       decideET = decideET
     }
-  where 
+  where
     decideET :: [ET] -> ET
     decideET [R, Covector] = Covector
     decideET [Covector, R] = Covector
-    decideET xs = requireSame xs $ head xs
+    decideET xs = assertSame xs $ head xs
 
 specPower :: HasCallStack => Int -> UnarySpec
 specPower alpha = defaultUnary (Power alpha) [R, C]
@@ -157,7 +162,7 @@ specRealImag :: HasCallStack => BinarySpec
 specRealImag =
   BinarySpec {toOp = RealImag, decideShape = decideShape, decideET = decideET}
   where
-    decideShape x y = requireSame [x, y] x
+    decideShape x y = assertSame [x, y] x
     decideET x y
       | x == R && y == R = C
       | otherwise = error "2 operands must be real"
@@ -186,7 +191,7 @@ specInnerProd =
       decideET = decideET
     }
   where
-    decideShape x y = requireSame [x, y] []
+    decideShape x y = assertSame [x, y] []
     decideET R Covector = Covector
     decideET Covector R = Covector
     decideET x y
@@ -197,7 +202,7 @@ specPiecewise :: HasCallStack => [Double] -> ConditionarySpec
 specPiecewise marks =
   ConditionarySpec {toOp = Piecewise marks, decideShape = decideShape, decideET = decideET}
   where
-    decideShape condition branches = requireSame (condition : branches) condition
+    decideShape condition branches = assertSame (condition : branches) condition
     decideET condition branches
       | condition == R && length branches == length marks + 1 = head branches
       | otherwise = error "Condition must be real and number of branches must equal number of marks + 1"
@@ -211,7 +216,7 @@ specReFT =
   where
     decideET x
       | x == R || x == C = R
-      | otherwise = error "Must be real or complex"
+      | x == Covector = Covector
 
 specImFT :: HasCallStack => UnarySpec
 specImFT =
@@ -219,7 +224,7 @@ specImFT =
   where
     decideET x
       | x == R || x == C = R
-      | otherwise = error "Must be real or complex"
+      | x == Covector = Covector
 
 specTwiceReFT :: HasCallStack => UnarySpec
 specTwiceReFT =
@@ -227,7 +232,7 @@ specTwiceReFT =
   where
     decideET x
       | x == R || x == C = R
-      | otherwise = error "Must be real or complex"
+      | x == Covector = Covector
 
 specTwiceImFT :: HasCallStack => UnarySpec
 specTwiceImFT =
@@ -235,17 +240,37 @@ specTwiceImFT =
   where
     decideET x
       | x == R || x == C = R
-      | otherwise = error "Must be real or complex"
-
+      | x == Covector = Covector
 
 specMulD :: HasCallStack => BinarySpec
-specMulD = BinarySpec {}
+specMulD =
+  BinarySpec {toOp = MulD, decideShape = \x y -> assertSame [x, y] x, decideET = decideET}
+  where
+    decideET R Covector = Covector
+    decideET _ _ = error "Must be R * Covector"
 
 specScaleD :: HasCallStack => BinarySpec
-specScaleD = BinarySpec {}
+specScaleD =
+  BinarySpec {toOp = ScaleD, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape [] x = x
+    decideShape _ _ = error "First operand must be scalar"
+    decideET R Covector = Covector
+    decideET _ _ = error "Must be R *. Covector"
 
 specDScale :: HasCallStack => BinarySpec
-specDScale = BinarySpec {}
+specDScale =
+  BinarySpec {toOp = DScale, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape [] x = x
+    decideShape _ _ = error "First operand must be scalar"
+    decideET Covector R = Covector
+    decideET _ _ = error "Must be Covector .* R"
 
 specInnerProdD :: HasCallStack => BinarySpec
-specInnerProdD = BinarySpec {}
+specInnerProdD =
+  BinarySpec {toOp = InnerProdD, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape x y = assertSame [x, y] []
+    decideET R Covector = Covector
+    decideET _ _ = error "Must be R <.> Covector"
