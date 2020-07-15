@@ -46,6 +46,8 @@ import qualified Prelude
 -- | Predefined holes using for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 
+[dx, dy, dz] = map PHole [20, 21, 22]
+
 -- | Predefined holes used for pattern matching with 'PRotateAmountHole'
 [amount, amount1, amount2, amount3] = map PRotateAmountHole [1 .. 4]
 
@@ -73,11 +75,11 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
       chain
         [ restructure,
 --          toRecursiveCollecting $ fromModification splitCovectorProdRules,
---          separateDVarAlone,
+          separateDVarAlone,
           toTransformation $ fromModification groupByDVar,
-          aggregateByDVar,
+          aggregateByDVar
 --          normalizeEachPartialDerivative,
-          removeUnreachable
+--          removeUnreachable
         ]
 
 inspect :: Transformation
@@ -108,20 +110,29 @@ restructure =
 --    _ -> just n
 
 -- | Move dVar out of operations (like reFT) that would prevent factoring
---separateDVarAlone :: Transformation
---separateDVarAlone =
---  multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
---    [ x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
+separateDVarAlone :: Transformation
+separateDVarAlone =
+  multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
+    [
+--      x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
 --      x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y,
 --      x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y,
+      x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
 --      s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y,
+      s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
 --      s * (x * y) |. isDVar y ~~~~~~> (s * x) * y,
+      s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
 --      x <.> rotate amount y |. isCovector y ~~~~~~> (rotate (negate amount) x <.> y),
+      x |<.>| rotate amount dy |.~~~~~~> (rotate (negate amount) x |<.>| dy),
 --      x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y,
+      x |<.>| reFT dy |.~~~~~~> reFT x <.> dy,
 --      x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y,
+      x |<.>| imFT dy |.~~~~~~> imFT x <.> dy,
 --      x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y,
+      x |<.>| twiceReFT dy |.~~~~~~> twiceReFT x <.> dy,
 --      x <.> twiceImFT y |. isCovector y ~~~~~~> twiceImFT x <.> y
---    ]
+      x |<.>| twiceImFT dy |.~~~~~~> twiceImFT x <.> dy
+    ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
 -- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->

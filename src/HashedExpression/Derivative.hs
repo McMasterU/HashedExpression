@@ -214,9 +214,9 @@ hiddenDerivative vars (Expression n mp) = coerce res
            in one / (one - f * f) |*| df
         InnerProd arg1 arg2 ->
           let f = asR arg1
-              df = traceShowId $ d f
+              df = d f
               g = asR arg2
-              dg = traceShowId $ d g
+              dg = d g
            in coerce $ f |<.>| dg + g |<.>| df
         Piecewise marks conditionArg branches ->
           let conditionExp = asR conditionArg

@@ -27,9 +27,13 @@ import qualified Prelude
 import Test.HUnit (assertBool)
 
 prop_DVarStayAlone :: Expression Scalar R -> Expectation
-prop_DVarStayAlone exp = do 
+prop_DVarStayAlone exp = do
+    print "------------iii----------------"
     showExp exp
+    showExp $ normalize $ derivativeAllVars $ exp
     showExp $ collectDifferentials . derivativeAllVars $ exp
+    print $ collectDifferentials . derivativeAllVars $ exp
+
     property
   where
     collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
@@ -43,7 +47,7 @@ prop_DVarStayAlone exp = do
         retrieveElementType nId mp == Covector,
         DVar _ <- retrieveOp cId mp =
         True
-      | otherwise = traceShow (show $ retrieveOp nId mp) False
+      | otherwise = traceShow ("here" ++ show (retrieveOp nId mp)) False
     property =
       case retrieveOp rootId mp of
         Sum ns -> assertBool " " $ all isDVarAlone ns

@@ -71,6 +71,8 @@ one = PConst 1.0
 -- | Predefined holes used for pattern matching with 'PListHole'
 [xs, ys] = map (PListHole id) [1, 2]
 
+[dxs, dys] = map (PListHole id) [3, 4]
+
 -- | Constant pattern x ^ 1
 powerOne :: PatternPower
 powerOne = PPowerConst 1
@@ -200,14 +202,12 @@ zeroOneRules =
     zero |*| dx |.~~~~~~> dZero,
     x |*| dZero |.~~~~~~> dZero,
     one |*| dx |.~~~~~~> dx,
-    
     zero |*.| dx |.~~~~~~> dZero,
     x |*.| dZero |.~~~~~~> dZero,
-    
     one |*.| dx |.~~~~~~> dx,
     dZero |.*| x |.~~~~~~> dZero,
-    
-    zero |<.>| dx |.~~~~~~> dZero
+    zero |<.>| dx |.~~~~~~> dZero,
+    x |<.>| dZero |.~~~~~~> dZero
   ]
 
 -- | Rules related to the scaling operation
@@ -278,8 +278,14 @@ distributiveRules =
     negate (sumP ys) |.~~~~~~> sumP (mapL negate ys),
     -- TODO: With covector
     sumP ys |*| dx |.~~~~~~> sumP (mapL (|*| dx) ys),
+    x |*| sumP dys |.~~~~~~> sumP (mapL (x |*|) dys),
+    --
     sumP ys |<.>| dx |.~~~~~~> sumP (mapL (|<.>| dx) ys),
+    x |<.>| sumP dys |.~~~~~~> sumP (mapL (x |<.>|) dys),
+    --
     sumP ys |*.| dx |.~~~~~~> sumP (mapL (|*.| dx) ys),
+    x |*.| sumP dys |.~~~~~~> sumP (mapL (x |*.|) dys),
+    --
     dx |.*| sumP ys |.~~~~~~> sumP (mapL (dx |.*|) ys)
   ]
 
@@ -415,7 +421,6 @@ flattenSumProdRules exp@(mp, n) =
 
 -- | Rules for grouping constants
 --   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
--- 
 groupConstantsRules :: Modification
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
@@ -456,6 +461,7 @@ combineTermsRules exp@(mp, n)
     toDiff :: (Int, Double) -> Change
     toDiff (nId, val)
       | val == 1 = just nId
+      | retrieveElementType nId mp == Covector = num_ val |*.| just nId
       | otherwise = num_ val *. just nId
 
 -- | Rules for combining and reducing the numbers of terms in 'Mul'
@@ -628,22 +634,24 @@ expandPiecewiseRealImag exp@(mp, n)
 -- | Rules for expanding piecewise functions
 --
 --   For example: `if x < 1 then x + 1 else x + y = (x + 1) * (if x < 1 then 1 else 0) + (x + y) * (if x < 1 then 0 else 1)`
--- 
 pullOutPiecewiseRules :: Modification
-pullOutPiecewiseRules exp@(mp, n)
-  | Piecewise marks condition branches <- retrieveOp n mp,
-    et /= C,
-    not (isAllZeroExceptOne branches) =
-    let branchWithPiecewise idx branch =
-          let newPiecewiseBranches =
-                -- [1, 0, 0 .. ]
-                replicate idx zero ++ [one] ++ replicate (length branches - idx - 1) zero
-              allZerosOneOne =
-                -- piecewise marks condition [1, 0, 0, ..]
-                piecewise marks (just condition) newPiecewiseBranches
-           in just branch * allZerosOneOne
-     in sum_ . zipWith branchWithPiecewise [0 ..] $ branches
-  | otherwise = just n
+pullOutPiecewiseRules exp@(mp, n) =
+  case retrieveOp n mp of
+    Piecewise marks condition branches
+      | et == R || et == Covector,
+        not (isAllZeroExceptOne branches) ->
+        let branchWithPiecewise idx branch =
+              let newPiecewiseBranches =
+                    -- [1, 0, 0 .. ]
+                    replicate idx zero ++ [one] ++ replicate (length branches - idx - 1) zero
+                  allZerosOneOne =
+                    -- piecewise marks condition [1, 0, 0, ..]
+                    piecewise marks (just condition) newPiecewiseBranches
+               in case et of
+                  R -> allZerosOneOne * just branch
+                  Covector -> allZerosOneOne |*| just branch
+         in sum_ . zipWith branchWithPiecewise [0 ..] $ branches
+    _ -> just n
   where
     isAllZeroExceptOne branches
       | [shouldBeOne] <- filter (not . isZero mp) branches,

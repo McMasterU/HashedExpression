@@ -28,10 +28,12 @@ import Var
 
 --main :: IO ()
 --main = do
---  let x = u <.> constant 2.1245607610894996
---  showExp $ normalize x
+--  let x = piecewise [1] y [1, y2 <.> x2]
 --  showExp $ derivativeAllVars x
+--  showExp $ normalize $ derivativeAllVars x
+--  showExp $ collectDifferentials . derivativeAllVars $ x
 
+-- TODO: FT..
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do

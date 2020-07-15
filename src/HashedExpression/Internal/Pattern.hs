@@ -780,7 +780,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
   where
     applyDiff' = applyDiff originalMp
     buildFromPattern' :: Shape -> Pattern -> ExpressionDiff
--- TODO: infer shape to Maybe Shape 
+-- TODO: infer shape to Maybe Shape
     buildFromPattern' inferredShape pattern =
       case pattern of
         PRef nId -> noChange nId
@@ -848,6 +848,6 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
         PMulD sp1 sp2 -> applyDiff' (Binary specMulD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
         PScaleD sp1 sp2 -> applyDiff' (Binary specScaleD) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
         PDScale sp1 sp2 -> applyDiff' (Binary specDScale) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
-        PInnerProdD sp1 sp2 -> applyDiff' (Binary specInnerProd) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
+        PInnerProdD sp1 sp2 -> applyDiff' (Binary specInnerProdD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
 
         _ -> error "The right hand-side of substitution has something that we don't support yet"

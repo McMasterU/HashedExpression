@@ -99,11 +99,10 @@ specScale =
       | null x = y
       | otherwise = error "First operand must be scalar"
     decideET :: ET -> ET -> ET
-    decideET R Covector = Covector
-    decideET Covector R = Covector
-    decideET R y = y
+    decideET R R = R
+    decideET R C = R
     decideET C C = C
-    decideET _ _ = error "Scaling invalid et"
+    decideET x y = error $ "Scaling invalid et " ++ show x ++ " " ++ show y
 
 specDiv :: HasCallStack => BinarySpec
 specDiv = defaultBinary Div [R]
@@ -187,11 +186,7 @@ specInnerProd =
     }
   where
     decideShape x y = assertSame [x, y] []
-    decideET R Covector = Covector
-    decideET Covector R = Covector
-    decideET x y
-      | x == y = x
-      | otherwise = error "invalid dot product"
+    decideET x y = assertSame [x, y] x
 
 specPiecewise :: HasCallStack => [Double] -> ConditionarySpec
 specPiecewise marks =

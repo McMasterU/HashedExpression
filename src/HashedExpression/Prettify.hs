@@ -170,8 +170,8 @@ hiddenPrettify pastable (mp, n) =
               ImFT arg -> T.concat ["imFT", wrapParentheses $ innerPrettify arg]
               TwiceReFT arg -> T.concat ["twiceReFT", wrapParentheses $ innerPrettify arg]
               TwiceImFT arg -> T.concat ["twiceImFT", wrapParentheses $ innerPrettify arg]
-              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "*", innerPrettify arg2]
-              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
-              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
-              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
+              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
+              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
+              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]
+              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "|<.>|", innerPrettify arg2]
 
