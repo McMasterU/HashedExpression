@@ -110,7 +110,7 @@ groupByDVar exp@(mp, n) =
     Sum ns
       | retrieveElementType n mp == Covector ->
         let groups = groupBy sameDVar . sortWith getDVar . filter (not . isZero mp) $ ns
-         in sum_1 . map (sum_1 . map mulOneIfAlone) $ groups
+         in sum_ . map (sum_ . map mulOneIfAlone) $ groups
     _ -> mulOneIfAlone n
   where
     getDVar :: Int -> String
@@ -128,8 +128,8 @@ groupByDVar exp@(mp, n) =
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId
-      | DVar _ <- retrieveOp nId mp = diffConst [] 1 |*| just1 mp nId
-      | otherwise = just1 mp nId
+      | DVar _ <- retrieveOp nId mp = diffConst [] 1 |*| just mp nId
+      | otherwise = just mp nId
 
 -- | After group Dvar to groups, we aggregate result in each group
 --   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)

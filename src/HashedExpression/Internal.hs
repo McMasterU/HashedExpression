@@ -253,13 +253,12 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
       | otherwise = go (k - 1) curExp (smp curExp)
 
 -- | Multiply a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
-product_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
-product_1 = applyDiff1 (Nary specMul)
+product_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+product_ = applyDiff1 (Nary specMul)
 
 -- | Sum a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
-sum_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
-sum_1 = applyDiff1 (Nary specSum)
-
+sum_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+sum_ = applyDiff1 (Nary specSum)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -406,8 +405,8 @@ sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
 noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
 
-just1 :: ExpressionMap -> NodeID -> ExpressionDiff
-just1 mp nID =
+just :: ExpressionMap -> NodeID -> ExpressionDiff
+just mp nID =
   ExpressionDiff (IM.singleton nID (retrieveNode nID mp)) nID
 
 -- | Same node type (Mul, Sum, Negate, ...), same shape, same ElementType but with new children, now make the same node type with new children
