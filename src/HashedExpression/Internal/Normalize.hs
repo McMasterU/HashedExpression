@@ -102,9 +102,9 @@ normalize = wrap . normalizingTransformation . unwrap
 --   Pass two attempts to turn the expression into a top-level multiplication if possible (see `toMultiplyIfPossible`)
 --   See Internal.Inner.multipleTimes for greater control over this
 normalizingTransformation :: Transformation
-normalizingTransformation = secondPass . firstPass
+normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pass
   where
-    firstPass =
+    pass =
       multipleTimes 1000 . chain $
         map
           (toRecursiveSimplification . fromModification)
@@ -127,7 +127,6 @@ normalizingTransformation = secondPass . firstPass
             twiceReFTAndImFTRules
           ]
           ++ [rulesFromPattern]
-    secondPass = chain [toMultiplyIfPossible, removeUnreachable]
 
 -- | Turn a modification into a recursive transformation
 toRecursiveSimplification ::

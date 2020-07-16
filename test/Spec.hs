@@ -25,18 +25,18 @@ import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
 import Var
+import Prelude hiding ((^))
 
 --main :: IO ()
 --main = do
---  let exp = xIm ((z +: 2.3215934181506612) + (- (x +: 7.222430479297311)))
---  showExp $ normalize exp
---  showExp $ derivativeAllVars exp
---  showExp $ normalize $ derivativeAllVars exp
+--  let exp = (Expression {exRootID = 2029289003279401, exMap = IM.fromList [(35219439,([],R,Var "m")),(36934800,([],R,Var "p")),(40937309,([],R,Var "w")),(1434098621427159,([],R,Power 2 40937309)),(2029289003279401,([],R,Scale 1434098621427159 7227349723491681)),(7227349723491681,([],R,Piecewise [24.675817653418964] 36934800 [35219439,40937309]))]}) :: Expression Scalar R
 --  showExp $ collectDifferentials . derivativeAllVars $ exp
+
+--  ((((piecewise [24.675817653418964] p [0.0, 1.0])*(w^2))+()+(2.0*(piecewise [24.675817653418964] p [0.0, 1.0])*(w^2)))|*|dw)
 
 main :: IO ()
 main = do
-  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
+  hspecWith defaultConfig {configQuickCheckSeed = Just 1779781593, configQuickCheckMaxSuccess = Just 100} $ do
     describe "ProblemSpec" ProblemSpec.spec
     describe "NormalizeSpec" NormalizeSpec.spec
     describe "HashedInterpSpec" InterpSpec.spec

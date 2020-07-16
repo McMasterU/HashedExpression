@@ -498,7 +498,7 @@ instance (KnownNat m, KnownNat n) => Arbitrary (Expression '(m, n) C) where
   arbitrary = fst <$> sized (gen2DC @Default1D @m @n)
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (DimensionType d, ElementType et) => ArbitraryExpresion (Expression d et)
+data ArbitraryExpresion = forall d et. (DimensionType d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
 
 instance Show ArbitraryExpresion where
   show (ArbitraryExpresion exp) = show exp
