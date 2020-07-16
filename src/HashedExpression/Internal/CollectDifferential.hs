@@ -73,13 +73,11 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
   where
     applyRules =
       chain
-        [ restructure,
---          toRecursiveCollecting $ fromModification splitCovectorProdRules,
-          separateDVarAlone,
+        [ separateDVarAlone,
           toTransformation $ fromModification groupByDVar,
-          aggregateByDVar
---          normalizeEachPartialDerivative,
---          removeUnreachable
+          aggregateByDVar,
+          normalizeEachPartialDerivative,
+          removeUnreachable
         ]
 
 inspect :: Transformation
@@ -89,49 +87,18 @@ inspect exp = traceShow (debugPrint exp) exp
 toRecursiveCollecting :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
 toRecursiveCollecting = toTransformation . toRecursive NoReorder
 
--- | Change to multiplication whenever possible, then flatten sum and product to prepare for splitCovectorProdRules
--- Also move covector to the right hand side of dot product
-restructure :: Transformation
-restructure =
-  multipleTimes 1000 . chain $
-    [ toMultiplyIfPossible,
-      toRecursiveCollecting $ fromModification flattenSumProdRules
-    ]
-
--- | x * y * covector * z --> (x * y * z) * covector
---splitCovectorProdRules :: Modification
---splitCovectorProdRules exp@(mp, n) =
---  case retrieveOp n mp of
---    Mul ns
---      | retrieveElementType n mp == Covector ->
---        let ([differential], reals) = partition ((== Covector) . flip retrieveElementType mp) ns
---            prodRest = product_ . map just $ reals
---         in prodRest * just differential
---    _ -> just n
-
 -- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
   multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
-    [
---      x <.> (restOfProduct ~* y) |. isCovector y ~~~~~~> ((restOfProduct ~* x) <.> y),
---      x <.> (z * y) |. isDVar y ~~~~~~> (z * x) <.> y,
---      x <.> (restOfProduct ~* y) |. isDVar y ~~~~~~> (restOfProduct ~* x) <.> y,
-      x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
---      s * (x <.> y) |. isDVar y ~~~~~~> (s *. x) <.> y,
+    [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
---      s * (x * y) |. isDVar y ~~~~~~> (s * x) * y,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
---      x <.> rotate amount y |. isCovector y ~~~~~~> (rotate (negate amount) x <.> y),
       x |<.>| rotate amount dy |.~~~~~~> (rotate (negate amount) x |<.>| dy),
---      x <.> reFT y |. isCovector y ~~~~~~> reFT x <.> y,
-      x |<.>| reFT dy |.~~~~~~> reFT x <.> dy,
---      x <.> imFT y |. isCovector y ~~~~~~> imFT x <.> y,
-      x |<.>| imFT dy |.~~~~~~> imFT x <.> dy,
---      x <.> twiceReFT y |. isCovector y ~~~~~~> twiceReFT x <.> y,
-      x |<.>| twiceReFT dy |.~~~~~~> twiceReFT x <.> dy,
---      x <.> twiceImFT y |. isCovector y ~~~~~~> twiceImFT x <.> y
-      x |<.>| twiceImFT dy |.~~~~~~> twiceImFT x <.> dy
+      x |<.>| reFT dy |.~~~~~~> reFT x |<.>| dy,
+      x |<.>| imFT dy |.~~~~~~> imFT x |<.>| dy,
+      x |<.>| twiceReFT dy |.~~~~~~> twiceReFT x |<.>| dy,
+      x |<.>| twiceImFT dy |.~~~~~~> twiceImFT x |<.>| dy
     ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
@@ -175,20 +142,16 @@ aggregateByDVar =
     ]
 
 -- | Normalize each partial derivative
---normalizeEachPartialDerivative :: Transformation
---normalizeEachPartialDerivative exp@(mp, n) =
---  case retrieveOp n mp of
---    Sum ns | retrieveElementType n mp == Covector -> sumMany $ map normalizeEach ns
---    InnerProd _ _ | retrieveElementType n mp == Covector -> normalizeEach n
---    Mul _ | retrieveElementType n mp == Covector -> normalizeEach n
---    _ -> (mp, n)
---  where
---    normalizeEach nId =
---      case retrieveOp nId mp of
---        Mul [partialDeriv, dVar]
---          | retrieveElementType nId mp == Covector ->
---            mulMany [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
---        InnerProd partialDeriv dVar
---          | retrieveElementType nId mp == Covector ->
---            apply (Binary specInnerProd) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
---        a -> error $ show a
+normalizeEachPartialDerivative :: Transformation
+normalizeEachPartialDerivative exp@(mp, n) =
+  case retrieveOp n mp of
+    Sum ns | retrieveElementType n mp == Covector -> sumMany $ map normalizeEach ns
+    MulD _ _ | retrieveElementType n mp == Covector -> normalizeEach n
+    InnerProdD _ _ | retrieveElementType n mp == Covector -> normalizeEach n
+    _ -> (mp, n)
+  where
+    normalizeEach nId =
+      case retrieveOp nId mp of
+        MulD partialDeriv dVar -> apply (Binary specMulD) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        InnerProdD partialDeriv dVar -> apply (Binary specInnerProdD) [normalizingTransformation (mp, partialDeriv), (mp, dVar)]
+        a -> error $ show a

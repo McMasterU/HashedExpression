@@ -28,19 +28,19 @@ import Var
 
 --main :: IO ()
 --main = do
---  let x = piecewise [1] y [1, y2 <.> x2]
---  showExp $ derivativeAllVars x
---  showExp $ normalize $ derivativeAllVars x
---  showExp $ collectDifferentials . derivativeAllVars $ x
+--  let exp = xIm ((z +: 2.3215934181506612) + (- (x +: 7.222430479297311)))
+--  showExp $ normalize exp
+--  showExp $ derivativeAllVars exp
+--  showExp $ normalize $ derivativeAllVars exp
+--  showExp $ collectDifferentials . derivativeAllVars $ exp
 
--- TODO: FT..
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
-    --    describe "ProblemSpec" ProblemSpec.spec
---    describe "NormalizeSpec" NormalizeSpec.spec
---    describe "HashedInterpSpec" InterpSpec.spec
-      describe "HashedCollectSpec" CollectSpec.spec
-  --    describe "StructureSpec" StructureSpec.spec
---  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
---    describe "CSimpleSpec" CSimpleSpec.spec
+    describe "ProblemSpec" ProblemSpec.spec
+    describe "NormalizeSpec" NormalizeSpec.spec
+    describe "HashedInterpSpec" InterpSpec.spec
+    describe "HashedCollectSpec" CollectSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
+    describe "CSimpleSpec" CSimpleSpec.spec

@@ -7,6 +7,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
+import Data.Tuple.Extra (thd3)
 import Debug.Trace (traceShow)
 import HashedExpression.Derivative
 import HashedExpression.Internal (D_, ET_, topologicalSort, unwrap)
@@ -19,22 +20,23 @@ import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
+import Test.HUnit (assertBool)
 import Test.Hspec
 import Test.QuickCheck
 import Var
 import Prelude hiding ((^))
 import qualified Prelude
-import Test.HUnit (assertBool)
+
+allDVarNames :: ExpressionMap -> [String]
+allDVarNames = concatMap (getDVarNames . thd3) . IM.elems
+  where
+    getDVarNames node
+      | DVar name <- node = [name]
+      | otherwise = []
 
 prop_DVarStayAlone :: Expression Scalar R -> Expectation
 prop_DVarStayAlone exp = do
-    print "------------iii----------------"
-    showExp exp
-    showExp $ normalize $ derivativeAllVars $ exp
-    showExp $ collectDifferentials . derivativeAllVars $ exp
-    print $ collectDifferentials . derivativeAllVars $ exp
-
-    property
+  property
   where
     collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
     isDVarAlone nId
@@ -53,62 +55,29 @@ prop_DVarStayAlone exp = do
         Sum ns -> assertBool " " $ all isDVarAlone ns
         _ -> assertBool "" $ isDVarAlone rootId
 
---        | DVar _ <- retrieveNode nId mp = True
 prop_DVarAppearOnce :: Expression Scalar R -> Bool
-prop_DVarAppearOnce exp = property
+prop_DVarAppearOnce exp = length (allDVarNames mp) == (Set.size . Set.fromList $ allDVarNames mp)
   where
-    collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
-    getDVarNames node
-      | DVar name <- node = [name]
-      | otherwise = []
-    allDVarNames = concatMap (getDVarNames . (\(s, et, op) -> op)) . IM.elems $ mp
-    property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
+    Expression rootId mp = collectDifferentials . exteriorDerivative allVars $ exp
 
 prop_DVarStayAloneWithOneR ::
   Expression Default1D R -> Expression Default1D R -> Bool
-prop_DVarStayAloneWithOneR exp1 exp2 = property
-  where
-    exp = exp1 <.> exp2
-    collectedExp@(Expression rootId mp) =
-      collectDifferentials . exteriorDerivative allVars $ exp
-    isDVarAlone nId
-      | Const 0 <- retrieveOp nId mp = True
-      | Mul [_, cId] <- retrieveOp nId mp,
-        retrieveElementType nId mp == Covector,
-        DVar _ <- retrieveOp cId mp =
-        True
-      | InnerProd _ cId <- retrieveOp nId mp,
-        retrieveElementType nId mp == Covector,
-        DVar _ <- retrieveOp cId mp =
-        True
-      | otherwise = False
-    property =
-      case retrieveOp rootId mp of
-        Sum ns -> all isDVarAlone ns
-        _ -> isDVarAlone rootId
+prop_DVarStayAloneWithOneR exp1 exp2 = prop_DVarAppearOnce (exp1 <.> exp2)
 
 prop_DVarAppearOnceWithOneR ::
   Expression Default1D R -> Expression Default1D R -> Bool
-prop_DVarAppearOnceWithOneR exp1 exp2 = property
-  where
-    exp = exp1 <.> exp2
-    collectedExp@(Expression rootId mp) = collectDifferentials . exteriorDerivative allVars $ exp
-    getDVarNames node
-      | DVar name <- node = [name]
-      | otherwise = []
-    allDVarNames = concatMap (getDVarNames . (\(s, et, op) -> op)) . IM.elems $ mp
-    property = length allDVarNames == (Set.size . Set.fromList $ allDVarNames)
+prop_DVarAppearOnceWithOneR exp1 exp2 = prop_DVarAppearOnce (exp1 <.> exp2)
 
 spec :: Spec
 spec =
   describe "Hashed collect differentials spec" $ do
     specify "DVar should stay by itself after collect differentials" $
       property prop_DVarStayAlone
---    specify "Each DVar appears only once after collect differentials" $
---      property prop_DVarAppearOnce
---    specify
---      "DVar should stay by itself after collect differentials (from dot product)"
---      $ property prop_DVarStayAloneWithOneR
---    specify
---      "Each DVar appears only once after collect differentials (from dot product)"
---      $ property prop_DVarAppearOnceWithOneR
+    specify "Each DVar appears only once after collect differentials" $
+      property prop_DVarAppearOnce
+    specify
+      "DVar should stay by itself after collect differentials (from dot product)"
+      $ property prop_DVarStayAloneWithOneR
+    specify
+      "Each DVar appears only once after collect differentials (from dot product)"
+      $ property prop_DVarAppearOnceWithOneR

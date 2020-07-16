@@ -286,11 +286,11 @@ num_ :: Double -> Change
 num_ = const_ []
 
 -- | Multiply a list of 'Change' together into a single 'Change'
-product_ :: [Change] -> Change
+product_ :: HasCallStack => [Change] -> Change
 product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
 
 -- | Sum a list of 'Change' together into a single 'Change'
-sum_ :: [Change] -> Change
+sum_ :: HasCallStack => [Change] -> Change
 sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
 
 -- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
@@ -348,7 +348,7 @@ instance RotateOp RotateAmount Change where
 instance PiecewiseOp Change Change where
   piecewise marks condition branches mp =
     applyDiff mp (ConditionAry (specPiecewise marks)) . map ($ mp) $ condition : branches
-    
+
 instance MulCovectorOp Change Change Change where
   (|*|) change1 change2 mp = applyDiff mp (Binary specMulD) [change1 mp, change2 mp]
 
@@ -360,7 +360,6 @@ instance CovectorScaleOp Change Change Change where
 
 instance InnerProductCovectorOp Change Change Change where
   (|<.>|) change1 change2 mp = applyDiff mp (Binary specInnerProdD) [change1 mp, change2 mp]
-
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -391,8 +390,8 @@ applyDiff ::
   ExpressionDiff
 applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
   where
-    updatedContextMp = IM.union mergedExtraEntries contextMp
     mergedExtraEntries = IM.unions . map extraEntries $ operands
+    updatedContextMp = IM.union mergedExtraEntries contextMp
     ns = map newRootId operands
     (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
 
@@ -401,10 +400,10 @@ diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
-    
+
 dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n
-  where 
+  where
     Expression n mp = fromNode (shape, Covector, DZero)
 
 -- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'

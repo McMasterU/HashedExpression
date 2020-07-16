@@ -374,6 +374,7 @@ instance RotateOp PatternRotateAmount Pattern where
   rotate = PRotate
 
 instance Num PatternPower where
+  fromInteger = PPowerConst . fromInteger
   (+) = PPowerMul
   (*) = PPowerMul
 
@@ -720,10 +721,10 @@ match (mp, n) outerWH =
         (TwiceReFT arg, PTwiceReFT sp) -> recursiveAndCombine [arg] [sp]
         (TwiceImFT arg, PTwiceImFT sp) -> recursiveAndCombine [arg] [sp]
         (DZero, PDZero) -> Just emptyMatch
-        (MulD arg1 arg2 , PMulD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (ScaleD arg1 arg2 , PScaleD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (DScale arg1 arg2 , PDScale sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (InnerProdD arg1 arg2 , PInnerProdD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (MulD arg1 arg2, PMulD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (ScaleD arg1 arg2, PScaleD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (DScale arg1 arg2, PDScale sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
+        (InnerProdD arg1 arg2, PInnerProdD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
         _ -> Nothing
 
 -- | Turn a 'Pattern' transformation into a 'Pattern' reference
@@ -776,11 +777,10 @@ buildFromPatternList exp match (PListHole fs listCapture)
 -- | Find a 'ExpressionDiff' corresponding to 'PatternList' w.r.t a base (unwrapped) 'Expression' that was already
 --   found in a 'Match'
 buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> ExpressionDiff
-buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieveShape originalN originalMp)
+buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ retrieveShape originalN originalMp)
   where
     applyDiff' = applyDiff originalMp
-    buildFromPattern' :: Shape -> Pattern -> ExpressionDiff
--- TODO: infer shape to Maybe Shape
+    buildFromPattern' :: Maybe Shape -> Pattern -> ExpressionDiff
     buildFromPattern' inferredShape pattern =
       case pattern of
         PRef nId -> noChange nId
@@ -790,7 +790,9 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
           | otherwise ->
             error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
-        PConst val -> diffConst inferredShape val
+        PConst val -> case inferredShape of
+          Just shape -> diffConst shape val
+          _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
           sumManyDiff originalMp . buildFromPatternList exp match $ ptl
         PMulList ptl ->
@@ -800,7 +802,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
         PNeg sp ->
           applyDiff' (Unary specNeg) [buildFromPattern' inferredShape sp]
         PScale sp1 sp2 ->
-          applyDiff' (Binary specScale) $ [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
+          applyDiff' (Binary specScale) $ [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
         PDiv sp1 sp2 ->
           applyDiff' (Binary specDiv) $ map (buildFromPattern' inferredShape) [sp1, sp2]
         PSqrt sp -> applyDiff' (Unary specSqrt) [buildFromPattern' inferredShape sp]
@@ -823,7 +825,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
         PRealPart sp -> applyDiff' (Unary specRealPart) [buildFromPattern' inferredShape sp]
         PImagPart sp -> applyDiff' (Unary specImagPart) [buildFromPattern' inferredShape sp]
         PInnerProd sp1 sp2 ->
-          applyDiff' (Binary specInnerProd) $ map (buildFromPattern' inferredShape) [sp1, sp2]
+          applyDiff' (Binary specInnerProd) $ map (buildFromPattern' Nothing) [sp1, sp2]
         PPiecewise _ _ ->
           error "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
         PMulRest restCapture sps
@@ -844,10 +846,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (retrieve
         PImFT sp -> applyDiff' (Unary specImFT) [buildFromPattern' inferredShape sp]
         PTwiceReFT sp -> applyDiff' (Unary specTwiceReFT) [buildFromPattern' inferredShape sp]
         PTwiceImFT sp -> applyDiff' (Unary specTwiceImFT) [buildFromPattern' inferredShape sp]
-        PDZero -> dZeroWithShape inferredShape
+        PDZero -> case inferredShape of
+          Just shape -> dZeroWithShape shape
+          _ -> error "Can't infer shape of DZero"
         PMulD sp1 sp2 -> applyDiff' (Binary specMulD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
-        PScaleD sp1 sp2 -> applyDiff' (Binary specScaleD) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
-        PDScale sp1 sp2 -> applyDiff' (Binary specDScale) [buildFromPattern' [] sp1, buildFromPattern' inferredShape sp2]
-        PInnerProdD sp1 sp2 -> applyDiff' (Binary specInnerProdD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
-
+        PScaleD sp1 sp2 -> applyDiff' (Binary specScaleD) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
+        PDScale sp1 sp2 -> applyDiff' (Binary specDScale) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
+        PInnerProdD sp1 sp2 -> applyDiff' (Binary specInnerProdD) $ map (buildFromPattern' Nothing) [sp1, sp2]
         _ -> error "The right hand-side of substitution has something that we don't support yet"

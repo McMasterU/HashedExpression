@@ -100,7 +100,7 @@ specScale =
       | otherwise = error "First operand must be scalar"
     decideET :: ET -> ET -> ET
     decideET R R = R
-    decideET R C = R
+    decideET R C = C
     decideET C C = C
     decideET x y = error $ "Scaling invalid et " ++ show x ++ " " ++ show y
 

@@ -78,7 +78,6 @@ nodeTypeWeight node =
     DScale {} -> 99999
     InnerProdD {} -> 99999
 
-
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool
 sameOp node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
@@ -123,11 +122,9 @@ opArgs node =
     TwiceImFT arg -> [arg]
     DZero -> []
     MulD arg1 arg2 -> [arg1, arg2]
-    ScaleD arg1 arg2  -> [arg1, arg2]
+    ScaleD arg1 arg2 -> [arg1, arg2]
     DScale arg1 arg2 -> [arg1, arg2]
     InnerProdD arg1 arg2 -> [arg1, arg2]
-
-    
 
 -- | Retrieve a 'Op' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveOp #-}

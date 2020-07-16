@@ -22,11 +22,11 @@ import Data.List (intercalate)
 import Debug.Trace (traceShowId)
 import HashedExpression.Internal.Expression
 
--- | hardcorded modulos used in hash function (i.e 'hashString')
+-- | hardcoded modulos used in hash function (i.e 'hashString')
 modulo :: Int
 modulo = 253931039382791
 
--- | hardcorded radix used in hash function (i.e 'hashString')
+-- | hardcoded radix used in hash function (i.e 'hashString')
 radix :: Int
 radix = 83
 
@@ -105,12 +105,11 @@ hash (shape, et, node) =
         TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
         -- Mark: Covector
         DVar name -> offsetHash 1 . hashString' $ show name
-        DZero -> offsetHash 34. hashString' $ "dzero"
+        DZero -> offsetHash 34 . hashString' $ "dzero"
         MulD arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
-        ScaleD arg1 arg2  -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
+        ScaleD arg1 arg2 -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
         DScale arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
         InnerProdD arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
-
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

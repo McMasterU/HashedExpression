@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
+import GHC.IO (unsafePerformIO)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -293,17 +294,18 @@ distributiveRules =
 --
 --   This includes common Fourier transform theorems, including linearity, as well as simplfications that will reduce
 --   computational complexity (for example, setting the imaginary-valued FT of a real-valued FT of x to 0).
+-- TODO: TwiceImFT and TwiceReFT should be in Optimize module ?
 fourierTransformRules :: [Substitution]
 fourierTransformRules =
   [ reFT (x +: y) |.~~~~~~> reFT x - imFT y,
     imFT (x +: y) |.~~~~~~> imFT x + reFT y,
-    reFT zero |.~~~~~~> zero,
-    imFT zero |.~~~~~~> zero,
-    -- TODO: TwiceImFT and TwiceReFT should be in Optimize module
-    twiceImFT zero |.~~~~~~> zero,
-    twiceReFT zero |.~~~~~~> zero,
     reFT (sumP xs) |.~~~~~~> sumP (mapL reFT xs),
     imFT (sumP xs) |.~~~~~~> sumP (mapL imFT xs),
+    -- Real
+    reFT zero |.~~~~~~> zero,
+    imFT zero |.~~~~~~> zero,
+    twiceImFT zero |.~~~~~~> zero,
+    twiceReFT zero |.~~~~~~> zero,
     imFT (reFT x) |. isReal x ~~~~~~> zero,
     reFT (imFT x) |. isReal x ~~~~~~> zero,
     reFT (s *. x) |. isReal s ~~~~~~> s *. reFT x,
@@ -311,6 +313,10 @@ fourierTransformRules =
     reFT (reFT x) |. isReal x ~~~~~~> twiceReFT x,
     imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x,
     -- Covector
+    reFT dZero |.~~~~~~> dZero,
+    imFT dZero |.~~~~~~> dZero,
+    twiceImFT dZero |.~~~~~~> dZero,
+    twiceReFT dZero |.~~~~~~> dZero,
     imFT (reFT dx) |. isCovector dx ~~~~~~> dZero,
     reFT (imFT dx) |. isCovector dx ~~~~~~> dZero,
     reFT (s |*.| dx) |.~~~~~~> s |*.| reFT x,
@@ -359,9 +365,11 @@ rotateRules =
     rotate amount (productP xs) |.~~~~~~> productP (mapL (rotate amount) xs),
     rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y,
     rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y),
+    rotate amount zero |.~~~~~~> zero,
     -- Covector
     rotate amount (s |*.| dx) |.~~~~~~> s |*.| rotate amount dx,
-    rotate amount1 x |<.>| rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x |<.>| y)
+    rotate amount1 x |<.>| rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x |<.>| y),
+    rotate amount dZero |.~~~~~~> dZero
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
@@ -648,8 +656,8 @@ pullOutPiecewiseRules exp@(mp, n) =
                     -- piecewise marks condition [1, 0, 0, ..]
                     piecewise marks (just condition) newPiecewiseBranches
                in case et of
-                  R -> allZerosOneOne * just branch
-                  Covector -> allZerosOneOne |*| just branch
+                    R -> allZerosOneOne * just branch
+                    Covector -> allZerosOneOne |*| just branch
          in sum_ . zipWith branchWithPiecewise [0 ..] $ branches
     _ -> just n
   where

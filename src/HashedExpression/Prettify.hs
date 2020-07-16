@@ -174,4 +174,3 @@ hiddenPrettify pastable (mp, n) =
               ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
               DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]
               InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "|<.>|", innerPrettify arg2]
-
