@@ -15,8 +15,8 @@ module HashedExpression.Problem where
 import qualified Data.IntMap as IM
 import Data.List (find, intercalate, sortBy, sortOn)
 import Data.List.Extra (firstJust)
-import qualified Data.Map as Map
 import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import HashedExpression.Derivative
@@ -25,6 +25,7 @@ import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value
@@ -34,15 +35,14 @@ import HashedExpression.Value
 -------------------------------------------------------------------------------
 
 -- | Representation of a variable in an optimization problem
-data Variable
-  = Variable
-      { -- | The variable's name
-        varName :: String,
-        -- | The variable's node ID
-        nodeId :: NodeID,
-        -- | The ID of the partial derivative of the variable
-        partialDerivativeId :: NodeID
-      }
+data Variable = Variable
+  { -- | The variable's name
+    varName :: String,
+    -- | The variable's node ID
+    nodeId :: NodeID,
+    -- | The ID of the partial derivative of the variable
+    partialDerivativeId :: NodeID
+  }
   deriving (Show)
 
 -- | A box constraint in an optimization problem
@@ -62,33 +62,31 @@ data BoxConstraint
 
 -- | A scalar constraint in an optimization problem
 -- is a constraint in a form: LB <= f(variables) <= UB where LB, f(variables), UB are scalar real values
-data ScalarConstraint
-  = ScalarConstraint
-      { -- | The node ID of the constraint
-        constraintValueId :: NodeID,
-        -- | The partial derivatives of the constraint
-        constraintPartialDerivatives :: [NodeID],
-        -- | The lower bound of the constraint
-        constraintLowerBound :: Double,
-        -- | The upper bound of the constraint
-        constraintUpperBound :: Double
-      }
+data ScalarConstraint = ScalarConstraint
+  { -- | The node ID of the constraint
+    constraintValueId :: NodeID,
+    -- | The partial derivatives of the constraint
+    constraintPartialDerivatives :: [NodeID],
+    -- | The lower bound of the constraint
+    constraintLowerBound :: Double,
+    -- | The upper bound of the constraint
+    constraintUpperBound :: Double
+  }
   deriving (Show, Eq, Ord)
 
 -- | Problem represents a valid optimization problem
-data Problem
-  = Problem
-      { -- | The variables present in the problem
-        variables :: [Variable],
-        -- | The node ID of the objective expression
-        objectiveId :: NodeID,
-        -- | The expression map of the problem, including the objective function and all constraints
-        expressionMap :: ExpressionMap,
-        -- | A list of box constraints in the problem
-        boxConstraints :: [BoxConstraint],
-        -- | A list of scalar constraints in the problem
-        scalarConstraints :: [ScalarConstraint]
-      }
+data Problem = Problem
+  { -- | The variables present in the problem
+    variables :: [Variable],
+    -- | The node ID of the objective expression
+    objectiveId :: NodeID,
+    -- | The expression map of the problem, including the objective function and all constraints
+    expressionMap :: ExpressionMap,
+    -- | A list of box constraints in the problem
+    boxConstraints :: [BoxConstraint],
+    -- | A list of scalar constraints in the problem
+    scalarConstraints :: [ScalarConstraint]
+  }
 
 -------------------------------------------------------------------------------
 instance Show Problem where
@@ -125,15 +123,17 @@ inf = 1 / 0
 partialDerivativeMaps :: Expression Scalar Covector -> Map String NodeID
 partialDerivativeMaps df@(Expression dfId dfMp) =
   case retrieveOp dfId dfMp of
-    Sum Covector ns -> Map.fromList $ mapMaybe getPartial ns
+    Sum ns | retrieveElementType dfId dfMp == Covector -> Map.fromList $ mapMaybe getPartial ns
     _ -> Map.fromList $ mapMaybe getPartial [dfId]
   where
     getPartial :: NodeID -> Maybe (String, NodeID)
     getPartial nId
-      | Mul Covector [partialId, dId] <- retrieveOp nId dfMp,
+      | Mul [partialId, dId] <- retrieveOp nId dfMp,
+        retrieveElementType nId dfMp == Covector,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
-      | InnerProd Covector partialId dId <- retrieveOp nId dfMp,
+      | InnerProd partialId dId <- retrieveOp nId dfMp,
+        retrieveElementType nId dfMp == Covector,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
       | otherwise = Nothing
@@ -264,11 +264,11 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
       alreadyExist name = any (isD name) . IM.keys $ mp
       makePart (name, shape)
         | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (binaryET InnerProd ElementDefault `hasShape` []) [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (Nary specMul) [aConst shape 0, dVarWithShape shape name]
       listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
         case retrieveOp n mp of
-          Sum Covector ns -> sumMany $ map (mp,) ns ++ listToInsert
+          Sum ns | retrieveElementType n mp == Covector -> sumMany $ map (mp,) ns ++ listToInsert
           _ -> sumMany $ (mp, n) : listToInsert
 
 -- | Construct a Problem from given objective function and constraints
@@ -276,7 +276,8 @@ constructProblem :: Expression Scalar R -> [String] -> Constraint -> ProblemResu
 constructProblem objectiveFunction varList constraint
   | null varsList = NoVariables
   | Just reason <- checkError = ProblemInvalid reason
-  | otherwise = -- all the constraints are good
+  | otherwise -- all the constraints are good
+    =
     let -- variable name with its node ID and partial derivative ID
         variableDatas :: [(String, (NodeID, NodeID))]
         variableDatas = Map.toList $ Map.intersectionWith (,) name2Id name2PartialDerivativeId
@@ -354,11 +355,11 @@ constructProblem objectiveFunction varList constraint
         scalarConstraints = map fst scalarConstraintsWithMp
         mergedMap = IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
         rootNs =
-          exRootID f
-            : ( map partialDerivativeId problemVariables
-                  ++ map constraintValueId scalarConstraints
-                  ++ concatMap constraintPartialDerivatives scalarConstraints
-              )
+          exRootID f :
+          ( map partialDerivativeId problemVariables
+              ++ map constraintValueId scalarConstraints
+              ++ concatMap constraintPartialDerivatives scalarConstraints
+          )
         -- remove DVar nodes
         relevantNodes = Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs)
         -- expression map
@@ -408,12 +409,12 @@ constructProblem objectiveFunction varList constraint
     checkConstraint :: ConstraintStatement -> Maybe String
     checkConstraint cs =
       case retrieveNode n mp of
-        (_, Var var) -- if it is a var, then should be box constraint
+        (_, _, Var var) -- if it is a var, then should be box constraint
           | not (Set.member var varsSet) -> Just $ var ++ " is not a variable"
           | any (not . compatible (variableShape var)) (getValCS cs) ->
             Just $ "Bound for " ++ var ++ " is not in the right shape"
           | otherwise -> Nothing
-        ([], _)
+        ([], _, _)
           | any (not . compatible []) (getValCS cs) ->
             Just "Scalar expression must be bounded by scalar value"
           | otherwise -> Nothing

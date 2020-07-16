@@ -11,7 +11,7 @@
 --  https://cp-algorithms.com/string/string-hashing.html
 module HashedExpression.Internal.Hash
   ( hash,
-    addInternal,
+    addNode,
     fromNode,
   )
 where
@@ -20,13 +20,13 @@ import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import Debug.Trace (traceShowId)
-import HashedExpression.Internal.Expression hiding ((*), (+), (-))
+import HashedExpression.Internal.Expression
 
--- | hardcorded modulos used in hash function (i.e 'hashString')
+-- | hardcoded modulos used in hash function (i.e 'hashString')
 modulo :: Int
 modulo = 253931039382791
 
--- | hardcorded radix used in hash function (i.e 'hashString')
+-- | hardcoded radix used in hash function (i.e 'hashString')
 radix :: Int
 radix = 83
 
@@ -55,19 +55,18 @@ separator = "a"
 -- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
 --   specific 'NodeID')
 hash :: Node -> Int
-hash (shape, node) =
+hash (shape, et, node) =
   let hashString' s =
         hashString $
-          (intercalate separator . map show $ shape) ++ separator ++ s
+          (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
-        DVar name -> offsetHash 1 . hashString' $ show name
         Const num -> offsetHash 2 . hashString' $ show num
-        Sum et args -> offsetHash 3 . hashString' $ show et ++ (intercalate separator . map show $ args)
-        Mul et args -> offsetHash 4 . hashString' $ show et ++ (intercalate separator . map show $ args)
+        Sum args -> offsetHash 3 . hashString' $ intercalate separator . map show $ args
+        Mul args -> offsetHash 4 . hashString' $ intercalate separator . map show $ args
         Power x arg -> offsetHash 5 . hashString' $ show x ++ "of" ++ show arg
-        Neg et arg -> offsetHash 6 . hashString' $ show et ++ show arg
-        Scale et arg1 arg2 -> offsetHash 7 . hashString' $ show et ++ show arg1 ++ separator ++ show arg2
+        Neg arg -> offsetHash 6 . hashString' $ show arg
+        Scale arg1 arg2 -> offsetHash 7 . hashString' $ show arg1 ++ separator ++ show arg2
         -- MARK: only apply to R
         Div arg1 arg2 -> offsetHash 8 . hashString' $ show arg1 ++ separator ++ show arg2
         Sqrt arg -> offsetHash 9 . hashString' $ show arg
@@ -89,7 +88,7 @@ hash (shape, node) =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProd et arg1 arg2 -> offsetHash 27 . hashString' $ show et ++ show arg1 ++ separator ++ show arg2
+        InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
         -- MARK: Piecewise
         Piecewise marks arg branches ->
           offsetHash 28 . hashString' $
@@ -104,6 +103,13 @@ hash (shape, node) =
         ImFT arg -> offsetHash 31 . hashString' $ show arg
         TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
         TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
+        -- Mark: Covector
+        DVar name -> offsetHash 1 . hashString' $ show name
+        DZero -> offsetHash 34 . hashString' $ "dzero"
+        MulD arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
+        ScaleD arg1 arg2 -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
+        DScale arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
+        InnerProdD arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
 
 -- | Check the outcome of a generated hash value
 data HashOutcome
@@ -125,16 +131,16 @@ hashOutcome mp new newHash =
         else IsClash
 
 -- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
-addInternal :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
-addInternal mp e =
+addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
+addNode mp e =
   case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
     (IsDuplicate h : _) -> (mp, h)
     (IsNew h : _) -> (IM.insert h e mp, h)
     _ -> error "addEntry everything clashed!"
 
 -- | Create a unique 'NodeID' with an accompanying (singleton) 'ExpressionMap' from a standalone 'Node'
-fromNode :: Node -> (ExpressionMap, NodeID)
-fromNode e = (mp, h)
+fromNode :: Node -> Expression d et
+fromNode e = Expression h mp
   where
     h = hash e
     mp = IM.insert h e IM.empty

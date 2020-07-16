@@ -58,17 +58,11 @@ measureTime action = do
   afterTime <- getCurrentTime
   putStrLn $ "Took " ++ show (diffUTCTime afterTime beforeTime) ++ " seconds"
 
--- |
-bringMaybeOut :: (Maybe a, Maybe b) -> Maybe (a, b)
-bringMaybeOut (Just x, Just y) = Just (x, y)
-bringMaybeOut _ = Nothing
-
 -- | Check if all elements of the list is equal
 allEqual :: (Eq a) => [a] -> Bool
-allEqual xs = and $ zipWith (==) (safeTail xs) xs
-  where
-    safeTail [] = []
-    safeTail (x : xs) = xs
+allEqual [] = True
+allEqual [x] = True
+allEqual (x : y : xs) = x == y && allEqual (y : xs)
 
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
@@ -92,13 +86,13 @@ ensureSameShapeList es after
 constWithShape :: Shape -> Double -> Expression d R
 constWithShape shape val = Expression h (IM.fromList [(h, node)])
   where
-    node = (shape, Const val)
+    node = (shape, R, Const val)
     h = hash node
 
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = (IM.fromList [(h, node)], h)
   where
-    node = (shape, Var name)
+    node = (shape, R, Var name)
     h = hash node
 
 -- |
@@ -108,7 +102,7 @@ isScalarShape = null
 -- |
 pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
-  | (shape, Const c) <- retrieveNode n mp = Just (shape, c)
+  | (shape, R, Const c) <- retrieveNode n mp = Just (shape, c)
   | otherwise = Nothing
 
 -- |
@@ -126,6 +120,10 @@ isZero mp nId
     Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
+
+-- |
+isDZero :: ExpressionMap -> NodeID -> Bool
+isDZero mp nId = retrieveOp nId mp == DZero
 
 -- |
 isOne :: ExpressionMap -> NodeID -> Bool
@@ -146,27 +144,27 @@ isConstant mp nId
 -- |
 pullSumOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullSumOperands mp nId
-  | Sum _ operands <- retrieveOp nId mp = operands
+  | Sum operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
 pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
-  | Mul _ operands <- retrieveOp nId mp = operands
+  | Mul operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
 
 -- |
 aConst :: Shape -> Double -> (ExpressionMap, NodeID)
 aConst shape val = (IM.fromList [(h, node)], h)
   where
-    node = (shape, Const val)
+    node = (shape, R, Const val)
     h = hash node
 
 -- |
 dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 dVarWithShape shape name = (IM.fromList [(h, node)], h)
   where
-    node = (shape, DVar name)
+    node = (shape, Covector, DVar name)
     h = hash node
 
 showT :: Show a => a -> T.Text
@@ -175,12 +173,14 @@ showT = T.pack . show
 -- |
 maybeVariable :: DimensionType d => Expression d R -> Maybe (String, Shape)
 maybeVariable (Expression nID mp) = case retrieveNode nID mp of
-  (shape, Var name) -> Just (name, shape)
+  (shape, R, Var name) -> Just (name, shape)
+  (shape, _, Var name) -> error "Why is this happening?"
   _ -> Nothing
 
 -------------------------------------------------------------------------------
 
 -- | MARK: (+)
+
 -------------------------------------------------------------------------------
 instance Num (Array Int Double) where
   (+) arr1 arr2 =

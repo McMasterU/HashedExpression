@@ -8,12 +8,11 @@ import Symphony.Common
 import Symphony.Symphony
 import System.Exit (exitFailure, exitSuccess)
 
-data SymphonyOpts
-  = SymphonyOpts
-      { filePath :: String,
-        noGenCode :: Bool,
-        outputPath :: String
-      }
+data SymphonyOpts = SymphonyOpts
+  { filePath :: String,
+    noGenCode :: Bool,
+    outputPath :: String
+  }
 
 symphonyOpts :: Parser SymphonyOpts
 symphonyOpts =

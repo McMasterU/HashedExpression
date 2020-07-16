@@ -11,9 +11,10 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import HashedExpression.Internal
-import qualified HashedExpression.Internal.Expression as HE
 import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
+import qualified HashedExpression.Internal.Expression as HE
 import qualified HashedExpression.Internal.Node as HN
+import HashedExpression.Internal.OperationSpec
 import qualified HashedExpression.Internal.Utils as HU
 import qualified HashedExpression.Operation as HO
 import Symphony.Common
@@ -50,13 +51,13 @@ constructExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, NodeI
 constructExp context shapeInfo exp =
   let add x y = sumMany [x, y]
       multiply x y = mulMany [x, y]
-      reIm x y = apply (binary RealImag) [x, y]
-      scale x y = apply (binaryET Scale ElementDefault) [x, y]
+      reIm x y = apply (Binary specRealImag) [x, y]
+      scale x y = apply (Binary specScale) [x, y]
       subtract x y = sumMany [x, scale (HU.aConst [] (-1)) y]
-      dot x y = apply (binaryET InnerProd ElementDefault `hasShape` []) [x, y]
-      app fun x = apply (unary fun) [x]
+      dot x y = apply (Binary specInnerProd) [x, y]
+      app fun x = apply (Unary fun) [x]
       piecewise marks condition branches =
-        apply (conditionAry (Piecewise marks)) (condition : branches)
+        apply (ConditionAry (specPiecewise marks)) (condition : branches)
    in case exp of
         ENumDouble (PDouble (pos, valStr))
           | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
@@ -90,12 +91,12 @@ constructExp context shapeInfo exp =
             operand2
             "Shape mismatched: trying to form complex from 2 vectors with different shape"
             opPos
-          when (getNT operand1 /= HE.R)
-            $ throwError
-            $ ErrorWithPosition "Numtype of operand 1 is not real" opPos
-          when (getNT operand2 /= HE.R)
-            $ throwError
-            $ ErrorWithPosition "Numtype of operand 2 is not real" opPos
+          when (getNT operand1 /= HE.R) $
+            throwError $
+              ErrorWithPosition "Numtype of operand 1 is not real" opPos
+          when (getNT operand2 /= HE.R) $
+            throwError $
+              ErrorWithPosition "Numtype of operand 2 is not real" opPos
           return $ reIm operand1 operand2
         ESubtract exp1 (TokenSub (opPos, _)) exp2 -> do
           let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
@@ -133,21 +134,21 @@ constructExp context shapeInfo exp =
             operand2
             "Numtype mismatched: trying to divide 2 vectors with different numtype"
             opPos
-          return $ multiply operand1 (app (Power (-1)) operand2)
+          return $ multiply operand1 (app (specPower (-1)) operand2)
         EScale exp1 (TokenScale (opPos, _)) exp2 -> do
           let inferredShape = inferShape context exp1 <|> shapeInfo
           operand1 <- constructExp context (Just []) exp1
           operand2 <- constructExp context inferredShape exp2
-          when (getShape operand1 /= [])
-            $ throwError
-            $ ErrorWithPosition
-              "The first operand of scaling operator is not a scalar"
-              opPos
-          when (getNT operand1 == HE.C && getNT operand2 == HE.R)
-            $ throwError
-            $ ErrorWithPosition
-              "Can't scale a real vector by a complex scalar"
-              opPos
+          when (getShape operand1 /= []) $
+            throwError $
+              ErrorWithPosition
+                "The first operand of scaling operator is not a scalar"
+                opPos
+          when (getNT operand1 == HE.C && getNT operand2 == HE.R) $
+            throwError $
+              ErrorWithPosition
+                "Can't scale a real vector by a complex scalar"
+                opPos
           return $ scale operand1 operand2
         EDot exp1 (TokenDot (opPos, _)) exp2 -> do
           let inferredShape =
@@ -167,25 +168,25 @@ constructExp context shapeInfo exp =
           return $ dot operand1 operand2
         EPower exp1 (TokenPower (opPos, _)) val -> do
           operand1 <- constructExp context shapeInfo exp1
-          return $ app (Power (toInt val)) operand1
+          return $ app (specPower (toInt val)) operand1
         ERotate (TokenRotate (opPos, _)) raStr exp -> do
           operand <- constructExp context shapeInfo exp
           let rotateAmount = toRotateAmount raStr
           let shape = getShape operand
-          when (null shape)
-            $ throwError
-            $ ErrorWithPosition "Can't rotate a scalar" opPos
-          when (length shape /= length rotateAmount)
-            $ throwError
-            $ ErrorWithPosition
-              ( "The rotate amount is for "
-                  ++ show (length rotateAmount)
-                  ++ "d vector, but the operand is "
-                  ++ show (length shape)
-                  ++ "d vector"
-              )
-              opPos
-          return $ app (Rotate rotateAmount) operand
+          when (null shape) $
+            throwError $
+              ErrorWithPosition "Can't rotate a scalar" opPos
+          when (length shape /= length rotateAmount) $
+            throwError $
+              ErrorWithPosition
+                ( "The rotate amount is for "
+                    ++ show (length rotateAmount)
+                    ++ "d vector, but the operand is "
+                    ++ show (length shape)
+                    ++ "d vector"
+                )
+                opPos
+          return $ app (specRotate rotateAmount) operand
         ENegate (TokenSub (opPos, _)) exp -> do
           operand <- constructExp context shapeInfo exp
           return $ scale (HU.aConst [] (-1)) operand
@@ -206,76 +207,76 @@ constructExp context shapeInfo exp =
               marks = concatMap extractMark cases
               exps = map extractExp cases
               shape = getShape condition
-          unless (isLastCase (last cases))
-            $ throwError
-            $ ErrorWithPosition
-              "Piecewise must end with an otherwise case"
-              opPos
-          unless ((Set.toList . Set.fromList $ marks) == marks)
-            $ throwError
-            $ ErrorWithPosition "The bounds must be increasing" opPos
-          unless (getNT condition == HE.R)
-            $ throwError
-            $ ErrorWithPosition "Condition is not a real vector" opPos
+          unless (isLastCase (last cases)) $
+            throwError $
+              ErrorWithPosition
+                "Piecewise must end with an otherwise case"
+                opPos
+          unless ((Set.toList . Set.fromList $ marks) == marks) $
+            throwError $
+              ErrorWithPosition "The bounds must be increasing" opPos
+          unless (getNT condition == HE.R) $
+            throwError $
+              ErrorWithPosition "Condition is not a real vector" opPos
           caseExps <- mapM (constructExp context (Just shape)) exps
           forM_ (zip caseExps [1 ..]) $ \(e, idx) ->
-            unless (getShape e == shape)
-              $ throwError
-              $ ErrorWithPosition
-                ( ". The shape of condition is "
-                    ++ toReadable shape
-                    ++ ", but the shape of branch "
-                    ++ show idx
-                    ++ " is "
-                    ++ toReadable (getShape e)
-                )
+            unless (getShape e == shape) $
+              throwError $
+                ErrorWithPosition
+                  ( ". The shape of condition is "
+                      ++ toReadable shape
+                      ++ ", but the shape of branch "
+                      ++ show idx
+                      ++ " is "
+                      ++ toReadable (getShape e)
+                  )
+                  opPos
+          unless (HU.allEqual $ map getNT caseExps) $
+            throwError $
+              ErrorWithPosition
+                "vector branches of piecewise are not of same numtype"
                 opPos
-          unless (HU.allEqual $ map getNT caseExps)
-            $ throwError
-            $ ErrorWithPosition
-              "vector branches of piecewise are not of same numtype"
-              opPos
           return $ piecewise marks condition caseExps
         EUnaryFun (PUnaryFun (opPos, funName)) exp -> do
           let onlyForRealVector operand =
-                unless (getNT operand == HE.R)
-                  $ throwError
-                  $ ErrorWithPosition "Operand must be a real vector" opPos
+                unless (getNT operand == HE.R) $
+                  throwError $
+                    ErrorWithPosition "Operand must be a real vector" opPos
               onlyForComplexVector operand =
-                unless (getNT operand == HE.C)
-                  $ throwError
-                  $ ErrorWithPosition
-                    "Operand must be a complex vector"
-                    opPos
+                unless (getNT operand == HE.C) $
+                  throwError $
+                    ErrorWithPosition
+                      "Operand must be a complex vector"
+                      opPos
           operand <- constructExp context shapeInfo exp
           let singleArgReal op = do
                 onlyForRealVector operand
                 return $ app op operand
           case funName of
-            "sqrt" -> singleArgReal Sqrt
-            "sin" -> singleArgReal Sin
-            "cos" -> singleArgReal Cos
-            "tan" -> singleArgReal Tan
-            "exp" -> singleArgReal Exp
-            "log" -> singleArgReal Log
-            "sinh" -> singleArgReal Sinh
-            "cosh" -> singleArgReal Cosh
-            "tanh" -> singleArgReal Tanh
-            "asin" -> singleArgReal Asin
-            "acos" -> singleArgReal Acos
-            "atan" -> singleArgReal Atan
-            "asinh" -> singleArgReal Asin
-            "acosh" -> singleArgReal Acos
-            "atanh" -> singleArgReal Atan
+            "sqrt" -> singleArgReal specSqrt
+            "sin" -> singleArgReal specSin
+            "cos" -> singleArgReal specCos
+            "tan" -> singleArgReal specTan
+            "exp" -> singleArgReal specExp
+            "log" -> singleArgReal specLog
+            "sinh" -> singleArgReal specSinh
+            "cosh" -> singleArgReal specCosh
+            "tanh" -> singleArgReal specTanh
+            "asin" -> singleArgReal specAsin
+            "acos" -> singleArgReal specAcos
+            "atan" -> singleArgReal specAtan
+            "asinh" -> singleArgReal specAsin
+            "acosh" -> singleArgReal specAcos
+            "atanh" -> singleArgReal specAtan
             "xRe" -> do
               onlyForComplexVector operand
-              return $ app RealPart operand
+              return $ app specRealPart operand
             "xIm" -> do
               onlyForComplexVector operand
-              return $ app ImagPart operand
+              return $ app specImagPart operand
             "ft" -> do
-              let reFT = app ReFT operand
-              let imFT = app ImFT operand
+              let reFT = app specReFT operand
+              let imFT = app specImFT operand
               return $ reIm reFT imFT
             "sumElements" -> do
               onlyForRealVector operand
@@ -285,8 +286,8 @@ constructExp context shapeInfo exp =
               if getNT operand == HE.R
                 then return $ dot operand operand
                 else do
-                  let re = app RealPart operand
-                      im = app ImagPart operand
+                  let re = app specRealPart operand
+                      im = app specImagPart operand
                   return $ dot re re `add` dot im im
             _ ->
               throwError $
@@ -295,8 +296,9 @@ constructExp context shapeInfo exp =
                   opPos
         EDoubleFun (PDoubleFun (funPos, name)) num exp -> do
           let onlyForRealVector operand =
-                unless (getNT operand == HE.R) $ throwError $
-                  ErrorWithPosition "Operand must be a real vector" funPos
+                unless (getNT operand == HE.R) $
+                  throwError $
+                    ErrorWithPosition "Operand must be a real vector" funPos
           operand <- constructExp context shapeInfo exp
           let delta = numToDouble num
           let huber delta operand =
@@ -328,16 +330,16 @@ checkSameShape ::
 checkSameShape operand1 operand2 errStr pos = do
   let shape1 = getShape operand1
       shape2 = getShape operand2
-  unless (shape1 == shape2)
-    $ throwError
-    $ ErrorWithPosition
-      ( errStr
-          ++ ". The shape of 1st operand is "
-          ++ toReadable shape1
-          ++ ", but the shape of 2nd operand 2 is "
-          ++ toReadable shape2
-      )
-      pos
+  unless (shape1 == shape2) $
+    throwError $
+      ErrorWithPosition
+        ( errStr
+            ++ ". The shape of 1st operand is "
+            ++ toReadable shape1
+            ++ ", but the shape of 2nd operand 2 is "
+            ++ toReadable shape2
+        )
+        pos
 
 -- | Check if two expression have the same num type
 checkSameNumType ::
@@ -349,13 +351,13 @@ checkSameNumType ::
 checkSameNumType operand1 operand2 errStr pos = do
   let nt1 = getNT operand1
       nt2 = getNT operand2
-  unless (nt1 == nt2)
-    $ throwError
-    $ ErrorWithPosition
-      ( errStr
-          ++ ". The numtype of 1st operand is "
-          ++ toReadableNT nt1
-          ++ ", but the numtype of 2nd operand is "
-          ++ toReadableNT nt2
-      )
-      pos
+  unless (nt1 == nt2) $
+    throwError $
+      ErrorWithPosition
+        ( errStr
+            ++ ". The numtype of 1st operand is "
+            ++ toReadableNT nt1
+            ++ ", but the numtype of 2nd operand is "
+            ++ toReadableNT nt2
+        )
+        pos

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 -- |
 -- Module      :  HashedExpression.Internal
@@ -9,67 +10,7 @@
 -- Portability :  unportable
 --
 -- Inner HashedExpression functionality, contains transformations and combinators for manually manipulating HashedExpressions.
-module HashedExpression.Internal
-  ( -- * Expression Builders
-    apply,
-    applyBinary,
-    applyNary,
-    applyConditionAry,
-    unwrap,
-    wrap,
-    mulMany,
-    sumMany,
-
-    -- * Operation Outcomes
-    ElementOutcome (..),
-    D_,
-    ET_,
-    OperationOption (..),
-    NodeOutcome (..),
-    binary,
-    binaryET,
-    applyUnary,
-    unary,
-    unaryET,
-    naryET,
-    conditionAry,
-    hasShape,
-
-    -- * Expression Transformations
-    Transformation,
-    toTransformation,
-    Modification,
-    fromModification,
-    OperandOrder (..),
-    toRecursive,
-    multipleTimes,
-    removeUnreachable,
-
-    -- * Expression Changes
-    Change,
-    const_,
-    num_,
-    product_,
-    sum_,
-    just,
-
-    -- * Expression Diffs
-    ExpressionDiff (..),
-    applyDiff,
-    diffConst,
-    mulManyDiff,
-    sumManyDiff,
-    noChange,
-    combineChildrenDiffs,
-
-    -- * Other
-    topologicalSort,
-    topologicalSortManyRoots,
-    expressionVarNodes,
-    varNodesWithId,
-    containsFTNode,
-  )
-where
+module HashedExpression.Internal where
 
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Reader (Reader, ask, runReader)
@@ -92,87 +33,9 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Expression Builders
--- --------------------------------------------------------------------------------------------------------------------
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'.
-apply ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | the operands (unwrapped 'Expression')
-  [(ExpressionMap, NodeID)] ->
-  -- | the resulting (unwrapped) 'Expression'
-  (ExpressionMap, NodeID)
-apply option exprs =
-  addEntryWithContext mergedMap mergedMap option (map snd exprs)
-  where
-    mergedMap = IM.unions . map fst $ exprs
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a list of 'Expression' (operands) using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression'
-applyNary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | the operands
-  [Expression d1 et1] ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyNary option = wrap . apply option . map unwrap
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression' and a fixed (binary) arity
-applyBinary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | the "left" operand
-  Expression d1 et1 ->
-  -- | the "right" operand
-  Expression d2 et2 ->
-  -- | the resulting 'Expression'
-  Expression d3 et3
-applyBinary option e1 e2 = wrap . apply option $ [unwrap e1, unwrap e2]
-
--- | Helper function that generalizes the construction of 'Expression' operators that transform
---   a input 'Expression' using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression' and a fixed (unary) arity
-applyUnary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | the operand
-  Expression d1 et1 ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyUnary option e1 = wrap . apply option $ [unwrap e1]
-
--- | Helper function that generalizes the construction of 'Expression' functions that
---   are piecewise, requiring a operand 'Expression' to serve as a conditional (or selector)
---   of other operands (branches)
-applyConditionAry ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | the conditional/selector operand
-  Expression d et1 ->
-  -- | operands (branches) that could be selected
-  [Expression d et2] ->
-  -- | the resulting 'Expression'
-  Expression d et2
-applyConditionAry option e branches =
-  wrap . apply option $ unwrap e : map unwrap branches
 
 -- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
 unwrap :: Expression d et -> (ExpressionMap, NodeID)
@@ -182,75 +45,117 @@ unwrap (Expression n mp) = (mp, n)
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
+-------------------------------------------------------------------------------
+addEntryWithContextTo ::
+  ExpressionMap ->
+  OperationSpec ->
+  [NodeID] ->
+  ExpressionMap ->
+  (ExpressionMap, NodeID)
+addEntryWithContextTo contextMp spec args mp =
+  let shapeOf nID = retrieveShape nID contextMp
+      etOf nID = retrieveElementType nID contextMp
+      (shape, et, op) = case (spec, args) of
+        (Unary (UnarySpec toOp decideShape decideET), [arg]) ->
+          ( decideShape (shapeOf arg),
+            decideET (etOf arg),
+            toOp arg
+          )
+        (Binary (BinarySpec toOp decideShape decideET), [arg1, arg2]) ->
+          ( decideShape (shapeOf arg1) (shapeOf arg2),
+            decideET (etOf arg1) (etOf arg2),
+            toOp arg1 arg2
+          )
+        (Nary (NarySpec toOp decideShape decideET), args) ->
+          ( decideShape (map shapeOf args),
+            decideET (map etOf args),
+            toOp args
+          )
+        (ConditionAry (ConditionarySpec toOp decideShape decideET), condition : branches) ->
+          ( decideShape (shapeOf condition) (map shapeOf branches),
+            decideET (etOf condition) (map etOf branches),
+            toOp condition branches
+          )
+        _ -> error "Unfaithful with operation spec"
+   in addNode mp (shape, et, op)
+
+-------------------------------------------------------------------------------
+
 -- | Generic N-Ary multiplication operator, constructed using 'apply'
 --   with 'ElementDefault' to default to the 'ElementType' of it's arguments
 mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-mulMany = apply $ naryET Mul ElementDefault
+mulMany = apply (Nary specMul)
 
 -- | Generic N-Ary addition operator, constructed using 'apply'
 --   with 'ElementDefault' to default to the 'ElementType' of it's arguments
 sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-sumMany = apply $ naryET Sum ElementDefault
+sumMany = apply (Nary specSum)
 
--- TODO is this needed?
--- Check if 2 different nodes from 2 maps have the same hash
-safeUnion :: ExpressionMap -> ExpressionMap -> ExpressionMap
-safeUnion = IM.union
+-------------------------------------------------------------------------------
 
--- | Generate a new 'ExpressionMap' with a new root 'Node' and 'NodeID' from a merged 'ExpressionMap' (of arguments)
-addEntryWithContext ::
-  -- | The context expression map, use for additional lookup
-  ExpressionMap ->
-  -- | The merged expression map of operands
-  ExpressionMap ->
-  -- | describes how an operators may change 'Dimension' or 'ElementType'
-  OperationOption ->
-  -- | list of root 'NodeID' of arguments
-  [NodeID] ->
-  -- | the resulting 'Expression' (unwrapped)
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'.
+apply ::
+  -- | describes changes in 'Dimension' or 'ElementType'
+  OperationSpec ->
+  -- | the operands (unwrapped 'Expression')
+  [(ExpressionMap, NodeID)] ->
+  -- | the resulting (unwrapped) 'Expression'
   (ExpressionMap, NodeID)
-addEntryWithContext contextMp mp (Normal nodeOutcome shapeOutcome) ns =
-  let highestShape :: [(ExpressionMap, NodeID)] -> Shape
-      highestShape = last . sortOn length . map (uncurry $ flip retrieveShape)
-      -------------------------------------------------------------------------------
-      highestShapeWithContext :: ExpressionMap -> [NodeID] -> Shape
-      highestShapeWithContext mp = last . sortOn length . map (`retrieveShape` mp)
-      -------------------------------------------------------------------------------
-      highestElementType :: [(ExpressionMap, NodeID)] -> ET
-      highestElementType = maximum . map (uncurry $ flip retrieveElementType)
-      -------------------------------------------------------------------------------
-      highestElementTypeWithContext :: ExpressionMap -> [NodeID] -> ET
-      highestElementTypeWithContext mp = maximum . map (`retrieveElementType` mp)
-      -------------------------------------------------------------------------------
-      shape :: Shape
-      shape = case shapeOutcome of
-        ShapeSpecific s -> s
-        _ -> highestShapeWithContext contextMp ns
-      elementType :: ElementOutcome -> ET
-      elementType elementOutcome = case elementOutcome of
-        ElementSpecific et -> et
-        _ -> highestElementTypeWithContext contextMp ns
-      node :: Op
-      node =
-        case (nodeOutcome, ns) of
-          (OpOne op, [arg]) -> op arg
-          (OpOneElement op elm, [arg]) -> op (elementType elm) arg
-          (OpTwo op, [arg1, arg2]) -> op arg1 arg2
-          (OpTwoElement op elm, [arg1, arg2]) ->
-            op (elementType elm) arg1 arg2
-          (OpMany op, args) -> op args
-          (OpManyElement op elm, args) -> op (elementType elm) args
-   in addInternal mp (shape, node)
-addEntryWithContext contextMp mp (Condition op) ns@(conditionN : branchesNs) =
-  let headBranchN = head branchesNs
-      shape = retrieveShape headBranchN contextMp
-      node = op conditionN branchesNs
-   in addInternal mp (shape, node)
+apply option exprs =
+  addEntryWithContextTo mergedMap option (map snd exprs) mergedMap
+  where
+    mergedMap = IM.unions . map fst $ exprs
 
--- --------------------------------------------------------------------------------------------------------------------
+applyUnary ::
+  HasCallStack =>
+  UnarySpec ->
+  -- | the operand
+  Expression d1 et1 ->
+  -- | the resulting 'Expression'
+  Expression d2 et2
+applyUnary spec e1 = wrap . apply (Unary spec) $ [unwrap e1]
 
--- * Operation Outcomes
--- --------------------------------------------------------------------------------------------------------------------
+applyNary ::
+  HasCallStack =>
+  -- | describes changes in 'Dimension' or 'ElementType'
+  NarySpec ->
+  -- | the operands
+  [Expression d1 et1] ->
+  -- | the resulting 'Expression'
+  Expression d2 et2
+applyNary spec = wrap . apply (Nary spec) . map unwrap
+
+-- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+--   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
+--   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
+--   of 'Expression' and a fixed (binary) arity
+applyBinary ::
+  HasCallStack =>
+  -- | describes changes in 'Dimension' or 'ElementType'
+  BinarySpec ->
+  -- | the "left" operand
+  Expression d1 et1 ->
+  -- | the "right" operand
+  Expression d2 et2 ->
+  -- | the resulting 'Expression'
+  Expression d3 et3
+applyBinary spec e1 e2 = wrap . apply (Binary spec) $ [unwrap e1, unwrap e2]
+
+applyConditionAry ::
+  -- | describes changes in 'Dimension' or 'ElementType'
+  ConditionarySpec ->
+  -- | the conditional/selector operand
+  Expression d et1 ->
+  -- | operands (branches) that could be selected
+  [Expression d et2] ->
+  -- | the resulting 'Expression'
+  Expression d et2
+applyConditionAry spec e branches =
+  wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
+
+-------------------------------------------------------------------------------
 
 -- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
 --   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
@@ -269,140 +174,12 @@ instance ToShape D_ where
 data ET_
   deriving (Typeable, ElementType)
 
--- | A union type to select either a default 'ElementType' or a specific one.
---   Default selection follows a priority chain 'R' < 'C' < 'Covector', choosing the first valid type
-data ElementOutcome
-  = -- | force a specifc 'ElementType'
-    ElementSpecific ET
-  | -- | select prioritized valid element ('R' < 'C' < 'Covector')
-    ElementDefault
-
--- | Possible outcomes effecting 'Dimension' and 'ElementType' when applying an operator.
---   Because of piecewise functions, constructing combinators for 'Expression' can be complicated due to
---   operator application resulting in conditionals. See the functions 'binary', 'unary', 'nary' and 'conditionAry'
---   for constructing generic OperationOption's
-data OperationOption
-  = -- | application has a normal outcome
-    Normal NodeOutcome ShapeOutcome
-  | -- | application outcome depends on condition (piecewise function)
-    Condition (ConditionArg -> [BranchArg] -> Op)
-
--- | Transform an 'OperationOption' to have a specific 'Shape'.
---   Useful for constructing an 'OperationOption' in conjunction with the 'unary', 'binary' and 'nary' functions that
---   default to 'ShapeDefault'. For example, one could construct an Inner Product operator for scalars like so
---
--- @
---  innerOp = binaryET InnerProd (ElementSpecific R) `hasShape` []
--- @
-hasShape :: OperationOption -> Shape -> OperationOption
-hasShape (Normal nodeOutcome _) specificShape =
-  Normal nodeOutcome (ShapeSpecific specificShape)
-hasShape option _ = option
-
--- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
---   different cases for inferring 'DimensionType' and 'ElementType' of the resulting 'Node' need to be considered.
---   The following data type contains constructors covering these cases, the are used in normal control flow by
---   'OperationOption'
---   TODO Haddock: why is there an OpOne and OpOneElement? Explain this?
-data NodeOutcome
-  = -- | Unary Operator, 'ElementType' irrelavent
-    OpOne (Arg -> Op)
-  | -- | Unary Operator, 'ElementType' included
-    OpOneElement (ET -> Arg -> Op) ElementOutcome
-  | -- | Binary Operator, 'ElementType' irrelavent
-    OpTwo (Arg -> Arg -> Op)
-  | -- | Binary Operator, 'ElementType' included
-    OpTwoElement (ET -> Arg -> Arg -> Op) ElementOutcome
-  | -- | N-Ary Operator, 'ElementType' irrelavent
-    OpMany (Args -> Op)
-  | -- | N-Ary Operator, 'ElementType' included
-    OpManyElement (ET -> Args -> Op) ElementOutcome
-
--- | When merging 'ExpressionMap', like in the 'apply' function used to construct operators for 'Expression',
---   different cases for inferring dimensions and sizes (i.e the 'Shape') of the resulting 'Node' need to be considered.
---   The following data type contains constructors covering these cases, the are used in normal control flow by
---   'OperationOption'
-data ShapeOutcome
-  = -- | provide a specific 'Shape'
-    ShapeSpecific Shape
-  | -- | automatically select the 'Shape' with the longest length
-    ShapeDefault
-  | -- | select the shape of a 'BranchArg' (used in piecewise functions)
-    ShapeBranches
-
--- | Construct a 'OperationOption' for a generic binary operator (of implicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpTwo' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapDefault'
-binary ::
-  -- | a constructor of 'Node'
-  (Arg -> Arg -> Op) ->
-  OperationOption -- result
-binary op = Normal (OpTwo op) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic binary operator (of explicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpTwoElement' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
-binaryET ::
-  -- | constructor of 'Node'
-  (ET -> Arg -> Arg -> Op) ->
-  -- | specific 'ElementType' or default
-  ElementOutcome ->
-  -- | result
-  OperationOption
-binaryET op elm = Normal (OpTwoElement op elm) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic unary operator (of implicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpOne' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
-unary ::
-  -- | constructor of 'Node'
-  (Arg -> Op) ->
-  -- | result
-  OperationOption
-unary op = Normal (OpOne op) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic unary operator (of explicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpOneElement' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
-unaryET ::
-  -- | constructor of 'Node'
-  (ET -> Arg -> Op) ->
-  -- | specific 'ElementType' or default
-  ElementOutcome ->
-  -- | result
-  OperationOption
-unaryET op elm = Normal (OpOneElement op elm) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic n-Ary operator (of implicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpMany' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
-nary ::
-  -- | constructor of 'Node'
-  (Args -> Op) ->
-  -- | result
-  OperationOption
-nary op = Normal (OpMany op) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic unary operator (of explicit 'ElementType').
---   Always returns the 'Normal' constructor with the input 'Node' wrapped in the 'OpManyElement' constructor.
---   Use 'hasShape' to select a different 'ShapeOutcome' than 'ShapeDefault'
-naryET ::
-  -- | constructor of 'Node'
-  (ET -> Args -> Op) ->
-  -- | specific 'ElementType' or default
-  ElementOutcome ->
-  -- | result
-  OperationOption
-naryET op elm = Normal (OpManyElement op elm) ShapeDefault
-
--- | Construct a 'OperationOption' for a generic piecewise function (of implicit 'ElementType').
---   A simple alias for the 'Condition' construtor
-conditionAry :: (ConditionArg -> [BranchArg] -> Op) -> OperationOption
-conditionAry = Condition
+-------------------------------------------------------------------------------
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Transformations
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
@@ -414,7 +191,8 @@ type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 toTransformation ::
   -- | argument provided by 'fromModification'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  Transformation -- resulting transformation
+  -- | resulting transformation
+  Transformation
 toTransformation normalizer exp@(mp, n) =
   let diff = normalizer exp
       newMp = IM.union mp (extraEntries diff)
@@ -423,6 +201,7 @@ toTransformation normalizer exp@(mp, n) =
 
 -- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
 --   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
+--  TODO: rename this to Rule ?
 type Modification = (ExpressionMap, NodeID) -> Change
 
 -- | Takes a 'Modification' and returns a corresponding function
@@ -437,7 +216,7 @@ data OperandOrder
 
 -- | Used to apply rules (which can be generated with 'fromModification') to every 'Node' in an 'Expression' bottom up
 toRecursive ::
-  -- | apply in topological order or not
+  -- | Reorder operands or not
   OperandOrder ->
   -- | rule applied to a single 'Node'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
@@ -485,12 +264,15 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Changes
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | The Change type allows the creation of combinators for expressing alterations to an 'Expression' with respect
 --   to a base 'ExpressionMap'. For example, combinators like 'sum_' will create will create a new 'ExpressionMap' with
 --   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
 --   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
+--
+-- ExpressionDiff in the MonadReader ExpressionMap
 type Change = ExpressionMap -> ExpressionDiff
 
 -- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
@@ -504,11 +286,11 @@ num_ :: Double -> Change
 num_ = const_ []
 
 -- | Multiply a list of 'Change' together into a single 'Change'
-product_ :: [Change] -> Change
+product_ :: HasCallStack => [Change] -> Change
 product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
 
 -- | Sum a list of 'Change' together into a single 'Change'
-sum_ :: [Change] -> Change
+sum_ :: HasCallStack => [Change] -> Change
 sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
 
 -- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
@@ -517,7 +299,7 @@ just nId _ = ExpressionDiff IM.empty nId
 
 instance Num Change where
   (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
-  negate change mp = applyDiff mp (unaryET Neg ElementDefault) [change mp]
+  negate change mp = applyDiff mp (Unary specNeg) [change mp]
   (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
   signum = error "The Change of signum is currently unimplemented"
   abs = error "The Change of abs is currently unimplemented"
@@ -528,64 +310,71 @@ instance Fractional Change where
   fromRational r = error "N/A"
 
 instance Floating Change where
-  sqrt change mp = applyDiff mp (unary Sqrt) [change mp]
-  exp change mp = applyDiff mp (unary Exp) [change mp]
-  log change mp = applyDiff mp (unary Log) [change mp]
-  sin change mp = applyDiff mp (unary Sin) [change mp]
-  cos change mp = applyDiff mp (unary Cos) [change mp]
-  tan change mp = applyDiff mp (unary Tan) [change mp]
-  asin change mp = applyDiff mp (unary Asin) [change mp]
-  acos change mp = applyDiff mp (unary Acos) [change mp]
-  atan change mp = applyDiff mp (unary Atan) [change mp]
-  sinh change mp = applyDiff mp (unary Sinh) [change mp]
-  cosh change mp = applyDiff mp (unary Cosh) [change mp]
-  tanh change mp = applyDiff mp (unary Tanh) [change mp]
-  asinh change mp = applyDiff mp (unary Asinh) [change mp]
-  acosh change mp = applyDiff mp (unary Acosh) [change mp]
-  atanh change mp = applyDiff mp (unary Atanh) [change mp]
+  sqrt change mp = applyDiff mp (Unary specSqrt) [change mp]
+  exp change mp = applyDiff mp (Unary specExp) [change mp]
+  log change mp = applyDiff mp (Unary specLog) [change mp]
+  sin change mp = applyDiff mp (Unary specSin) [change mp]
+  cos change mp = applyDiff mp (Unary specCos) [change mp]
+  tan change mp = applyDiff mp (Unary specTan) [change mp]
+  asin change mp = applyDiff mp (Unary specAsin) [change mp]
+  acos change mp = applyDiff mp (Unary specAcos) [change mp]
+  atan change mp = applyDiff mp (Unary specAtan) [change mp]
+  sinh change mp = applyDiff mp (Unary specSinh) [change mp]
+  cosh change mp = applyDiff mp (Unary specCosh) [change mp]
+  tanh change mp = applyDiff mp (Unary specTanh) [change mp]
+  asinh change mp = applyDiff mp (Unary specAsinh) [change mp]
+  acosh change mp = applyDiff mp (Unary specAcosh) [change mp]
+  atanh change mp = applyDiff mp (Unary specAtanh) [change mp]
 
 instance PowerOp Change Int where
-  (^) change alpha mp = applyDiff mp (unary (Power alpha)) [change mp]
+  (^) change alpha mp = applyDiff mp (Unary (specPower alpha)) [change mp]
 
 instance VectorSpaceOp Change Change where
   scale change1 change2 mp =
-    applyDiff mp (binaryET Scale ElementDefault) [change1 mp, change2 mp]
+    applyDiff mp (Binary specScale) [change1 mp, change2 mp]
 
 instance ComplexRealOp Change Change where
-  (+:) change1 change2 mp =
-    applyDiff mp (binary RealImag) [change1 mp, change2 mp]
-  xRe change1 mp = applyDiff mp (unary RealPart) [change1 mp]
-  xIm change1 mp = applyDiff mp (unary ImagPart) [change1 mp]
+  (+:) change1 change2 mp = applyDiff mp (Binary specRealImag) [change1 mp, change2 mp]
+  xRe change1 mp = applyDiff mp (Unary specRealPart) [change1 mp]
+  xIm change1 mp = applyDiff mp (Unary specImagPart) [change1 mp]
 
 instance InnerProductSpaceOp Change Change Change where
   (<.>) change1 change2 mp =
-    applyDiff
-      mp
-      (binaryET InnerProd ElementDefault `hasShape` [])
-      [change1 mp, change2 mp]
+    applyDiff mp (Binary specInnerProd) [change1 mp, change2 mp]
 
 instance RotateOp RotateAmount Change where
-  rotate ra change mp = applyDiff mp (unary (Rotate ra)) [change mp]
+  rotate ra change mp = applyDiff mp (Unary (specRotate ra)) [change mp]
 
 instance PiecewiseOp Change Change where
   piecewise marks condition branches mp =
-    applyDiff mp (conditionAry (Piecewise marks)) . map ($ mp) $
-      condition : branches
+    applyDiff mp (ConditionAry (specPiecewise marks)) . map ($ mp) $ condition : branches
+
+instance MulCovectorOp Change Change Change where
+  (|*|) change1 change2 mp = applyDiff mp (Binary specMulD) [change1 mp, change2 mp]
+
+instance ScaleCovectorOp Change Change Change where
+  (|*.|) change1 change2 mp = applyDiff mp (Binary specScaleD) [change1 mp, change2 mp]
+
+instance CovectorScaleOp Change Change Change where
+  (|.*|) change1 change2 mp = applyDiff mp (Binary specDScale) [change1 mp, change2 mp]
+
+instance InnerProductCovectorOp Change Change Change where
+  (|<.>|) change1 change2 mp = applyDiff mp (Binary specInnerProdD) [change1 mp, change2 mp]
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Diffs
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | When performing a 'Change' on an 'ExpressionMap', the extra entries created by the change
 --   (i.e not included in the original 'ExpressionMap') and a new root 'NodeID' are stored in the ExpressionDiff type
-data ExpressionDiff
-  = ExpressionDiff
-      { -- | Extra entries we need to add to the original Expression Map
-        extraEntries :: ExpressionMap,
-        -- | New root of the expression (can change, can be the same)
-        newRootId :: NodeID
-      }
+data ExpressionDiff = ExpressionDiff
+  { -- | Extra entries we need to add to the original Expression Map
+    extraEntries :: ExpressionMap,
+    -- | New root of the expression (can change, can be the same)
+    newRootId :: NodeID
+  }
   deriving (Eq, Ord, Show)
 
 -- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
@@ -594,7 +383,7 @@ applyDiff ::
   -- | the base map to find diffs w.r.t
   ExpressionMap ->
   -- | the operation to apply
-  OperationOption ->
+  OperationSpec ->
   -- | the operands (also in diff to the base map)
   [ExpressionDiff] ->
   -- | the result (combined diffs with new nodes)
@@ -604,8 +393,7 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
     mergedExtraEntries = IM.unions . map extraEntries $ operands
     updatedContextMp = IM.union mergedExtraEntries contextMp
     ns = map newRootId operands
-    (resExtraEntries, resRootId) =
-      addEntryWithContext updatedContextMp mergedExtraEntries option ns
+    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
 
 -- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
 diffConst :: Shape -> Double -> ExpressionDiff
@@ -613,31 +401,38 @@ diffConst shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
 
+dZeroWithShape :: Shape -> ExpressionDiff
+dZeroWithShape shape = ExpressionDiff mp n
+  where
+    Expression n mp = fromNode (shape, Covector, DZero)
+
 -- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
 mulManyDiff ::
+  HasCallStack =>
   -- | base map to find diff w.r.t
   ExpressionMap ->
   -- | operands
   [ExpressionDiff] ->
   -- | combined operands with new entries
   ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (naryET Mul ElementDefault)
+mulManyDiff contextMp = applyDiff contextMp (Nary specMul)
 
 -- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
 sumManyDiff ::
+  HasCallStack =>
   -- | base map to find diff w.r.t
   ExpressionMap ->
   -- | operands
   [ExpressionDiff] ->
   -- | combined operands with new entries
   ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (naryET Sum ElementDefault)
+sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
 
 -- | The ExpressionDiff corresponding to no change in this node
 noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
 
--- | Same node type (Mul, Sum, Negate, ...), but children may changed, now make the same node type with new children
+-- | Same node type (Mul, Sum, Negate, ...), same shape, same ElementType but with new children, now make the same node type with new children
 --   and return the combined difference
 combineChildrenDiffs ::
   OperandOrder ->
@@ -646,85 +441,84 @@ combineChildrenDiffs ::
   [ExpressionDiff] ->
   ExpressionDiff
 combineChildrenDiffs operandOrder contextMp n childrenDiffs
-  | Sum et _ <- oldNode,
+  | Sum _ <- oldOp,
     operandOrder == Reorder =
-    sortAndCombine (naryET Sum (ElementSpecific et))
-  | Mul et _ <- oldNode,
+    sortAndCombine (Nary specSum)
+  | Mul _ <- oldOp,
     operandOrder == Reorder =
-    sortAndCombine (naryET Mul (ElementSpecific et))
-  | InnerProd R arg1 arg2 <- oldNode,
+    sortAndCombine (Nary specMul)
+  | InnerProd _ _ <- oldOp,
+    R == oldET,
     operandOrder == Reorder =
-    sortAndCombine (binaryET InnerProd (ElementSpecific R))
-  | oldChildren == newChildren && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
+    sortAndCombine (Binary specInnerProd)
+  | oldChildrenIDs == newChildrenIDs && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
   | otherwise =
-    case oldNode of
+    case oldOp of
       Var _ -> noChange n
       DVar _ -> noChange n
       Const _ -> noChange n
-      Sum et _ -> combine (naryET Sum (ElementSpecific et))
-      Mul et _ -> combine (naryET Mul (ElementSpecific et))
-      Power x _ -> combine (unary (Power x))
-      Neg et _ -> combine (unaryET Neg (ElementSpecific et))
-      Scale et _ _ -> combine (binaryET Scale (ElementSpecific et))
-      Div _ _ -> combine (binary Div)
-      Sqrt _ -> combine (unary Sqrt)
-      Sin _ -> combine (unary Sin)
-      Cos _ -> combine (unary Cos)
-      Tan _ -> combine (unary Tan)
-      Exp _ -> combine (unary Exp)
-      Log _ -> combine (unary Log)
-      Sinh _ -> combine (unary Sinh)
-      Cosh _ -> combine (unary Cosh)
-      Tanh _ -> combine (unary Tanh)
-      Asin _ -> combine (unary Asin)
-      Acos _ -> combine (unary Acos)
-      Atan _ -> combine (unary Atan)
-      Asinh _ -> combine (unary Asinh)
-      Acosh _ -> combine (unary Acosh)
-      Atanh _ -> combine (unary Atanh)
-      RealImag _ _ -> combine (binary RealImag)
-      RealPart _ -> combine (unary RealPart)
-      ImagPart _ -> combine (unary ImagPart)
-      InnerProd et _ _ ->
-        combine (binaryET InnerProd (ElementSpecific et))
-      Piecewise marks _ _ -> combine (conditionAry (Piecewise marks))
-      Rotate amount _ -> combine (unary (Rotate amount))
-      ReFT _ -> combine (unary ReFT)
-      ImFT _ -> combine (unary ImFT)
-      TwiceReFT _ -> combine (unary TwiceReFT)
-      TwiceImFT _ -> combine (unary TwiceImFT)
+      Sum _ -> combine (Nary specSum)
+      Mul _ -> combine (Nary specMul)
+      Power x _ -> combine (Unary (specPower x))
+      Neg _ -> combine (Unary specNeg)
+      Scale _ _ -> combine (Binary specScale)
+      Div _ _ -> combine (Binary specDiv)
+      Sqrt _ -> combine (Unary specSqrt)
+      Sin _ -> combine (Unary specSin)
+      Cos _ -> combine (Unary specCos)
+      Tan _ -> combine (Unary specTan)
+      Exp _ -> combine (Unary specExp)
+      Log _ -> combine (Unary specLog)
+      Sinh _ -> combine (Unary specSinh)
+      Cosh _ -> combine (Unary specCosh)
+      Tanh _ -> combine (Unary specTanh)
+      Asin _ -> combine (Unary specAsin)
+      Acos _ -> combine (Unary specAcos)
+      Atan _ -> combine (Unary specAtan)
+      Asinh _ -> combine (Unary specAsinh)
+      Acosh _ -> combine (Unary specAcosh)
+      Atanh _ -> combine (Unary specAtanh)
+      RealPart _ -> combine (Unary specRealPart)
+      ImagPart _ -> combine (Unary specImagPart)
+      RealImag _ _ -> combine (Binary specRealImag)
+      InnerProd _ _ -> combine (Binary specInnerProd)
+      Piecewise marks _ _ -> combine (ConditionAry (specPiecewise marks))
+      Rotate amount _ -> combine (Unary (specRotate amount))
+      ReFT _ -> combine (Unary specReFT)
+      ImFT _ -> combine (Unary specImFT)
+      TwiceReFT _ -> combine (Unary specTwiceReFT)
+      TwiceImFT _ -> combine (Unary specTwiceImFT)
+      DZero -> noChange n
+      MulD _ _ -> combine (Binary specMulD)
+      ScaleD {} -> combine (Binary specScaleD)
+      DScale {} -> combine (Binary specDScale)
+      InnerProdD _ _ -> combine (Binary specInnerProdD)
   where
-    (oldShape, oldNode) = retrieveNode n contextMp
-    oldChildren = opArgs oldNode
-    newChildren = map newRootId childrenDiffs
+    (oldShape, oldET, oldOp) = retrieveNode n contextMp
+    -------------------------------------------------------------------------------
+    oldChildrenIDs = opArgs oldOp
+    newChildrenIDs = map newRootId childrenDiffs
+    -------------------------------------------------------------------------------
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-    combine option =
-      applyDiff contextMp (option `hasShape` oldShape) childrenDiffs
+    -------------------------------------------------------------------------------
+    combine spec = applyDiff contextMp spec childrenDiffs
     sortAndCombine option =
-      let getNode diff
-            | Just (_, node) <- IM.lookup (newRootId diff) contextMp = node
-            | Just (_, node) <-
-                IM.lookup (newRootId diff) combinedExtraEntries =
-              node
-          nodeType diff1 diff2 = sameOp (getNode diff1) (getNode diff2)
-          weight diff = nodeTypeWeight $ getNode diff
-          sortArgs =
-            concatMap (sortWith newRootId)
-              . groupBy nodeType
-              . sortWith weight
+      let getOp diff
+            | Just (_, _, node) <- IM.lookup (newRootId diff) contextMp = node
+            | Just (_, _, node) <- IM.lookup (newRootId diff) combinedExtraEntries = node
+          opType diff1 diff2 = sameOp (getOp diff1) (getOp diff2)
+          weight diff = nodeTypeWeight $ getOp diff
+          sortArgs = concatMap (sortWith newRootId) . groupBy opType . sortWith weight
           sortedChildrenDiffs = sortArgs childrenDiffs
-       in if oldChildren == map newRootId sortedChildrenDiffs
+       in if oldChildrenIDs == map newRootId sortedChildrenDiffs
             && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
             then noChange n
-            else
-              applyDiff
-                contextMp
-                (option `hasShape` oldShape)
-                sortedChildrenDiffs
+            else applyDiff contextMp option sortedChildrenDiffs
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Other
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
@@ -789,8 +583,8 @@ varNodesWithId mp = mapMaybe collect . IM.keys $ mp
 containsFTNode :: ExpressionMap -> Bool
 containsFTNode mp = any isFT $ IM.elems mp
   where
-    isFT (_, node) =
-      case node of
+    isFT (_, _, op) =
+      case op of
         ReFT _ -> True
         ImFT _ -> True
         TwiceImFT _ -> True

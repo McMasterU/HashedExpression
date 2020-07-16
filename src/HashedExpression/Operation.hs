@@ -1,5 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
 -- |
 -- Module      :  HashedExpression.Operation
 -- Copyright   :  (c) OCA 2020
@@ -21,15 +19,16 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, natVal)
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression hiding ((*), (+), (-), NumOp (..))
+import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
 instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
-  (^) e1 x = applyUnary (unary (Power x) `hasShape` expressionShape e1) e1
+  (^) e1 x = applyUnary (specPower x) e1
 
 -- | Converts a double-precision floating-point number to a real-number expression with dimension constraint `d`
 --
@@ -39,20 +38,14 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 fromDouble :: forall d. ToShape d => Double -> (Expression d R)
 fromDouble value = Expression h (fromList [(h, node)])
   where
-    node = (toShape (Proxy @d), Const value)
+    node = (toShape (Proxy @d), R, Const value)
     h = hash node
 
 -- | Basic operations on Num class expressions with dimension constraint `d`
 instance ToShape d => Num (Expression d R) where
-  e1 + e2 =
-    let op = naryET Sum ElementDefault `hasShape` expressionShape e1
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  e1 * e2 =
-    let op = naryET Mul ElementDefault `hasShape` expressionShape e1
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  negate =
-    let op = unaryET Neg ElementDefault
-     in applyUnary $ unaryET Neg ElementDefault
+  e1 + e2 = applyNary specSum [e1, e2]
+  e1 * e2 = applyNary specMul [e1, e2]
+  negate = applyUnary specNeg
 
   fromInteger val = fromDouble $ fromIntegral val
   abs = error "TODO: abs"
@@ -66,7 +59,7 @@ instance ToShape d => Num (Expression d R) where
 --    e1 / e2
 -- @
 instance ToShape d => Fractional (Expression d R) where
-  e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
+  e1 / e2 = e1 * e2 ^ (-1)
   fromRational r = fromDouble $ fromRational r
 
 -- | Represent common functions for real-number floating-point expressions with dimension constraint `d`
@@ -77,21 +70,21 @@ instance ToShape d => Fractional (Expression d R) where
 -- @
 instance ToShape d => Floating (Expression d R) where
   pi = fromDouble $ pi
-  sqrt = applyUnary (unary Sqrt)
-  exp = applyUnary (unary Exp)
-  log = applyUnary (unary Log)
-  sin = applyUnary (unary Sin)
-  cos = applyUnary (unary Cos)
-  tan = applyUnary (unary Tan)
-  asin = applyUnary (unary Asin)
-  acos = applyUnary (unary Acos)
-  atan = applyUnary (unary Atan)
-  sinh = applyUnary (unary Sinh)
-  cosh = applyUnary (unary Cosh)
-  tanh = applyUnary (unary Tanh)
-  asinh = applyUnary (unary Asinh)
-  acosh = applyUnary (unary Acosh)
-  atanh = applyUnary (unary Atanh)
+  sqrt = applyUnary specSqrt
+  exp = applyUnary specExp
+  log = applyUnary specLog
+  sin = applyUnary specSin
+  cos = applyUnary specCos
+  tan = applyUnary specTan
+  asin = applyUnary specAsin
+  acos = applyUnary specAcos
+  atan = applyUnary specAtan
+  sinh = applyUnary specSinh
+  cosh = applyUnary specCosh
+  tanh = applyUnary specTanh
+  asinh = applyUnary specAsinh
+  acosh = applyUnary specAcosh
+  atanh = applyUnary specAtanh
 
 -- | Basic operations on complex-number expressions with dimension constraint `d`
 --
@@ -102,18 +95,12 @@ instance ToShape d => Floating (Expression d R) where
 --     `unary operation` e1
 -- @
 instance ToShape d => Num (Expression d C) where
-  e1 + e2 =
-    let op = naryET Sum ElementDefault `hasShape` expressionShape e1
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  e1 * e2 =
-    let op = naryET Mul ElementDefault `hasShape` expressionShape e1
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  negate =
-    let op = unaryET Neg ElementDefault
-     in applyUnary $ unaryET Neg ElementDefault
+  e1 + e2 = applyNary specSum [e1, e2]
+  e1 * e2 = applyNary specMul [e1, e2]
+  negate = applyUnary specNeg
   fromInteger val = fromIntegral val +: fromIntegral 0
   abs = error "TODO: abs"
-  signum = error "Not applicable to tensor"
+  signum = error "Not applicable"
 
 -- | Define division operation and transformation to complex fractional expression from rational real number with dimension constraint `d`
 --
@@ -128,25 +115,17 @@ instance ToShape d => Fractional (Expression d C) where
 
 -- | Basic operations on covector expressions with dimension constraint `d`
 instance ToShape d => Num (Expression d Covector) where
-  e1 + e2 =
-    let op = naryET Sum ElementDefault `hasShape` expressionShape e1
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
-  (*) = error "Not applicable to 1-form"
-  negate =
-    let op = unaryET Neg ElementDefault
-     in applyUnary $ unaryET Neg ElementDefault
-  fromInteger = error "Not applicable to 1-form"
-  abs = error "TODO: abs"
-  signum = error "Not applicable to 1-form"
+  e1 + e2 = applyNary specSum [e1, e2]
+  negate = applyUnary specNeg
+  (*) = error "*: Not applicable to 1-form"
+  fromInteger = error "fromInteger: Not applicable to 1-form"
+  abs = error "abs: Not applicable to 1-form"
+  signum = error "signum: Not applicable to 1-form"
 
 -- | Scale in vector space
 instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression d et) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et
-  scale e1 e2 =
-    let op =
-          binaryET Scale (ElementSpecific $ expressionElementType e2)
-            `hasShape` expressionShape e2
-     in applyBinary op e1 e2
+  scale = applyBinary specScale
 
 -- | Create a complex expression from two real number expression
 --
@@ -157,29 +136,18 @@ instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression
 --  @
 instance (DimensionType d) => ComplexRealOp (Expression d R) (Expression d C) where
   (+:) :: Expression d R -> Expression d R -> Expression d C
-  (+:) e1 e2 =
-    let op = binary RealImag
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
+  (+:) = applyBinary specRealImag
   xRe :: Expression d C -> Expression d R
-  xRe =
-    let op = unary RealPart
-     in applyUnary op
+  xRe = applyUnary specRealPart
   xIm :: Expression d C -> Expression d R
-  xIm =
-    let op = unary ImagPart
-     in applyUnary op
+  xIm = applyUnary specImagPart
 
 instance
   (InnerProductSpace d s) =>
   InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Scalar s)
   where
   (<.>) :: Expression d s -> Expression d s -> Expression Scalar s
-  (<.>) e1 e2 =
-    let scalarShape = []
-        op =
-          binaryET InnerProd (ElementSpecific $ expressionElementType e2)
-            `hasShape` scalarShape
-     in ensureSameShape e1 e2 $ applyBinary op e1 e2
+  (<.>) = applyBinary specInnerProd
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
@@ -229,17 +197,18 @@ sumElements expr = expr <.> one
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 instance (DimensionType d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
-  piecewise marks conditionExp branchExps
-    | not (null marks),
-      (Set.toList . Set.fromList $ marks) == marks,
-      length marks + 1 == length branchExps =
-      guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
-    | otherwise =
-      error $
-        "Must satisfy number of marks = number of branches - 1, and marks are increasing "
-          ++ show marks
-    where
-      guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
+  piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
+
+--    | not (null marks),
+--      (Set.toList . Set.fromList $ marks) == marks,
+--      length marks + 1 == length branchExps =
+--      guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
+--    | otherwise =
+--      error $
+--        "Must satisfy number of marks = number of branches - 1, and marks are increasing "
+--          ++ show marks
+--    where
+--      guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
 
 -- Fourier transform on complex expression
 instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
@@ -247,8 +216,8 @@ instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
   ft e
     | isScalarShape $ expressionShape e = e
     | otherwise =
-      let reFT = applyUnary (unary ReFT) e
-          imFT = applyUnary (unary ImFT) e
+      let reFT = applyUnary specReFT e
+          imFT = applyUnary specImFT e
        in reFT +: imFT
 
 -- Fourier transform on real expression which returns complex expression
@@ -256,22 +225,33 @@ instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
   ft :: Expression d R -> Expression d C
   ft e = ft (e +: constWithShape (expressionShape e) 0)
 
+instance (DimensionType d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
+  x |*| dy = applyBinary specMulD x dy
+
+instance (DimensionType d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where
+  x |*.| dy = applyBinary specScaleD x dy
+
+instance (DimensionType d) => CovectorScaleOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where
+  dx |.*| y = applyBinary specDScale dx y
+
+instance (DimensionType d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where
+  x |<.>| dy = applyBinary specInnerProdD x dy
+
 -- |
 instance (ElementType et, KnownNat n) => RotateOp Int (Expression n et) where
   rotate :: Int -> Expression n et -> Expression n et
-  rotate x = applyUnary . unary $ Rotate [x]
+  rotate x = applyUnary (specRotate [x])
 
 instance (ElementType et, KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expression '(m, n) et) where
   rotate :: (Int, Int) -> Expression '(m, n) et -> Expression '(m, n) et
-  rotate (x, y) = applyUnary . unary $ Rotate [x, y]
+  rotate (x, y) = applyUnary (specRotate [x, y])
 
 instance
   (ElementType et, KnownNat m, KnownNat n, KnownNat p) =>
   RotateOp (Int, Int, Int) (Expression '(m, n, p) et)
   where
   rotate :: (Int, Int, Int) -> Expression '(m, n, p) et -> Expression '(m, n, p) et
-  rotate (x, y, z) =
-    applyUnary . unary $ Rotate [x, y, z]
+  rotate (x, y, z) = applyUnary (specRotate [x, y, z])
 
 -- | Returns an int from a type-level natural
 valueFromNat :: forall n. (KnownNat n) => Int
@@ -281,7 +261,7 @@ valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
 variable :: String -> Expression Scalar R
 variable name = Expression h (fromList [(h, node)])
   where
-    node = ([], Var name)
+    node = ([], R, Var name)
     h = hash node
 
 -- | Create primitive expressions using Nat kind.
@@ -298,7 +278,7 @@ variable1D ::
 variable1D name = Expression h (fromList [(h, node)])
   where
     size = valueFromNat @n
-    node = ([size], Var name)
+    node = ([size], R, Var name)
     h = hash node
 
 -- | Create a variable for two-dimensional nat values
@@ -315,7 +295,7 @@ variable2D name = Expression h (fromList [(h, node)])
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
-    node = ([size1, size2], Var name)
+    node = ([size1, size2], R, Var name)
     h = hash node
 
 -- | Create a variable for three-dimensional nat values
@@ -333,14 +313,14 @@ variable3D name = Expression h (fromList [(h, node)])
     size1 = valueFromNat @m
     size2 = valueFromNat @n
     size3 = valueFromNat @p
-    node = ([size1, size3], Var name)
+    node = ([size1, size3], R, Var name)
     h = hash node
 
 -- | create a scalar (non-vector) constant Expression
 constant :: Double -> Expression Scalar R
 constant val = Expression h (fromList [(h, node)])
   where
-    node = ([], Const val)
+    node = ([], R, Const val)
     h = hash node
 
 -- | Declare a one-dimensional constant
@@ -355,7 +335,7 @@ constant1D ::
 constant1D val = Expression h (fromList [(h, node)])
   where
     size = valueFromNat @n
-    node = ([size], Const val)
+    node = ([size], R, Const val)
     h = hash node
 
 -- | Two-dimensional constant
@@ -371,7 +351,7 @@ constant2D val = Expression h (fromList [(h, node)])
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
-    node = ([size1, size2], Const val)
+    node = ([size1, size2], R, Const val)
     h = hash node
 
 -- | Three-dimensional constant
@@ -388,5 +368,5 @@ constant3D val = Expression h (fromList [(h, node)])
     size1 = valueFromNat @m
     size2 = valueFromNat @n
     size3 = valueFromNat @p
-    node = ([size1, size3], Const val)
+    node = ([size1, size3], R, Const val)
     h = hash node

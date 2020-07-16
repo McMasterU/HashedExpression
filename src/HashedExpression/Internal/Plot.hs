@@ -23,17 +23,16 @@ import System.Process (readProcessWithExitCode)
 
 type FileName = String
 
-data Function
-  = Function
-      { expr :: Expression Scalar R,
-        predefinedValues :: ValMaps
-      }
+data Function = Function
+  { expr :: Expression Scalar R,
+    predefinedValues :: ValMaps
+  }
 
 scalarVariables :: Function -> [String]
 scalarVariables (Function exp values) = mapMaybe toScalarVariable entries
   where
     entries = IM.elems . exMap $ exp
-    toScalarVariable (shape, node)
+    toScalarVariable (shape, _, node)
       | Var name <- node,
         null shape,
         not $ Map.member name values =

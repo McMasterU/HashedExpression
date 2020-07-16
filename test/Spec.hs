@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 
-import qualified CSimpleSpec
 import CSimpleSpec (evaluateCodeC)
+import qualified CSimpleSpec
 import qualified CollectSpec
 import Commons
 import Data.Array.Unboxed as U
@@ -10,6 +10,7 @@ import Data.Map (fromList, union)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import HashedExpression.Derivative
+import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
@@ -24,6 +25,14 @@ import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
 import Var
+
+--main :: IO ()
+--main = do
+--  let exp = xIm ((z +: 2.3215934181506612) + (- (x +: 7.222430479297311)))
+--  showExp $ normalize exp
+--  showExp $ derivativeAllVars exp
+--  showExp $ normalize $ derivativeAllVars exp
+--  showExp $ collectDifferentials . derivativeAllVars $ exp
 
 main :: IO ()
 main = do

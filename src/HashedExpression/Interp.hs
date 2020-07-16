@@ -27,7 +27,6 @@ import HashedExpression.Internal.Expression
     Expression (..),
     ExpressionMap,
     NodeID,
-    NodeID,
     Op (..),
     R,
     Scalar,
@@ -85,7 +84,7 @@ instance Approximable Double where
   prettifyShow a
     | abs a < 1e-10 = "0" --  in prettify, inputs less than a small condition value consider as zero,
     | otherwise = printf "%.2f" a --  otherwise, it shows the exact input.
-        --  [TODO] Is it a specific condition value for prettify?
+    --  [TODO] Is it a specific condition value for prettify?
 
 {-
 Instance which belongs to approximable class for Complex Double precision inputs.
@@ -179,10 +178,10 @@ instance Evaluable Scalar R Double where
             Just (VScalar val) -> val
             _ -> error "no value associated with the variable"
         Const val -> val
-        Sum R args -> sum . map (eval valMap . expZeroR mp) $ args --  sum of a scalar is of the type of R
-        Mul R args -> product . map (eval valMap . expZeroR mp) $ args --  mul of a scalar is of the type of R
-        Neg R arg -> - (eval valMap $ expZeroR mp arg) --  Unary minus
-        Scale R arg1 arg2 ->
+        Sum args -> sum . map (eval valMap . expZeroR mp) $ args --  sum of a scalar is of the type of R
+        Mul args -> product . map (eval valMap . expZeroR mp) $ args --  mul of a scalar is of the type of R
+        Neg arg -> - (eval valMap $ expZeroR mp arg) --  Unary minus
+        Scale arg1 arg2 ->
           eval valMap (expZeroR mp arg1)
             * eval valMap (expZeroR mp arg2)
         Power x arg -> eval valMap (expZeroR mp arg) ^ x --  power operator with 2 inputs, power and base
@@ -191,7 +190,7 @@ instance Evaluable Scalar R Double where
           eval valMap (expZeroR mp arg1)
             / eval valMap (expZeroR mp arg2)
         Sqrt arg -> sqrt (eval valMap (expZeroR mp arg)) --  square root
-                -- trigonometric functions
+        -- trigonometric functions
         Sin arg -> sin (eval valMap (expZeroR mp arg))
         Cos arg -> cos (eval valMap (expZeroR mp arg))
         Tan arg -> tan (eval valMap (expZeroR mp arg))
@@ -209,7 +208,7 @@ instance Evaluable Scalar R Double where
         RealPart arg -> realPart (eval valMap (expZeroC mp arg))
         ImagPart arg -> imagPart (eval valMap (expZeroC mp arg))
         --  Inner product is associating each pair of vectors with a scalar
-        InnerProd R arg1 arg2 ->
+        InnerProd arg1 arg2 ->
           case retrieveShape arg1 mp of
             [] ->
               --  inner product of Scalar
@@ -263,11 +262,11 @@ instance Evaluable Scalar C (Complex Double) where
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
       case retrieveOp n mp of
-        Sum C args -> sum . map (eval valMap . expZeroC mp) $ args --  sum of a scalar is of the type C
-        Mul C args -> product . map (eval valMap . expZeroC mp) $ args --  Multiplication of a scalar is of the type C
+        Sum args -> sum . map (eval valMap . expZeroC mp) $ args --  sum of a scalar is of the type C
+        Mul args -> product . map (eval valMap . expZeroC mp) $ args --  Multiplication of a scalar is of the type C
         Power x arg -> eval valMap (expZeroC mp arg) ^ x --  power evaluation of arg to the power of x
-        Neg C arg -> - (eval valMap $ expZeroC mp arg)
-        Scale C arg1 arg2 ->
+        Neg arg -> - (eval valMap $ expZeroC mp arg)
+        Scale arg1 arg2 ->
           case retrieveElementType arg1 mp of
             R ->
               fromR (eval valMap (expZeroR mp arg1))
@@ -279,7 +278,7 @@ instance Evaluable Scalar C (Complex Double) where
           --  show the real and imaginary part of complex as x + i y
           eval valMap (expZeroR mp arg1)
             :+ eval valMap (expZeroR mp arg2)
-        InnerProd C arg1 arg2 ->
+        InnerProd arg1 arg2 ->
           --  evaluate the inner product in C
           case retrieveShape arg1 mp of
             [] ->
@@ -346,17 +345,17 @@ evaluate1DReal valMap (mp, n)
           Just (V1D val) -> val
           _ -> error "no value associated with the variable"
       Const val -> listArray (0, size - 1) $ replicate size val
-      Sum R args ->
+      Sum args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate1DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul args ->
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DReal valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg R arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate1DReal valMap $ (mp, arg2)
       Div arg1 arg2 ->
@@ -448,17 +447,17 @@ evaluate1DComplex ::
 evaluate1DComplex valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveOp n mp of
-      Sum C args ->
+      Sum args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate1DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul args ->
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DComplex valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg C arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1
@@ -504,17 +503,17 @@ evaluate2DReal valMap (mp, n)
       Const val ->
         listArray ((0, 0), (size1 - 1, size2 - 1)) $
           replicate (size1 * size2) val
-      Sum R args ->
+      Sum args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate2DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul args ->
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DReal valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg R arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate2DReal valMap $ (mp, arg2)
       Div arg1 arg2 ->
@@ -619,17 +618,17 @@ evaluate2DComplex ::
 evaluate2DComplex valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveOp n mp of
-      Sum C args ->
+      Sum args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate2DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul args ->
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DComplex valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg C arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1
@@ -685,15 +684,15 @@ evaluate3DReal valMap (mp, n)
       Const val ->
         listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $
           replicate (size1 * size2 * size3) val
-      Sum R args ->
+      Sum args ->
         foldrElementwise (+) . map (evaluate3DReal valMap . (mp,)) $
           args
-      Mul R args ->
+      Mul args ->
         foldrElementwise (*) . map (evaluate3DReal valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg R arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
-      Scale R arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
          in fmap (scalar *) . evaluate3DReal valMap $ (mp, arg2)
       Div arg1 arg2 ->
@@ -817,17 +816,17 @@ evaluate3DComplex ::
 evaluate3DComplex valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveOp n mp of
-      Sum C args ->
+      Sum args ->
         --  evaluate the sum over undefined input arguments
         foldrElementwise (+) . map (evaluate3DComplex valMap . (mp,)) $
           args
-      Mul C args ->
+      Mul args ->
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate3DComplex valMap . (mp,)) $
           args
       Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
-      Neg C arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
-      Scale C arg1 arg2 ->
+      Neg arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
+      Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
           R ->
             let scalar = fromR . eval valMap $ expZeroR mp arg1

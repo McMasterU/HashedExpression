@@ -116,10 +116,9 @@ hiddenPrettify pastable (mp, n) =
             [x] -> T.concat ["[", T.pack . show $ x, "]"]
             [x, y] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]"]
             [x, y, z] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]", "[", T.pack . show $ z, "]"]
-            _ -> error "Haven't deal with more than 3-dimension"
+            _ -> error "TODO: not yet support more than 3D"
    in case node of
         Var name -> T.concat [T.pack name]
-        DVar name -> T.concat ["d", T.pack name]
         Const val
           | pastable ->
             case shape of
@@ -127,19 +126,21 @@ hiddenPrettify pastable (mp, n) =
               [x] -> T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
               _ -> T.pack $ show val
           | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
+        DVar name -> T.concat ["d", T.pack name]
+        DZero -> "d0"
         _ ->
           wrapParentheses $
             case node of
-              Sum _ args
+              Sum args
                 | pastable -> T.concat ["sum [", T.intercalate ", " . map innerPrettify $ args, "]"]
                 | otherwise -> T.intercalate "+" . map innerPrettify $ args
-              Mul _ args
+              Mul args
                 | pastable -> T.concat ["prod [", T.intercalate ", " . map innerPrettify $ args, "]"]
                 | otherwise -> T.intercalate "*" . map innerPrettify $ args
-              Neg _ arg
+              Neg arg
                 | pastable -> T.concat ["negate", wrapParentheses $ innerPrettify arg]
                 | otherwise -> T.concat ["-", wrapParentheses $ innerPrettify arg]
-              Scale _ arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
+              Scale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
               Div arg1 arg2 -> T.concat [innerPrettify arg1, "/", innerPrettify arg2]
               Sqrt arg -> T.concat ["sqrt", wrapParentheses $ innerPrettify arg]
               Sin arg -> T.concat ["sin", wrapParentheses $ innerPrettify arg]
@@ -159,7 +160,7 @@ hiddenPrettify pastable (mp, n) =
               RealImag arg1 arg2 -> T.concat [innerPrettify arg1, "+:", innerPrettify arg2]
               RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
               ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
-              InnerProd et arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
+              InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
               Piecewise marks conditionArg branches ->
                 let printBranches = T.intercalate ", " . map innerPrettify $ branches
                  in T.concat ["piecewise ", T.pack . show $ marks, " ", innerPrettify conditionArg, " [", printBranches, "]"]
@@ -169,3 +170,7 @@ hiddenPrettify pastable (mp, n) =
               ImFT arg -> T.concat ["imFT", wrapParentheses $ innerPrettify arg]
               TwiceReFT arg -> T.concat ["twiceReFT", wrapParentheses $ innerPrettify arg]
               TwiceImFT arg -> T.concat ["twiceImFT", wrapParentheses $ innerPrettify arg]
+              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
+              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
+              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]
+              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "|<.>|", innerPrettify arg2]
