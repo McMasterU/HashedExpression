@@ -199,15 +199,6 @@ toTransformation normalizer exp@(mp, n) =
       newN = newRootId diff
    in (newMp, newN)
 
--- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
---   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
---  TODO: rename this to Rule ?
-type Modification = (ExpressionMap, NodeID) -> Change
-
--- | Takes a 'Modification' and returns a corresponding function
-fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
-fromModification mkDiff exp@(mp, n) = mkDiff exp mp
-
 -- | Operand order in the operation
 data OperandOrder
   = Reorder
@@ -261,39 +252,7 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
 
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Expression Changes
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- | The Change type allows the creation of combinators for expressing alterations to an 'Expression' with respect
---   to a base 'ExpressionMap'. For example, combinators like 'sum_' will create will create a new 'ExpressionMap' with
---   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
---   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
---
--- ExpressionDiff in the MonadReader ExpressionMap
-type Change = ExpressionMap -> ExpressionDiff
-
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
-const_ :: Shape -> Double -> Change
-const_ shape val mp = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
-
--- | The 'Change' created when adding a single 'Scalar' constant
-num_ :: Double -> Change
-num_ = const_ []
-
--- | Multiply a list of 'Change' together into a single 'Change'
-product_ :: HasCallStack => [Change] -> Change
-product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
-
--- | Sum a list of 'Change' together into a single 'Change'
-sum_ :: HasCallStack => [Change] -> Change
-sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
-
--- | Multiply a list of 'Change' together into a single 'Change'
+-- | Multiply a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
 product_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
 product_1 = applyDiff1 (Nary specMul)
 
@@ -301,74 +260,6 @@ product_1 = applyDiff1 (Nary specMul)
 sum_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
 sum_1 = applyDiff1 (Nary specSum)
 
-
--- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
-just :: NodeID -> Change
-just nId _ = ExpressionDiff IM.empty nId
-
-instance Num Change where
-  (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
-  negate change mp = applyDiff mp (Unary specNeg) [change mp]
-  (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
-  signum = error "The Change of signum is currently unimplemented"
-  abs = error "The Change of abs is currently unimplemented"
-  fromInteger = error "The change of fromInteger is currently unimplemented"
-
-instance Fractional Change where
-  (/) change1 change2 = change1 * (change2 ^ (-1))
-  fromRational r = error "N/A"
-
-instance Floating Change where
-  sqrt change mp = applyDiff mp (Unary specSqrt) [change mp]
-  exp change mp = applyDiff mp (Unary specExp) [change mp]
-  log change mp = applyDiff mp (Unary specLog) [change mp]
-  sin change mp = applyDiff mp (Unary specSin) [change mp]
-  cos change mp = applyDiff mp (Unary specCos) [change mp]
-  tan change mp = applyDiff mp (Unary specTan) [change mp]
-  asin change mp = applyDiff mp (Unary specAsin) [change mp]
-  acos change mp = applyDiff mp (Unary specAcos) [change mp]
-  atan change mp = applyDiff mp (Unary specAtan) [change mp]
-  sinh change mp = applyDiff mp (Unary specSinh) [change mp]
-  cosh change mp = applyDiff mp (Unary specCosh) [change mp]
-  tanh change mp = applyDiff mp (Unary specTanh) [change mp]
-  asinh change mp = applyDiff mp (Unary specAsinh) [change mp]
-  acosh change mp = applyDiff mp (Unary specAcosh) [change mp]
-  atanh change mp = applyDiff mp (Unary specAtanh) [change mp]
-
-instance PowerOp Change Int where
-  (^) change alpha mp = applyDiff mp (Unary (specPower alpha)) [change mp]
-
-instance VectorSpaceOp Change Change where
-  scale change1 change2 mp =
-    applyDiff mp (Binary specScale) [change1 mp, change2 mp]
-
-instance ComplexRealOp Change Change where
-  (+:) change1 change2 mp = applyDiff mp (Binary specRealImag) [change1 mp, change2 mp]
-  xRe change1 mp = applyDiff mp (Unary specRealPart) [change1 mp]
-  xIm change1 mp = applyDiff mp (Unary specImagPart) [change1 mp]
-
-instance InnerProductSpaceOp Change Change Change where
-  (<.>) change1 change2 mp =
-    applyDiff mp (Binary specInnerProd) [change1 mp, change2 mp]
-
-instance RotateOp RotateAmount Change where
-  rotate ra change mp = applyDiff mp (Unary (specRotate ra)) [change mp]
-
-instance PiecewiseOp Change Change where
-  piecewise marks condition branches mp =
-    applyDiff mp (ConditionAry (specPiecewise marks)) . map ($ mp) $ condition : branches
-
-instance MulCovectorOp Change Change Change where
-  (|*|) change1 change2 mp = applyDiff mp (Binary specMulD) [change1 mp, change2 mp]
-
-instance ScaleCovectorOp Change Change Change where
-  (|*.|) change1 change2 mp = applyDiff mp (Binary specScaleD) [change1 mp, change2 mp]
-
-instance CovectorScaleOp Change Change Change where
-  (|.*|) change1 change2 mp = applyDiff mp (Binary specDScale) [change1 mp, change2 mp]
-
-instance InnerProductCovectorOp Change Change Change where
-  (|<.>|) change1 change2 mp = applyDiff mp (Binary specInnerProdD) [change1 mp, change2 mp]
 
 -- --------------------------------------------------------------------------------------------------------------------
 
