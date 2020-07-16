@@ -293,6 +293,15 @@ product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
 sum_ :: HasCallStack => [Change] -> Change
 sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
 
+-- | Multiply a list of 'Change' together into a single 'Change'
+product_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+product_1 = applyDiff1 (Nary specMul)
+
+-- | Sum a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
+sum_1 :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+sum_1 = applyDiff1 (Nary specSum)
+
+
 -- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
 just :: NodeID -> Change
 just nId _ = ExpressionDiff IM.empty nId
@@ -395,6 +404,80 @@ applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
     ns = map newRootId operands
     (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
 
+applyDiff1 ::
+  -- | the operation to apply
+  OperationSpec ->
+  -- | the operands (also in diff to the base map)
+  [ExpressionDiff] ->
+  -- | the result (combined diffs with new nodes)
+  ExpressionDiff
+applyDiff1 option operands = ExpressionDiff resExtraEntries resRootId
+  where
+    mergedExtraEntries = IM.unions . map extraEntries $ operands
+    ns = map newRootId operands
+    (resExtraEntries, resRootId) = addEntryWithContextTo mergedExtraEntries option ns mergedExtraEntries
+
+instance Num ExpressionDiff where
+  (+) change1 change2 = applyDiff1 (Nary specSum) [change1, change2]
+  negate change = applyDiff1 (Unary specNeg) [change]
+  (*) change1 change2 = applyDiff1 (Nary specMul) [change1, change2]
+
+instance Fractional ExpressionDiff where
+  (/) change1 change2 = change1 * (change2 ^ (-1))
+  fromRational r = error "N/A"
+
+instance Floating ExpressionDiff where
+  sqrt change = applyDiff1 (Unary specSqrt) [change]
+  exp change = applyDiff1 (Unary specExp) [change]
+  log change = applyDiff1 (Unary specLog) [change]
+  sin change = applyDiff1 (Unary specSin) [change]
+  cos change = applyDiff1 (Unary specCos) [change]
+  tan change = applyDiff1 (Unary specTan) [change]
+  asin change = applyDiff1 (Unary specAsin) [change]
+  acos change = applyDiff1 (Unary specAcos) [change]
+  atan change = applyDiff1 (Unary specAtan) [change]
+  sinh change = applyDiff1 (Unary specSinh) [change]
+  cosh change = applyDiff1 (Unary specCosh) [change]
+  tanh change = applyDiff1 (Unary specTanh) [change]
+  asinh change = applyDiff1 (Unary specAsinh) [change]
+  acosh change = applyDiff1 (Unary specAcosh) [change]
+  atanh change = applyDiff1 (Unary specAtanh) [change]
+
+instance PowerOp ExpressionDiff Int where
+  (^) change alpha = applyDiff1 (Unary (specPower alpha)) [change]
+
+instance VectorSpaceOp ExpressionDiff ExpressionDiff where
+  scale change1 change2 =
+    applyDiff1 (Binary specScale) [change1, change2]
+
+instance ComplexRealOp ExpressionDiff ExpressionDiff where
+  (+:) change1 change2 = applyDiff1 (Binary specRealImag) [change1, change2]
+  xRe change1 = applyDiff1 (Unary specRealPart) [change1]
+  xIm change1 = applyDiff1 (Unary specImagPart) [change1]
+
+instance InnerProductSpaceOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (<.>) change1 change2 =
+    applyDiff1 (Binary specInnerProd) [change1, change2]
+
+instance RotateOp RotateAmount ExpressionDiff where
+  rotate ra change = applyDiff1 (Unary (specRotate ra)) [change]
+
+instance PiecewiseOp ExpressionDiff ExpressionDiff where
+  piecewise marks condition branches =
+    applyDiff1 (ConditionAry (specPiecewise marks)) $ condition : branches
+
+instance MulCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|*|) change1 change2 = applyDiff1 (Binary specMulD) [change1, change2]
+
+instance ScaleCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|*.|) change1 change2 = applyDiff1 (Binary specScaleD) [change1, change2]
+
+instance CovectorScaleOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|.*|) change1 change2 = applyDiff1 (Binary specDScale) [change1, change2]
+
+instance InnerProductCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|<.>|) change1 change2 = applyDiff1 (Binary specInnerProdD) [change1, change2]
+
 -- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
 diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
@@ -431,6 +514,10 @@ sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
 -- | The ExpressionDiff corresponding to no change in this node
 noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
+
+just1 :: ExpressionMap -> NodeID -> ExpressionDiff
+just1 mp nID =
+  ExpressionDiff (IM.singleton nID (retrieveNode nID mp)) nID
 
 -- | Same node type (Mul, Sum, Negate, ...), same shape, same ElementType but with new children, now make the same node type with new children
 --   and return the combined difference

@@ -52,7 +52,7 @@ rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
 separator :: String
 separator = "a"
 
--- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
+-- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addNode' to generate a
 --   specific 'NodeID')
 hash :: Node -> Int
 hash (shape, et, node) =
@@ -88,8 +88,8 @@ hash (shape, et, node) =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
+        -- 
         InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
-        -- MARK: Piecewise
         Piecewise marks arg branches ->
           offsetHash 28 . hashString' $
             (intercalate separator . map show $ marks)
@@ -97,7 +97,6 @@ hash (shape, et, node) =
               ++ show arg
               ++ separator
               ++ (intercalate separator . map show $ branches)
-        -- MARK: Rotate
         Rotate amount arg -> offsetHash 29 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
         ReFT arg -> offsetHash 30 . hashString' $ show arg
         ImFT arg -> offsetHash 31 . hashString' $ show arg
