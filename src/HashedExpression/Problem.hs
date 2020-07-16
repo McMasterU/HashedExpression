@@ -91,18 +91,23 @@ data Problem = Problem
 -------------------------------------------------------------------------------
 instance Show Problem where
   show Problem {..} =
-    intercalate "\n" $
-      [ "-------------- Objective Function --------------",
-        debugPrint (expressionMap, objectiveId)
+    intercalate
+      "\n"
+      [ "\n-------------------------------------------------------------------------------",
+        showObjective,
+        showPartials,
+        intercalate "\n" (map showScalarConstraint scalarConstraints)
       ]
-        ++ map showPartial variables
     where
-      showPartial var =
-        intercalate
-          "\n"
-          [ "----------------∂f/∂" ++ varName var ++ "-------------",
-            debugPrint (expressionMap, partialDerivativeId var)
-          ]
+      showObjective = "Objective: " ++ debugPrint (expressionMap, objectiveId)
+      showPartials =
+        intercalate "\n" $
+          ["∂/∂" ++ varName var ++ ": " ++ debugPrint (expressionMap, partialDerivativeId var) | var <- variables]
+      showScalarConstraint (ScalarConstraint vId pIDs lb ub) =
+        let withVarName = zip (map varName variables) pIDs
+         in intercalate "\n" $
+              ["Constraint: " ++ show lb ++ " <= " ++ debugPrint (expressionMap, vId) ++ " <= " ++ show ub]
+                ++ ["∂/∂" ++ name ++ ": " ++ debugPrint (expressionMap, pID) | (name, pID) <- withVarName]
 
 -------------------------------------------------------------------------------
 
@@ -128,12 +133,10 @@ partialDerivativeMaps df@(Expression dfId dfMp) =
   where
     getPartial :: NodeID -> Maybe (String, NodeID)
     getPartial nId
-      | Mul [partialId, dId] <- retrieveOp nId dfMp,
-        retrieveElementType nId dfMp == Covector,
+      | MulD partialId dId <- retrieveOp nId dfMp,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
-      | InnerProd partialId dId <- retrieveOp nId dfMp,
-        retrieveElementType nId dfMp == Covector,
+      | InnerProdD partialId dId <- retrieveOp nId dfMp,
         DVar name <- retrieveOp dId dfMp =
         Just (name, partialId)
       | otherwise = Nothing
@@ -228,7 +231,7 @@ isBoxConstraint cs =
 -------------------------------------------------------------------------------
 
 -- | A constraint is a sequence of constraint statements
-data Constraint = Constraint [ConstraintStatement]
+newtype Constraint = Constraint [ConstraintStatement]
   deriving (Show, Eq, Ord)
 
 -------------------------------------------------------------------------------
@@ -263,8 +266,8 @@ introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
         | otherwise = False
       alreadyExist name = any (isD name) . IM.keys $ mp
       makePart (name, shape)
-        | isScalarShape shape = mulMany [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (Nary specMul) [aConst shape 0, dVarWithShape shape name]
+        | isScalarShape shape = apply (Binary specMulD) [aConst shape 0, dVarWithShape shape name]
+        | otherwise = apply (Binary specInnerProdD) [aConst shape 0, dVarWithShape shape name]
       listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
    in wrap $
         case retrieveOp n mp of

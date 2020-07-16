@@ -255,7 +255,7 @@ instance Codegen CSimpleConfig where
               [ defineStuffs,
                 constraintCodes,
                 readValsCodes,
-                writeVarCodes,
+                --                writeVarCodes,
                 evaluatingCodes,
                 evaluateObjectiveCodes,
                 evaluatePartialDerivativesCodes,
@@ -320,14 +320,14 @@ instance Codegen CSimpleConfig where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      writeVarCodeEach (name, nId) =
-        [ [i|for (i = 0; i < #{product shape}; i++){|],
-          [i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|],
-          "}"
-        ]
-        where
-          offset = cAddress nId
-          shape = retrieveShape nId expressionMap
+      --      writeVarCodeEach (name, nId) =
+      --        [ [i|for (i = 0; i < #{product shape}; i++){|],
+      --          [i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|],
+      --          "}"
+      --        ]
+      --        where
+      --          offset = cAddress nId
+      --          shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       defineStuffs :: Code
       defineStuffs =
@@ -434,14 +434,14 @@ instance Codegen CSimpleConfig where
           ++ scoped (concatMap readValCodeEach vs)
           ++ ["}"] --
           -------------------------------------------------------------------------------
-      writeVarCodes =
-        ["void print_vars() {"]
-          ++ [[i|  FILE *fp = fopen("solutions.out","w");|]]
-          ++ scoped (["  int i;"] ++ concatMap writeVarCodeEach vs)
-          ++ [ "  fclose(fp);",
-               "}"
-             ]
-      -------------------------------------------------------------------------------
+          --      writeVarCodes =
+          --        ["void print_vars() {"]
+          --          ++ [[i|  FILE *fp = fopen("solutions.out","w");|]]
+          --          ++ scoped (["  int i;"] ++ concatMap writeVarCodeEach vs)
+          --          ++ [ "  fclose(fp);",
+          --               "}"
+          --             ]
+          -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
           ++ scoped (evaluating codegen $ objectiveId : map partialDerivativeId variables)

@@ -18,6 +18,7 @@ import HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Value
 import Test.Hspec
+import Test.QuickCheck (property)
 import Var
 import Prelude hiding ((^))
 
@@ -27,66 +28,72 @@ reFT = xRe . ft
 imFT :: (DimensionType d) => Expression d R -> Expression d R
 imFT = xIm . ft
 
+prop_NormalizeIsIdempotent :: ArbitraryExpresion -> Expectation
+prop_NormalizeIsIdempotent (ArbitraryExpresion exp) =
+  exp `shouldNormalizeTo` normalize exp
+
 spec :: Spec
 spec = do
   describe "Normalize spec" $ do
-    --    specify "normalize scalar one zero" $ do
-    --      constant 0.0 *. constant 9.0 `shouldNormalizeTo` constant 0.0
-    --      x * one `shouldNormalizeTo` x
-    --      one * x `shouldNormalizeTo` x
-    --      x * zero `shouldNormalizeTo` zero
-    --      zero * x `shouldNormalizeTo` zero
-    --      y * (x * zero) `shouldNormalizeTo` zero
-    --      zero * (x * one) `shouldNormalizeTo` zero
-    --      zero * x * one `shouldNormalizeTo` zero
-    --      zero * (x * y) `shouldNormalizeTo` zero
-    --      (x * y) * zero `shouldNormalizeTo` zero
-    --      (x * zero) * one `shouldNormalizeTo` zero
-    --      ((x * y) * one) `shouldNormalizeTo` (x * y)
-    --      x * y * z * one `shouldNormalizeTo` x * y * z
-    --      product [x, y, z, t, w, zero] `shouldNormalizeTo` zero
-    --    specify "normalize log and exponential" $ do
-    --      log (exp x) `shouldNormalizeTo` x
-    --      exp (log x) `shouldNormalizeTo` x
-    --    specify "complex related" $ do
-    --      ((x +: y) * (z +: w)) `shouldNormalizeTo` ((x * z - y * w) +: (x * w + y * z))
-    --      xRe (x +: y) `shouldNormalizeTo` x
-    --      xIm (x +: y) `shouldNormalizeTo` y
-    --      (x +: y) + (u +: v) `shouldNormalizeTo` (x + u) +: (y + v)
-    --      s *. (x +: y) `shouldNormalizeTo` (s *. x) +: (s *. y)
-    --      (x +: y) * (z +: w) `shouldNormalizeTo` (x * z - y * w) +: (x * w + y * z)
-    --    specify "dot product" $ do
-    --      x <.> zero `shouldNormalizeTo` zero
-    --      zero <.> x `shouldNormalizeTo` zero
-    --      ((s *. x) <.> y) `shouldNormalizeTo` (s *. (x <.> y))
-    --      x <.> (s *. y) `shouldNormalizeTo` s *. (x <.> y)
-    --    specify "distributivity" $ do
-    --      x * (y + z) `shouldNormalizeTo` (x * y + x * z)
-    --      (y + z) * x `shouldNormalizeTo` (x * y + x * z)
-    --      (x *. (y + z)) `shouldNormalizeTo` (x *. y + x *. z)
-    --      (x <.> (y + z)) `shouldNormalizeTo` ((x <.> y) + (x <.> z))
-    --      (y + z) <.> x `shouldNormalizeTo` (y <.> x) + (z <.> x)
-    --      x * sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x *) [y, z, t, u, v])
-    --      sum [y, z, t, u, v] * x `shouldNormalizeTo` sum (map (x *) [y, z, t, u, v])
-    --      x *. sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x *.) [y, z, t, u, v])
-    --      x <.> sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x <.>) [y, z, t, u, v])
-    --      sum [y, z, t, u, v] <.> x `shouldNormalizeTo` sum (map (<.> x) [y, z, t, u, v])
-    --      product [a, b, c, sum [x, y, z]] `shouldNormalizeTo` sum (map (product . (: [a, b, c])) [x, y, z])
-    --      (x + y) * (z + t) * a * b `shouldNormalizeTo` (a * b * x * z + a * b * x * t + a * b * y * z + a * b * y * t)
-    --    specify "flatten sum and product" $ do
-    --      product [x * y, product [z, t, w], one] `shouldNormalizeTo` product [x, y, z, t, w]
-    --      sum [x + y, sum [z, t, w + s], zero] `shouldNormalizeTo` sum [x, y, z, t, w, s]
-    --    specify "group constants together" $ do
-    --      product [one, one, x, y, one, z] `shouldNormalizeTo` product [x, y, z]
-    --      sum [one, one, x, y, one, z] `shouldNormalizeTo` sum [constant 3, x, y, z]
-    --      product [constant 1, constant 2, x, y, constant 3, z] `shouldNormalizeTo` product [constant 6, x, y, z]
+    specify "normalize is idempotent" $ do
+      property prop_NormalizeIsIdempotent
+    specify "normalize scalar one zero" $ do
+      constant 0.0 *. constant 9.0 `shouldNormalizeTo` constant 0.0
+      x * one `shouldNormalizeTo` x
+      one * x `shouldNormalizeTo` x
+      x * zero `shouldNormalizeTo` zero
+      zero * x `shouldNormalizeTo` zero
+      y * (x * zero) `shouldNormalizeTo` zero
+      zero * (x * one) `shouldNormalizeTo` zero
+      zero * x * one `shouldNormalizeTo` zero
+      zero * (x * y) `shouldNormalizeTo` zero
+      (x * y) * zero `shouldNormalizeTo` zero
+      (x * zero) * one `shouldNormalizeTo` zero
+      ((x * y) * one) `shouldNormalizeTo` (x * y)
+      x * y * z * one `shouldNormalizeTo` x * y * z
+      product [x, y, z, t, w, zero] `shouldNormalizeTo` zero
+    specify "normalize log and exponential" $ do
+      log (exp x) `shouldNormalizeTo` x
+      exp (log x) `shouldNormalizeTo` x
+    specify "complex related" $ do
+      ((x +: y) * (z +: w)) `shouldNormalizeTo` ((x * z - y * w) +: (x * w + y * z))
+      xRe (x +: y) `shouldNormalizeTo` x
+      xIm (x +: y) `shouldNormalizeTo` y
+      (x +: y) + (u +: v) `shouldNormalizeTo` (x + u) +: (y + v)
+      s *. (x +: y) `shouldNormalizeTo` (s *. x) +: (s *. y)
+      (x +: y) * (z +: w) `shouldNormalizeTo` (x * z - y * w) +: (x * w + y * z)
+    specify "dot product" $ do
+      x <.> zero `shouldNormalizeTo` zero
+      zero <.> x `shouldNormalizeTo` zero
+      ((s *. x) <.> y) `shouldNormalizeTo` (s *. (x <.> y))
+      x <.> (s *. y) `shouldNormalizeTo` s *. (x <.> y)
+    specify "distributivity" $ do
+      x * (y + z) `shouldNormalizeTo` (x * y + x * z)
+      (y + z) * x `shouldNormalizeTo` (x * y + x * z)
+      (x *. (y + z)) `shouldNormalizeTo` (x *. y + x *. z)
+      (x <.> (y + z)) `shouldNormalizeTo` ((x <.> y) + (x <.> z))
+      (y + z) <.> x `shouldNormalizeTo` (y <.> x) + (z <.> x)
+      x * sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x *) [y, z, t, u, v])
+      sum [y, z, t, u, v] * x `shouldNormalizeTo` sum (map (x *) [y, z, t, u, v])
+      x *. sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x *.) [y, z, t, u, v])
+      x <.> sum [y, z, t, u, v] `shouldNormalizeTo` sum (map (x <.>) [y, z, t, u, v])
+      sum [y, z, t, u, v] <.> x `shouldNormalizeTo` sum (map (<.> x) [y, z, t, u, v])
+      product [a, b, c, sum [x, y, z]] `shouldNormalizeTo` sum (map (product . (: [a, b, c])) [x, y, z])
+      (x + y) * (z + t) * a * b `shouldNormalizeTo` (a * b * x * z + a * b * x * t + a * b * y * z + a * b * y * t)
+    specify "flatten sum and product" $ do
+      product [x * y, product [z, t, w], one] `shouldNormalizeTo` product [x, y, z, t, w]
+      sum [x + y, sum [z, t, w + s], zero] `shouldNormalizeTo` sum [x, y, z, t, w, s]
+    specify "group constants together" $ do
+      product [one, one, x, y, one, z] `shouldNormalizeTo` product [x, y, z]
+      sum [one, one, x, y, one, z] `shouldNormalizeTo` sum [constant 3, x, y, z]
+      product [constant 1, constant 2, x, y, constant 3, z] `shouldNormalizeTo` product [constant 6, x, y, z]
     specify "combine same terms" $ do
-      --      sum [one *. x1, x1, x1, constant 3 *. y1, y1] `shouldNormalizeTo` sum [constant 3 *. x1, constant 4 *. y1]
+      sum [one *. x1, x1, x1, constant 3 *. y1, y1] `shouldNormalizeTo` sum [constant 3 *. x1, constant 4 *. y1]
       sum [constant (-1) *. x1, x1, constant 3 *. y1, y1, z1] `shouldNormalizeTo` sum [constant 4 *. y1, z1]
-    --      x1 - x1 `shouldNormalizeTo` zero1
-    --      sum [one *. x, x, x, constant 3 *. y, y] `shouldNormalizeTo` sum [constant 3 *. x, constant 4 *. y]
-    --      sum [constant (-1) *. x, x, constant 3 *. y, y, z] `shouldNormalizeTo` sum [constant 4 *. y, z]
-    --      x - x `shouldNormalizeTo` zero
+      x1 - x1 `shouldNormalizeTo` zero1
+      sum [one *. x, x, x, constant 3 *. y, y] `shouldNormalizeTo` sum [constant 3 *. x, constant 4 *. y]
+      sum [constant (-1) *. x, x, constant 3 *. y, y, z] `shouldNormalizeTo` sum [constant 4 *. y, z]
+      x - x `shouldNormalizeTo` zero
     specify "scale rules" $ do
       x *. (y *. v) `shouldNormalizeTo` (x * y) *. v
     specify "negate rules" $ do
@@ -169,7 +176,7 @@ spec = do
           res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
       res1 `shouldApprox` res2
   describe "Unit tests" $
-    specify "normalize scalar one zero" $ do
+    specify "should properly normalize hard-coded exp" $ do
       x `shouldNormalizeTo` x
       constant 1 / x `shouldNormalizeTo` x ^ (-1)
       x + x `shouldNormalizeTo` constant 2 *. x

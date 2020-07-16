@@ -38,45 +38,46 @@ import HashedExpression.Internal.Expression
 nodeTypeWeight :: HasCallStack => Op -> Int
 nodeTypeWeight node =
   case node of
-    Var {} -> 1
     Const {} -> 0
-    Sum {} -> 9999 -- Sum at the end
+    Var {} -> 1
     Mul {} -> 3
-    Power {} -> 28
-    Neg {} -> 4
-    Scale {} -> 7777 -- Right after RealImag
-    Div {} -> 6
-    Sqrt {} -> 7
-    Sin {} -> 8
-    Cos {} -> 9
-    Tan {} -> 10
-    Exp {} -> 11
-    Log {} -> 12
-    Sinh {} -> 13
-    Cosh {} -> 14
-    Tanh {} -> 15
-    Asin {} -> 16
-    Acos {} -> 17
-    Atan {} -> 18
-    Asinh {} -> 19
-    Acosh {} -> 20
-    Atanh {} -> 21
-    RealImag {} -> 8888 -- At the end right after sum
-    RealPart {} -> 23
-    ImagPart {} -> 24
-    InnerProd {} -> 25
-    Piecewise {} -> 26
-    Rotate {} -> 27
-    ReFT {} -> 28
-    ImFT {} -> 29
-    TwiceReFT {} -> 30
-    TwiceImFT {} -> 31
-    DVar {} -> 99999
-    DZero {} -> 99999
-    MulD {} -> 99999
-    ScaleD {} -> 99999
-    DScale {} -> 99999
-    InnerProdD {} -> 99999
+    Power {} -> 4
+    Neg {} -> 5
+    Div {} -> 7
+    Sqrt {} -> 8
+    Sin {} -> 9
+    Cos {} -> 10
+    Tan {} -> 11
+    Exp {} -> 12
+    Log {} -> 13
+    Sinh {} -> 14
+    Cosh {} -> 15
+    Tanh {} -> 16
+    Asin {} -> 17
+    Acos {} -> 18
+    Atan {} -> 19
+    Asinh {} -> 20
+    Acosh {} -> 21
+    Atanh {} -> 22
+    RealPart {} -> 24
+    ImagPart {} -> 25
+    InnerProd {} -> 26
+    Piecewise {} -> 27
+    Rotate {} -> 28
+    ReFT {} -> 29
+    ImFT {} -> 30
+    TwiceReFT {} -> 31
+    TwiceImFT {} -> 32
+    Scale {} -> 33 -- Right after RealImag
+    RealImag {} -> 34 -- At the end right after sum
+    Sum {} -> 35 -- Sum at the end
+    ------------------------
+    DVar {} -> 101
+    DZero {} -> 102
+    MulD {} -> 103
+    ScaleD {} -> 104
+    DScale {} -> 105
+    InnerProdD {} -> 106
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool

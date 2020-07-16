@@ -33,7 +33,7 @@ import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
-import HashedExpression.Prettify (showExp, showExpDebug)
+import HashedExpression.Prettify (debugPrint, showExp, showExpDebug)
 import HashedExpression.Problem
 import HashedExpression.Value
 import System.Process (readProcess, readProcessWithExitCode)
@@ -44,22 +44,11 @@ import Var
 import Prelude hiding ((^))
 import qualified Prelude
 
----- |
---isOneAfterAnother :: MemMap -> [Int] -> Bool
---isOneAfterAnother memMap nIds = all isOk xs
---  where
---    xs = zip nIds (tail nIds)
---    isOk (cur, nxt) =
---      let (offsetCur, _, shapeCur) =
---            fromJust $ IM.lookup cur (entryMap memMap)
---          (offsetNxt, _, _) = fromJust $ IM.lookup nxt (entryMap memMap)
---       in offsetCur + Prelude.product shapeCur == offsetNxt
-
 -- |
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemNoConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
-      pdMap = partialDerivativeMaps . collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
+  let pdMap = partialDerivativeMaps . collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
       constructResult = constructProblem exp names (Constraint [])
   case constructResult of
     NoVariables -> return () -- it is possible that the random expression doesn't have any variables
@@ -74,9 +63,6 @@ prop_constructProblemNoConstraint (Suite exp valMap) = do
               True
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $ all ok variables
-
---      assertBool "variables are not allocated consecutively" $
---        isOneAfterAnother memMap (map nodeId variables)
 
 -- |
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
@@ -136,8 +122,6 @@ prop_constructProblemBoxConstraint (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      --      assertBool "variables are not allocated consecutively" $
-      --        isOneAfterAnother memMap (map nodeId variables)
       case (sampled, boxConstraints) of
         (_ : _, []) ->
           assertFailure
@@ -184,8 +168,6 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
             | otherwise = False
       assertBool "partial derivative ids aren't correct" $
         all ok variables
-      --      assertBool "variables are not allocated consecutively" $
-      --        isOneAfterAnother memMap (map nodeId variables)
       case (scc, scalarConstraints) of
         ([], _) -> return ()
         (_ : _, []) ->
@@ -232,6 +214,13 @@ problemsRepo =
           vars = ["x", "y", "z", "t"]
        in constructProblem f vars constraints,
       True
+    ),
+    ( let [x, y, z] = map (variable2D @100 @100) ["x", "y", "z"]
+          f = x <.> y + z <.> z
+          constraints = Constraint [y <.> z .<= VNum 1]
+          vars = ["x", "y", "z"]
+       in constructProblem f vars constraints,
+      True
     )
   ]
 
@@ -239,13 +228,13 @@ spec :: Spec
 spec =
   describe "Hash Solver spec " $ do
     specify "test hand-written problems" $
-      forM_ problemsRepo $ \(problemResult, expected) ->
+      forM_ problemsRepo $ \(problemResult, expected) -> do
         case (problemResult, expected) of
-          (ProblemInvalid _, True) ->
-            assertFailure "This problem is valid but fail to construct"
-          (ProblemValid _, False) ->
-            assertFailure "This problem is invalid but success to construct"
-          _ -> return ()
+          (ProblemValid _, True) ->
+            return ()
+          (ProblemInvalid _, False) ->
+            return ()
+          _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
     specify "valid problem should be constructed successfully" $
       property prop_constructProblemNoConstraint
     specify "valid box constrained problem should be constructed successfully" $

@@ -29,8 +29,8 @@ partialDerivative f mx = case maybeVariable mx of
     let df = exteriorDerivative (Set.fromList [x]) f
         Expression nID mp = collectDifferentials df
      in case retrieveOp nID mp of
-          Const 0 -> constWithShape shape 0
-          Mul [partialID, _] -> wrap (mp, partialID)
-          InnerProd partialID _ -> wrap (mp, partialID)
+          DZero -> constWithShape shape 0
+          MulD partialID _ -> wrap (mp, partialID)
+          InnerProdD partialID _ -> wrap (mp, partialID)
           node -> error $ "This should not happen: " ++ show node
   Nothing -> error "2nd argument is not a variable"
