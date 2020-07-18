@@ -23,7 +23,7 @@ import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl', groupBy, sort, sortBy, sortOn)
-import Data.Maybe (catMaybes, fromJust, mapMaybe)
+import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
@@ -31,10 +31,10 @@ import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
@@ -531,6 +531,12 @@ topologicalSort ::
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
+
+-- | Topological sort the ExpressionDiff. Note that there are some NodeID getting referred in ExpressionDiff
+-- but dont appears on it's extraEntries. However, the extraEries still form a DAG.
+topologicalSortExpressionDiff :: ExpressionDiff -> [NodeID]
+topologicalSortExpressionDiff (ExpressionDiff mp n) = topologicalSortManyRoots (mp, [n])
+
 -- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSortManyRoots ::
@@ -554,21 +560,26 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
     -------------------------------------------------------------------------------
     topoOrder =
       runSTUArray $ do
+        -- if a node is visited
         marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
+        -- order of completing traversing NodeIDs
         order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
+        -- count next index of order
         cnt <- newSTRef 0 :: ST s (STRef s Int)
         let dfs u = do
               let arrayPos = toPos u
               writeArray marked arrayPos True
               forM_ (adj u) $ \v -> do
-                isMarked <- readArray marked (toPos v)
-                unless isMarked $ dfs v
+                when (isJust $ IM.lookup v mp) $ do
+                  isMarked <- readArray marked (toPos v)
+                  unless isMarked $ dfs v
               cntVal <- readSTRef cnt
               writeArray order cntVal u
               writeSTRef cnt (cntVal + 1)
         forM_ ns $ \n -> do
-          isMarked <- readArray marked (toPos n)
-          unless isMarked $ dfs n
+          when (isJust $ IM.lookup n mp) $ do
+            isMarked <- readArray marked (toPos n)
+            unless isMarked $ dfs n
         return order
 
 -- | Retrieves all 'Var' nodes in an 'Expression'
