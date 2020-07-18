@@ -128,7 +128,7 @@ groupByDVar exp@(mp, n) =
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId
-      | DVar _ <- retrieveOp nId mp = diffConst [] 1 |*| just mp nId
+      | DVar _ <- retrieveOp nId mp = num_ 1 |*| just mp nId
       | otherwise = just mp nId
 
 -- | After group Dvar to groups, we aggregate result in each group

@@ -370,11 +370,14 @@ instance CovectorScaleOp ExpressionDiff ExpressionDiff ExpressionDiff where
 instance InnerProductCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
   (|<.>|) change1 change2 = applyDiff1 (Binary specInnerProdD) [change1, change2]
 
--- | The 'ExpressionDiff' when adding a constant is just the constant node 
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
+-- | The 'ExpressionDiff' when adding a constant is just the constant node
+const_ :: Shape -> Double -> ExpressionDiff
+const_ shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
+    
+num_ :: Double -> ExpressionDiff
+num_ = const_ []
 
 dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n

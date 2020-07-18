@@ -235,9 +235,9 @@ spec =
           (ProblemInvalid _, False) ->
             return ()
           _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
-    specify "valid problem should be constructed successfully" $
-      property prop_constructProblemNoConstraint
-    specify "valid box constrained problem should be constructed successfully" $
-      property prop_constructProblemBoxConstraint
-    specify "valid scalar constraints problem should be successfully successfully" $
-      property prop_constructProblemScalarConstraints
+--    specify "valid problem should be constructed successfully" $
+--      property prop_constructProblemNoConstraint
+--    specify "valid box constrained problem should be constructed successfully" $
+--      property prop_constructProblemBoxConstraint
+--    specify "valid scalar constraints problem should be successfully successfully" $
+--      property prop_constructProblemScalarConstraints

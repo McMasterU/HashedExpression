@@ -433,12 +433,12 @@ groupConstantsRules exp@(mp, n) =
         Sum ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
-            let total = diffConst shape . Prelude.sum $ cs ->
+            let total = const_ shape . Prelude.sum $ cs ->
             sum_ $ total : (map (just mp) . filter (not . isConstant mp) $ ns)
         Mul ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
-            let total = diffConst shape . Prelude.product $ cs ->
+            let total = const_ shape . Prelude.product $ cs ->
             product_ $ total : (map (just mp) . filter (not . isConstant mp) $ ns)
         _ -> just mp n
 
@@ -465,8 +465,8 @@ combineTermsRules exp@(mp, n)
     toDiff :: (Int, Double) -> ExpressionDiff
     toDiff (nId, val)
       | val == 1 = just mp nId
-      | retrieveElementType nId mp == Covector = diffConst [] val |*.| just mp nId
-      | otherwise = diffConst [] val *. just mp nId
+      | retrieveElementType nId mp == Covector = num_ val |*.| just mp nId
+      | otherwise = num_ val *. just mp nId
 
 -- | Rules for combining and reducing the numbers of terms in 'Mul'
 --
@@ -565,7 +565,7 @@ combineRealScalarRules exp@(mp, n)
         (just mp scalee, Just $ just mp scalar)
       | Neg negatee <- retrieveOp nId mp,
         retrieveElementType nId mp == R =
-        (just mp negatee, Just $ diffConst [] (-1))
+        (just mp negatee, Just $ num_ (-1))
       | otherwise = (just mp nId, Nothing)
 
 -- | Rules that are applied in specific scenarios if possible
@@ -592,7 +592,7 @@ evaluateIfPossibleRules exp@(mp, n) =
       | Const val <- retrieveOp nId mp = Just val
       | otherwise = Nothing
     pulledVals = mapM getVal . opArgs $ node
-    res = diffConst shape
+    res = const_ shape
 
 -- | Rules to normalize rotations
 --
@@ -610,7 +610,7 @@ negativeZeroRules :: (ExpressionMap, NodeID) -> ExpressionDiff
 negativeZeroRules exp@(mp, n)
   | (shape, _, Const val) <- retrieveNode n mp,
     val == 0.0 || val == (-0.0) =
-    diffConst shape 0
+    const_ shape 0
   | otherwise = just mp n
 
 -- | Rules for piecewise functions of 'RealImag'
@@ -662,8 +662,8 @@ pullOutPiecewiseRules exp@(mp, n) =
       | otherwise = False
     et = retrieveElementType n mp
     shape = retrieveShape n mp
-    one = diffConst shape 1
-    zero = diffConst shape 0
+    one = const_ shape 1
+    zero = const_ shape 0
 
 -- | Rules for advanced FT simplification
 --
@@ -677,7 +677,7 @@ twiceReFTAndImFTRules exp@(mp, n)
     Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
     let rest = map (just mp) . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
         totalScaleFactor = scaleFactor * fromIntegral (Prelude.product $ retrieveShape innerArg mp)
-        scalar = diffConst [] totalScaleFactor
+        scalar = num_ totalScaleFactor
         scaled = scalar *. just mp innerArg
      in sum_ $ scaled : rest
   | otherwise = just mp n
