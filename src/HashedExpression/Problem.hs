@@ -20,14 +20,13 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import HashedExpression.Derivative
-import HashedExpression.Internal.Structure
-
 import HashedExpression.Internal
 import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value

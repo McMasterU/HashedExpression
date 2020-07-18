@@ -531,7 +531,6 @@ topologicalSort ::
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 
-
 -- | Topological sort the ExpressionDiff. Note that there are some NodeID getting referred in ExpressionDiff
 -- but dont appears on it's extraEntries. However, the extraEries still form a DAG.
 topologicalSortExpressionDiff :: ExpressionDiff -> [NodeID]
@@ -590,3 +589,43 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
     collect nId
       | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
+
+-- | Merge the second map into the first map, resolve hash collision if occur
+safeMerge :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID) -> (ExpressionMap, (NodeID, NodeID))
+safeMerge (mp1, n1) (mp2, n2) = undefined
+
+-- | Merge the second diff's extra entries to first's, resolve hash collision if occur
+--   Precondition:
+--   + accMp is collision-free w.r.t contextMp
+--   + diff's extra entries is collision-free w.r.t contextMp
+--   Post condition:
+--   + mp is collision-free w.r.t contextMp
+safeMergeDiff ::
+  -- | Context expression map where the diff is computed from: contextMp
+  ExpressionMap ->
+  -- | The expression map where the diff will be merged into: accMp
+  ExpressionMap ->
+  -- | The expression diff which will be merged: diff
+  ExpressionDiff ->
+  -- | New merged expression map and new NodeID corresponding to the merged diff. (mp, nID)
+  (ExpressionMap, NodeID)
+safeMergeDiff contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRootID) = case IM.lookup diffRootID finalSub of
+  Just newRootID -> (mergedMap, newRootID)
+  _ -> (mergedMap, diffRootID)
+  where
+    f :: (ExpressionMap, IM.IntMap Int) -> NodeID -> (ExpressionMap, IM.IntMap Int)
+    f (acc, sub) nodeID =
+      let -- whether a NodeID has been rehash and replaced by another NodeID (to avoid hash-collision)
+          mapping nID = case IM.lookup nID sub of
+            Just other -> other
+            _ -> nID
+          -- the node needed to be added to accMp
+          node = mapNode mapping (retrieveNode nodeID diffExtraEntries)
+          -- get the new hash that is collision-free to both acc and contextMp
+          newNodeID = hashNode (checkHashFromMaps [acc, contextMp]) node
+       in ( IM.insert newNodeID node acc,
+            if newNodeID == nodeID
+              then sub
+              else IM.insert nodeID newNodeID sub
+          )
+    (mergedMap, finalSub) = foldl f (accMp, IM.empty) $ topologicalSortExpressionDiff diff

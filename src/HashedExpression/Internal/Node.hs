@@ -20,6 +20,8 @@ module HashedExpression.Internal.Node
     expressionNode,
     expressionOp,
     expressionShape,
+    mapOp,
+    mapNode,
   )
 where
 
@@ -126,6 +128,52 @@ opArgs node =
     ScaleD arg1 arg2 -> [arg1, arg2]
     DScale arg1 arg2 -> [arg1, arg2]
     InnerProdD arg1 arg2 -> [arg1, arg2]
+
+mapOp :: (NodeID -> NodeID) -> Op -> Op
+mapOp f op =
+  case op of
+    Var x -> Var x
+    DVar x -> DVar x
+    Const val -> Const val
+    Sum args -> Sum $ map f args
+    Mul args -> Mul $ map f args
+    Power x arg -> Power x (f arg)
+    Neg arg -> Neg (f arg)
+    Scale arg1 arg2 -> Scale (f arg1) (f arg2)
+    Div arg1 arg2 -> Div (f arg1) (f arg2)
+    Sqrt arg -> Sqrt (f arg)
+    Sin arg -> Sin (f arg)
+    Cos arg -> Cos (f arg)
+    Tan arg -> Tan (f arg)
+    Exp arg -> Exp (f arg)
+    Log arg -> Log (f arg)
+    Sinh arg -> Sinh (f arg)
+    Cosh arg -> Cosh (f arg)
+    Tanh arg -> Tanh (f arg)
+    Asin arg -> Asin (f arg)
+    Acos arg -> Acos (f arg)
+    Atan arg -> Atan (f arg)
+    Asinh arg -> Asinh (f arg)
+    Acosh arg -> Acosh (f arg)
+    Atanh arg -> Atanh (f arg)
+    RealImag arg1 arg2 -> RealImag (f arg1) (f arg2)
+    RealPart arg -> RealPart (f arg)
+    ImagPart arg -> ImagPart (f arg)
+    InnerProd arg1 arg2 -> InnerProd (f arg1) (f arg2)
+    Piecewise marks conditionArg branches -> Piecewise marks (f conditionArg) (map f branches)
+    Rotate am arg -> Rotate am (f arg)
+    ReFT arg -> ReFT (f arg)
+    ImFT arg -> ImFT (f arg)
+    TwiceReFT arg -> TwiceReFT (f arg)
+    TwiceImFT arg -> TwiceImFT (f arg)
+    DZero -> DZero
+    MulD arg1 arg2 -> MulD (f arg1) (f arg2)
+    ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)
+    DScale arg1 arg2 -> DScale (f arg1) (f arg2)
+    InnerProdD arg1 arg2 -> InnerProdD (f arg1) (f arg2)
+
+mapNode :: (NodeID -> NodeID) -> Node -> Node
+mapNode f (shape, et, op) = (shape, et, mapOp f op)
 
 -- | Retrieve a 'Op' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveOp #-}

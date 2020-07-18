@@ -1,4 +1,5 @@
 module HashedExpression.Internal.Structure where
+
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
@@ -22,4 +23,3 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
-

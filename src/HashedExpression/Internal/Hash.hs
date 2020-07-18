@@ -14,6 +14,9 @@ module HashedExpression.Internal.Hash
     addNode,
     fromNode,
     fromNodeUnwrapped,
+    hashNode,
+    checkHashFromMap,
+    checkHashFromMaps,
   )
 where
 
@@ -112,28 +115,40 @@ hash (shape, et, node) rehashNum =
 data HashOutcome
   = -- | clashes with an old hash
     IsClash
-  | -- | duplicate of a hash (able to reuse)
-    AlreadyExist Int
   | -- | new hash value
-    IsNew Int
+    IsOk NodeID
   deriving (Eq, Show, Ord)
 
-hashOutcome :: ExpressionMap -> Node -> Int -> HashOutcome
-hashOutcome mp new newHash =
-  case IM.lookup newHash mp of
-    Nothing -> IsNew newHash
-    Just old ->
-      if old == new
-        then AlreadyExist newHash
-        else IsClash
+type CheckHash = Node -> NodeID -> HashOutcome
+
+-- |
+checkHashFromMap :: ExpressionMap -> CheckHash
+checkHashFromMap mp node nID =
+  case IM.lookup nID mp of
+    Nothing -> IsOk nID
+    Just existingNode | existingNode == node -> IsOk nID
+    _ -> IsClash
+
+-- |
+checkHashFromMaps :: [ExpressionMap] -> CheckHash
+checkHashFromMaps [] node nID = IsOk nID
+checkHashFromMaps (mp : mps) node nID = case checkHashFromMap mp node nID of
+  IsClash -> IsClash
+  IsOk _ -> checkHashFromMaps mps node nID
+
+-- |
+hashNode :: CheckHash -> Node -> NodeID
+hashNode checkHash e =
+  case dropWhile (== IsClash) . map (checkHash e . hash e) $ [0 .. 1000] of
+    (IsOk h : _) -> h
+    _ -> error "hashNode everything clashed!"
 
 -- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
 addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
 addNode mp e =
-  case dropWhile (== IsClash) . map (hashOutcome mp e . hash e) $ [0 .. 1000] of
-    (AlreadyExist h : _) -> (mp, h)
-    (IsNew h : _) -> (IM.insert h e mp, h)
-    _ -> error "addNode everything clashed!"
+  let checkHash = checkHashFromMap mp
+      h = hashNode checkHash e
+   in (IM.insert h e mp, h)
 
 -- | Create an Expression from a standalone 'Node'
 fromNode :: Node -> Expression d et

@@ -164,7 +164,6 @@ maybeVariable (Expression nID mp) = case retrieveNode nID mp of
   (shape, R, Var name) -> Just (name, shape)
   _ -> Nothing
 
-
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
 varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
