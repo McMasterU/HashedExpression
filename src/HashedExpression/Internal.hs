@@ -47,6 +47,7 @@ wrap = uncurry $ flip Expression
 
 -------------------------------------------------------------------------------
 addEntryWithContextTo ::
+  HasCallStack =>
   ExpressionMap ->
   OperationSpec ->
   [NodeID] ->
@@ -220,12 +221,11 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
       let children = opArgs $ retrieveOp nId mp
           childrenDiffs = map (fromJust . flip IM.lookup diffs) children
           nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
+          -- TODO merge: (mp, nId) (nodeDiff extraEntries, newRootId)
           newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
           ExpressionDiff exEntries newId = smp newExp
-          diff =
-            ExpressionDiff
-              (IM.union exEntries (extraEntries nodeDiff))
-              newId
+          -- TODO merge: just exEntries ?
+          diff = ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
        in IM.insert nId diff diffs
     diffs = foldl' f IM.empty topoOrder
 
@@ -276,25 +276,27 @@ data ExpressionDiff = ExpressionDiff
   }
   deriving (Eq, Ord, Show)
 
--- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
---   other 'ExpressionDiff'
-applyDiff ::
-  -- | the base map to find diffs w.r.t
-  ExpressionMap ->
-  -- | the operation to apply
-  OperationSpec ->
-  -- | the operands (also in diff to the base map)
-  [ExpressionDiff] ->
-  -- | the result (combined diffs with new nodes)
-  ExpressionDiff
-applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
-  where
-    mergedExtraEntries = IM.unions . map extraEntries $ operands
-    updatedContextMp = IM.union mergedExtraEntries contextMp
-    ns = map newRootId operands
-    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
+--
+---- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
+----   other 'ExpressionDiff'
+--applyDiff ::
+--  -- | the base map to find diffs w.r.t
+--  ExpressionMap ->
+--  -- | the operation to apply
+--  OperationSpec ->
+--  -- | the operands (also in diff to the base map)
+--  [ExpressionDiff] ->
+--  -- | the result (combined diffs with new nodes)
+--  ExpressionDiff
+--applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
+--  where
+--    mergedExtraEntries = IM.unions . map extraEntries $ operands
+--    updatedContextMp = IM.union mergedExtraEntries contextMp
+--    ns = map newRootId operands
+--    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
 
 applyDiff1 ::
+  HasCallStack =>
   -- | the operation to apply
   OperationSpec ->
   -- | the operands (also in diff to the base map)
@@ -368,7 +370,7 @@ instance CovectorScaleOp ExpressionDiff ExpressionDiff ExpressionDiff where
 instance InnerProductCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
   (|<.>|) change1 change2 = applyDiff1 (Binary specInnerProdD) [change1, change2]
 
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
+-- | The 'ExpressionDiff' when adding a constant is just the constant node 
 diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
   where
@@ -379,31 +381,6 @@ dZeroWithShape shape = ExpressionDiff mp n
   where
     Expression n mp = fromNode (shape, Covector, DZero)
 
--- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
-mulManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (Nary specMul)
-
--- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
-sumManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
-
--- | The ExpressionDiff corresponding to no change in this node
-noChange :: NodeID -> ExpressionDiff
-noChange = ExpressionDiff IM.empty
 
 just :: ExpressionMap -> NodeID -> ExpressionDiff
 just mp nID =
@@ -428,12 +405,12 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     R == oldET,
     operandOrder == Reorder =
     sortAndCombine (Binary specInnerProd)
-  | oldChildrenIDs == newChildrenIDs && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
+  | oldChildrenIDs == newChildrenIDs  = just contextMp n
   | otherwise =
     case oldOp of
-      Var _ -> noChange n
-      DVar _ -> noChange n
-      Const _ -> noChange n
+      Var _ -> just contextMp n
+      DVar _ -> just contextMp n
+      Const _ -> just contextMp n
       Sum _ -> combine (Nary specSum)
       Mul _ -> combine (Nary specMul)
       Power x _ -> combine (Unary (specPower x))
@@ -465,7 +442,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
       ImFT _ -> combine (Unary specImFT)
       TwiceReFT _ -> combine (Unary specTwiceReFT)
       TwiceImFT _ -> combine (Unary specTwiceImFT)
-      DZero -> noChange n
+      DZero -> just contextMp n
       MulD _ _ -> combine (Binary specMulD)
       ScaleD {} -> combine (Binary specScaleD)
       DScale {} -> combine (Binary specDScale)
@@ -476,9 +453,10 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     oldChildrenIDs = opArgs oldOp
     newChildrenIDs = map newRootId childrenDiffs
     -------------------------------------------------------------------------------
+    -- TODO merge: safe merge
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     -------------------------------------------------------------------------------
-    combine spec = applyDiff contextMp spec childrenDiffs
+    combine spec = applyDiff1 spec childrenDiffs
     sortAndCombine option =
       let getOp diff
             | Just (_, _, node) <- IM.lookup (newRootId diff) contextMp = node
@@ -489,8 +467,8 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
           sortedChildrenDiffs = sortArgs childrenDiffs
        in if oldChildrenIDs == map newRootId sortedChildrenDiffs
             && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
-            then noChange n
-            else applyDiff contextMp option sortedChildrenDiffs
+            then just contextMp n
+            else applyDiff1 option sortedChildrenDiffs
 
 -- --------------------------------------------------------------------------------------------------------------------
 
