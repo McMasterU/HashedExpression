@@ -37,6 +37,9 @@ import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
+
+import HashedExpression.Internal.Structure
+
 import HashedExpression.Prettify
 import Prelude hiding ((^))
 

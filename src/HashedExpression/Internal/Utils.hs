@@ -84,16 +84,10 @@ ensureSameShapeList es after
     error $ "Ensure same shape failed " ++ show (map expressionShape es)
 
 constWithShape :: Shape -> Double -> Expression d R
-constWithShape shape val = Expression h (IM.fromList [(h, node)])
-  where
-    node = (shape, R, Const val)
-    h = hash node
+constWithShape shape val = fromNode (shape, R, Const val)
 
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
-varWithShape shape name = (IM.fromList [(h, node)], h)
-  where
-    node = (shape, R, Var name)
-    h = hash node
+varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
 
 -- |
 isScalarShape :: Shape -> Bool
@@ -155,17 +149,11 @@ pullProdOperands mp nId
 
 -- |
 aConst :: Shape -> Double -> (ExpressionMap, NodeID)
-aConst shape val = (IM.fromList [(h, node)], h)
-  where
-    node = (shape, R, Const val)
-    h = hash node
+aConst shape val = fromNodeUnwrapped (shape, R, Const val)
 
 -- |
 dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
-dVarWithShape shape name = (IM.fromList [(h, node)], h)
-  where
-    node = (shape, Covector, DVar name)
-    h = hash node
+dVarWithShape shape name = fromNodeUnwrapped (shape, Covector, DVar name)
 
 showT :: Show a => a -> T.Text
 showT = T.pack . show
@@ -174,8 +162,28 @@ showT = T.pack . show
 maybeVariable :: DimensionType d => Expression d R -> Maybe (String, Shape)
 maybeVariable (Expression nID mp) = case retrieveNode nID mp of
   (shape, R, Var name) -> Just (name, shape)
-  (shape, _, Var name) -> error "Why is this happening?"
   _ -> Nothing
+
+
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
+varNodesWithId :: ExpressionMap -> [(String, NodeID)]
+varNodesWithId mp = mapMaybe collect . IM.keys $ mp
+  where
+    collect nId
+      | Var varName <- retrieveOp nId mp = Just (varName, nId)
+      | otherwise = Nothing
+
+-- | Predicate determining if a 'ExpressionMap' contains a FT operation
+containsFTNode :: ExpressionMap -> Bool
+containsFTNode mp = any isFT $ IM.elems mp
+  where
+    isFT (_, _, op) =
+      case op of
+        ReFT _ -> True
+        ImFT _ -> True
+        TwiceImFT _ -> True
+        TwiceReFT _ -> True
+        _ -> False
 
 -------------------------------------------------------------------------------
 

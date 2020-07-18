@@ -16,7 +16,9 @@ import HashedExpression.Internal
     topologicalSortManyRoots,
     unwrap,
   )
+  
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
