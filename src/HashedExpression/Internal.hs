@@ -34,6 +34,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
@@ -47,6 +48,7 @@ wrap = uncurry $ flip Expression
 
 -------------------------------------------------------------------------------
 addEntryWithContextTo ::
+  HasCallStack =>
   ExpressionMap ->
   OperationSpec ->
   [NodeID] ->
@@ -97,6 +99,7 @@ sumMany = apply (Nary specSum)
 --   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
 --   provided via 'OperationOption'.
 apply ::
+  HasCallStack =>
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
   -- | the operands (unwrapped 'Expression')
@@ -144,6 +147,7 @@ applyBinary ::
 applyBinary spec e1 e2 = wrap . apply (Binary spec) $ [unwrap e1, unwrap e2]
 
 applyConditionAry ::
+  HasCallStack =>
   -- | describes changes in 'Dimension' or 'ElementType'
   ConditionarySpec ->
   -- | the conditional/selector operand
@@ -199,16 +203,8 @@ toTransformation normalizer exp@(mp, n) =
       newN = newRootId diff
    in (newMp, newN)
 
--- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
---   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
---  TODO: rename this to Rule ?
-type Modification = (ExpressionMap, NodeID) -> Change
-
--- | Takes a 'Modification' and returns a corresponding function
-fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
-fromModification mkDiff exp@(mp, n) = mkDiff exp mp
-
--- | Operand order in the operation
+-- | Whether to reorder operand (by sorting) in a commutative binary operation or
+-- associative commutative n-ary operation
 data OperandOrder
   = Reorder
   | NoReorder
@@ -229,12 +225,11 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
       let children = opArgs $ retrieveOp nId mp
           childrenDiffs = map (fromJust . flip IM.lookup diffs) children
           nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
+          -- TODO merge: (mp, nId) (nodeDiff extraEntries, newRootId)
           newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
           ExpressionDiff exEntries newId = smp newExp
-          diff =
-            ExpressionDiff
-              (IM.union exEntries (extraEntries nodeDiff))
-              newId
+          -- TODO merge: just exEntries ?
+          diff = ExpressionDiff (IM.union exEntries (extraEntries nodeDiff)) newId
        in IM.insert nId diff diffs
     diffs = foldl' f IM.empty topoOrder
 
@@ -242,8 +237,7 @@ toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
 removeUnreachable :: Transformation
 removeUnreachable (mp, n) =
   let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
-      reducedMap =
-        IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
+      reducedMap = IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
    in (reducedMap, n)
 
 -- | Apply a 'Transformation' maximum k times, or stop if the expression doesn't change
@@ -261,105 +255,13 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
 
--- --------------------------------------------------------------------------------------------------------------------
+-- | Multiply a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
+product_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+product_ = applyDiff (Nary specMul)
 
--- * Expression Changes
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- | The Change type allows the creation of combinators for expressing alterations to an 'Expression' with respect
---   to a base 'ExpressionMap'. For example, combinators like 'sum_' will create will create a new 'ExpressionMap' with
---   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
---   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
---
--- ExpressionDiff in the MonadReader ExpressionMap
-type Change = ExpressionMap -> ExpressionDiff
-
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
-const_ :: Shape -> Double -> Change
-const_ shape val mp = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
-
--- | The 'Change' created when adding a single 'Scalar' constant
-num_ :: Double -> Change
-num_ = const_ []
-
--- | Multiply a list of 'Change' together into a single 'Change'
-product_ :: HasCallStack => [Change] -> Change
-product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
-
--- | Sum a list of 'Change' together into a single 'Change'
-sum_ :: HasCallStack => [Change] -> Change
-sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
-
--- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
-just :: NodeID -> Change
-just nId _ = ExpressionDiff IM.empty nId
-
-instance Num Change where
-  (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
-  negate change mp = applyDiff mp (Unary specNeg) [change mp]
-  (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
-  signum = error "The Change of signum is currently unimplemented"
-  abs = error "The Change of abs is currently unimplemented"
-  fromInteger = error "The change of fromInteger is currently unimplemented"
-
-instance Fractional Change where
-  (/) change1 change2 = change1 * (change2 ^ (-1))
-  fromRational r = error "N/A"
-
-instance Floating Change where
-  sqrt change mp = applyDiff mp (Unary specSqrt) [change mp]
-  exp change mp = applyDiff mp (Unary specExp) [change mp]
-  log change mp = applyDiff mp (Unary specLog) [change mp]
-  sin change mp = applyDiff mp (Unary specSin) [change mp]
-  cos change mp = applyDiff mp (Unary specCos) [change mp]
-  tan change mp = applyDiff mp (Unary specTan) [change mp]
-  asin change mp = applyDiff mp (Unary specAsin) [change mp]
-  acos change mp = applyDiff mp (Unary specAcos) [change mp]
-  atan change mp = applyDiff mp (Unary specAtan) [change mp]
-  sinh change mp = applyDiff mp (Unary specSinh) [change mp]
-  cosh change mp = applyDiff mp (Unary specCosh) [change mp]
-  tanh change mp = applyDiff mp (Unary specTanh) [change mp]
-  asinh change mp = applyDiff mp (Unary specAsinh) [change mp]
-  acosh change mp = applyDiff mp (Unary specAcosh) [change mp]
-  atanh change mp = applyDiff mp (Unary specAtanh) [change mp]
-
-instance PowerOp Change Int where
-  (^) change alpha mp = applyDiff mp (Unary (specPower alpha)) [change mp]
-
-instance VectorSpaceOp Change Change where
-  scale change1 change2 mp =
-    applyDiff mp (Binary specScale) [change1 mp, change2 mp]
-
-instance ComplexRealOp Change Change where
-  (+:) change1 change2 mp = applyDiff mp (Binary specRealImag) [change1 mp, change2 mp]
-  xRe change1 mp = applyDiff mp (Unary specRealPart) [change1 mp]
-  xIm change1 mp = applyDiff mp (Unary specImagPart) [change1 mp]
-
-instance InnerProductSpaceOp Change Change Change where
-  (<.>) change1 change2 mp =
-    applyDiff mp (Binary specInnerProd) [change1 mp, change2 mp]
-
-instance RotateOp RotateAmount Change where
-  rotate ra change mp = applyDiff mp (Unary (specRotate ra)) [change mp]
-
-instance PiecewiseOp Change Change where
-  piecewise marks condition branches mp =
-    applyDiff mp (ConditionAry (specPiecewise marks)) . map ($ mp) $ condition : branches
-
-instance MulCovectorOp Change Change Change where
-  (|*|) change1 change2 mp = applyDiff mp (Binary specMulD) [change1 mp, change2 mp]
-
-instance ScaleCovectorOp Change Change Change where
-  (|*.|) change1 change2 mp = applyDiff mp (Binary specScaleD) [change1 mp, change2 mp]
-
-instance CovectorScaleOp Change Change Change where
-  (|.*|) change1 change2 mp = applyDiff mp (Binary specDScale) [change1 mp, change2 mp]
-
-instance InnerProductCovectorOp Change Change Change where
-  (|<.>|) change1 change2 mp = applyDiff mp (Binary specInnerProdD) [change1 mp, change2 mp]
+-- | Sum a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
+sum_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
+sum_ = applyDiff (Nary specSum)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -377,60 +279,101 @@ data ExpressionDiff = ExpressionDiff
   }
   deriving (Eq, Ord, Show)
 
--- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
---   other 'ExpressionDiff'
+--
+---- | Compute a new 'ExpressionDiff' when applying an operation to
+----   other 'ExpressionDiff'(s)
 applyDiff ::
-  -- | the base map to find diffs w.r.t
-  ExpressionMap ->
+  HasCallStack =>
   -- | the operation to apply
   OperationSpec ->
   -- | the operands (also in diff to the base map)
   [ExpressionDiff] ->
   -- | the result (combined diffs with new nodes)
   ExpressionDiff
-applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
+applyDiff option operands = ExpressionDiff resExtraEntries resRootId
   where
     mergedExtraEntries = IM.unions . map extraEntries $ operands
-    updatedContextMp = IM.union mergedExtraEntries contextMp
     ns = map newRootId operands
-    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
+    (resExtraEntries, resRootId) = addEntryWithContextTo mergedExtraEntries option ns mergedExtraEntries
 
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
+instance Num ExpressionDiff where
+  (+) change1 change2 = applyDiff (Nary specSum) [change1, change2]
+  negate change = applyDiff (Unary specNeg) [change]
+  (*) change1 change2 = applyDiff (Nary specMul) [change1, change2]
+
+instance Fractional ExpressionDiff where
+  (/) change1 change2 = change1 * (change2 ^ (-1))
+  fromRational r = error "N/A"
+
+instance Floating ExpressionDiff where
+  sqrt change = applyDiff (Unary specSqrt) [change]
+  exp change = applyDiff (Unary specExp) [change]
+  log change = applyDiff (Unary specLog) [change]
+  sin change = applyDiff (Unary specSin) [change]
+  cos change = applyDiff (Unary specCos) [change]
+  tan change = applyDiff (Unary specTan) [change]
+  asin change = applyDiff (Unary specAsin) [change]
+  acos change = applyDiff (Unary specAcos) [change]
+  atan change = applyDiff (Unary specAtan) [change]
+  sinh change = applyDiff (Unary specSinh) [change]
+  cosh change = applyDiff (Unary specCosh) [change]
+  tanh change = applyDiff (Unary specTanh) [change]
+  asinh change = applyDiff (Unary specAsinh) [change]
+  acosh change = applyDiff (Unary specAcosh) [change]
+  atanh change = applyDiff (Unary specAtanh) [change]
+
+instance PowerOp ExpressionDiff Int where
+  (^) change alpha = applyDiff (Unary (specPower alpha)) [change]
+
+instance VectorSpaceOp ExpressionDiff ExpressionDiff where
+  scale change1 change2 =
+    applyDiff (Binary specScale) [change1, change2]
+
+instance ComplexRealOp ExpressionDiff ExpressionDiff where
+  (+:) change1 change2 = applyDiff (Binary specRealImag) [change1, change2]
+  xRe change1 = applyDiff (Unary specRealPart) [change1]
+  xIm change1 = applyDiff (Unary specImagPart) [change1]
+
+instance InnerProductSpaceOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (<.>) change1 change2 =
+    applyDiff (Binary specInnerProd) [change1, change2]
+
+instance RotateOp RotateAmount ExpressionDiff where
+  rotate ra change = applyDiff (Unary (specRotate ra)) [change]
+
+instance PiecewiseOp ExpressionDiff ExpressionDiff where
+  piecewise marks condition branches =
+    applyDiff (ConditionAry (specPiecewise marks)) $ condition : branches
+
+instance MulCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|*|) change1 change2 = applyDiff (Binary specMulD) [change1, change2]
+
+instance ScaleCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|*.|) change1 change2 = applyDiff (Binary specScaleD) [change1, change2]
+
+instance CovectorScaleOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|.*|) change1 change2 = applyDiff (Binary specDScale) [change1, change2]
+
+instance InnerProductCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
+  (|<.>|) change1 change2 = applyDiff (Binary specInnerProdD) [change1, change2]
+
+-- | The 'ExpressionDiff' when adding a constant is just the constant node
+const_ :: Shape -> Double -> ExpressionDiff
+const_ shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
+
+num_ :: Double -> ExpressionDiff
+num_ = const_ []
 
 dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n
   where
     Expression n mp = fromNode (shape, Covector, DZero)
 
--- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
-mulManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (Nary specMul)
-
--- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
-sumManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
-
--- | The ExpressionDiff corresponding to no change in this node
-noChange :: NodeID -> ExpressionDiff
-noChange = ExpressionDiff IM.empty
+just :: ExpressionMap -> NodeID -> ExpressionDiff
+just mp nID =
+  ExpressionDiff (IM.singleton nID (retrieveNode nID mp)) nID
 
 -- | Same node type (Mul, Sum, Negate, ...), same shape, same ElementType but with new children, now make the same node type with new children
 --   and return the combined difference
@@ -451,12 +394,12 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     R == oldET,
     operandOrder == Reorder =
     sortAndCombine (Binary specInnerProd)
-  | oldChildrenIDs == newChildrenIDs && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
+  | oldChildrenIDs == newChildrenIDs = just contextMp n
   | otherwise =
     case oldOp of
-      Var _ -> noChange n
-      DVar _ -> noChange n
-      Const _ -> noChange n
+      Var _ -> just contextMp n
+      DVar _ -> just contextMp n
+      Const _ -> just contextMp n
       Sum _ -> combine (Nary specSum)
       Mul _ -> combine (Nary specMul)
       Power x _ -> combine (Unary (specPower x))
@@ -488,7 +431,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
       ImFT _ -> combine (Unary specImFT)
       TwiceReFT _ -> combine (Unary specTwiceReFT)
       TwiceImFT _ -> combine (Unary specTwiceImFT)
-      DZero -> noChange n
+      DZero -> just contextMp n
       MulD _ _ -> combine (Binary specMulD)
       ScaleD {} -> combine (Binary specScaleD)
       DScale {} -> combine (Binary specDScale)
@@ -499,9 +442,10 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     oldChildrenIDs = opArgs oldOp
     newChildrenIDs = map newRootId childrenDiffs
     -------------------------------------------------------------------------------
+    -- TODO merge: safe merge
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     -------------------------------------------------------------------------------
-    combine spec = applyDiff contextMp spec childrenDiffs
+    combine spec = applyDiff spec childrenDiffs
     sortAndCombine option =
       let getOp diff
             | Just (_, _, node) <- IM.lookup (newRootId diff) contextMp = node
@@ -512,81 +456,5 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
           sortedChildrenDiffs = sortArgs childrenDiffs
        in if oldChildrenIDs == map newRootId sortedChildrenDiffs
             && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
-            then noChange n
-            else applyDiff contextMp option sortedChildrenDiffs
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Other
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
---   unreachable nodes will be ignored
-topologicalSort ::
-  -- | unwrapped 'Expression'
-  (ExpressionMap, NodeID) ->
-  -- | list in topological order (independent to dependent)
-  [NodeID]
-topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
-
--- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
---   unreachable nodes will be ignored
-topologicalSortManyRoots ::
-  -- | many rooted unwrapped 'Expression'
-  (ExpressionMap, [NodeID]) ->
-  -- | list in topological order (independent to dependent)
-  [NodeID]
-topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
-  where
-    n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
-    toPos nId = fromJust $ IM.lookup nId n2Pos
-    len = IM.size n2Pos
-    adj nId = opArgs $ retrieveOp nId mp
-    topoOrder =
-      runSTUArray $ do
-        marked <- newArray (0, len - 1) False :: ST s (STUArray s Int Bool)
-        order <- newArray (0, len - 1) (-1) :: ST s (STUArray s Int Int)
-        cnt <- newSTRef 0 :: ST s (STRef s Int)
-        let dfs u = do
-              let arrayPos = toPos u
-              writeArray marked arrayPos True
-              forM_ (adj u) $ \v -> do
-                isMarked <- readArray marked (toPos v)
-                unless isMarked $ dfs v
-              cntVal <- readSTRef cnt
-              writeArray order cntVal u
-              writeSTRef cnt (cntVal + 1)
-        forM_ ns $ \n -> do
-          isMarked <- readArray marked (toPos n)
-          unless isMarked $ dfs n
-        return order
-
--- | Retrieves all 'Var' nodes in an 'Expression'
-expressionVarNodes :: (DimensionType d, ElementType et) => Expression d et -> [(String, NodeID)]
-expressionVarNodes (Expression n mp) = mapMaybe collect ns
-  where
-    ns = topologicalSort (mp, n)
-    collect nId
-      | Var varName <- retrieveOp nId mp = Just (varName, nId)
-      | otherwise = Nothing
-
--- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
-varNodesWithId :: ExpressionMap -> [(String, NodeID)]
-varNodesWithId mp = mapMaybe collect . IM.keys $ mp
-  where
-    collect nId
-      | Var varName <- retrieveOp nId mp = Just (varName, nId)
-      | otherwise = Nothing
-
--- | Predicate determining if a 'ExpressionMap' contains a FT operation
-containsFTNode :: ExpressionMap -> Bool
-containsFTNode mp = any isFT $ IM.elems mp
-  where
-    isFT (_, _, op) =
-      case op of
-        ReFT _ -> True
-        ImFT _ -> True
-        TwiceImFT _ -> True
-        TwiceReFT _ -> True
-        _ -> False
+            then just contextMp n
+            else applyDiff option sortedChildrenDiffs

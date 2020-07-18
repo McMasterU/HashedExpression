@@ -35,8 +35,6 @@ prop_NormalizeIsIdempotent (ArbitraryExpresion exp) =
 spec :: Spec
 spec = do
   describe "Normalize spec" $ do
-    specify "normalize is idempotent" $ do
-      property prop_NormalizeIsIdempotent
     specify "normalize scalar one zero" $ do
       constant 0.0 *. constant 9.0 `shouldNormalizeTo` constant 0.0
       x * one `shouldNormalizeTo` x
@@ -151,7 +149,7 @@ spec = do
       piecewise [1, 2] c [zero, x *. y, zero] `shouldNormalizeTo` x *. piecewise [1, 2] c [zero, y, zero]
       piecewise [4, 5] x1 [zero1, x1 * (s *. y1), zero1] `shouldNormalizeTo` s *. piecewise [4, 5] x1 [zero1, x1 * y1, zero1]
       piecewise [1] c1 [c1 +: y1, z1 +: t1] `shouldNormalizeTo` piecewise [1] c1 [c1, z1] +: piecewise [1] c1 [y1, t1]
-  describe "Fourier transform" $
+  describe "Fourier transform" $ do
     specify "some Ft rules" $ do
       reFT (reFT x1) + imFT (imFT x1) `shouldNormalizeTo` constant (fromIntegral defaultDim1D) *. x1
       reFT (reFT x2) + imFT (imFT x2) `shouldNormalizeTo` constant (fromIntegral (default1stDim2D * default2ndDim2D)) *. x2
@@ -175,6 +173,8 @@ spec = do
       let res1 = eval valMap $ reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
           res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
       res1 `shouldApprox` res2
+  specify "normalize is idempotent" $ do
+    property prop_NormalizeIsIdempotent
   describe "Unit tests" $
     specify "should properly normalize hard-coded exp" $ do
       x `shouldNormalizeTo` x

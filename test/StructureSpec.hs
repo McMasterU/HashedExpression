@@ -12,13 +12,12 @@ import Data.Maybe (fromJust)
 import HashedExpression.Internal
   ( D_,
     ET_,
-    topologicalSort,
-    topologicalSortManyRoots,
     unwrap,
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)

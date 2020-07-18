@@ -74,7 +74,7 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
     applyRules =
       chain
         [ separateDVarAlone,
-          toTransformation $ fromModification groupByDVar,
+          toTransformation groupByDVar,
           aggregateByDVar,
           normalizeEachPartialDerivative,
           removeUnreachable
@@ -104,7 +104,7 @@ separateDVarAlone =
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
 -- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->
 --   ((f * dx + 1 * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
-groupByDVar :: Modification
+groupByDVar :: (ExpressionMap, NodeID) -> ExpressionDiff
 groupByDVar exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns
@@ -128,8 +128,8 @@ groupByDVar exp@(mp, n) =
     sameDVar :: Int -> Int -> Bool
     sameDVar nId1 nId2 = getDVar nId1 == getDVar nId2
     mulOneIfAlone nId
-      | DVar _ <- retrieveOp nId mp = num_ 1 |*| just nId
-      | otherwise = just nId
+      | DVar _ <- retrieveOp nId mp = num_ 1 |*| just mp nId
+      | otherwise = just mp nId
 
 -- | After group Dvar to groups, we aggregate result in each group
 --   ((f * dx + x * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)

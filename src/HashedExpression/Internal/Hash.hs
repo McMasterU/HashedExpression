@@ -13,6 +13,7 @@ module HashedExpression.Internal.Hash
   ( hash,
     addNode,
     fromNode,
+    fromNodeUnwrapped,
   )
 where
 
@@ -45,20 +46,17 @@ offsetHash offset hash =
     then offset * modulo + hash
     else error "????"
 
-rehash :: Int -> [Int]
-rehash x = x : [x + (241 + x * 251) * i | i <- [1 ..]]
-
 -- | Any string used as a separator between node ids (which are numbers)
 separator :: String
 separator = "a"
 
--- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addInternal' to generate a
+-- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addNode' to generate a
 --   specific 'NodeID')
-hash :: Node -> Int
-hash (shape, et, node) =
+hash :: Node -> Int -> Int
+hash (shape, et, node) rehashNum =
   let hashString' s =
         hashString $
-          (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s
+          (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s ++ concat (replicate rehashNum "x")
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
         Const num -> offsetHash 2 . hashString' $ show num
@@ -88,8 +86,8 @@ hash (shape, et, node) =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
+        --
         InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
-        -- MARK: Piecewise
         Piecewise marks arg branches ->
           offsetHash 28 . hashString' $
             (intercalate separator . map show $ marks)
@@ -97,7 +95,6 @@ hash (shape, et, node) =
               ++ show arg
               ++ separator
               ++ (intercalate separator . map show $ branches)
-        -- MARK: Rotate
         Rotate amount arg -> offsetHash 29 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
         ReFT arg -> offsetHash 30 . hashString' $ show arg
         ImFT arg -> offsetHash 31 . hashString' $ show arg
@@ -116,7 +113,7 @@ data HashOutcome
   = -- | clashes with an old hash
     IsClash
   | -- | duplicate of a hash (able to reuse)
-    IsDuplicate Int
+    AlreadyExist Int
   | -- | new hash value
     IsNew Int
   deriving (Eq, Show, Ord)
@@ -127,20 +124,23 @@ hashOutcome mp new newHash =
     Nothing -> IsNew newHash
     Just old ->
       if old == new
-        then IsDuplicate newHash
+        then AlreadyExist newHash
         else IsClash
 
 -- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
 addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
 addNode mp e =
-  case dropWhile (== IsClash) . map (hashOutcome mp e) . rehash . hash $ e of
-    (IsDuplicate h : _) -> (mp, h)
+  case dropWhile (== IsClash) . map (hashOutcome mp e . hash e) $ [0 .. 1000] of
+    (AlreadyExist h : _) -> (mp, h)
     (IsNew h : _) -> (IM.insert h e mp, h)
-    _ -> error "addEntry everything clashed!"
+    _ -> error "addNode everything clashed!"
 
--- | Create a unique 'NodeID' with an accompanying (singleton) 'ExpressionMap' from a standalone 'Node'
+-- | Create an Expression from a standalone 'Node'
 fromNode :: Node -> Expression d et
-fromNode e = Expression h mp
+fromNode e = Expression nID mp
   where
-    h = hash e
-    mp = IM.insert h e IM.empty
+    (mp, nID) = addNode IM.empty e
+
+-- | Create an unwrapped Expresion from a standalone 'Node'
+fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
+fromNodeUnwrapped = addNode IM.empty
