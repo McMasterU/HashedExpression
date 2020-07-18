@@ -98,6 +98,7 @@ sumMany = apply (Nary specSum)
 --   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
 --   provided via 'OperationOption'.
 apply ::
+  HasCallStack =>
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
   -- | the operands (unwrapped 'Expression')
@@ -145,6 +146,7 @@ applyBinary ::
 applyBinary spec e1 e2 = wrap . apply (Binary spec) $ [unwrap e1, unwrap e2]
 
 applyConditionAry ::
+  HasCallStack =>
   -- | describes changes in 'Dimension' or 'ElementType'
   ConditionarySpec ->
   -- | the conditional/selector operand
@@ -200,7 +202,8 @@ toTransformation normalizer exp@(mp, n) =
       newN = newRootId diff
    in (newMp, newN)
 
--- | Operand order in the operation
+-- | Whether to reorder operand (by sorting) in a commutative binary operation or
+-- associative commutative n-ary operation
 data OperandOrder
   = Reorder
   | NoReorder
@@ -254,11 +257,11 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 
 -- | Multiply a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
 product_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
-product_ = applyDiff1 (Nary specMul)
+product_ = applyDiff (Nary specMul)
 
 -- | Sum a list of 'ExpressionDiff' together into a single 'ExpressionDiff'
 sum_ :: HasCallStack => [ExpressionDiff] -> ExpressionDiff
-sum_ = applyDiff1 (Nary specSum)
+sum_ = applyDiff (Nary specSum)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -277,25 +280,9 @@ data ExpressionDiff = ExpressionDiff
   deriving (Eq, Ord, Show)
 
 --
----- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
-----   other 'ExpressionDiff'
---applyDiff ::
---  -- | the base map to find diffs w.r.t
---  ExpressionMap ->
---  -- | the operation to apply
---  OperationSpec ->
---  -- | the operands (also in diff to the base map)
---  [ExpressionDiff] ->
---  -- | the result (combined diffs with new nodes)
---  ExpressionDiff
---applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
---  where
---    mergedExtraEntries = IM.unions . map extraEntries $ operands
---    updatedContextMp = IM.union mergedExtraEntries contextMp
---    ns = map newRootId operands
---    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
-
-applyDiff1 ::
+---- | Compute a new 'ExpressionDiff' when applying an operation to
+----   other 'ExpressionDiff'(s)
+applyDiff ::
   HasCallStack =>
   -- | the operation to apply
   OperationSpec ->
@@ -303,79 +290,79 @@ applyDiff1 ::
   [ExpressionDiff] ->
   -- | the result (combined diffs with new nodes)
   ExpressionDiff
-applyDiff1 option operands = ExpressionDiff resExtraEntries resRootId
+applyDiff option operands = ExpressionDiff resExtraEntries resRootId
   where
     mergedExtraEntries = IM.unions . map extraEntries $ operands
     ns = map newRootId operands
     (resExtraEntries, resRootId) = addEntryWithContextTo mergedExtraEntries option ns mergedExtraEntries
 
 instance Num ExpressionDiff where
-  (+) change1 change2 = applyDiff1 (Nary specSum) [change1, change2]
-  negate change = applyDiff1 (Unary specNeg) [change]
-  (*) change1 change2 = applyDiff1 (Nary specMul) [change1, change2]
+  (+) change1 change2 = applyDiff (Nary specSum) [change1, change2]
+  negate change = applyDiff (Unary specNeg) [change]
+  (*) change1 change2 = applyDiff (Nary specMul) [change1, change2]
 
 instance Fractional ExpressionDiff where
   (/) change1 change2 = change1 * (change2 ^ (-1))
   fromRational r = error "N/A"
 
 instance Floating ExpressionDiff where
-  sqrt change = applyDiff1 (Unary specSqrt) [change]
-  exp change = applyDiff1 (Unary specExp) [change]
-  log change = applyDiff1 (Unary specLog) [change]
-  sin change = applyDiff1 (Unary specSin) [change]
-  cos change = applyDiff1 (Unary specCos) [change]
-  tan change = applyDiff1 (Unary specTan) [change]
-  asin change = applyDiff1 (Unary specAsin) [change]
-  acos change = applyDiff1 (Unary specAcos) [change]
-  atan change = applyDiff1 (Unary specAtan) [change]
-  sinh change = applyDiff1 (Unary specSinh) [change]
-  cosh change = applyDiff1 (Unary specCosh) [change]
-  tanh change = applyDiff1 (Unary specTanh) [change]
-  asinh change = applyDiff1 (Unary specAsinh) [change]
-  acosh change = applyDiff1 (Unary specAcosh) [change]
-  atanh change = applyDiff1 (Unary specAtanh) [change]
+  sqrt change = applyDiff (Unary specSqrt) [change]
+  exp change = applyDiff (Unary specExp) [change]
+  log change = applyDiff (Unary specLog) [change]
+  sin change = applyDiff (Unary specSin) [change]
+  cos change = applyDiff (Unary specCos) [change]
+  tan change = applyDiff (Unary specTan) [change]
+  asin change = applyDiff (Unary specAsin) [change]
+  acos change = applyDiff (Unary specAcos) [change]
+  atan change = applyDiff (Unary specAtan) [change]
+  sinh change = applyDiff (Unary specSinh) [change]
+  cosh change = applyDiff (Unary specCosh) [change]
+  tanh change = applyDiff (Unary specTanh) [change]
+  asinh change = applyDiff (Unary specAsinh) [change]
+  acosh change = applyDiff (Unary specAcosh) [change]
+  atanh change = applyDiff (Unary specAtanh) [change]
 
 instance PowerOp ExpressionDiff Int where
-  (^) change alpha = applyDiff1 (Unary (specPower alpha)) [change]
+  (^) change alpha = applyDiff (Unary (specPower alpha)) [change]
 
 instance VectorSpaceOp ExpressionDiff ExpressionDiff where
   scale change1 change2 =
-    applyDiff1 (Binary specScale) [change1, change2]
+    applyDiff (Binary specScale) [change1, change2]
 
 instance ComplexRealOp ExpressionDiff ExpressionDiff where
-  (+:) change1 change2 = applyDiff1 (Binary specRealImag) [change1, change2]
-  xRe change1 = applyDiff1 (Unary specRealPart) [change1]
-  xIm change1 = applyDiff1 (Unary specImagPart) [change1]
+  (+:) change1 change2 = applyDiff (Binary specRealImag) [change1, change2]
+  xRe change1 = applyDiff (Unary specRealPart) [change1]
+  xIm change1 = applyDiff (Unary specImagPart) [change1]
 
 instance InnerProductSpaceOp ExpressionDiff ExpressionDiff ExpressionDiff where
   (<.>) change1 change2 =
-    applyDiff1 (Binary specInnerProd) [change1, change2]
+    applyDiff (Binary specInnerProd) [change1, change2]
 
 instance RotateOp RotateAmount ExpressionDiff where
-  rotate ra change = applyDiff1 (Unary (specRotate ra)) [change]
+  rotate ra change = applyDiff (Unary (specRotate ra)) [change]
 
 instance PiecewiseOp ExpressionDiff ExpressionDiff where
   piecewise marks condition branches =
-    applyDiff1 (ConditionAry (specPiecewise marks)) $ condition : branches
+    applyDiff (ConditionAry (specPiecewise marks)) $ condition : branches
 
 instance MulCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
-  (|*|) change1 change2 = applyDiff1 (Binary specMulD) [change1, change2]
+  (|*|) change1 change2 = applyDiff (Binary specMulD) [change1, change2]
 
 instance ScaleCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
-  (|*.|) change1 change2 = applyDiff1 (Binary specScaleD) [change1, change2]
+  (|*.|) change1 change2 = applyDiff (Binary specScaleD) [change1, change2]
 
 instance CovectorScaleOp ExpressionDiff ExpressionDiff ExpressionDiff where
-  (|.*|) change1 change2 = applyDiff1 (Binary specDScale) [change1, change2]
+  (|.*|) change1 change2 = applyDiff (Binary specDScale) [change1, change2]
 
 instance InnerProductCovectorOp ExpressionDiff ExpressionDiff ExpressionDiff where
-  (|<.>|) change1 change2 = applyDiff1 (Binary specInnerProdD) [change1, change2]
+  (|<.>|) change1 change2 = applyDiff (Binary specInnerProdD) [change1, change2]
 
 -- | The 'ExpressionDiff' when adding a constant is just the constant node
 const_ :: Shape -> Double -> ExpressionDiff
 const_ shape val = ExpressionDiff mp n
   where
     (mp, n) = aConst shape val
-    
+
 num_ :: Double -> ExpressionDiff
 num_ = const_ []
 
@@ -383,7 +370,6 @@ dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n
   where
     Expression n mp = fromNode (shape, Covector, DZero)
-
 
 just :: ExpressionMap -> NodeID -> ExpressionDiff
 just mp nID =
@@ -408,7 +394,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     R == oldET,
     operandOrder == Reorder =
     sortAndCombine (Binary specInnerProd)
-  | oldChildrenIDs == newChildrenIDs  = just contextMp n
+  | oldChildrenIDs == newChildrenIDs = just contextMp n
   | otherwise =
     case oldOp of
       Var _ -> just contextMp n
@@ -459,7 +445,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     -- TODO merge: safe merge
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     -------------------------------------------------------------------------------
-    combine spec = applyDiff1 spec childrenDiffs
+    combine spec = applyDiff spec childrenDiffs
     sortAndCombine option =
       let getOp diff
             | Just (_, _, node) <- IM.lookup (newRootId diff) contextMp = node
@@ -471,7 +457,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
        in if oldChildrenIDs == map newRootId sortedChildrenDiffs
             && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
             then just contextMp n
-            else applyDiff1 option sortedChildrenDiffs
+            else applyDiff option sortedChildrenDiffs
 
 -- --------------------------------------------------------------------------------------------------------------------
 

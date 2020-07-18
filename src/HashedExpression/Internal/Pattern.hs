@@ -794,63 +794,63 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ r
           Just shape -> const_ shape val
           _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
-          applyDiff1 (Nary specSum) . buildFromPatternList exp match $ ptl
+          applyDiff (Nary specSum) . buildFromPatternList exp match $ ptl
         PMulList ptl ->
-          applyDiff1 (Nary specMul) . buildFromPatternList exp match $ ptl
-        PSum sps -> applyDiff1 (Nary specSum) . map (buildFromPattern' inferredShape) $ sps
-        PMul sps -> applyDiff1 (Nary specMul) . map (buildFromPattern' inferredShape) $ sps
+          applyDiff (Nary specMul) . buildFromPatternList exp match $ ptl
+        PSum sps -> applyDiff (Nary specSum) . map (buildFromPattern' inferredShape) $ sps
+        PMul sps -> applyDiff (Nary specMul) . map (buildFromPattern' inferredShape) $ sps
         PNeg sp ->
-          applyDiff1 (Unary specNeg) [buildFromPattern' inferredShape sp]
+          applyDiff (Unary specNeg) [buildFromPattern' inferredShape sp]
         PScale sp1 sp2 ->
-          applyDiff1 (Binary specScale) $ [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
+          applyDiff (Binary specScale) $ [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
         PDiv sp1 sp2 ->
-          applyDiff1 (Binary specDiv) $ map (buildFromPattern' inferredShape) [sp1, sp2]
-        PSqrt sp -> applyDiff1 (Unary specSqrt) [buildFromPattern' inferredShape sp]
-        PSin sp -> applyDiff1 (Unary specSin) [buildFromPattern' inferredShape sp]
-        PCos sp -> applyDiff1 (Unary specCos) [buildFromPattern' inferredShape sp]
-        PTan sp -> applyDiff1 (Unary specTan) [buildFromPattern' inferredShape sp]
-        PExp sp -> applyDiff1 (Unary specExp) [buildFromPattern' inferredShape sp]
-        PLog sp -> applyDiff1 (Unary specLog) [buildFromPattern' inferredShape sp]
-        PSinh sp -> applyDiff1 (Unary specSinh) [buildFromPattern' inferredShape sp]
-        PCosh sp -> applyDiff1 (Unary specCosh) [buildFromPattern' inferredShape sp]
-        PTanh sp -> applyDiff1 (Unary specTanh) [buildFromPattern' inferredShape sp]
-        PAsin sp -> applyDiff1 (Unary specAsin) [buildFromPattern' inferredShape sp]
-        PAcos sp -> applyDiff1 (Unary specAcos) [buildFromPattern' inferredShape sp]
-        PAtan sp -> applyDiff1 (Unary specAtan) [buildFromPattern' inferredShape sp]
-        PAsinh sp -> applyDiff1 (Unary specAsinh) [buildFromPattern' inferredShape sp]
-        PAcosh sp -> applyDiff1 (Unary specAcosh) [buildFromPattern' inferredShape sp]
-        PAtanh sp -> applyDiff1 (Unary specAtanh) [buildFromPattern' inferredShape sp]
+          applyDiff (Binary specDiv) $ map (buildFromPattern' inferredShape) [sp1, sp2]
+        PSqrt sp -> applyDiff (Unary specSqrt) [buildFromPattern' inferredShape sp]
+        PSin sp -> applyDiff (Unary specSin) [buildFromPattern' inferredShape sp]
+        PCos sp -> applyDiff (Unary specCos) [buildFromPattern' inferredShape sp]
+        PTan sp -> applyDiff (Unary specTan) [buildFromPattern' inferredShape sp]
+        PExp sp -> applyDiff (Unary specExp) [buildFromPattern' inferredShape sp]
+        PLog sp -> applyDiff (Unary specLog) [buildFromPattern' inferredShape sp]
+        PSinh sp -> applyDiff (Unary specSinh) [buildFromPattern' inferredShape sp]
+        PCosh sp -> applyDiff (Unary specCosh) [buildFromPattern' inferredShape sp]
+        PTanh sp -> applyDiff (Unary specTanh) [buildFromPattern' inferredShape sp]
+        PAsin sp -> applyDiff (Unary specAsin) [buildFromPattern' inferredShape sp]
+        PAcos sp -> applyDiff (Unary specAcos) [buildFromPattern' inferredShape sp]
+        PAtan sp -> applyDiff (Unary specAtan) [buildFromPattern' inferredShape sp]
+        PAsinh sp -> applyDiff (Unary specAsinh) [buildFromPattern' inferredShape sp]
+        PAcosh sp -> applyDiff (Unary specAcosh) [buildFromPattern' inferredShape sp]
+        PAtanh sp -> applyDiff (Unary specAtanh) [buildFromPattern' inferredShape sp]
         PRealImag sp1 sp2 ->
-          applyDiff1 (Binary specRealImag) $ map (buildFromPattern' inferredShape) [sp1, sp2]
-        PRealPart sp -> applyDiff1 (Unary specRealPart) [buildFromPattern' inferredShape sp]
-        PImagPart sp -> applyDiff1 (Unary specImagPart) [buildFromPattern' inferredShape sp]
+          applyDiff (Binary specRealImag) $ map (buildFromPattern' inferredShape) [sp1, sp2]
+        PRealPart sp -> applyDiff (Unary specRealPart) [buildFromPattern' inferredShape sp]
+        PImagPart sp -> applyDiff (Unary specImagPart) [buildFromPattern' inferredShape sp]
         PInnerProd sp1 sp2 ->
-          applyDiff1 (Binary specInnerProd) $ map (buildFromPattern' Nothing) [sp1, sp2]
+          applyDiff (Binary specInnerProd) $ map (buildFromPattern' Nothing) [sp1, sp2]
         PPiecewise _ _ ->
           error "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
         PMulRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-            applyDiff1 (Nary specMul) $
+            applyDiff (Nary specMul) $
               (map (just originalMp) ns) ++ map (buildFromPattern' inferredShape) sps
         PSumRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-            applyDiff1 (Nary specSum) $
+            applyDiff (Nary specSum) $
               (map (just originalMp) $ ns) ++ map (buildFromPattern' inferredShape) sps
         PPower sp pp ->
           let val = buildFromPatternPower match pp
-           in applyDiff1 (Unary (specPower val)) [buildFromPattern' inferredShape sp]
+           in applyDiff (Unary (specPower val)) [buildFromPattern' inferredShape sp]
         PRotate pra sp ->
           let rotateAmount = buildFromPatternRotateAmount match pra
-           in applyDiff1 (Unary (specRotate rotateAmount)) [buildFromPattern' inferredShape sp]
-        PReFT sp -> applyDiff1 (Unary specReFT) [buildFromPattern' inferredShape sp]
-        PImFT sp -> applyDiff1 (Unary specImFT) [buildFromPattern' inferredShape sp]
-        PTwiceReFT sp -> applyDiff1 (Unary specTwiceReFT) [buildFromPattern' inferredShape sp]
-        PTwiceImFT sp -> applyDiff1 (Unary specTwiceImFT) [buildFromPattern' inferredShape sp]
+           in applyDiff (Unary (specRotate rotateAmount)) [buildFromPattern' inferredShape sp]
+        PReFT sp -> applyDiff (Unary specReFT) [buildFromPattern' inferredShape sp]
+        PImFT sp -> applyDiff (Unary specImFT) [buildFromPattern' inferredShape sp]
+        PTwiceReFT sp -> applyDiff (Unary specTwiceReFT) [buildFromPattern' inferredShape sp]
+        PTwiceImFT sp -> applyDiff (Unary specTwiceImFT) [buildFromPattern' inferredShape sp]
         PDZero -> case inferredShape of
           Just shape -> dZeroWithShape shape
           _ -> error "Can't infer shape of DZero"
-        PMulD sp1 sp2 -> applyDiff1 (Binary specMulD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
-        PScaleD sp1 sp2 -> applyDiff1 (Binary specScaleD) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
-        PDScale sp1 sp2 -> applyDiff1 (Binary specDScale) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
-        PInnerProdD sp1 sp2 -> applyDiff1 (Binary specInnerProdD) $ map (buildFromPattern' Nothing) [sp1, sp2]
+        PMulD sp1 sp2 -> applyDiff (Binary specMulD) [buildFromPattern' inferredShape sp1, buildFromPattern' inferredShape sp2]
+        PScaleD sp1 sp2 -> applyDiff (Binary specScaleD) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
+        PDScale sp1 sp2 -> applyDiff (Binary specDScale) [buildFromPattern' (Just []) sp1, buildFromPattern' inferredShape sp2]
+        PInnerProdD sp1 sp2 -> applyDiff (Binary specInnerProdD) $ map (buildFromPattern' Nothing) [sp1, sp2]
         _ -> error "The right hand-side of substitution has something that we don't support yet"
