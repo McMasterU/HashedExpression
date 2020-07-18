@@ -88,6 +88,7 @@ import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
+import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
@@ -97,7 +98,6 @@ import HashedExpression.Operation
 import Prelude (Bool)
 import Prelude hiding ((^))
 import qualified Prelude
-import GHC.Stack (HasCallStack)
 
 -- --------------------------------------------------------------------------------------------------------------------
 

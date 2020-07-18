@@ -27,6 +27,7 @@ import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding (InnerProductSpaceOp (..))
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Value

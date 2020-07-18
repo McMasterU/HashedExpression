@@ -36,10 +36,7 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 --    (fromDouble 15) :: Expression Scalar R
 -- @
 fromDouble :: forall d. ToShape d => Double -> (Expression d R)
-fromDouble value = Expression h (fromList [(h, node)])
-  where
-    node = (toShape (Proxy @d), R, Const value)
-    h = hash node
+fromDouble value = fromNode (toShape (Proxy @d), R, Const value)
 
 -- | Basic operations on Num class expressions with dimension constraint `d`
 instance ToShape d => Num (Expression d R) where
@@ -259,10 +256,7 @@ valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- | Create primitive expressions
 variable :: String -> Expression Scalar R
-variable name = Expression h (fromList [(h, node)])
-  where
-    node = ([], R, Var name)
-    h = hash node
+variable name = fromNode ([], R, Var name)
 
 -- | Create primitive expressions using Nat kind.
 --
@@ -275,11 +269,9 @@ variable1D ::
   (KnownNat n) =>
   String ->
   Expression n R
-variable1D name = Expression h (fromList [(h, node)])
+variable1D name = fromNode ([size], R, Var name)
   where
     size = valueFromNat @n
-    node = ([size], R, Var name)
-    h = hash node
 
 -- | Create a variable for two-dimensional nat values
 -- @
@@ -291,12 +283,10 @@ variable2D ::
   (KnownNat m, KnownNat n) =>
   String ->
   Expression '(m, n) R
-variable2D name = Expression h (fromList [(h, node)])
+variable2D name = fromNode ([size1, size2], R, Var name)
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
-    node = ([size1, size2], R, Var name)
-    h = hash node
 
 -- | Create a variable for three-dimensional nat values
 -- @
@@ -308,20 +298,15 @@ variable3D ::
   (KnownNat m, KnownNat n, KnownNat p) =>
   String ->
   Expression '(m, n, p) R
-variable3D name = Expression h (fromList [(h, node)])
+variable3D name = fromNode ([size1, size3], R, Var name)
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
     size3 = valueFromNat @p
-    node = ([size1, size3], R, Var name)
-    h = hash node
 
 -- | create a scalar (non-vector) constant Expression
 constant :: Double -> Expression Scalar R
-constant val = Expression h (fromList [(h, node)])
-  where
-    node = ([], R, Const val)
-    h = hash node
+constant = constWithShape []
 
 -- | Declare a one-dimensional constant
 -- @
@@ -332,11 +317,9 @@ constant1D ::
   (KnownNat n) =>
   Double ->
   Expression n R
-constant1D val = Expression h (fromList [(h, node)])
+constant1D = constWithShape [size]
   where
     size = valueFromNat @n
-    node = ([size], R, Const val)
-    h = hash node
 
 -- | Two-dimensional constant
 -- @
@@ -347,12 +330,10 @@ constant2D ::
   (KnownNat m, KnownNat n) =>
   Double ->
   Expression '(m, n) R
-constant2D val = Expression h (fromList [(h, node)])
+constant2D = constWithShape [size1, size2]
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
-    node = ([size1, size2], R, Const val)
-    h = hash node
 
 -- | Three-dimensional constant
 -- @
@@ -363,10 +344,8 @@ constant3D ::
   (KnownNat m, KnownNat n, KnownNat p) =>
   Double ->
   Expression '(m, n, p) R
-constant3D val = Expression h (fromList [(h, node)])
+constant3D = constWithShape [size1, size2, size3]
   where
     size1 = valueFromNat @m
     size2 = valueFromNat @n
     size3 = valueFromNat @p
-    node = ([size1, size3], R, Const val)
-    h = hash node
