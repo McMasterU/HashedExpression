@@ -83,14 +83,10 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
 inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
--- | Convert a 'Modification' to a 'Transformation' by applying it recursively *WITHOUT* a topological reordering
-toRecursiveCollecting :: ((ExpressionMap, NodeID) -> ExpressionDiff) -> Transformation
-toRecursiveCollecting = toTransformation . toRecursive NoReorder
-
 -- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
-  multipleTimes 1000 . chain . map (toRecursiveCollecting . fromSubstitution) $
+  multipleTimes 1000 . chain . map (toRecursiveTransformation . fromSubstitution) $
     [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
@@ -136,7 +132,7 @@ groupByDVar exp@(mp, n) =
 --   --> ((f + x) * dx) + (h * dy) + ((t1 + f1) <.> dx1)
 aggregateByDVar :: Transformation
 aggregateByDVar =
-  chain . map (toRecursiveCollecting . fromSubstitution) $
+  chain . map (toRecursiveTransformation . fromSubstitution) $
     [ sumP (mapL (|*| y) xs) |. isDVar y ~~~~~~> sumP xs |*| y,
       sumP (mapL (|<.>| y) xs) |. isDVar y ~~~~~~> sumP xs |<.>| y
     ]

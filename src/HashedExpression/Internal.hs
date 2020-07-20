@@ -202,43 +202,41 @@ toTransformation normalizer exp@(mp, n) =
 
 -- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
 --   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
---  TODO: rename this to Rule ?
 type Modification = (ExpressionMap, NodeID) -> Change
 
 -- | Takes a 'Modification' and returns a corresponding function
 fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
 fromModification mkDiff exp@(mp, n) = mkDiff exp mp
 
--- | Operand order in the operation
-data OperandOrder
-  = Reorder
-  | NoReorder
-  deriving (Eq)
-
 -- | Used to apply rules (which can be generated with 'fromModification') to every 'Node' in an 'Expression' bottom up
-toRecursive ::
-  -- | Reorder operands or not
-  OperandOrder ->
+toRecursiveTransformation ::
   -- | rule applied to a single 'Node'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
   -- | resulting rule applied to every 'Node'
-  ((ExpressionMap, NodeID) -> ExpressionDiff) 
-toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
+  Transformation
+toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup headN finalSub)
   where
+    -------------------------------------------------------------------------------
+    topoOrder :: [NodeID]
     topoOrder = topologicalSort exp
-    f :: IM.IntMap ExpressionDiff -> NodeID -> IM.IntMap ExpressionDiff
-    f diffs nId =
-      let children = opArgs $ retrieveOp nId mp
-          childrenDiffs = map (fromJust . flip IM.lookup diffs) children
-          nodeDiff = combineChildrenDiffs operandOrder mp nId childrenDiffs
-          newExp = (IM.union mp $ extraEntries nodeDiff, newRootId nodeDiff)
-          ExpressionDiff exEntries newId = smp newExp
-          diff =
-            ExpressionDiff
-              (IM.union exEntries (extraEntries nodeDiff))
-              newId
-       in IM.insert nId diff diffs
-    diffs = foldl' f IM.empty topoOrder
+    -------------------------------------------------------------------------------
+    f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
+    f (accMp, sub) nID =
+      let mapping nID = case IM.lookup nID sub of
+            Just other -> other
+            _ -> nID
+          -- Rebuild from applied children
+          node = mapNode mapping (retrieveNode nID accMp)
+          nodeID = hashNode (checkHashFromMap accMp) node
+          updatedMp = if nodeID == nID then accMp else IM.insert nodeID node accMp
+          -- Exp built from applied children
+          curExp = (updatedMp, nodeID)
+          ExpressionDiff extraEntries newNodeID = smp curExp
+       in -- extraEntries is diffed from updatedMp
+          -- thus they are safe to merge
+          (IM.union extraEntries updatedMp, IM.insert nID newNodeID sub)
+    -------------------------------------------------------------------------------
+    (finalMap, finalSub) = foldl' f (mp, IM.empty) topoOrder
 
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
@@ -379,7 +377,6 @@ data ExpressionDiff = ExpressionDiff
   }
   deriving (Eq, Ord, Show)
 
-
 -- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
 diffConst :: Shape -> Double -> ExpressionDiff
 diffConst shape val = ExpressionDiff mp n
@@ -416,90 +413,6 @@ sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
 -- | The ExpressionDiff corresponding to no change in this node
 noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
-
--- | Same node type (Mul, Sum, Negate, ...), same shape, same ElementType but with new children, now make the same node type with new children
---   and return the combined difference
-combineChildrenDiffs ::
-  OperandOrder ->
-  ExpressionMap ->
-  NodeID ->
-  [ExpressionDiff] ->
-  ExpressionDiff
-combineChildrenDiffs operandOrder contextMp n childrenDiffs
-  | Sum _ <- oldOp,
-    operandOrder == Reorder =
-    sortAndCombine (Nary specSum)
-  | Mul _ <- oldOp,
-    operandOrder == Reorder =
-    sortAndCombine (Nary specMul)
-  | InnerProd _ _ <- oldOp,
-    R == oldET,
-    operandOrder == Reorder =
-    sortAndCombine (Binary specInnerProd)
-  | oldChildrenIDs == newChildrenIDs && all ((== IM.empty) . extraEntries) childrenDiffs = noChange n
-  | otherwise =
-    case oldOp of
-      Var _ -> noChange n
-      DVar _ -> noChange n
-      Const _ -> noChange n
-      Sum _ -> combine (Nary specSum)
-      Mul _ -> combine (Nary specMul)
-      Power x _ -> combine (Unary (specPower x))
-      Neg _ -> combine (Unary specNeg)
-      Scale _ _ -> combine (Binary specScale)
-      Div _ _ -> combine (Binary specDiv)
-      Sqrt _ -> combine (Unary specSqrt)
-      Sin _ -> combine (Unary specSin)
-      Cos _ -> combine (Unary specCos)
-      Tan _ -> combine (Unary specTan)
-      Exp _ -> combine (Unary specExp)
-      Log _ -> combine (Unary specLog)
-      Sinh _ -> combine (Unary specSinh)
-      Cosh _ -> combine (Unary specCosh)
-      Tanh _ -> combine (Unary specTanh)
-      Asin _ -> combine (Unary specAsin)
-      Acos _ -> combine (Unary specAcos)
-      Atan _ -> combine (Unary specAtan)
-      Asinh _ -> combine (Unary specAsinh)
-      Acosh _ -> combine (Unary specAcosh)
-      Atanh _ -> combine (Unary specAtanh)
-      RealPart _ -> combine (Unary specRealPart)
-      ImagPart _ -> combine (Unary specImagPart)
-      RealImag _ _ -> combine (Binary specRealImag)
-      InnerProd _ _ -> combine (Binary specInnerProd)
-      Piecewise marks _ _ -> combine (ConditionAry (specPiecewise marks))
-      Rotate amount _ -> combine (Unary (specRotate amount))
-      ReFT _ -> combine (Unary specReFT)
-      ImFT _ -> combine (Unary specImFT)
-      TwiceReFT _ -> combine (Unary specTwiceReFT)
-      TwiceImFT _ -> combine (Unary specTwiceImFT)
-      DZero -> noChange n
-      MulD _ _ -> combine (Binary specMulD)
-      ScaleD {} -> combine (Binary specScaleD)
-      DScale {} -> combine (Binary specDScale)
-      InnerProdD _ _ -> combine (Binary specInnerProdD)
-  where
-    (oldShape, oldET, oldOp) = retrieveNode n contextMp
-    -------------------------------------------------------------------------------
-    oldChildrenIDs = opArgs oldOp
-    newChildrenIDs = map newRootId childrenDiffs
-    -------------------------------------------------------------------------------
-    -- TODO: hash collision
-    combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
-    -------------------------------------------------------------------------------
-    combine spec = applyDiff contextMp spec childrenDiffs
-    sortAndCombine option =
-      let getOp diff
-            | Just (_, _, node) <- IM.lookup (newRootId diff) contextMp = node
-            | Just (_, _, node) <- IM.lookup (newRootId diff) combinedExtraEntries = node
-          opType diff1 diff2 = sameOp (getOp diff1) (getOp diff2)
-          weight diff = nodeTypeWeight $ getOp diff
-          sortArgs = concatMap (sortWith newRootId) . groupBy opType . sortWith weight
-          sortedChildrenDiffs = sortArgs childrenDiffs
-       in if oldChildrenIDs == map newRootId sortedChildrenDiffs
-            && all ((== IM.empty) . extraEntries) sortedChildrenDiffs
-            then noChange n
-            else applyDiff contextMp option sortedChildrenDiffs
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -575,10 +488,32 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
       | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
--- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID) -> (ExpressionMap, (NodeID, NodeID))
-safeMerge (mp1, n1) (mp2, n2) = undefined
+--to :: IM.IntMap
 
+-- | Merge the second map into the first map, resolve hash collision if occur
+-- safeMerge :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID) -> (ExpressionMap, (NodeID, NodeID))
+-- safeMerge (mp1, n1) (mp2, n2)
+--  | IM.size mp1 < IM.size mp2 =
+--    let (mergedMap, (newN2, newN1)) = safeMerge (mp2, n2) (mp1, n1)
+--     in (mergedMap, (newN1, newN2))
+--  | otherwise =
+--    let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
+--        f (acc, sub) nodeID =
+--          let -- whether a NodeID has been rehash and replaced by another NodeID (to avoid hash-collision)
+--              mapping nID = case IM.lookup nID sub of
+--                Just other -> other
+--                _ -> nID
+--              -- the node needed to be added to accMp
+--              node = mapNode mapping (retrieveNode nodeID diffExtraEntries)
+--              -- get the new hash that is collision-free to both acc and contextMp
+--              newNodeID = hash (checkHashFromMaps [acc, contextMp]) node
+--           in ( IM.insert newNodeID node acc,
+--                if newNodeID == nodeID
+--                  then sub
+--                  else IM.insert nodeID newNodeID sub
+--              )
+--     in undefined
+--
 -- | Merge the second diff's extra entries to first's, resolve hash collision if occur
 --   This is the auxiliary function for many other hash-collision handling functions, e.g safeMergeDiffs
 --   Precondition:
@@ -617,7 +552,7 @@ safeMergeDiff hash contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRoo
               then sub
               else IM.insert nodeID newNodeID sub
           )
-    (mergedMap, finalSub) = foldl f (accMp, IM.empty) $ topologicalSortExpressionDiff diff
+    (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSortExpressionDiff diff
 
 -- | Merge all the expression diffs, resolve any hash collision if occur
 --   Precondition:
@@ -634,31 +569,13 @@ safeMergeDiffs ::
   --   + nIDs are new root IDs of the input diffs
   --   + nIDs are keys of mp
   (ExpressionMap, [NodeID])
-safeMergeDiffs contextMp = foldl f (IM.empty, [])
+safeMergeDiffs contextMp diffs = foldl' f (extraEntries headDiff, [newRootId headDiff]) restDiffs
   where
+    (headDiff : restDiffs) = diffs
     f :: (ExpressionMap, [NodeID]) -> ExpressionDiff -> (ExpressionMap, [NodeID])
     f (accMp, nIDs) diff =
       let (nextAccMp, nID) = safeMergeDiff hashNode contextMp accMp diff
        in (nextAccMp, nIDs ++ [nID])
-
----- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
-----   other 'ExpressionDiff'
---applyDiff ::
---  -- | the base map to find diffs w.r.t
---  ExpressionMap ->
---  -- | the operation to apply
---  OperationSpec ->
---  -- | the operands (also in diff to the base map)
---  [ExpressionDiff] ->
---  -- | the result (combined diffs with new nodes)
---  ExpressionDiff
---applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
---  where
---    mergedExtraEntries = IM.unions . map extraEntries $ operands
---    updatedContextMp = IM.union mergedExtraEntries contextMp
---    ns = map newRootId operands
---    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
-
 
 -- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
 --   other 'ExpressionDiff'
@@ -683,7 +600,6 @@ applyDiff contextMp spec diffs = ExpressionDiff (IM.insert resID resNode mergedE
     (resID, resNode) = createEntry checkHash spec operands
 
 -- |
---
 createEntry ::
   -- | Check for hash collision function
   CheckHash ->
