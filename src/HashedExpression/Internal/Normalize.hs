@@ -40,7 +40,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import GHC.IO (unsafePerformIO)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -107,8 +106,9 @@ normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pa
     pass =
       multipleTimes 1000 . chain $
         map
-          (toRecursiveSimplification . fromModification)
-          [ evaluateIfPossibleRules,
+          (toRecursiveTransformation . fromModification)
+          [ reorderOperands,
+            evaluateIfPossibleRules,
             groupConstantsRules,
             combineTermsRules,
             combineTermsRulesProd,
@@ -128,11 +128,11 @@ normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pa
           ]
           ++ [rulesFromPattern]
 
--- | Turn a modification into a recursive transformation
-toRecursiveSimplification ::
-  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  Transformation
-toRecursiveSimplification = toTransformation . toRecursive Reorder
+---- | Turn a modification into a recursive transformation
+--toRecursiveSimplification ::
+--  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
+--  Transformation
+--toRecursiveSimplification = toTransformation . toRecursive Reorder
 
 -- | Turn to multiplication if possible (i.e, scale a scalar R or Covector,
 -- inner product between 2 scalar R or Covector) (this is performed after all other rules completed)
@@ -154,7 +154,7 @@ toRecursiveSimplification = toTransformation . toRecursive Reorder
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
 toMultiplyIfPossible :: Transformation
 toMultiplyIfPossible =
-  chain . map (toRecursiveSimplification . fromSubstitution) $
+  chain . map (toRecursiveTransformation . fromSubstitution) $
     [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y,
       x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
       x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
@@ -165,7 +165,7 @@ toMultiplyIfPossible =
 -- | Create a transformation which combines together the various rules listed in this module.
 rulesFromPattern :: Transformation
 rulesFromPattern =
-  chain . map (toRecursiveSimplification . fromSubstitution) . concat $
+  chain . map (toRecursiveTransformation . fromSubstitution) . concat $
     [ complexNumRules,
       zeroOneRules,
       scaleRules,
@@ -276,7 +276,7 @@ distributiveRules =
     x *. sumP ys |.~~~~~~> sumP (mapL (x *.) ys),
     sumP ys *. x |.~~~~~~> sumP (mapL (*. x) ys),
     negate (sumP ys) |.~~~~~~> sumP (mapL negate ys),
-    -- TODO: With covector
+    -- Covector
     sumP ys |*| dx |.~~~~~~> sumP (mapL (|*| dx) ys),
     x |*| sumP dys |.~~~~~~> sumP (mapL (x |*|) dys),
     --
@@ -610,7 +610,6 @@ normalizeRotateRules exp@(mp, n)
 --
 --   This is to avoid having `Const (-0.0)` show up, which is considered different than `Const (0.0)`.
 --   Thus, instead we convert those to `Const (0.0)`.
--- TODO: re-implement
 negativeZeroRules :: Modification
 negativeZeroRules exp@(mp, n)
   | (shape, _, Const val) <- retrieveNode n mp,
@@ -707,3 +706,26 @@ twiceReFTAndImFTRules exp@(mp, n)
         x == innerArg =
         True
       | otherwise = False
+
+-- | Re-order operands in associative-commutative operators like Sum or Mul
+-- or commutative binary like InnerProd for real
+reorderOperands :: Modification
+reorderOperands exp@(mp, n)
+  | Sum operands <- retrieveOp n mp,
+    let sortedOperands = sortOperands operands,
+    sortedOperands /= operands =
+    sum_ (map just sortedOperands)
+  | Mul operands <- retrieveOp n mp,
+    let sortedOperands = sortOperands operands,
+    sortedOperands /= operands =
+    product_ (map just sortedOperands)
+  | InnerProd o1 o2 <- retrieveOp n mp,
+    retrieveElementType n mp == R,
+    let [s1, s2] = sortOperands [o1, o2],
+    [s1, s2] /= [o1, o2] =
+    just s1 <.> just s2
+  | otherwise = just n
+  where
+    weight nID = nodeTypeWeight $ retrieveOp nID mp
+    opType nID1 nID2 = weight nID1 == weight nID2
+    sortOperands os = concatMap (sortWith id) . groupBy opType . sortWith weight $ os

@@ -26,6 +26,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value
@@ -334,6 +335,7 @@ constructProblem objectiveFunction varList constraint
                           constraintLowerBound = lb,
                           constraintUpperBound = ub
                         },
+                      -- TODO: safeMerge
                       exMap g `IM.union` exMap dg
                     )
            in map toScalarConstraint listScalarExpressions
@@ -356,6 +358,7 @@ constructProblem objectiveFunction varList constraint
         boxConstraints = extractBoxConstraint constraint
         scalarConstraintsWithMp = extractScalarConstraint varsWithShape constraint
         scalarConstraints = map fst scalarConstraintsWithMp
+        -- TODO: safeMerge
         mergedMap = IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
         rootNs =
           exRootID f :

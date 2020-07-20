@@ -476,14 +476,14 @@ isScalar :: Pattern -> Condition
 isScalar p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in retrieveShape newRootId (IM.union extraEntries originMp) == []
+   in retrievesShape newRootId [originMp, extraEntries] == []
 
 -- | Returns True iff the 'Pattern' capture is a 'DVar'
 isDVar :: Pattern -> Condition
 isDVar p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in case retrieveOp newRootId (IM.union extraEntries originMp) of
+   in case retrievesOp newRootId [originMp, extraEntries] of
         DVar _ -> True
         _ -> False
 
@@ -492,7 +492,7 @@ isConst :: Pattern -> Condition
 isConst p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in case retrieveOp newRootId (IM.union extraEntries originMp) of
+   in case retrievesOp newRootId [originMp, extraEntries] of
         Const _ -> True
         _ -> False
 
@@ -505,22 +505,21 @@ isReal :: Pattern -> Condition
 isReal p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp) == R
+   in retrievesElementType newRootId [originMp, extraEntries] == R
 
 -- | Returns True iff the 'Pattern' captured has a Complex (i.e 'C') 'ElementType'
 isComplex :: Pattern -> Condition
 isComplex p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp) == C
+   in retrievesElementType newRootId [originMp, extraEntries] == C
 
 -- | Returns True iff the 'Pattern' captured has a 'Covector' 'ElementType'
 isCovector :: Pattern -> Condition
 isCovector p exp match =
   let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
       originMp = fst exp
-   in retrieveElementType newRootId (IM.union extraEntries originMp)
-        == Covector
+   in retrievesElementType newRootId [originMp, extraEntries] == Covector
 
 -- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
 sameElementType :: [Pattern] -> Condition
@@ -529,7 +528,7 @@ sameElementType ps exp match = allEqual . map getET $ ps
     getET p =
       let ExpressionDiff extraEntries newRootId = buildFromPattern exp match p
           originMp = fst exp
-       in retrieveElementType newRootId (IM.union extraEntries originMp)
+       in retrievesElementType newRootId [originMp, extraEntries]
 
 -- | Returns True iff the 'PatternRotateAmount' captured has a value of 0
 zeroAmount :: PatternRotateAmount -> Condition
@@ -794,11 +793,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ r
           Just shape -> diffConst shape val
           _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
-          sumManyDiff originalMp . buildFromPatternList exp match $ ptl
+          applyDiff' (Nary specSum) . buildFromPatternList exp match $ ptl
         PMulList ptl ->
-          mulManyDiff originalMp . buildFromPatternList exp match $ ptl
-        PSum sps -> sumManyDiff originalMp . map (buildFromPattern' inferredShape) $ sps
-        PMul sps -> mulManyDiff originalMp . map (buildFromPattern' inferredShape) $ sps
+          applyDiff' (Nary specMul) . buildFromPatternList exp match $ ptl
+        PSum sps -> applyDiff' (Nary specSum) . map (buildFromPattern' inferredShape) $ sps
+        PMul sps -> applyDiff' (Nary specMul) . map (buildFromPattern' inferredShape) $ sps
         PNeg sp ->
           applyDiff' (Unary specNeg) [buildFromPattern' inferredShape sp]
         PScale sp1 sp2 ->
@@ -830,11 +829,11 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ r
           error "Pattern piecewise appear on the right side of normalizier rules which we haven't had yet"
         PMulRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-            mulManyDiff originalMp $
+            applyDiff' (Nary specMul) $
               (map noChange ns) ++ map (buildFromPattern' inferredShape) sps
         PSumRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
-            sumManyDiff originalMp $
+            applyDiff' (Nary specSum) $
               (map noChange $ ns) ++ map (buildFromPattern' inferredShape) sps
         PPower sp pp ->
           let val = buildFromPatternPower match pp

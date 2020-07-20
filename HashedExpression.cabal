@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f40830f7fcbafd7374abca5e5a9b34b7171fc55c25ca59ae93e05d79535da3a6
+-- hash: 53e3c8434f7f2a6206e7b49dcb5c186d6ea5ffb6931a3c138160d6bbae9c09e8
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -44,6 +44,7 @@ library
       HashedExpression.Embed.FFTW
       HashedExpression.Internal
       HashedExpression.Internal.CollectDifferential
+      HashedExpression.Internal.Collision
       HashedExpression.Internal.Expression
       HashedExpression.Internal.Hash
       HashedExpression.Internal.Node
@@ -51,6 +52,7 @@ library
       HashedExpression.Internal.OperationSpec
       HashedExpression.Internal.Pattern
       HashedExpression.Internal.Plot
+      HashedExpression.Internal.Structure
       HashedExpression.Internal.Utils
       HashedExpression.Interp
       HashedExpression.Operation
@@ -172,6 +174,7 @@ test-suite HashedExpression-test
   main-is: Spec.hs
   other-modules:
       CollectSpec
+      CollisionSpec
       Commons
       CSimpleSpec
       InterpSpec

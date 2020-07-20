@@ -16,15 +16,22 @@ module HashedExpression.Internal.Node
     retrieveNode,
     retrieveOp,
     retrieveShape,
+    retrievesNode,
+    retrievesOp,
+    retrievesElementType,
+    retrievesShape,
     expressionElementType,
     expressionNode,
     expressionOp,
     expressionShape,
+    mapOp,
+    mapNode,
   )
 where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort)
+import Data.Tuple.Extra (fst3, snd3, thd3)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
@@ -127,6 +134,52 @@ opArgs node =
     DScale arg1 arg2 -> [arg1, arg2]
     InnerProdD arg1 arg2 -> [arg1, arg2]
 
+mapOp :: (NodeID -> NodeID) -> Op -> Op
+mapOp f op =
+  case op of
+    Var x -> Var x
+    DVar x -> DVar x
+    Const val -> Const val
+    Sum args -> Sum $ map f args
+    Mul args -> Mul $ map f args
+    Power x arg -> Power x (f arg)
+    Neg arg -> Neg (f arg)
+    Scale arg1 arg2 -> Scale (f arg1) (f arg2)
+    Div arg1 arg2 -> Div (f arg1) (f arg2)
+    Sqrt arg -> Sqrt (f arg)
+    Sin arg -> Sin (f arg)
+    Cos arg -> Cos (f arg)
+    Tan arg -> Tan (f arg)
+    Exp arg -> Exp (f arg)
+    Log arg -> Log (f arg)
+    Sinh arg -> Sinh (f arg)
+    Cosh arg -> Cosh (f arg)
+    Tanh arg -> Tanh (f arg)
+    Asin arg -> Asin (f arg)
+    Acos arg -> Acos (f arg)
+    Atan arg -> Atan (f arg)
+    Asinh arg -> Asinh (f arg)
+    Acosh arg -> Acosh (f arg)
+    Atanh arg -> Atanh (f arg)
+    RealImag arg1 arg2 -> RealImag (f arg1) (f arg2)
+    RealPart arg -> RealPart (f arg)
+    ImagPart arg -> ImagPart (f arg)
+    InnerProd arg1 arg2 -> InnerProd (f arg1) (f arg2)
+    Piecewise marks conditionArg branches -> Piecewise marks (f conditionArg) (map f branches)
+    Rotate am arg -> Rotate am (f arg)
+    ReFT arg -> ReFT (f arg)
+    ImFT arg -> ImFT (f arg)
+    TwiceReFT arg -> TwiceReFT (f arg)
+    TwiceImFT arg -> TwiceImFT (f arg)
+    DZero -> DZero
+    MulD arg1 arg2 -> MulD (f arg1) (f arg2)
+    ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)
+    DScale arg1 arg2 -> DScale (f arg1) (f arg2)
+    InnerProdD arg1 arg2 -> InnerProdD (f arg1) (f arg2)
+
+mapNode :: (NodeID -> NodeID) -> Node -> Node
+mapNode f (shape, et, op) = (shape, et, mapOp f op)
+
 -- | Retrieve a 'Op' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveOp #-}
 retrieveOp :: HasCallStack => NodeID -> ExpressionMap -> Op
@@ -190,3 +243,23 @@ expressionOp (Expression n mp) =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "expression not in map"
+
+-- | Retrieve a 'Node' structure from the list of Expression map, must exists
+retrievesNode :: HasCallStack => NodeID -> [ExpressionMap] -> Node
+retrievesNode n [] = error "node not in any map"
+retrievesNode n (mp : mps) =
+  case IM.lookup n mp of
+    Just internal -> internal
+    _ -> retrievesNode n mps
+
+-- | Retrieve a 'Op' structure from the list of Expression map, must exists
+retrievesOp :: HasCallStack => NodeID -> [ExpressionMap] -> Op
+retrievesOp n mps = thd3 $ retrievesNode n mps
+
+-- | Retrieve a 'ElementType' structure from the list of Expression map, must exists
+retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ET
+retrievesElementType n mps = snd3 $ retrievesNode n mps
+
+---- | Retrieve a 'Shape' structure from the list of Expression map, must exists
+retrievesShape :: HasCallStack => NodeID -> [ExpressionMap] -> Shape
+retrievesShape n mps = fst3 $ retrievesNode n mps
