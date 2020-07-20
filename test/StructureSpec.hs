@@ -59,6 +59,7 @@ prop_TopologicalSortManyRoots xs
   | length xs <= 1 = True
   | otherwise = noDuplicate sortedNodeId && all prop withChildren
   where
+    -- TODO: safeMerge here
     mergedMap = IM.unions . map (fst . getWrappedExp) $ xs
     roots = map (snd . getWrappedExp) xs
     sortedNodeId = topologicalSortManyRoots (mergedMap, roots)

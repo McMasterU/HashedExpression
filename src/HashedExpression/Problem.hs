@@ -335,6 +335,7 @@ constructProblem objectiveFunction varList constraint
                           constraintLowerBound = lb,
                           constraintUpperBound = ub
                         },
+                      -- TODO: safeMerge
                       exMap g `IM.union` exMap dg
                     )
            in map toScalarConstraint listScalarExpressions
@@ -357,6 +358,7 @@ constructProblem objectiveFunction varList constraint
         boxConstraints = extractBoxConstraint constraint
         scalarConstraintsWithMp = extractScalarConstraint varsWithShape constraint
         scalarConstraints = map fst scalarConstraintsWithMp
+        -- TODO: safeMerge
         mergedMap = IM.unions $ [dfMp, fMp] ++ map snd scalarConstraintsWithMp
         rootNs =
           exRootID f :

@@ -16,6 +16,10 @@ module HashedExpression.Internal.Node
     retrieveNode,
     retrieveOp,
     retrieveShape,
+    retrievesNode,
+    retrievesOp,
+    retrievesElementType,
+    retrievesShape,
     expressionElementType,
     expressionNode,
     expressionOp,
@@ -27,6 +31,7 @@ where
 
 import qualified Data.IntMap.Strict as IM
 import Data.List (sort)
+import Data.Tuple.Extra (fst3, snd3, thd3)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
 
@@ -238,3 +243,23 @@ expressionOp (Expression n mp) =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "expression not in map"
+
+-- | Retrieve a 'Node' structure from the list of Expression map, must exists
+retrievesNode :: HasCallStack => NodeID -> [ExpressionMap] -> Node
+retrievesNode n [] = error "node not in any map"
+retrievesNode n (mp : mps) =
+  case IM.lookup n mp of
+    Just internal -> internal
+    _ -> retrievesNode n mps
+
+-- | Retrieve a 'Op' structure from the list of Expression map, must exists
+retrievesOp :: HasCallStack => NodeID -> [ExpressionMap] -> Op
+retrievesOp n mps = thd3 $ retrievesNode n mps
+
+-- | Retrieve a 'ElementType' structure from the list of Expression map, must exists
+retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ET
+retrievesElementType n mps = snd3 $ retrievesNode n mps
+
+---- | Retrieve a 'Shape' structure from the list of Expression map, must exists
+retrievesShape :: HasCallStack => NodeID -> [ExpressionMap] -> Shape
+retrievesShape n mps = fst3 $ retrievesNode n mps

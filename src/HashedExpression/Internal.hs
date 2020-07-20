@@ -104,10 +104,16 @@ apply ::
   [(ExpressionMap, NodeID)] ->
   -- | the resulting (unwrapped) 'Expression'
   (ExpressionMap, NodeID)
-apply option exprs =
-  addEntryWithContextTo mergedMap option (map snd exprs) mergedMap
+apply option [] = error "No operand"
+apply option ((mp, n) : xs) = (IM.insert resID resNode mergedMap, resID)
   where
-    mergedMap = IM.unions . map fst $ exprs
+    f :: (ExpressionMap, [NodeID]) -> (ExpressionMap, NodeID) -> (ExpressionMap, [NodeID])
+    f (acc, accIds) (valMP, valNID) =
+      let (mergedMap, nID) = safeMerge acc (valMP, valNID)
+       in (mergedMap, accIds ++ [nID])
+    (mergedMap, nIDs) = foldl' f (mp, [n]) xs
+    operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
+    (resID, resNode) = createEntry (checkHashFromMap mergedMap) option operands
 
 applyUnary ::
   HasCallStack =>
@@ -222,11 +228,7 @@ toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup 
     -------------------------------------------------------------------------------
     f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
     f (accMp, sub) nID =
-      let mapping nID = case IM.lookup nID sub of
-            Just other -> other
-            _ -> nID
-          -- Rebuild from applied children
-          node = mapNode mapping (retrieveNode nID accMp)
+      let node = mapNode (toTotal sub) (retrieveNode nID accMp)
           nodeID = hashNode (checkHashFromMap accMp) node
           updatedMp = if nodeID == nID then accMp else IM.insert nodeID node accMp
           -- Exp built from applied children
@@ -287,20 +289,20 @@ num_ = const_ []
 
 -- | Multiply a list of 'Change' together into a single 'Change'
 product_ :: HasCallStack => [Change] -> Change
-product_ changes mp = mulManyDiff mp . map ($ mp) $ changes
+product_ changes mp = applyDiff mp (Nary specMul) . map ($ mp) $ changes
 
 -- | Sum a list of 'Change' together into a single 'Change'
 sum_ :: HasCallStack => [Change] -> Change
-sum_ changes mp = sumManyDiff mp . map ($ mp) $ changes
+sum_ changes mp = applyDiff mp (Nary specSum) . map ($ mp) $ changes
 
 -- | Creates just a 'ExpressionDiff' with a empty 'ExpressionMap' and the given 'NodeID' as the root
 just :: NodeID -> Change
 just nId _ = ExpressionDiff IM.empty nId
 
 instance Num Change where
-  (+) change1 change2 mp = sumManyDiff mp [change1 mp, change2 mp]
+  (+) change1 change2 mp = applyDiff mp (Nary specSum) [change1 mp, change2 mp]
   negate change mp = applyDiff mp (Unary specNeg) [change mp]
-  (*) change1 change2 mp = mulManyDiff mp [change1 mp, change2 mp]
+  (*) change1 change2 mp = applyDiff mp (Nary specMul) [change1 mp, change2 mp]
   signum = error "The Change of signum is currently unimplemented"
   abs = error "The Change of abs is currently unimplemented"
   fromInteger = error "The change of fromInteger is currently unimplemented"
@@ -388,28 +390,6 @@ dZeroWithShape shape = ExpressionDiff mp n
   where
     Expression n mp = fromNode (shape, Covector, DZero)
 
--- | Combine a list of 'ExpressionDiff' using 'Mul', generate new nodes with respect to a base 'ExpressionMap'
-mulManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-mulManyDiff contextMp = applyDiff contextMp (Nary specMul)
-
--- | Combine a list of 'ExpressionDiff' using 'Sum', generate new nodes with respect to a base 'ExpressionMap'
-sumManyDiff ::
-  HasCallStack =>
-  -- | base map to find diff w.r.t
-  ExpressionMap ->
-  -- | operands
-  [ExpressionDiff] ->
-  -- | combined operands with new entries
-  ExpressionDiff
-sumManyDiff contextMp = applyDiff contextMp (Nary specSum)
-
 -- | The ExpressionDiff corresponding to no change in this node
 noChange :: NodeID -> ExpressionDiff
 noChange = ExpressionDiff IM.empty
@@ -488,32 +468,30 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
       | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
---to :: IM.IntMap
+toTotal :: IM.IntMap NodeID -> (NodeID -> NodeID)
+toTotal mp nID = case IM.lookup nID mp of
+  Just other -> other
+  _ -> nID
 
 -- | Merge the second map into the first map, resolve hash collision if occur
--- safeMerge :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID) -> (ExpressionMap, (NodeID, NodeID))
--- safeMerge (mp1, n1) (mp2, n2)
---  | IM.size mp1 < IM.size mp2 =
---    let (mergedMap, (newN2, newN1)) = safeMerge (mp2, n2) (mp1, n1)
---     in (mergedMap, (newN1, newN2))
---  | otherwise =
---    let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
---        f (acc, sub) nodeID =
---          let -- whether a NodeID has been rehash and replaced by another NodeID (to avoid hash-collision)
---              mapping nID = case IM.lookup nID sub of
---                Just other -> other
---                _ -> nID
---              -- the node needed to be added to accMp
---              node = mapNode mapping (retrieveNode nodeID diffExtraEntries)
---              -- get the new hash that is collision-free to both acc and contextMp
---              newNodeID = hash (checkHashFromMaps [acc, contextMp]) node
---           in ( IM.insert newNodeID node acc,
---                if newNodeID == nodeID
---                  then sub
---                  else IM.insert nodeID newNodeID sub
---              )
---     in undefined
+safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+safeMerge accMp (mp, n) =
+  let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
+      f (acc, sub) nodeID =
+        let -- the node needed to be added to accMp
+            node = mapNode (toTotal sub) (retrieveNode nodeID mp)
+            -- get the new hash that is collision-free to both acc and contextMp
+            newNodeID = hashNode (checkHashFromMap accMp) node
+         in ( IM.insert newNodeID node acc,
+              if newNodeID == nodeID
+                then sub
+                else IM.insert nodeID newNodeID sub
+            )
+      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
+   in (mergedMap, toTotal finalSub n)
+
 --
+
 -- | Merge the second diff's extra entries to first's, resolve hash collision if occur
 --   This is the auxiliary function for many other hash-collision handling functions, e.g safeMergeDiffs
 --   Precondition:
@@ -539,12 +517,8 @@ safeMergeDiff hash contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRoo
   where
     f :: (ExpressionMap, IM.IntMap Int) -> NodeID -> (ExpressionMap, IM.IntMap Int)
     f (acc, sub) nodeID =
-      let -- whether a NodeID has been rehash and replaced by another NodeID (to avoid hash-collision)
-          mapping nID = case IM.lookup nID sub of
-            Just other -> other
-            _ -> nID
-          -- the node needed to be added to accMp
-          node = mapNode mapping (retrieveNode nodeID diffExtraEntries)
+      let -- the node needed to be added to accMp
+          node = mapNode (toTotal sub) (retrieveNode nodeID diffExtraEntries)
           -- get the new hash that is collision-free to both acc and contextMp
           newNodeID = hash (checkHashFromMaps [acc, contextMp]) node
        in ( IM.insert newNodeID node acc,
