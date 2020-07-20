@@ -221,7 +221,8 @@ toRecursive ::
   OperandOrder ->
   -- | rule applied to a single 'Node'
   ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  ((ExpressionMap, NodeID) -> ExpressionDiff) -- resulting rule applied to every 'Node'
+  -- | resulting rule applied to every 'Node'
+  ((ExpressionMap, NodeID) -> ExpressionDiff) 
 toRecursive operandOrder smp exp@(mp, headN) = fromJust $ IM.lookup headN diffs
   where
     topoOrder = topologicalSort exp
@@ -378,23 +379,6 @@ data ExpressionDiff = ExpressionDiff
   }
   deriving (Eq, Ord, Show)
 
--- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
---   other 'ExpressionDiff'
-applyDiff ::
-  -- | the base map to find diffs w.r.t
-  ExpressionMap ->
-  -- | the operation to apply
-  OperationSpec ->
-  -- | the operands (also in diff to the base map)
-  [ExpressionDiff] ->
-  -- | the result (combined diffs with new nodes)
-  ExpressionDiff
-applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
-  where
-    mergedExtraEntries = IM.unions . map extraEntries $ operands
-    updatedContextMp = IM.union mergedExtraEntries contextMp
-    ns = map newRootId operands
-    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
 
 -- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
 diffConst :: Shape -> Double -> ExpressionDiff
@@ -500,6 +484,7 @@ combineChildrenDiffs operandOrder contextMp n childrenDiffs
     oldChildrenIDs = opArgs oldOp
     newChildrenIDs = map newRootId childrenDiffs
     -------------------------------------------------------------------------------
+    -- TODO: hash collision
     combinedExtraEntries = IM.unions . map extraEntries $ childrenDiffs
     -------------------------------------------------------------------------------
     combine spec = applyDiff contextMp spec childrenDiffs
@@ -644,8 +629,10 @@ safeMergeDiffs ::
   ExpressionMap ->
   -- | The diffs to be merged: diffs
   [ExpressionDiff] ->
-  -- | Result (mp, nIDs) where mp is the merged expression map of all ExpresisonDiffs' extraEnries and nIDs are
-  --   new root node IDs
+  -- | Result (mp, nIDs) where:
+  --   + mp is the merged expression map of all ExpresisonDiffs' extraEntrries
+  --   + nIDs are new root IDs of the input diffs
+  --   + nIDs are keys of mp
   (ExpressionMap, [NodeID])
 safeMergeDiffs contextMp = foldl f (IM.empty, [])
   where
@@ -653,3 +640,83 @@ safeMergeDiffs contextMp = foldl f (IM.empty, [])
     f (accMp, nIDs) diff =
       let (nextAccMp, nID) = safeMergeDiff hashNode contextMp accMp diff
        in (nextAccMp, nIDs ++ [nID])
+
+---- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
+----   other 'ExpressionDiff'
+--applyDiff ::
+--  -- | the base map to find diffs w.r.t
+--  ExpressionMap ->
+--  -- | the operation to apply
+--  OperationSpec ->
+--  -- | the operands (also in diff to the base map)
+--  [ExpressionDiff] ->
+--  -- | the result (combined diffs with new nodes)
+--  ExpressionDiff
+--applyDiff contextMp option operands = ExpressionDiff resExtraEntries resRootId
+--  where
+--    mergedExtraEntries = IM.unions . map extraEntries $ operands
+--    updatedContextMp = IM.union mergedExtraEntries contextMp
+--    ns = map newRootId operands
+--    (resExtraEntries, resRootId) = addEntryWithContextTo updatedContextMp option ns mergedExtraEntries
+
+
+-- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
+--   other 'ExpressionDiff'
+applyDiff ::
+  -- | the base map to find diffs w.r.t
+  ExpressionMap ->
+  -- | the operation to apply
+  OperationSpec ->
+  -- | the operands (also in diff to the base map)
+  [ExpressionDiff] ->
+  -- | the result (combined diffs with new nodes)
+  ExpressionDiff
+applyDiff contextMp spec diffs = ExpressionDiff (IM.insert resID resNode mergedExtraEntries) resID
+  where
+    (mergedExtraEntries, nIDs) = safeMergeDiffs contextMp diffs
+    getNode nID
+      | Just node <- IM.lookup nID mergedExtraEntries = node
+      | Just node <- IM.lookup nID contextMp = node
+      | otherwise = error "applyDiff: Impossible"
+    operands = zip nIDs $ map getNode nIDs
+    checkHash = checkHashFromMaps [contextMp, mergedExtraEntries]
+    (resID, resNode) = createEntry checkHash spec operands
+
+-- |
+--
+createEntry ::
+  -- | Check for hash collision function
+  CheckHash ->
+  -- | Operation specification
+  OperationSpec ->
+  -- | Operands
+  [(NodeID, Node)] ->
+  -- | The entry that is collision-free from CheckHash
+  (NodeID, Node)
+createEntry checkHash spec args =
+  let shapeOf (nID, (shape, et, _)) = shape
+      etOf (nID, (shape, et, _)) = et
+      idOf (nID, (shape, et, _)) = nID
+      node = case (spec, args) of
+        (Unary (UnarySpec toOp decideShape decideET), [arg]) ->
+          ( decideShape (shapeOf arg),
+            decideET (etOf arg),
+            toOp (idOf arg)
+          )
+        (Binary (BinarySpec toOp decideShape decideET), [arg1, arg2]) ->
+          ( decideShape (shapeOf arg1) (shapeOf arg2),
+            decideET (etOf arg1) (etOf arg2),
+            toOp (idOf arg1) (idOf arg2)
+          )
+        (Nary (NarySpec toOp decideShape decideET), args) ->
+          ( decideShape (map shapeOf args),
+            decideET (map etOf args),
+            toOp (map idOf args)
+          )
+        (ConditionAry (ConditionarySpec toOp decideShape decideET), condition : branches) ->
+          ( decideShape (shapeOf condition) (map shapeOf branches),
+            decideET (etOf condition) (map etOf branches),
+            toOp (idOf condition) (map idOf branches)
+          )
+        _ -> error "Unfaithful with operation spec"
+   in (hashNode checkHash node, node)

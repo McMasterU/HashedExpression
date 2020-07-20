@@ -124,6 +124,8 @@ data HashOutcome
 type CheckHash = Node -> NodeID -> HashOutcome
 
 -- |
+-- | IsOk if doesn't collide with the provided expression map
+--   IsClash otherwise
 checkHashFromMap :: ExpressionMap -> CheckHash
 checkHashFromMap mp node nID =
   case IM.lookup nID mp of
@@ -131,7 +133,8 @@ checkHashFromMap mp node nID =
     Just existingNode | existingNode == node -> IsOk nID
     _ -> IsClash
 
--- |
+-- | IsOk if doesn't collide with any of provided expression map
+--   IsClash otherwise
 checkHashFromMaps :: [ExpressionMap] -> CheckHash
 checkHashFromMaps [] node nID = IsOk nID
 checkHashFromMaps (mp : mps) node nID = case checkHashFromMap mp node nID of

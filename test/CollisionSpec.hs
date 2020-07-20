@@ -75,7 +75,7 @@ prop_safeMergeDiffShouldResolveCollision (CollisionSample contextMp accMp diff h
     return $ intercalate "\n" $ Set.toList $ Set.fromList $ map (debugPrint . (mp `IM.union` contextMp,)) ids
   -- Result should be the same regardless of how hashing played out
   forM_ (zip results (tail results)) $ \(x, y) -> do
-    x @=? y
+    x `shouldBe` y
 
 spec :: Spec
 spec = describe "Handle hash collision spec" $
