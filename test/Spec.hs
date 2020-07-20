@@ -3,6 +3,7 @@
 import CSimpleSpec (evaluateCodeC)
 import qualified CSimpleSpec
 import qualified CollectSpec
+import qualified CollisionSpec
 import Commons
 import Data.Array.Unboxed as U
 import qualified Data.IntMap as IM
@@ -37,6 +38,7 @@ import Prelude hiding ((^))
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
+    describe "CollisionSpec" CollisionSpec.spec
     describe "ProblemSpec" ProblemSpec.spec
     describe "NormalizeSpec" NormalizeSpec.spec
     describe "HashedInterpSpec" InterpSpec.spec

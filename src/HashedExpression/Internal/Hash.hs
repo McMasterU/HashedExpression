@@ -17,6 +17,8 @@ module HashedExpression.Internal.Hash
     hashNode,
     checkHashFromMap,
     checkHashFromMaps,
+    CheckHash,
+    HashOutcome (..),
   )
 where
 

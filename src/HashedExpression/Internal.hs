@@ -595,12 +595,16 @@ safeMerge :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID) -> (ExpressionMa
 safeMerge (mp1, n1) (mp2, n2) = undefined
 
 -- | Merge the second diff's extra entries to first's, resolve hash collision if occur
+--   This is the auxiliary function for many other hash-collision handling functions, e.g safeMergeDiffs
 --   Precondition:
 --   + accMp is collision-free w.r.t contextMp
 --   + diff's extra entries is collision-free w.r.t contextMp
 --   Post condition:
 --   + mp is collision-free w.r.t contextMp
 safeMergeDiff ::
+  -- | Hashing scheme, this would normally be HashedExpression.Hash.hashNode
+  -- but this should work for any hashing scheme
+  (CheckHash -> Node -> NodeID) ->
   -- | Context expression map where the diff is computed from: contextMp
   ExpressionMap ->
   -- | The expression map where the diff will be merged into: accMp
@@ -609,7 +613,7 @@ safeMergeDiff ::
   ExpressionDiff ->
   -- | New merged expression map and new NodeID corresponding to the merged diff. (mp, nID)
   (ExpressionMap, NodeID)
-safeMergeDiff contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRootID) = case IM.lookup diffRootID finalSub of
+safeMergeDiff hash contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRootID) = case IM.lookup diffRootID finalSub of
   Just newRootID -> (mergedMap, newRootID)
   _ -> (mergedMap, diffRootID)
   where
@@ -622,10 +626,30 @@ safeMergeDiff contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRootID) 
           -- the node needed to be added to accMp
           node = mapNode mapping (retrieveNode nodeID diffExtraEntries)
           -- get the new hash that is collision-free to both acc and contextMp
-          newNodeID = hashNode (checkHashFromMaps [acc, contextMp]) node
+          newNodeID = hash (checkHashFromMaps [acc, contextMp]) node
        in ( IM.insert newNodeID node acc,
             if newNodeID == nodeID
               then sub
               else IM.insert nodeID newNodeID sub
           )
     (mergedMap, finalSub) = foldl f (accMp, IM.empty) $ topologicalSortExpressionDiff diff
+
+-- | Merge all the expression diffs, resolve any hash collision if occur
+--   Precondition:
+--      ∀ d in diffs: d is collision-free w.r.t contextMp
+--   Post condition
+--      mp is collision-free w.r.t contextMp
+safeMergeDiffs ::
+  -- | The context expression map: contextMp
+  ExpressionMap ->
+  -- | The diffs to be merged: diffs
+  [ExpressionDiff] ->
+  -- | Result (mp, nIDs) where mp is the merged expression map of all ExpresisonDiffs' extraEnries and nIDs are
+  --   new root node IDs
+  (ExpressionMap, [NodeID])
+safeMergeDiffs contextMp = foldl f (IM.empty, [])
+  where
+    f :: (ExpressionMap, [NodeID]) -> ExpressionDiff -> (ExpressionMap, [NodeID])
+    f (accMp, nIDs) diff =
+      let (nextAccMp, nID) = safeMergeDiff hashNode contextMp accMp diff
+       in (nextAccMp, nIDs ++ [nID])
