@@ -3,6 +3,7 @@ module HashedExpression.Internal.Utils where
 import Data.Array
 import Data.Complex
 import qualified Data.IntMap.Strict as IM
+import Data.List (foldl')
 import Data.List.Split (splitOn)
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
@@ -172,6 +173,13 @@ varNodesWithId mp = mapMaybe collect . IM.keys $ mp
       | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
+varNodesWithShape :: ExpressionMap -> [(String, Shape)]
+varNodesWithShape mp = mapMaybe collect $ IM.toList mp
+  where
+    collect (nID, (shape, _, Var varName)) = Just (varName, shape)
+    collect _ = Nothing
+
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation
 containsFTNode :: ExpressionMap -> Bool
 containsFTNode mp = any isFT $ IM.elems mp
@@ -185,8 +193,14 @@ containsFTNode mp = any isFT $ IM.elems mp
         _ -> False
 
 -------------------------------------------------------------------------------
-
--- | MARK: (+)
+--
+zipMp :: forall a b c. Ord a => Map a b -> Map a c -> Map a (b, c)
+zipMp mp1 mp2 = foldl' f Map.empty $ Map.keys mp1
+  where
+    f :: Map a (b, c) -> a -> Map a (b, c)
+    f acc k = case (Map.lookup k mp1, Map.lookup k mp2) of
+      (Just v1, Just v2) -> Map.insert k (v1, v2) acc
+      _ -> acc
 
 -------------------------------------------------------------------------------
 instance Num (Array Int Double) where
