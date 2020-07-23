@@ -13,6 +13,7 @@ module HashedExpression.Prettify
     prettifyDebug,
     showExpDebug,
     showExp,
+    debugPrintExp,
     showAllEntries,
     allEntriesDebug,
     allEntries,
@@ -94,6 +95,9 @@ showAllEntries e = do
 -- | same as 'prettify' without any overhead
 debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
+
+debugPrintExp :: Expression d et -> String
+debugPrintExp = debugPrint . unwrap
 
 -- | auxillary function for computing pretty format of an 'Expression'
 hiddenPrettify ::

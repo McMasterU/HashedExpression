@@ -104,14 +104,9 @@ apply ::
   [(ExpressionMap, NodeID)] ->
   -- | the resulting (unwrapped) 'Expression'
   (ExpressionMap, NodeID)
-apply option [] = error "No operand"
-apply option ((mp, n) : xs) = (IM.insert resID resNode mergedMap, resID)
+apply option exps = (IM.insert resID resNode mergedMap, resID)
   where
-    f :: (ExpressionMap, [NodeID]) -> (ExpressionMap, NodeID) -> (ExpressionMap, [NodeID])
-    f (acc, accIds) (valMP, valNID) =
-      let (mergedMap, nID) = safeMerge acc (valMP, valNID)
-       in (mergedMap, accIds ++ [nID])
-    (mergedMap, nIDs) = foldl' f (mp, [n]) xs
+    (mergedMap, nIDs) = safeMerges exps
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
     (resID, resNode) = createEntry (checkHashFromMap mergedMap) option operands
 
@@ -489,6 +484,15 @@ safeMerge accMp (mp, n) =
             )
       (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
    in (mergedMap, toTotal finalSub n)
+
+safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
+safeMerges [] = (IM.empty, [])
+safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
+  where
+    f :: (ExpressionMap, [NodeID]) -> (ExpressionMap, NodeID) -> (ExpressionMap, [NodeID])
+    f (acc, accIds) (valMP, valNID) =
+      let (mergedMap, nID) = safeMerge acc (valMP, valNID)
+       in (mergedMap, accIds ++ [nID])
 
 --
 

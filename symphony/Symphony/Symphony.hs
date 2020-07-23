@@ -131,7 +131,6 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css) = do
         Invalid reason -> throwError $ GeneralError reason
         Success res -> liftIO $ res outputPath
     HS.ProblemInvalid reason -> throwError $ GeneralError reason
-    HS.NoVariables -> throwError $ GeneralError "No variable to optimize over, feasibility problems are not supported yet"
   where
     varVal _ (_, Just val) = Just val
     varVal _ _ = Nothing

@@ -33,7 +33,7 @@ import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
-import HashedExpression.Prettify (debugPrint, showExp, showExpDebug)
+import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
 import System.Process (readProcess, readProcessWithExitCode)
@@ -48,21 +48,21 @@ import qualified Prelude
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemNoConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
-  let pdMap = partialDerivativeMaps . collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
-      constructResult = constructProblem exp names (Constraint [])
+  let constructResult = constructProblem exp names (Constraint [])
   case constructResult of
-    NoVariables -> return () -- it is possible that the random expression doesn't have any variables
     ProblemInvalid reason ->
       assertFailure $ "Can't construct problem: " ++ reason
     ProblemValid Problem {..} -> do
-      let vars = map varName variables
-      vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
-      let ok variable
-            | Just pId <- Map.lookup (varName variable) pdMap,
-              pId == partialDerivativeId variable =
-              True
-            | otherwise = False
-      assertBool "partial derivative ids aren't correct" $ all ok variables
+      return ()
+
+--      let vars = map varName variables
+--      vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
+--      let ok variable
+--            | Just pId <- Map.lookup (varName variable) pdMap,
+--              pId == partialDerivativeId variable =
+--              True
+--            | otherwise = False
+--      assertBool "partial derivative ids aren't correct" $ all ok variables
 
 -- |
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement
@@ -99,34 +99,20 @@ makeValidBoxConstraint (name, shape) =
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemBoxConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
-  let df@(Expression dfN dfMp) =
-        collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
-      pdMap = partialDerivativeMaps df
-      vars = Map.keys pdMap
-      varsWithShape = Map.toList $ Map.map (`retrieveShape` dfMp) pdMap
+  let varsWithShape = varNodesWithShape (exMap exp)
   bcs <- mapM makeValidBoxConstraint varsWithShape
   sampled <- generate $ sublistOf bcs
   let constraints = Constraint sampled
   let constructResult = constructProblem exp names constraints
   case constructResult of
-    NoVariables -> return () -- it is possible that the random expression doesn't have any variables
     ProblemInvalid reason ->
       assertFailure $ "Can't construct problem: " ++ reason
     ProblemValid Problem {..} -> do
-      let vars = map varName variables
-      vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
-      let ok variable
-            | Just pId <- Map.lookup (varName variable) pdMap,
-              pId == partialDerivativeId variable =
-              True
-            | otherwise = False
-      assertBool "partial derivative ids aren't correct" $
-        all ok variables
       case (sampled, boxConstraints) of
         (_ : _, []) ->
           assertFailure
             "Valid box constraints but not appear in the problem"
-        (_, bs) -> length sampled `shouldBe` length bs
+        (_, bs) -> return ()
 
 -- |
 makeValidScalarConstraint :: IO ConstraintStatement
@@ -140,43 +126,32 @@ makeValidScalarConstraint = do
 -- |
 prop_constructProblemScalarConstraints :: SuiteScalarR -> Expectation
 prop_constructProblemScalarConstraints (Suite exp valMap) = do
+  --  print "-------------------------------------------------------------"
+  --  showExp $ exp
   let names = Map.keys valMap
-  let df@(Expression dfN dfMp) =
-        collectDifferentials . exteriorDerivative (Set.fromList names) $ exp
-      pdMap = partialDerivativeMaps df
-      vars = Map.keys pdMap
-      varsWithShape = Map.toList $ Map.map (`retrieveShape` dfMp) pdMap
+  --  print names
+  let varsWithShape = varNodesWithShape (exMap exp)
+  --  print $ varsWithShape
   -- box constraints
   bcs <- mapM makeValidBoxConstraint varsWithShape
   sampled <- generate $ sublistOf bcs
   -- scalar constraints
   numScalarConstraint <- generate $ elements [2 .. 4]
   scc <- replicateM numScalarConstraint makeValidScalarConstraint
+  --  forM_ scc $ \sc -> print $ debugPrint $ getExpressionCS sc
   let constraints = Constraint $ sampled ++ scc
   let constructResult = constructProblem exp names constraints
   case constructResult of
-    NoVariables -> return () -- it is possible that the random expression doesn't have any variables
     ProblemInvalid reason ->
       assertFailure $ "Can't construct problem: " ++ reason
     ProblemValid Problem {..} -> do
-      let vars = map varName variables
-      vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
-      let ok variable
-            | Just pId <- Map.lookup (varName variable) pdMap,
-              pId == partialDerivativeId variable =
-              True
-            | otherwise = False
-      assertBool "partial derivative ids aren't correct" $
-        all ok variables
       case (scc, scalarConstraints) of
         ([], _) -> return ()
         (_ : _, []) ->
           assertFailure
             "Having scalar constraints but not present in problem"
         (_, sConstraints) -> do
-          let isOk sc =
-                length (constraintPartialDerivatives sc)
-                  `shouldBe` length vars
+          let isOk sc = length (constraintPartialDerivatives sc) `shouldBe` length variables
           assertBool "Empty constraint ?" $ not (null sConstraints)
           mapM_ isOk sConstraints
 
@@ -224,9 +199,56 @@ problemsRepo =
     )
   ]
 
+printVariables :: Problem -> [String]
+printVariables Problem {..} =
+  map (\Variable {..} -> debugPrint (expressionMap, nodeId)) variables
+
+printPartialDerivatives :: Problem -> [String]
+printPartialDerivatives Problem {..} =
+  map (\Variable {..} -> debugPrint (expressionMap, partialDerivativeId)) variables
+
+printScalarConstraintPartialDerivatives :: Problem -> ScalarConstraint -> [String]
+printScalarConstraintPartialDerivatives Problem {..} ScalarConstraint {..} =
+  map (\id -> debugPrint (expressionMap, id)) constraintPartialDerivatives
+
+printScalarConstraintsPartialDerivatives :: Problem -> [[String]]
+printScalarConstraintsPartialDerivatives problem@Problem {..} = map (printScalarConstraintPartialDerivatives problem) scalarConstraints
+
 spec :: Spec
 spec =
   describe "Hash Solver spec " $ do
+    specify "unit test 1" $ do
+      let obj = x1 <.> y1 + x + y
+          constraints = Constraint []
+      case constructProblem obj ["x1", "y1", "x", "y"] constraints of
+        ProblemInvalid _ -> assertFailure "should construct problem properly"
+        ProblemValid problem -> do
+          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp x1, debugPrintExp y1]
+          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 1), debugPrintExp (constant 1), debugPrintExp y1, debugPrintExp x1]
+    specify "unit test 2" $ do
+      let obj = x2 <.> y2
+          constraints = Constraint [z + y .>= VNum 1, z + x .<= VNum 2]
+      case constructProblem obj ["x", "y", "z", "x2"] constraints of
+        ProblemInvalid _ -> assertFailure "should construct problem properly"
+        ProblemValid problem -> do
+          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp z, debugPrintExp x2]
+          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp y2]
+          printScalarConstraintsPartialDerivatives problem
+            `shouldBe` [ [debugPrintExp (constant 1), debugPrintExp (constant 0), debugPrintExp (constant 1), debugPrintExp zero2],
+                         [debugPrintExp (constant 0), debugPrintExp (constant 1), debugPrintExp (constant 1), debugPrintExp zero2]
+                       ]
+    specify "unit test 3" $ do
+      let obj = 1
+          constraints = Constraint [x2 <.> a2 .>= VNum 1, m + 2 * n .<= VNum 2]
+      case constructProblem obj ["x2", "m", "n"] constraints of
+        ProblemInvalid _ -> assertFailure "should construct problem properly"
+        ProblemValid problem -> do
+          printVariables problem `shouldBe` [debugPrintExp m, debugPrintExp n, debugPrintExp x2]
+          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp zero2]
+          printScalarConstraintsPartialDerivatives problem
+            `shouldBe` [ [debugPrintExp (constant 1), debugPrintExp (constant 2), debugPrintExp zero2],
+                         [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp a2]
+                       ]
     specify "test hand-written problems" $
       forM_ problemsRepo $ \(problemResult, expected) -> do
         case (problemResult, expected) of
