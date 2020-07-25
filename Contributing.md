@@ -40,4 +40,3 @@ The expression is now a hash table with a root node ID.
 Or explicitly:
 ![Hash explicit](examples/Hash_Explicit.png)
 
-The rest are just implementations. Good luck!
