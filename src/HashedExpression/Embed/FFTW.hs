@@ -12,13 +12,17 @@ fftUtils =
 **/
 #include <fftw3.h>
 
-typedef enum complex_part {
-  REAL = 0, IMAG
-} complex_part;
+typedef enum output_part {
+  REAL = 0, IMAG = 1
+} output_part;
+
+typedef enum input_type {
+  INPUT_REAL = 0, INPUT_COMPLEX = 1
+} input_type;
 
 // For simplicity, just use the dft for complex by adding 0 to the input complex part
 // We will use the special version for computing dft real later
-void dft_1d(int N, double *in, double *out, complex_part part) {
+void dft_1d(int N, double *in, double *out, input_type it, output_part part) {
   fftw_complex *aux;
   fftw_plan p;
   int i;
@@ -27,6 +31,7 @@ void dft_1d(int N, double *in, double *out, complex_part part) {
   for (i = 0; i < N; i++) {
     aux[i][0] = in[i];
     aux[i][1] = 0;
+    if (it == INPUT_COMPLEX) aux[i][1] = in[i + N];
   }
   fftw_execute(p); /* repeat as needed */
 
@@ -41,7 +46,7 @@ void dft_1d(int N, double *in, double *out, complex_part part) {
 
 // For simplicity, just use the dft for complex by adding 0 to the input complex part
 // We will use the special version for computing dft real later
-void dft_2d(int ROW, int COLUMN, double *in, double *out, complex_part part) {
+void dft_2d(int ROW, int COLUMN, double *in, double *out, input_type it, output_part part) {
   fftw_complex *aux;
   fftw_plan p;
   int i, j;
@@ -51,6 +56,7 @@ void dft_2d(int ROW, int COLUMN, double *in, double *out, complex_part part) {
     for (j = 0; j < COLUMN; j++) {
       aux[i * COLUMN + j][0] = in[i * COLUMN + j];
       aux[i * COLUMN + j][1] = 0;
+      if (it == INPUT_COMPLEX) aux[i * COLUMN + j][1] = in[i * COLUMN + j + ROW * COLUMN];
     }
   }
   fftw_execute(p); /* repeat as needed */
