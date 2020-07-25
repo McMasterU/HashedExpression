@@ -1,16 +1,14 @@
-module HashedExpression.Derivative.Partial where
+module HashedExpression.Differentiation.Exterior.Partial where
 
 import qualified Data.Set as Set
 import HashedExpression
-import HashedExpression.Derivative
+import HashedExpression.Differentiation.Exterior.Collect
+import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Internal
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify
-
--- TODO move to Derivative
 
 -- | Compute partial derivative: ∂f / ∂x.
 --   Automatically performs 'exteriorDerivative' w.r.t a single variable, uses 'collectDifferentials' to

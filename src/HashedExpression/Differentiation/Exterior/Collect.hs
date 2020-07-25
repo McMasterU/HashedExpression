@@ -1,5 +1,5 @@
 -- |
--- Module      :  HashedExpression.Internal.CollectDifferential
+-- Module      :  HashedExpression.Differentiation.Exterior.Collect
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
@@ -8,7 +8,7 @@
 --
 -- This module exists solely to factor terms around their differentials. When properly factored, the term multiplying
 -- a differential (say dx) is it's corresponding parital derivative (i.e derivative w.r.t x)
-module HashedExpression.Internal.CollectDifferential
+module HashedExpression.Differentiation.Exterior.Collect
   ( collectDifferentials,
   )
 where

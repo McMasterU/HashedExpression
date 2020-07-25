@@ -10,7 +10,7 @@ import qualified Data.IntMap as IM
 import Data.Map (fromList, union)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
-import HashedExpression.Internal.CollectDifferential
+import HashedExpression.Differentiation.Exterior.Collect
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils

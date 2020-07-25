@@ -31,7 +31,6 @@ stack haddock --haddock-arguments "--odir=docs/"
 ### TODO add regression tests for examples
 ### TODO Better interface for Transformation's (in Inner.hs) needed? 
 - Make relationship between Transformation/Modification/Change clearer? Put in it's own module?
-- toRecursiveSimplification and toRecursiveCollecting should be reduced to one function?
 ### TODO Make sure we don't introduce bugs doing CodeGen for FT
 ### TODO Maybe use Numeric Prelude for better Num class and then better VectorSpace
 ### TODO add cVariable1D name = variable1D (name ++ "Re") +: variable1D (name ++ "Im"), cVariable2D = ...

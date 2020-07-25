@@ -23,9 +23,9 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust, fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
-import HashedExpression.Derivative
+import HashedExpression.Differentiation.Exterior.Collect
+import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Internal
-import HashedExpression.Internal.CollectDifferential
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize
