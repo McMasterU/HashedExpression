@@ -30,7 +30,8 @@ void dft_1d(int N, double *in, double *out, input_type it, output_part part) {
   p = fftw_plan_dft_1d(N, aux, aux, FFTW_FORWARD, FFTW_MEASURE);
   for (i = 0; i < N; i++) {
     aux[i][0] = in[i];
-    aux[i][1] = in[(i + N) * it];
+    aux[i][1] = 0;
+    if (it == INPUT_COMPLEX) aux[i][1] = in[i + N];
   }
   fftw_execute(p); /* repeat as needed */
 
@@ -54,7 +55,8 @@ void dft_2d(int ROW, int COLUMN, double *in, double *out, input_type it, output_
   for (i = 0; i < ROW; i++) {
     for (j = 0; j < COLUMN; j++) {
       aux[i * COLUMN + j][0] = in[i * COLUMN + j];
-      aux[i * COLUMN + j][1] = in[(i * COLUMN + j + ROW * COLUMN) * it];
+      aux[i * COLUMN + j][1] = 0;
+      if (it == INPUT_COMPLEX) aux[i * COLUMN + j][1] = in[i * COLUMN + j + ROW * COLUMN];
     }
   }
   fftw_execute(p); /* repeat as needed */

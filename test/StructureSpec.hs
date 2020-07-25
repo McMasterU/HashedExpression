@@ -12,10 +12,10 @@ import Data.Maybe (fromJust)
 import HashedExpression.Internal
   ( D_,
     ET_,
+    safeMerges,
     topologicalSort,
     topologicalSortManyRoots,
     unwrap,
-    safeMerges
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node

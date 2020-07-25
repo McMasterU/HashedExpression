@@ -162,7 +162,7 @@ evaluating CSimpleCodegen {..} rootIDs =
               | et == R -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
               | et == C ->
                 for i (len n) $
-                  [ [I.i|double complex res = cpow((#{arg `reAt` i}) + (arg `imAt` i) * I, #{x});|],
+                  [ [I.i|double complex res = cpow((#{arg `reAt` i}) + (#{arg `imAt` i}) * I, #{x});|],
                     [I.i|#{n `reAt` i} = creal(res);|],
                     [I.i|#{n `imAt` i} = cimag(res);|]
                   ]
@@ -184,9 +184,10 @@ evaluating CSimpleCodegen {..} rootIDs =
               | et == C,
                 retrieveElementType scalar cExpressionMap == C ->
                 for i (len n) $
-                  [ [I.i|double complex s = (#{scalar `reAt` i}) + (#{scalar `imAt` i}) * I;|],
-                    [I.i|#{n `reAt` i} = s * #{arg `reAt` i};|],
-                    [I.i|#{n `imAt` i} = s * #{arg `imAt` i};|]
+                  [ [I.i|double complex s = (#{scalar `reAt` nooffset}) + (#{scalar `imAt` nooffset}) * I;|],
+                    [I.i|double complex res = s * (#{arg `reAt` i} + #{arg `imAt` i} * I);|],
+                    [I.i|#{n `reAt` i} = creal(res);|],
+                    [I.i|#{n `imAt` i} = cimag(res);|]
                   ]
             Div arg1 arg2
               | et == R -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
@@ -216,8 +217,8 @@ evaluating CSimpleCodegen {..} rootIDs =
                 [ [I.i|#{n `reAt` i} = #{arg1 !! i};|],
                   [I.i|#{n `imAt` i} = #{arg2 !! i};|]
                 ]
-            RealPart arg -> for i (len n) [ [I.i|#{n !! i} = #{arg `reAt` i};|]]
-            ImagPart arg -> for i (len n) [ [I.i|#{n !! i} = #{arg `imAt` i};|]]
+            RealPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `reAt` i};|]]
+            ImagPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `imAt` i};|]]
             InnerProd arg1 arg2
               | et == R && null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
               | et == R ->
@@ -225,14 +226,16 @@ evaluating CSimpleCodegen {..} rootIDs =
                     codes = for i (len arg1) [[I.i|acc += #{arg1 !! i} * #{arg2 !! i};|]]
                     afterCodes = [[I.i|#{n !! nooffset} = acc;|]]
                  in scoped $ initCodes ++ codes ++ afterCodes
+              -- Conjugate the second operand
               | et == C && null (shapeOf arg1) ->
-                [ [I.i|double complex res = ((#{arg1 `reAt` nooffset}) + (#{arg1 `imAt` nooffset}) * I) * ((#{arg2 `reAt` nooffset}) + (#{arg2 `imAt` nooffset}) * I);|],
-                  [I.i|#{n `reAt` nooffset} = creal(res);|],
-                  [I.i|#{n `imAt` nooffset} = cimag(res);|]
-                ]
+                scoped
+                  [ [I.i|double complex res = ((#{arg1 `reAt` nooffset}) + (#{arg1 `imAt` nooffset}) * I) * ((#{arg2 `reAt` nooffset}) - (#{arg2 `imAt` nooffset}) * I);|],
+                    [I.i|#{n `reAt` nooffset} = creal(res);|],
+                    [I.i|#{n `imAt` nooffset} = cimag(res);|]
+                  ]
               | et == C ->
                 let initCodes = [[I.i|double complex acc = 0 + 0 * I;|]]
-                    codes = for i (len arg1) [[I.i|acc += ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) * ((#{arg2 `reAt` i}) + (#{arg2 `imAt` i}) * I);|]]
+                    codes = for i (len arg1) [[I.i|acc += ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) * ((#{arg2 `reAt` i}) - (#{arg2 `imAt` i}) * I);|]]
                     afterCodes =
                       [ [I.i|#{n `reAt` nooffset} = creal(acc);|],
                         [I.i|#{n `imAt` nooffset} = cimag(acc);|]
@@ -322,12 +325,12 @@ evaluating CSimpleCodegen {..} rootIDs =
                 [size] | et == R -> [[I.i|im_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
                 [size1, size2] | et == R -> [[I.i|im_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
             ReFT arg ->
-              let inputType = if et == R then "INPUT_REAL" else "INPUT_COMPLEX"
+              let inputType = if retrieveElementType arg cExpressionMap == R then "INPUT_REAL" else "INPUT_COMPLEX"
                in case shape of
                     [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
                     [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
             ImFT arg ->
-              let inputType = if et == R then "INPUT_REAL" else "INPUT_COMPLEX"
+              let inputType = if retrieveElementType arg cExpressionMap == R then "INPUT_REAL" else "INPUT_COMPLEX"
                in case shape of
                     [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
                     [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]

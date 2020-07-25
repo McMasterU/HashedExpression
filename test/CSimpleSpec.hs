@@ -29,6 +29,7 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Normalize (normalize)
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
+import HashedExpression.Prettify
 import HashedExpression.Value
 import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)
@@ -151,8 +152,8 @@ readC str = (readR rePart, readR imPart)
     [rePart, imPart] = splitOn "\n" str
 
 -- |
-prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
-prop_CEqualInterpScalarR (Suite exp valMaps) =
+prop_CEqualInterpScalarR :: Bool -> SuiteScalarR -> Expectation
+prop_CEqualInterpScalarR flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -160,15 +161,15 @@ prop_CEqualInterpScalarR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT evalExp valMaps
       let resultNormalize = read . head . splitOn " " $ outputSimple
-      let resultInterpNormalize = eval valMaps normalizedExp
+      let resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
-prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (Suite exp valMaps) =
+prop_CEqualInterpScalarC :: Bool -> SuiteScalarC -> Expectation
+prop_CEqualInterpScalarC flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -176,16 +177,16 @@ prop_CEqualInterpScalarC (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputCodeC) <- evaluateCodeC withFT evalExp valMaps
       let ([im], [re]) = readC outputCodeC
       let resultNormalize = im :+ re
-      let resultInterpNormalize = eval valMaps normalizedExp
+      let resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
-prop_CEqualInterpOneR :: SuiteOneR -> Expectation
-prop_CEqualInterpOneR (Suite exp valMaps) =
+prop_CEqualInterpOneR :: Bool -> SuiteOneR -> Expectation
+prop_CEqualInterpOneR flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -193,15 +194,15 @@ prop_CEqualInterpOneR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputSimple) <- evaluateCodeC withFT normalizedExp valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT evalExp valMaps
       let resultNormalize = listArray (0, defaultDim1D - 1) $ readR outputSimple
-      let resultInterpNormalize = eval valMaps normalizedExp
+      let resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
-prop_CEqualInterpOneC :: SuiteOneC -> Expectation
-prop_CEqualInterpOneC (Suite exp valMaps) =
+prop_CEqualInterpOneC :: Bool -> SuiteOneC -> Expectation
+prop_CEqualInterpOneC flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -209,16 +210,16 @@ prop_CEqualInterpOneC (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputCodeC) <- evaluateCodeC withFT normalizedExp valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputCodeC) <- evaluateCodeC withFT evalExp valMaps
       let (re, im) = readC outputCodeC
           resultNormalize = listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
-          resultInterpNormalize = eval valMaps normalizedExp
+          resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
-prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
-prop_CEqualInterpTwoR (Suite exp valMaps) =
+prop_CEqualInterpTwoR :: Bool -> SuiteTwoR -> Expectation
+prop_CEqualInterpTwoR flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -226,15 +227,15 @@ prop_CEqualInterpTwoR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputSimple) <- evaluateCodeC withFT normalizedExp valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputSimple) <- evaluateCodeC withFT evalExp valMaps
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ readR outputSimple
-      let resultInterpNormalize = eval valMaps normalizedExp
+      let resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
-prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
-prop_CEqualInterpTwoC (Suite exp valMaps) =
+prop_CEqualInterpTwoC :: Bool -> SuiteTwoC -> Expectation
+prop_CEqualInterpTwoC flag (Suite exp valMaps) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -242,11 +243,11 @@ prop_CEqualInterpTwoC (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      let normalizedExp = normalize exp
-      (exitCode, outputCodeC) <- evaluateCodeC withFT (normalize exp) valMaps
+      let evalExp = if flag then normalize exp else exp
+      (exitCode, outputCodeC) <- evaluateCodeC withFT evalExp valMaps
       let (re, im) = readC outputCodeC
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ zipWith (:+) re im
-      let resultInterpNormalize = eval valMaps normalizedExp
+      let resultInterpNormalize = eval valMaps evalExp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec
@@ -259,15 +260,15 @@ spec =
     specify
       "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
       $ property prop_CEqualInterpScalarC
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
---      $ property prop_CEqualInterpOneR
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
---      $ property prop_CEqualInterpOneC
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
---      $ property prop_CEqualInterpTwoR
---    specify
---      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
---      $ property prop_CEqualInterpTwoC
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
+      $ property prop_CEqualInterpOneR
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
+      $ property prop_CEqualInterpOneC
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
+      $ property prop_CEqualInterpTwoR
+    specify
+      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
+      $ property prop_CEqualInterpTwoC
