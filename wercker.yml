@@ -2,14 +2,14 @@
 # Docker Hub https://registry.hub.docker.com/_/debian/
 # Read more about containers on our dev center
 # https://devcenter.wercker.com/overview-and-core-concepts/containers/
-box: hashexpression/base:0.0.1
+box: hashexpression/wercker
   # You can also use services such as databases. Read more on our dev center:
   # https://devcenter.wercker.com/administration/services/
   # services:
   # - postgres
   # https://devcenter.wercker.com/administration/services/examples/postgresql/
 
-  # - mongo
+# - mongo
 # https://devcenter.wercker.com/administration/services/examples/mongodb/
 
 # This is the build pipeline. Pipelines are the core of wercker
@@ -21,6 +21,6 @@ build:
   # https://devcenter.wercker.com/development/steps/
   steps:
     - script:
-        name: echo
+        name: build & test
         code: |
-          echo "hello world!"
+          stack build --test --ghc-options -O2
