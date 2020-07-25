@@ -197,6 +197,7 @@ toTransformation ::
   Transformation
 toTransformation normalizer exp@(mp, n) =
   let diff = normalizer exp
+      -- Safe to merge here
       newMp = IM.union mp (extraEntries diff)
       newN = newRootId diff
    in (newMp, newN)
