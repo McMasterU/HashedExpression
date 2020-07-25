@@ -116,11 +116,11 @@ initCodegen _ mp consecutiveIDs =
             | otherwise = " + " <> offsetVal
        in [i|ptr[#{addressMap nID}#{offset}]|]
     -- Accessor for complex
-    reAt = access
-    imAt nID offset = access nID $ offset <> " + " <> showT (product (retrieveShape nID mp))
+    reAt nID offsetVal = access nID offsetVal
+    imAt nID offsetVal = access nID $ offsetVal <> " + " <> showT (product (retrieveShape nID mp))
 
 -------------------------------------------------------------------------------
-evaluating :: CSimpleCodegen -> [Int] -> Code
+evaluating :: CSimpleCodegen -> [NodeID] -> Code
 evaluating CSimpleCodegen {..} rootIDs =
   concatMap genCode $ topologicalSortManyRoots (cExpressionMap, rootIDs)
   where
@@ -132,20 +132,70 @@ evaluating CSimpleCodegen {..} rootIDs =
     len nID = product (retrieveShape nID cExpressionMap)
     genCode :: Int -> Code
     genCode n =
-      let (shape, _, op) = retrieveNode n cExpressionMap
+      let (shape, et, op) = retrieveNode n cExpressionMap
        in case op of
             Var _ -> []
             Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
-            Sum args ->
-              let sumAt i = T.intercalate " + " $ map (!! i) args
-               in for i (len n) [[I.i|#{n !! i} = #{sumAt i};|]]
-            Mul args ->
-              let prodAt i = T.intercalate " * " $ map (!! i) args
-               in for i (len n) [[I.i|#{n !! i} = #{prodAt i};|]]
-            Power x arg -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
-            Neg arg -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
-            Scale scalar arg -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
-            Div arg1 arg2 -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
+            Sum args
+              | et == R ->
+                let sumAt i = T.intercalate " + " $ map (!! i) args
+                 in for i (len n) [[I.i|#{n !! i} = #{sumAt i};|]]
+              | et == C ->
+                let sumReAt i = T.intercalate " + " $ map (`reAt` i) args
+                    sumImAt i = T.intercalate " + " $ map (`imAt` i) args
+                 in for i (len n) $
+                      [ [I.i|#{n `reAt` i} = #{sumReAt i};|],
+                        [I.i|#{n `imAt` i} = #{sumImAt i};|]
+                      ]
+            Mul args
+              | et == R ->
+                let prodAt i = T.intercalate " * " $ map (!! i) args
+                 in for i (len n) [[I.i|#{n !! i} = #{prodAt i};|]]
+              | et == C ->
+                let prodAt i = T.intercalate " * " $ map (\x -> [I.i|((#{x `reAt` i}) + (#{x `imAt` i}) * I)|]) args
+                 in for i (len n) $
+                      [ [I.i|double complex res = #{prodAt i};|],
+                        [I.i|#{n `reAt` i} = creal(res);|],
+                        [I.i|#{n `imAt` i} = cimag(res);|]
+                      ]
+            Power x arg
+              | et == R -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
+              | et == C ->
+                for i (len n) $
+                  [ [I.i|double complex res = cpow((#{arg `reAt` i}) + (arg `imAt` i) * I, #{x});|],
+                    [I.i|#{n `reAt` i} = creal(res);|],
+                    [I.i|#{n `imAt` i} = cimag(res);|]
+                  ]
+            Neg arg
+              | et == R -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
+              | et == C ->
+                for i (len n) $
+                  [ [I.i|#{n `reAt` i} = - #{arg `reAt` i};|],
+                    [I.i|#{n `imAt` i} = - #{arg `imAt` i};|]
+                  ]
+            Scale scalar arg
+              | et == R -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
+              | et == C,
+                retrieveElementType scalar cExpressionMap == R ->
+                for i (len n) $
+                  [ [I.i|#{n `reAt` i} = #{scalar !! nooffset} * #{arg `reAt` i};|],
+                    [I.i|#{n `imAt` i} = #{scalar !! nooffset} * #{arg `imAt` i};|]
+                  ]
+              | et == C,
+                retrieveElementType scalar cExpressionMap == C ->
+                for i (len n) $
+                  [ [I.i|double complex s = (#{scalar `reAt` i}) + (#{scalar `imAt` i}) * I;|],
+                    [I.i|#{n `reAt` i} = s * #{arg `reAt` i};|],
+                    [I.i|#{n `imAt` i} = s * #{arg `imAt` i};|]
+                  ]
+            Div arg1 arg2
+              | et == R -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
+              | et == C ->
+                for i (len n) $
+                  [ [I.i|double complex res = ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) / ((#{arg2 `reAt` i}) + (#{arg2 `imAt` i}) * I);|],
+                    [I.i|#{n `reAt` i} = creal(res);|],
+                    [I.i|#{n `imAt` i} = cimag(res);|]
+                  ]
             Sqrt arg -> for i (len n) [[I.i|#{n !! i} = sqrt(#{arg !! i});|]]
             Sin arg -> for i (len n) [[I.i|#{n !! i} = sin(#{arg !! i});|]]
             Cos arg -> for i (len n) [[I.i|#{n !! i} = cos(#{arg !! i});|]]
@@ -162,14 +212,31 @@ evaluating CSimpleCodegen {..} rootIDs =
             Acosh arg -> for i (len n) [[I.i|#{n !! i} = acosh(#{arg !! i});|]]
             Atanh arg -> for i (len n) [[I.i|#{n !! i} = atanh(#{arg !! i});|]]
             RealImag arg1 arg2 ->
-              for i (len n) [[I.i|#{n !! i} = #{arg1 !! i};|]]
-                ++ for i (len n) [[I.i|#{n `imAt` i} = #{arg2 !! i};|]]
+              for i (len n) $
+                [ [I.i|#{n `reAt` i} = #{arg1 !! i};|],
+                  [I.i|#{n `imAt` i} = #{arg2 !! i};|]
+                ]
+            RealPart arg -> for i (len n) [ [I.i|#{n !! i} = #{arg `reAt` i};|]]
+            ImagPart arg -> for i (len n) [ [I.i|#{n !! i} = #{arg `imAt` i};|]]
             InnerProd arg1 arg2
-              | null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
-              | otherwise ->
+              | et == R && null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
+              | et == R ->
                 let initCodes = [[I.i|double acc = 0;|]]
                     codes = for i (len arg1) [[I.i|acc += #{arg1 !! i} * #{arg2 !! i};|]]
                     afterCodes = [[I.i|#{n !! nooffset} = acc;|]]
+                 in scoped $ initCodes ++ codes ++ afterCodes
+              | et == C && null (shapeOf arg1) ->
+                [ [I.i|double complex res = ((#{arg1 `reAt` nooffset}) + (#{arg1 `imAt` nooffset}) * I) * ((#{arg2 `reAt` nooffset}) + (#{arg2 `imAt` nooffset}) * I);|],
+                  [I.i|#{n `reAt` nooffset} = creal(res);|],
+                  [I.i|#{n `imAt` nooffset} = cimag(res);|]
+                ]
+              | et == C ->
+                let initCodes = [[I.i|double complex acc = 0 + 0 * I;|]]
+                    codes = for i (len arg1) [[I.i|acc += ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) * ((#{arg2 `reAt` i}) + (#{arg2 `imAt` i}) * I);|]]
+                    afterCodes =
+                      [ [I.i|#{n `reAt` nooffset} = creal(acc);|],
+                        [I.i|#{n `imAt` nooffset} = cimag(acc);|]
+                      ]
                  in scoped $ initCodes ++ codes ++ afterCodes
             Piecewise marks condition branches ->
               let m : ms = map showT marks
@@ -177,28 +244,58 @@ evaluating CSimpleCodegen {..} rootIDs =
                   elseifEach (m, b) =
                     elseif
                       [I.i|#{condition !! i} <= #{m}|]
-                      [[I.i|#{n !! i} = #{b !! i};|]]
+                      ( if et == R
+                          then [[I.i|#{n !! i} = #{b !! i};|]]
+                          else
+                            [ [I.i|#{n `reAt` i} = #{b `reAt` i};|],
+                              [I.i|#{n `imAt` i} = #{b `imAt` i};|]
+                            ]
+                      )
                in for i (len n) $
                     if_
                       [I.i|#{condition !! i} <= #{m}|]
-                      [[I.i|#{n !! i} = #{b !! i};|]]
+                      ( if et == R
+                          then [[I.i|#{n !! i} = #{b !! i};|]]
+                          else
+                            [ [I.i|#{n `reAt` i} = #{b `reAt` i};|],
+                              [I.i|#{n `imAt` i} = #{b `imAt` i};|]
+                            ]
+                      )
                       ++ concatMap elseifEach (zip ms bs)
-                      ++ else_ [[I.i|#{n !! i} = #{lst !! i};|]]
+                      ++ else_
+                        ( if et == R
+                            then [[I.i|#{n !! i} = #{lst !! i};|]]
+                            else
+                              [ [I.i|#{n `reAt` i} = #{lst `reAt` i};|],
+                                [I.i|#{n `imAt` i} = #{lst `imAt` i};|]
+                              ]
+                        )
             Rotate [amount] arg ->
               let [size] = shape
                in for i size $
-                    [ [I.i|int ai = (#{i} - #{amount} + #{size}) % #{size};|],
-                      [I.i|#{n !! i} = #{arg !! "ai"};|]
-                    ]
+                    [[I.i|int ai = (#{i} - #{amount} + #{size}) % #{size};|]]
+                      ++ ( if et == R
+                             then [[I.i|#{n !! i} = #{arg !! "ai"};|]]
+                             else
+                               [ [I.i|#{n `reAt` i} = #{arg `reAt` "ai"};|],
+                                 [I.i|#{n `imAt` i} = #{arg `imAt` "ai"};|]
+                               ]
+                         )
             Rotate [amount1, amount2] arg ->
               let [size1, size2] = shape
                   toIndex i j = [I.i|#{i} * #{size2} + #{j}|]
                in for i size1 $
                     for j size2 $
                       [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
-                        [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
-                        [I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]
+                        [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|]
                       ]
+                        ++ ( if et == R
+                               then [[I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]]
+                               else
+                                 [ [I.i|#{n `reAt` (toIndex i j)} = #{arg `reAt` (toIndex "ai" "aj")};|],
+                                   [I.i|#{n `imAt` (toIndex i j)} = #{arg `imAt` (toIndex "ai" "aj")};|]
+                                 ]
+                           )
             Rotate [amount1, amount2, amount3] arg ->
               let [size1, size2, size3] = shape
                   toIndex i j k = [I.i|#{i} * #{size2} * #{size3} + #{j} * #{size3} + #{k}|]
@@ -207,25 +304,33 @@ evaluating CSimpleCodegen {..} rootIDs =
                       for k size3 $
                         [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
                           [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
-                          [I.i|int ak = (#{k} - #{amount3} + #{size3}) % #{size3}'|],
-                          [I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]
+                          [I.i|int ak = (#{k} - #{amount3} + #{size3}) % #{size3}'|]
                         ]
+                          ++ ( if et == R
+                                 then [[I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]]
+                                 else
+                                   [ [I.i|#{n `reAt` (toIndex i j k)} = #{arg `reAt` (toIndex "ai" "aj" "ak")};|],
+                                     [I.i|#{n `imAt` (toIndex i j k)} = #{arg `imAt` (toIndex "ai" "aj" "ak")};|]
+                                   ]
+                             )
             TwiceReFT arg ->
               case shape of
-                [size] -> [[I.i|re_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
-                [size1, size2] -> [[I.i|re_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
+                [size] | et == R -> [[I.i|re_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
+                [size1, size2] | et == R -> [[I.i|re_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
             TwiceImFT arg ->
               case shape of
-                [size] -> [[I.i|im_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
-                [size1, size2] -> [[I.i|im_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
+                [size] | et == R -> [[I.i|im_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
+                [size1, size2] | et == R -> [[I.i|im_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
             ReFT arg ->
-              case shape of
-                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, REAL);|]]
-                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, REAL);|]]
+              let inputType = if et == R then "INPUT_REAL" else "INPUT_COMPLEX"
+               in case shape of
+                    [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
+                    [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
             ImFT arg ->
-              case shape of
-                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, IMAG);|]]
-                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, IMAG);|]]
+              let inputType = if et == R then "INPUT_REAL" else "INPUT_COMPLEX"
+               in case shape of
+                    [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
+                    [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
             node -> error $ "Other node type should not be here after normalized " ++ show node
 
 -------------------------------------------------------------------------------
@@ -339,6 +444,7 @@ instance Codegen CSimpleConfig where
           if containsFTNode expressionMap
             then T.pack fftUtils
             else "",
+          "#include <complex.h>",
           "// number of (higher dimensional) variables ",
           "#define NUM_VARIABLES " <> showT (length variables),
           "// number of real variables, because each higher dimensional var is a grid of real variables",
