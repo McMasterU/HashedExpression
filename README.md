@@ -1,4 +1,4 @@
-## HashedExpression
+## HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
 
 A type-safe symbolic computing Haskell embeded DSL for solving optimization problems.
 
