@@ -15,6 +15,7 @@ import HashedExpression.Internal
     topologicalSort,
     topologicalSortManyRoots,
     unwrap,
+    safeMerges
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
@@ -59,9 +60,7 @@ prop_TopologicalSortManyRoots xs
   | length xs <= 1 = True
   | otherwise = noDuplicate sortedNodeId && all prop withChildren
   where
-    -- TODO: safeMerge here
-    mergedMap = IM.unions . map (fst . getWrappedExp) $ xs
-    roots = map (snd . getWrappedExp) xs
+    (mergedMap, roots) = safeMerges $ map getWrappedExp xs
     sortedNodeId = topologicalSortManyRoots (mergedMap, roots)
     dependencies n = opArgs $ retrieveOp n mergedMap
     withChildren = zip sortedNodeId (map dependencies sortedNodeId)
