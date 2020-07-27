@@ -790,7 +790,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ r
             error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
         PConst val -> case inferredShape of
-          Just shape -> diffConst shape val
+          Just shape -> const_ shape val originalMp
           _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
           applyDiff' (Nary specSum) . buildFromPatternList exp match $ ptl

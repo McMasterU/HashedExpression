@@ -170,6 +170,8 @@ data Op
     RealPart Arg
   | -- | extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
     ImagPart Arg
+  | -- | conjugate a complex expression
+    Conjugate Arg
   | -- | inner product operator, overload via 'InnerProductSpace'
     InnerProd Arg Arg
   | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'

@@ -91,6 +91,7 @@ hash (shape, et, node) rehashNum =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
+        Conjugate arg -> offsetHash 39 . hashString' $ show arg
         --
         InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
         Piecewise marks arg branches ->

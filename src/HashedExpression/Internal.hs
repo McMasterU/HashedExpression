@@ -34,7 +34,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
@@ -270,14 +269,21 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 --   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
 --   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
 --
--- ExpressionDiff in the MonadReader ExpressionMap
+-- ExpressionDiff is MonadReader ExpressionMap
 type Change = ExpressionMap -> ExpressionDiff
 
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
+-- | The 'ExpressionDiff' when adding a constant
 const_ :: Shape -> Double -> Change
-const_ shape val mp = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
+const_ shape val mp =
+  let node = (shape, R, Const val)
+      nID = hashNode (checkHashFromMap mp) node
+  in case IM.lookup nID mp of
+    Just _ -> ExpressionDiff IM.empty nID
+    _ -> ExpressionDiff (IM.singleton nID node) nID
+
+--const_ shape val mp = ExpressionDiff mp n
+--  where
+--    (mp, n) = aConst shape val
 
 -- | The 'Change' created when adding a single 'Scalar' constant
 num_ :: Double -> Change
@@ -374,12 +380,6 @@ data ExpressionDiff = ExpressionDiff
     newRootId :: NodeID
   }
   deriving (Eq, Ord, Show)
-
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
 
 dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n
