@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 53e3c8434f7f2a6206e7b49dcb5c186d6ea5ffb6931a3c138160d6bbae9c09e8
+-- hash: 158d5ed7ffd77d8520dc6eedabb8d47f1240293abc2485d2358bc8fa6a262c85
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -39,11 +39,13 @@ library
       HashedExpression.Codegen
       HashedExpression.Codegen.CSIMD
       HashedExpression.Codegen.CSimple
-      HashedExpression.Derivative
-      HashedExpression.Derivative.Partial
+      HashedExpression.Differentiation.Exterior
+      HashedExpression.Differentiation.Exterior.Collect
+      HashedExpression.Differentiation.Exterior.Derivative
+      HashedExpression.Differentiation.Reverse
+      HashedExpression.Differentiation.Reverse.State
       HashedExpression.Embed.FFTW
       HashedExpression.Internal
-      HashedExpression.Internal.CollectDifferential
       HashedExpression.Internal.Collision
       HashedExpression.Internal.Expression
       HashedExpression.Internal.Hash
@@ -180,6 +182,7 @@ test-suite HashedExpression-test
       InterpSpec
       NormalizeSpec
       ProblemSpec
+      ReverseDifferentiationSpec
       StructureSpec
       Var
       Paths_HashedExpression

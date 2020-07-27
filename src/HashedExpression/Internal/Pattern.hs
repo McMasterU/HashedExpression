@@ -229,6 +229,8 @@ data Pattern
     PRealPart Pattern
   | -- | pattern that has a imaginary part extraction operator applied to it
     PImagPart Pattern
+  | -- |
+    PConjugate Pattern
   | -- | pattern that has a inner product operator applied to it
     PInnerProd Pattern Pattern
   | -- | pattern that has a piecewise
@@ -363,6 +365,7 @@ instance ComplexRealOp Pattern Pattern where
   (+:) = PRealImag
   xRe = PRealPart
   xIm = PImagPart
+  conjugate = PConjugate
 
 instance InnerProductSpaceOp Pattern Pattern Pattern where
   (<.>) = PInnerProd
@@ -790,7 +793,7 @@ buildFromPattern exp@(originalMp, originalN) match = buildFromPattern' (Just $ r
             error "Capture not in the Map Capture Int which should never happen"
         PHead pl -> head $ buildFromPatternList exp match pl
         PConst val -> case inferredShape of
-          Just shape -> diffConst shape val
+          Just shape -> const_ shape val originalMp
           _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
           applyDiff' (Nary specSum) . buildFromPatternList exp match $ ptl

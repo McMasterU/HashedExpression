@@ -11,10 +11,9 @@ import Data.Map (empty, fromList, union)
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import qualified Data.Set as Set
-import HashedExpression.Derivative.Partial
 import Graphics.EasyPlot
 import HashedExpression
-import HashedExpression.Derivative
+import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation

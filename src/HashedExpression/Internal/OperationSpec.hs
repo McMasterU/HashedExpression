@@ -159,7 +159,7 @@ specRealImag =
     decideShape x y = assertSame [x, y] x
     decideET x y
       | x == R && y == R = C
-      | otherwise = error "2 operands must be real"
+      | otherwise = error $ "2 operands must be real" ++ show [x, y]
 
 specRealPart :: HasCallStack => UnarySpec
 specRealPart =
@@ -176,6 +176,9 @@ specImagPart =
     decideET x
       | x == C = R
       | otherwise = error "Must be complex"
+
+specConjugate :: HasCallStack => UnarySpec
+specConjugate = defaultUnary Conjugate [C]
 
 specInnerProd :: HasCallStack => BinarySpec
 specInnerProd =

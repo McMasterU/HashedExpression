@@ -57,8 +57,8 @@ module HashedExpression
   )
 where
 
-import HashedExpression.Derivative
-import HashedExpression.Internal.CollectDifferential
+import HashedExpression.Differentiation.Exterior.Collect
+import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Normalize
 import HashedExpression.Interp

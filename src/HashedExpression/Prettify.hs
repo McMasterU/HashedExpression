@@ -164,6 +164,7 @@ hiddenPrettify pastable (mp, n) =
               RealImag arg1 arg2 -> T.concat [innerPrettify arg1, "+:", innerPrettify arg2]
               RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
               ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
+              Conjugate arg -> T.concat ["conjugate", wrapParentheses $ innerPrettify arg]
               InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
               Piecewise marks conditionArg branches ->
                 let printBranches = T.intercalate ", " . map innerPrettify $ branches

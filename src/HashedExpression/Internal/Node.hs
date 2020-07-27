@@ -69,15 +69,16 @@ nodeTypeWeight node =
     RealPart {} -> 24
     ImagPart {} -> 25
     InnerProd {} -> 26
-    Piecewise {} -> 27
-    Rotate {} -> 28
-    ReFT {} -> 29
-    ImFT {} -> 30
-    TwiceReFT {} -> 31
-    TwiceImFT {} -> 32
-    Scale {} -> 33 -- Right after RealImag
-    RealImag {} -> 34 -- At the end right after sum
-    Sum {} -> 35 -- Sum at the end
+    Conjugate {} -> 27
+    Piecewise {} -> 28
+    Rotate {} -> 29
+    ReFT {} -> 30
+    ImFT {} -> 31
+    TwiceReFT {} -> 32
+    TwiceImFT {} -> 33
+    Scale {} -> 34 -- Right after RealImag
+    RealImag {} -> 35 -- At the end right after sum
+    Sum {} -> 36 -- Sum at the end
     ------------------------
     DVar {} -> 101
     DZero {} -> 102
@@ -121,6 +122,7 @@ opArgs node =
     RealImag arg1 arg2 -> [arg1, arg2]
     RealPart arg -> [arg]
     ImagPart arg -> [arg]
+    Conjugate arg -> [arg]
     InnerProd arg1 arg2 -> [arg1, arg2]
     Piecewise _ conditionArg branches -> conditionArg : branches
     Rotate _ arg -> [arg]
@@ -164,6 +166,7 @@ mapOp f op =
     RealImag arg1 arg2 -> RealImag (f arg1) (f arg2)
     RealPart arg -> RealPart (f arg)
     ImagPart arg -> ImagPart (f arg)
+    Conjugate arg -> Conjugate (f arg)
     InnerProd arg1 arg2 -> InnerProd (f arg1) (f arg2)
     Piecewise marks conditionArg branches -> Piecewise marks (f conditionArg) (map f branches)
     Rotate am arg -> Rotate am (f arg)

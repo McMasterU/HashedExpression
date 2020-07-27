@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
--- Module      :  HashedExpression.Derivative
+-- Module      :  HashedExpression.Differentiation.Exterior.Derivative
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
@@ -17,7 +17,7 @@
 -- Computing an exterior derivative on an expression @Expression d R@ will result in a @Expression d Covector@, i.e a 'Covector' field
 -- (also known as 1-form). This will contain 'dVar' terms representing where implicit differentiation has occurred. See 'CollectDifferential'
 -- to factor like terms for producing partial derivatives
-module HashedExpression.Derivative
+module HashedExpression.Differentiation.Exterior.Derivative
   ( exteriorDerivative,
     derivativeAllVars,
   )

@@ -34,7 +34,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
@@ -270,14 +269,21 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 --   a new root 'NodeID' (contained inside a 'ExpressionDiff') from a list of other 'Change'. By passing along the
 --   base 'ExpressionMap' in each 'Change', we can assure there's no overlap when generating new 'Node'
 --
--- ExpressionDiff in the MonadReader ExpressionMap
+-- ExpressionDiff is MonadReader ExpressionMap
 type Change = ExpressionMap -> ExpressionDiff
 
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
+-- | The 'ExpressionDiff' when adding a constant
 const_ :: Shape -> Double -> Change
-const_ shape val mp = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
+const_ shape val mp =
+  let node = (shape, R, Const val)
+      nID = hashNode (checkHashFromMap mp) node
+   in case IM.lookup nID mp of
+        Just _ -> ExpressionDiff IM.empty nID
+        _ -> ExpressionDiff (IM.singleton nID node) nID
+
+--const_ shape val mp = ExpressionDiff mp n
+--  where
+--    (mp, n) = aConst shape val
 
 -- | The 'Change' created when adding a single 'Scalar' constant
 num_ :: Double -> Change
@@ -299,9 +305,9 @@ instance Num Change where
   (+) change1 change2 mp = applyDiff mp (Nary specSum) [change1 mp, change2 mp]
   negate change mp = applyDiff mp (Unary specNeg) [change mp]
   (*) change1 change2 mp = applyDiff mp (Nary specMul) [change1 mp, change2 mp]
-  signum = error "The Change of signum is currently unimplemented"
-  abs = error "The Change of abs is currently unimplemented"
-  fromInteger = error "The change of fromInteger is currently unimplemented"
+  signum = error "signum change"
+  abs = error "abs change"
+  fromInteger = error "from integer"
 
 instance Fractional Change where
   (/) change1 change2 = change1 * (change2 ^ (-1))
@@ -335,6 +341,7 @@ instance ComplexRealOp Change Change where
   (+:) change1 change2 mp = applyDiff mp (Binary specRealImag) [change1 mp, change2 mp]
   xRe change1 mp = applyDiff mp (Unary specRealPart) [change1 mp]
   xIm change1 mp = applyDiff mp (Unary specImagPart) [change1 mp]
+  conjugate change mp = applyDiff mp (Unary specConjugate) [change mp]
 
 instance InnerProductSpaceOp Change Change Change where
   (<.>) change1 change2 mp =
@@ -374,12 +381,6 @@ data ExpressionDiff = ExpressionDiff
     newRootId :: NodeID
   }
   deriving (Eq, Ord, Show)
-
--- | The 'ExpressionDiff' when adding a constant is just the constant node (generate by 'aConst')
-diffConst :: Shape -> Double -> ExpressionDiff
-diffConst shape val = ExpressionDiff mp n
-  where
-    (mp, n) = aConst shape val
 
 dZeroWithShape :: Shape -> ExpressionDiff
 dZeroWithShape shape = ExpressionDiff mp n
