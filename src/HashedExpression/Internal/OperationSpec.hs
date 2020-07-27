@@ -176,8 +176,8 @@ specImagPart =
     decideET x
       | x == C = R
       | otherwise = error "Must be complex"
-      
-specConjugate :: HasCallStack => UnarySpec 
+
+specConjugate :: HasCallStack => UnarySpec
 specConjugate = defaultUnary Conjugate [C]
 
 specInnerProd :: HasCallStack => BinarySpec

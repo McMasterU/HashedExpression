@@ -30,4 +30,3 @@ expressionEdges :: (ExpressionMap, NodeID) -> [(NodeID, NodeID)]
 expressionEdges (mp, rootID) =
   [ (nID, child) | nID <- topologicalSort (mp, rootID), child <- opArgs $ retrieveOp nID mp
   ]
-

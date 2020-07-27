@@ -138,6 +138,8 @@ instance (DimensionType d) => ComplexRealOp (Expression d R) (Expression d C) wh
   xRe = applyUnary specRealPart
   xIm :: Expression d C -> Expression d R
   xIm = applyUnary specImagPart
+  conjugate :: Expression d C -> Expression d C
+  conjugate = applyUnary specConjugate
 
 instance
   (InnerProductSpace d s) =>

@@ -219,6 +219,11 @@ evaluating CSimpleCodegen {..} rootIDs =
                 ]
             RealPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `reAt` i};|]]
             ImagPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `imAt` i};|]]
+            Conjugate arg ->
+              for i (len n) $
+                [ [I.i|#{n `reAt` i} = #{arg `reAt` i};|],
+                  [I.i|#{n `imAt` i} = -#{arg `imAt` i};|]
+                ]
             InnerProd arg1 arg2
               | et == R && null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
               | et == R ->

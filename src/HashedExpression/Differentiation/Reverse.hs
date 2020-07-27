@@ -16,49 +16,14 @@ import Data.List (foldl')
 import Data.List.HT (removeEach)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
-
---child2ParentsMap :: (ExpressionMap, NodeID) -> IM.IntMap [NodeID]
---child2ParentsMap (mp, rootID) =
---  let parent2ChildEdges = expressionEdges (mp, rootID)
---   in foldl' (\acc (parent, child) -> IM.insertWith (++) child [parent] acc) IM.empty parent2ChildEdges
-
-data ComputeDState = ComputeDState
-  { contextMap :: ExpressionMap,
-    computedPartsByParents :: IM.IntMap [NodeID],
-    partialDerivativeMap :: Map String NodeID
-  }
-
-type ComputeReverseM a = State ComputeDState a
-
-modifyContextMap :: (ExpressionMap -> ExpressionMap) -> ComputeReverseM ()
-modifyContextMap f = modify' $ \s -> s {contextMap = f (contextMap s)}
-
-modifyComputedPartsByParents :: (IM.IntMap [NodeID] -> IM.IntMap [NodeID]) -> ComputeReverseM ()
-modifyComputedPartsByParents f = modify' $ \s -> s {computedPartsByParents = f (computedPartsByParents s)}
-
-modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
-modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (partialDerivativeMap s)}
-
-introduceNode :: Node -> ComputeReverseM NodeID
-introduceNode node = do
-  mp <- gets contextMap
-  let nID = hashNode (checkHashFromMap mp) node
-  modify' $ \s -> s {contextMap = IM.insert nID node mp}
-  return nID
-
-perform :: OperationSpec -> [NodeID] -> ComputeReverseM NodeID
-perform spec operandIDs = do
-  mp <- gets contextMap
-  let operands = map (\nID -> (nID, retrieveNode nID mp)) operandIDs
-  let (nID, node) = createEntry (checkHashFromMap mp) spec operands
-  modify' $ \s -> s {contextMap = IM.insert nID node mp}
-  return nID
+import Prelude hiding ((^))
 
 compute ::
   Expression Scalar R ->
@@ -72,12 +37,12 @@ compute (Expression rootID mp) =
         --- NodeID of derivative w.r.t to current node: d(f) / d(nID)
         dN <-
           if nID == rootID
-            then introduceNode ([], R, Const 1)
+            then sNum 1
             else do
               dPartsFromParent <- IM.lookup nID <$> gets computedPartsByParents
               -- Sum all the derivative parts incurred by its parents
               case dPartsFromParent of
-                Just [d] -> pure d
+                Just [d] -> from d
                 Just ds -> perform (Nary specSum) ds
         curMp <- gets contextMap
         let (shape, et, op) = retrieveNode nID curMp
@@ -93,103 +58,139 @@ compute (Expression rootID mp) =
               productRest <- perform (Nary specMul) rest
               if et == R
                 then do
-                  dX <- perform (Nary specMul) [dN, productRest]
+                  dX <- from dN * from productRest
                   modifyComputedPartsByParents (IM.insertWith (++) x [dX])
                 else do
-                  conjugateRest <- perform (Unary specConjugate) [productRest]
-                  dX <- perform (Nary specMul) [dN, conjugateRest]
+                  dX <- from dN * conjugate (from productRest)
                   modifyComputedPartsByParents (IM.insertWith (++) x [dX])
-          Power alpha x -> do
-            rest <- perform (Unary (specPower (alpha - 1))) [x]
-            conjugateRest <- perform (Unary specConjugate) [rest]
-            dX <- perform (Nary specMul) [dN, conjugateRest]
-            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Power alpha x -> case et of
+            R -> do
+              dX <- sNum (fromIntegral alpha) *. (from dN * (from x ^ (alpha -1)))
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+            C -> do
+              dX <- sNum (fromIntegral alpha) *. conjugate (from x ^ (alpha - 1))
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Neg x -> do
-            dX <- perform (Unary specNeg) [dN]
+            dX <- negate $ from dN
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Scale scalar scalee -> do
             case (retrieveElementType scalar curMp, retrieveElementType scalee curMp) of
               (R, R) -> do
                 -- for scalar
-                dScalar <- perform (Binary specInnerProd) [dN, scalee]
+                dScalar <- from dN <.> from scalee
                 modifyComputedPartsByParents (IM.insertWith (++) scalar [dScalar])
                 -- for scalee
-                dScalee <- perform (Binary specScale) [scalar, dN]
+                dScalee <- from scalar *. from dN
                 modifyComputedPartsByParents (IM.insertWith (++) scalee [dScalee])
               (R, C) -> do
                 -- for scalar
-                reScalee <- perform (Unary specRealPart) [scalar]
-                imScalee <- perform (Unary specImagPart) [scalar]
-                reDN <- perform (Unary specRealPart) [dN]
-                imDN <- perform (Unary specImagPart) [dN]
-                sm1 <- perform (Binary specInnerProd) [reScalee, reDN]
-                sm2 <- perform (Binary specInnerProd) [imScalee, imDN]
-                dScalar <- perform (Nary specSum) [sm1, sm2]
+                dScalar <- xRe (from scalee) <.> xRe (from dN) + xIm (from scalee) <.> xIm (from dN)
                 modifyComputedPartsByParents (IM.insertWith (++) scalar [dScalar])
                 -- for scalee
-                dScalee <- perform (Binary specScale) [scalar, dN]
+                dScalee <- from scalar *. from dN
                 modifyComputedPartsByParents (IM.insertWith (++) scalee [dScalee])
               (C, C) -> do
-                dScalar <- perform (Binary specInnerProd) [dN, scalee]
+                -- for scalar
+                dScalar <- from dN <.> from scalee
                 modifyComputedPartsByParents (IM.insertWith (++) scalar [dScalar])
-                conjugateScalar <- perform (Unary specConjugate) [dScalar]
-                dScalee <- perform (Binary specScale) [conjugateScalar, dN]
+                -- for scalee
+                dScalee <- conjugate (from scalar) *. from dN
                 modifyComputedPartsByParents (IM.insertWith (++) scalee [dScalee])
           Div x y -> do
-            dX <- perform (Binary specDiv) [dN, y]
+            dX <- from dN / from y
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
-            temp1 <- perform (Unary (specPower (-2))) [y]
-            temp2 <- perform (Unary specNeg) [temp1]
-            dY <- perform (Nary specMul) [dN, x, temp2]
+            dY <- from dN * from x * (from y ^ (-2))
             modifyComputedPartsByParents (IM.insertWith (++) y [dY])
-          Sqrt {} -> undefined
-          Sin {} -> undefined
-          Cos {} -> undefined
-          Tan {} -> undefined
-          Exp {} -> undefined
-          Log {} -> undefined
-          Sinh {} -> undefined
-          Cosh {} -> undefined
-          Tanh {} -> undefined
-          Asin {} -> undefined
-          Acos {} -> undefined
-          Atan {} -> undefined
-          Asinh {} -> undefined
-          Acosh {} -> undefined
-          Atanh {} -> undefined
-          --
+          Sqrt x -> do
+            dX <- sNum 0.5 *. (from dN / sqrt (from x))
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Sin x -> do
+            dX <- from dN * cos (from x)
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Cos x -> do
+            dX <- from dN * (- sin (from x))
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Tan x -> do
+            dX <- from dN * (cos (from x) ^ (-2))
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Exp x -> do
+            dX <- from dN * exp (from x)
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Log x -> do
+            dX <- from dN * (from x ^ (-1))
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Sinh x -> do
+            dX <- from dN * cosh (from x)
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Cosh x -> do
+            dX <- from dN * sinh (from x)
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Tanh x -> do
+            let one = introduceNode (shape, R, Const 1)
+            dX <- from dN * (one - tanh (from x) ^ 2)
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Asin x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Acos x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Atan x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Asinh x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Acosh x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          Atanh x -> do
+            dX <- error "TODO"
+            modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           RealImag re im -> do
-            dRe <- perform (Unary specRealPart) [dN]
-            dIm <- perform (Unary specImagPart) [dN]
+            dRe <- xRe $ from dN
             modifyComputedPartsByParents (IM.insertWith (++) re [dRe])
+            dIm <- xIm $ from dN
             modifyComputedPartsByParents (IM.insertWith (++) im [dIm])
           RealPart reIm -> do
-            zeroIm <- introduceNode (shape, R, Const 0)
-            dReIm <- perform (Binary specRealImag) [dN, zeroIm]
+            let zero = introduceNode (shape, R, Const 0)
+            dReIm <- from dN +: zero
             modifyComputedPartsByParents (IM.insertWith (++) reIm [dReIm])
           ImagPart reIm -> do
-            zeroRe <- introduceNode (shape, R, Const 0)
-            dReIm <- perform (Binary specRealImag) [zeroRe, dN]
+            let zero = introduceNode (shape, R, Const 0)
+            dReIm <- zero +: from dN
             modifyComputedPartsByParents (IM.insertWith (++) reIm [dReIm])
           InnerProd x y -> do
             case et of
               R -> do
-                dX <- perform (Binary specScale) [dN, y]
+                dX <- from dN *. from y
                 modifyComputedPartsByParents (IM.insertWith (++) x [dX])
-                dY <- perform (Binary specScale) [dN, x]
+                dY <- from dN *. from x
                 modifyComputedPartsByParents (IM.insertWith (++) y [dY])
               C -> do
-                dX <- perform (Binary specScale) [dN, y]
+                dX <- from dN *. from y
                 modifyComputedPartsByParents (IM.insertWith (++) x [dX])
-                conjugateDN <- perform (Unary specConjugate) [dN]
-                dY <- perform (Binary specScale) [conjugateDN, x]
+                dY <- conjugate (from dN) *. from x
                 modifyComputedPartsByParents (IM.insertWith (++) y [dY])
           Piecewise {} -> undefined
           Rotate amount x -> do
             dX <- perform (Unary (specRotate (map negate amount))) [dN]
+            dX <- rotate (map negate amount) $ from dN
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
-          ReFT {} -> undefined
-          ImFT {} -> undefined
+          ReFT x
+            | retrieveElementType x curMp == R -> do
+              dX <- reFT (from dN)
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+            | otherwise -> do
+              dX <- reFT (from dN) +: (- imFT (from dN))
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+          ImFT x
+            | retrieveElementType x curMp == R -> do
+              dX <- imFT (from dN)
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
+            | otherwise -> do
+              dX <- imFT (from dN) +: (- reFT (from dN))
+              modifyComputedPartsByParents (IM.insertWith (++) x [dX])
       (_, res) = runState go init
    in --      res = flip runStateT init $ do
       --        forM_ reverseTopoOrder $ \nID -> do

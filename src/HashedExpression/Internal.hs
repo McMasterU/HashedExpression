@@ -277,9 +277,9 @@ const_ :: Shape -> Double -> Change
 const_ shape val mp =
   let node = (shape, R, Const val)
       nID = hashNode (checkHashFromMap mp) node
-  in case IM.lookup nID mp of
-    Just _ -> ExpressionDiff IM.empty nID
-    _ -> ExpressionDiff (IM.singleton nID node) nID
+   in case IM.lookup nID mp of
+        Just _ -> ExpressionDiff IM.empty nID
+        _ -> ExpressionDiff (IM.singleton nID node) nID
 
 --const_ shape val mp = ExpressionDiff mp n
 --  where
@@ -305,9 +305,9 @@ instance Num Change where
   (+) change1 change2 mp = applyDiff mp (Nary specSum) [change1 mp, change2 mp]
   negate change mp = applyDiff mp (Unary specNeg) [change mp]
   (*) change1 change2 mp = applyDiff mp (Nary specMul) [change1 mp, change2 mp]
-  signum = error "The Change of signum is currently unimplemented"
-  abs = error "The Change of abs is currently unimplemented"
-  fromInteger = error "The change of fromInteger is currently unimplemented"
+  signum = error "signum change"
+  abs = error "abs change"
+  fromInteger = error "from integer"
 
 instance Fractional Change where
   (/) change1 change2 = change1 * (change2 ^ (-1))
@@ -341,6 +341,7 @@ instance ComplexRealOp Change Change where
   (+:) change1 change2 mp = applyDiff mp (Binary specRealImag) [change1 mp, change2 mp]
   xRe change1 mp = applyDiff mp (Unary specRealPart) [change1 mp]
   xIm change1 mp = applyDiff mp (Unary specImagPart) [change1 mp]
+  conjugate change mp = applyDiff mp (Unary specConjugate) [change mp]
 
 instance InnerProductSpaceOp Change Change Change where
   (<.>) change1 change2 mp =

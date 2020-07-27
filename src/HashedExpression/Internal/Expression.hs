@@ -398,6 +398,9 @@ class ComplexRealOp r c | r -> c, c -> r where
   -- | extract imaginary part from complex data
   xIm :: c -> r
 
+  -- conjugate
+  conjugate :: c -> c
+
 -- | Interface for Inner Product combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class InnerProductSpaceOp a b c | a b -> c where
