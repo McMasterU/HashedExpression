@@ -10,6 +10,12 @@
 module HashedExpression.Interp
   ( Evaluable (..),
     Approximable (..),
+    evaluate1DReal,
+    evaluate1DComplex,
+    evaluate2DReal,
+    evaluate2DComplex,
+    evaluate3DReal,
+    evaluate3DComplex,
   )
 where
 
@@ -278,6 +284,7 @@ instance Evaluable Scalar C (Complex Double) where
           --  show the real and imaginary part of complex as x + i y
           eval valMap (expZeroR mp arg1)
             :+ eval valMap (expZeroR mp arg2)
+        Conjugate arg -> conjugate $ eval valMap (expZeroC mp arg)
         InnerProd arg1 arg2 ->
           --  evaluate the inner product in C
           case retrieveShape arg1 mp of
@@ -472,6 +479,9 @@ evaluate1DComplex valMap (mp, n)
           (:+)
           (evaluate1DReal valMap $ (mp, arg1))
           (evaluate1DReal valMap $ (mp, arg2))
+      Conjugate arg ->
+        let res = evaluate1DComplex valMap (mp, arg)
+         in fmap conjugate res
       Piecewise marks conditionArg branchArgs ->
         let cdt = evaluate1DReal valMap $ (mp, conditionArg)
             branches =
@@ -643,6 +653,9 @@ evaluate2DComplex valMap (mp, n)
           (:+)
           (evaluate2DReal valMap $ (mp, arg1))
           (evaluate2DReal valMap $ (mp, arg2))
+      Conjugate arg ->
+        let res = evaluate2DComplex valMap (mp, arg)
+         in fmap conjugate res
       Piecewise marks conditionArg branchArgs ->
         let cdt = evaluate2DReal valMap $ (mp, conditionArg)
             branches =

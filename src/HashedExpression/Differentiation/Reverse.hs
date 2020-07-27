@@ -25,10 +25,11 @@ import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
 import Prelude hiding ((^))
 
-compute ::
+-- |
+partialDerivativesMapByReverse ::
   Expression Scalar R ->
   (ExpressionMap, Map String NodeID)
-compute (Expression rootID mp) =
+partialDerivativesMapByReverse (Expression rootID mp) =
   let reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
       init = ComputeDState mp IM.empty Map.empty
       -- Chain rule
@@ -46,6 +47,8 @@ compute (Expression rootID mp) =
                 Just ds -> perform (Nary specSum) ds
         curMp <- gets contextMap
         let (shape, et, op) = retrieveNode nID curMp
+        let one = introduceNode (shape, R, Const 1)
+        let zero = introduceNode (shape, R, Const 0)
         case op of
           Var name -> modifyPartialDerivativeMap (Map.insert name dN)
           Const _ -> return ()
@@ -68,7 +71,7 @@ compute (Expression rootID mp) =
               dX <- sNum (fromIntegral alpha) *. (from dN * (from x ^ (alpha -1)))
               modifyComputedPartsByParents (IM.insertWith (++) x [dX])
             C -> do
-              dX <- sNum (fromIntegral alpha) *. conjugate (from x ^ (alpha - 1))
+              dX <- sNum (fromIntegral alpha) *. (from dN * conjugate (from x ^ (alpha - 1)))
               modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Neg x -> do
             dX <- negate $ from dN
@@ -126,26 +129,25 @@ compute (Expression rootID mp) =
             dX <- from dN * sinh (from x)
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Tanh x -> do
-            let one = introduceNode (shape, R, Const 1)
             dX <- from dN * (one - tanh (from x) ^ 2)
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Asin x -> do
-            dX <- error "TODO"
+            dX <- from dN * (one / sqrt (one - from x ^ 2))
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Acos x -> do
-            dX <- error "TODO"
+            dX <- from dN * (- one / sqrt (one - from x ^ 2))
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Atan x -> do
-            dX <- error "TODO"
+            dX <- from dN * (one / one + from x ^ 2)
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Asinh x -> do
-            dX <- error "TODO"
+            dX <- from dN * (one / sqrt (one + from x ^ 2))
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Acosh x -> do
-            dX <- error "TODO"
+            dX <- from dN * (one / sqrt (from x ^ 2 - one))
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           Atanh x -> do
-            dX <- error "TODO"
+            dX <- from dN * (one / sqrt (one - from x ^ 2))
             modifyComputedPartsByParents (IM.insertWith (++) x [dX])
           RealImag re im -> do
             dRe <- xRe $ from dN
@@ -153,11 +155,9 @@ compute (Expression rootID mp) =
             dIm <- xIm $ from dN
             modifyComputedPartsByParents (IM.insertWith (++) im [dIm])
           RealPart reIm -> do
-            let zero = introduceNode (shape, R, Const 0)
             dReIm <- from dN +: zero
             modifyComputedPartsByParents (IM.insertWith (++) reIm [dReIm])
           ImagPart reIm -> do
-            let zero = introduceNode (shape, R, Const 0)
             dReIm <- zero +: from dN
             modifyComputedPartsByParents (IM.insertWith (++) reIm [dReIm])
           InnerProd x y -> do
@@ -172,7 +172,21 @@ compute (Expression rootID mp) =
                 modifyComputedPartsByParents (IM.insertWith (++) x [dX])
                 dY <- conjugate (from dN) *. from x
                 modifyComputedPartsByParents (IM.insertWith (++) y [dY])
-          Piecewise {} -> undefined
+          Piecewise marks condition branches -> do
+            dCondition <- zero
+            modifyComputedPartsByParents (IM.insertWith (++) condition [dCondition])
+            let numBranches = length branches
+            forM_ (zip branches [0 ..]) $ \(branch, idx) -> case et of
+              R -> do
+                associate <- piecewise marks (from condition) (replicate idx zero ++ [one] ++ replicate (numBranches - idx - 1) zero)
+                dBranch <- from dN * from associate
+                modifyComputedPartsByParents (IM.insertWith (++) branch [dBranch])
+              C -> do
+                let zeroC = zero +: zero
+                let oneC = one +: zero
+                associate <- piecewise marks (from condition) (replicate idx zeroC ++ [oneC] ++ replicate (numBranches - idx - 1) zeroC)
+                dBranch <- from dN * conjugate (from associate)
+                modifyComputedPartsByParents (IM.insertWith (++) branch [dBranch])
           Rotate amount x -> do
             dX <- perform (Unary (specRotate (map negate amount))) [dN]
             dX <- rotate (map negate amount) $ from dN
@@ -192,28 +206,5 @@ compute (Expression rootID mp) =
               dX <- imFT (from dN) +: (- reFT (from dN))
               modifyComputedPartsByParents (IM.insertWith (++) x [dX])
       (_, res) = runState go init
-   in --      res = flip runStateT init $ do
-      --        forM_ reverseTopoOrder $ \nID -> do
-      --          undefined
+   in (contextMap res, partialDerivativeMap res)
 
-      --      update :: (ExpressionMap, IM.IntMap [NodeID], IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap [NodeID], IM.IntMap NodeID)
-      --      update (accMp, accsByID, dByID) nID =
-      --        let (shape, et, op) = retrieveNode nID accMp
-      --            derivativeCurrent
-      --              | nID == rootID = undefined
-      --              | otherwise = case IM.lookup nID accsByID of
-      --                Just [d] -> d
-      --                Just ds -> undefined
-      --         in undefined
-      (contextMap res, partialDerivativeMap res)
-
----
---             Re                  Im
----           (a + bi) <.> (c + di)
---       (a <.> c + b <.> d) + (b <.> c - a <.> d)
---        (Re *. c - Im *. d)    (Re *. d + IM *. c)
-
---  (Re *. a + Im *. b) + (Re *. b - Im *. a)
---
-
------------------------------------

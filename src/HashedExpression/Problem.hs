@@ -25,6 +25,7 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Exterior.Collect
 import HashedExpression.Differentiation.Exterior.Derivative
+import HashedExpression.Differentiation.Exterior
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
@@ -125,26 +126,6 @@ ninf = -1 / 0
 -- | Positive infinity
 inf :: Double
 inf = 1 / 0
-
--------------------------------------------------------------------------------
-
--- | Return a map from variable name to the corresponding partial derivative node id
---   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
-partialDerivativeMaps :: (ExpressionMap, NodeID) -> Map String NodeID
-partialDerivativeMaps (dfMp, dfId) =
-  case retrieveOp dfId dfMp of
-    Sum ns | retrieveElementType dfId dfMp == Covector -> Map.fromList $ mapMaybe getPartial ns
-    _ -> Map.fromList $ mapMaybe getPartial [dfId]
-  where
-    getPartial :: NodeID -> Maybe (String, NodeID)
-    getPartial nId
-      | MulD partialId dId <- retrieveOp nId dfMp,
-        DVar name <- retrieveOp dId dfMp =
-        Just (name, partialId)
-      | InnerProdD partialId dId <- retrieveOp nId dfMp,
-        DVar name <- retrieveOp dId dfMp =
-        Just (name, partialId)
-      | otherwise = Nothing
 
 -------------------------------------------------------------------------------
 
@@ -342,7 +323,7 @@ constructProblemHelper obj names (Constraint constraints) = do
   curMp <- get
   let finalRelevantVars = filter (\(name, _) -> Set.member name varsSet) $ varNodesWithId curMp
   let name2PartialDerivativeID :: Map String NodeID
-      name2PartialDerivativeID = partialDerivativeMaps (curMp, dfID)
+      name2PartialDerivativeID = partialDerivativesMap (curMp, dfID)
       variables =
         map
           ( \(name, varNodeID) ->
@@ -353,7 +334,7 @@ constructProblemHelper obj names (Constraint constraints) = do
   let scalarConstraints =
         map
           ( \(gID, dgID, (lb, ub)) ->
-              let name2PartialDerivativeID = partialDerivativeMaps (curMp, dgID)
+              let name2PartialDerivativeID = partialDerivativesMap (curMp, dgID)
                in ScalarConstraint
                     { constraintValueId = gID,
                       constraintPartialDerivatives = map (\(name, _) -> fromJust $ Map.lookup name name2PartialDerivativeID) finalRelevantVars,

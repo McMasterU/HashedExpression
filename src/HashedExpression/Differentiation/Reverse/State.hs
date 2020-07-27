@@ -15,6 +15,7 @@ import Data.List (foldl')
 import Data.List.HT (removeEach)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -29,21 +30,27 @@ data ComputeDState = ComputeDState
     partialDerivativeMap :: Map String NodeID
   }
 
+-- |
 modifyContextMap :: (ExpressionMap -> ExpressionMap) -> ComputeReverseM ()
 modifyContextMap f = modify' $ \s -> s {contextMap = f (contextMap s)}
 
+-- |
 modifyComputedPartsByParents :: (IM.IntMap [NodeID] -> IM.IntMap [NodeID]) -> ComputeReverseM ()
 modifyComputedPartsByParents f = modify' $ \s -> s {computedPartsByParents = f (computedPartsByParents s)}
 
+-- |
 modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
 modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (partialDerivativeMap s)}
 
+-- |
 from :: NodeID -> ComputeReverseM NodeID
 from = return
 
+-- |
 sNum :: Double -> ComputeReverseM NodeID
 sNum val = introduceNode ([], R, Const val)
 
+-- |
 introduceNode :: Node -> ComputeReverseM NodeID
 introduceNode node = do
   mp <- gets contextMap
@@ -51,6 +58,7 @@ introduceNode node = do
   modify' $ \s -> s {contextMap = IM.insert nID node mp}
   return nID
 
+-- |
 perform :: OperationSpec -> [NodeID] -> ComputeReverseM NodeID
 perform spec operandIDs = do
   mp <- gets contextMap
@@ -59,6 +67,7 @@ perform spec operandIDs = do
   modify' $ \s -> s {contextMap = IM.insert nID node mp}
   return nID
 
+-- |
 type ComputeReverseM a = State ComputeDState a
 
 instance Num (ComputeReverseM NodeID) where
@@ -71,11 +80,12 @@ instance Num (ComputeReverseM NodeID) where
     do
       x <- operand
       perform (Unary specNeg) [x]
+  (*) :: HasCallStack => ComputeReverseM NodeID -> ComputeReverseM NodeID -> ComputeReverseM NodeID
   (*) operand1 operand2 =
     do
       x <- operand1
       y <- operand2
-      perform (Nary specSum) [x, y]
+      perform (Nary specMul) [x, y]
 
 instance Fractional (ComputeReverseM NodeID) where
   (/) operand1 operand2 = do

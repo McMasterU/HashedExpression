@@ -21,6 +21,7 @@ import HashedExpression.Prettify
 import qualified InterpSpec
 import qualified NormalizeSpec
 import qualified ProblemSpec
+import qualified ReverseDifferentiationSpec
 import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
@@ -43,5 +44,6 @@ main = do
     describe "HashedInterpSpec" InterpSpec.spec
     describe "HashedCollectSpec" CollectSpec.spec
     describe "StructureSpec" StructureSpec.spec
+    describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} $ do
     describe "CSimpleSpec" CSimpleSpec.spec
