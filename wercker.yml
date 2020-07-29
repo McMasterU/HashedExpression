@@ -38,11 +38,11 @@ create-release:
     - script:
         name: Create lbfgs-b archive
         code: |
-          tar czf lbfgs-b-$RELEASE_VERSION.tar.gz --directory=algorithms/lbfgs-b `ls algorithms/lbfgs-b`
+          tar czfh lbfgs-b-$RELEASE_VERSION.tar.gz --directory=algorithms/lbfgs-b `ls algorithms/lbfgs-b`
     - script:
         name: Create ipopt archive
         code: |
-          tar czf ipopt-$RELEASE_VERSION.tar.gz --directory=algorithms/ipopt `ls algorithms/ipopt`
+          tar czfh ipopt-$RELEASE_VERSION.tar.gz --directory=algorithms/ipopt `ls algorithms/ipopt`
     - wercker/github-create-release@2.1.1:
         token: $GITHUB_TOKEN
         tag: v$RELEASE_VERSION

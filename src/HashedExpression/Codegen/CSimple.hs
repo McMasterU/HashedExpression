@@ -25,7 +25,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
-import HashedExpression.Embed.FFTW (fftUtils)
+import HashedExpression.Embed (fftUtils)
 import HashedExpression.Internal (topologicalSortManyRoots, unwrap)
 import HashedExpression.Internal.Expression (DimensionType, ET (..), Expression, ExpressionMap, NumType, Op (..), Shape, exMap)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 158d5ed7ffd77d8520dc6eedabb8d47f1240293abc2485d2358bc8fa6a262c85
+-- hash: 4732ebeea96aa0ab53d093b2603034a50ca60eab42220b4cbf13a51f13e63d94
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -44,7 +44,7 @@ library
       HashedExpression.Differentiation.Exterior.Derivative
       HashedExpression.Differentiation.Reverse
       HashedExpression.Differentiation.Reverse.State
-      HashedExpression.Embed.FFTW
+      HashedExpression.Embed
       HashedExpression.Internal
       HashedExpression.Internal.Collision
       HashedExpression.Internal.Expression
@@ -79,6 +79,7 @@ library
     , deepseq
     , easyplot
     , extra
+    , file-embed
     , filepath
     , mtl
     , process
@@ -111,6 +112,7 @@ executable HashedExpression-exe
     , deepseq
     , easyplot
     , extra
+    , file-embed
     , filepath
     , hspec
     , mtl
@@ -159,6 +161,7 @@ executable symphony
     , deepseq
     , easyplot
     , extra
+    , file-embed
     , filepath
     , mtl
     , optparse-applicative
@@ -205,6 +208,7 @@ test-suite HashedExpression-test
     , deepseq
     , easyplot
     , extra
+    , file-embed
     , filepath
     , hspec
     , mtl
