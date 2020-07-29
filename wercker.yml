@@ -34,14 +34,28 @@ create-release:
     - script:
         name: Create symphony archive
         code: |
-          tar czf symphony-$RELEASE_VERSION.tar.gz --directory=bins symphony
+          tar czf symphony-$RELEASE_VERSION-linux.tar.gz --directory=bins symphony
+    - script:
+        name: Create lbfgs-b archive
+        code: |
+          tar czf lbfgs-b-$RELEASE_VERSION.tar.gz --directory=algorithms/lbfgs-b `ls algrorithms/lbfgs-b`
+    - script:
+        name: Create ipopt archive
+        code: |
+          tar czf ipopt-$RELEASE_VERSION.tar.gz --directory=algorithms/ipopt `ls algrorithms/ipopt`
     - wercker/github-create-release@2.1.1:
         token: $GITHUB_TOKEN
         tag: v$RELEASE_VERSION
         title: v$RELEASE_VERSION
     - wercker/github-upload-asset@2.1.1:
         token: $GITHUB_TOKEN
-        file: symphony-$RELEASE_VERSION.tar.gz
+        file: symphony-$RELEASE_VERSION-linux.tar.gz
+    - wercker/github-upload-asset@2.1.1:
+        token: $GITHUB_TOKEN
+        file: ipopt-$RELEASE_VERSION.tar.gz
+    - wercker/github-upload-asset@2.1.1:
+        token: $GITHUB_TOKEN
+        file: lbfgs-b-$RELEASE_VERSION.tar.gz
 
 
 create-docker-image:
