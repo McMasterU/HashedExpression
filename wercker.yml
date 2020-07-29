@@ -1,26 +1,64 @@
-# This references a standard debian container from the
-# Docker Hub https://registry.hub.docker.com/_/debian/
-# Read more about containers on our dev center
-# https://devcenter.wercker.com/overview-and-core-concepts/containers/
 box: hashexpression/wercker
-  # You can also use services such as databases. Read more on our dev center:
-  # https://devcenter.wercker.com/administration/services/
-  # services:
-  # - postgres
-  # https://devcenter.wercker.com/administration/services/examples/postgresql/
+no-response-timeout: 10
 
-# - mongo
-# https://devcenter.wercker.com/administration/services/examples/mongodb/
-
-# This is the build pipeline. Pipelines are the core of wercker
-# Read more about pipelines on our dev center
-# https://devcenter.wercker.com/development/pipelines/
 build:
   # Steps make up the actions in your pipeline
   # Read more about steps on our dev center:
   # https://devcenter.wercker.com/development/steps/
   steps:
     - script:
+        name: restore cache
+        code: |
+          if [ -e "$WERCKER_CACHE_DIR/.stack-work" ]; then
+            cp -r $WERCKER_CACHE_DIR/.stack-work .
+          fi
+    - script:
         name: build & test
         code: |
-          stack build --test --ghc-options -O2
+          stack build --test --ghc-options -O2 --copy-bins --local-bin-path bins
+    - script:
+        name: store cache
+        code: |
+          cp -r .stack-work $WERCKER_CACHE_DIR
+
+
+create-release:
+  box: ubuntu
+  steps:
+    - install-packages:
+        packages: curl file
+    - script:
+        name: Get release version
+        code: |
+          export RELEASE_VERSION=$(cat VERSION)
+    - script:
+        name: Create symphony archive
+        code: |
+          tar czf symphony-$RELEASE_VERSION.tar.gz --directory=bins symphony
+    - wercker/github-create-release@2.1.1:
+        token: $GITHUB_TOKEN
+        tag: v$RELEASE_VERSION
+        title: v$RELEASE_VERSION
+    - wercker/github-upload-asset@2.1.1:
+        token: $GITHUB_TOKEN
+        file: symphony-$RELEASE_VERSION.tar.gz
+
+
+create-docker-image:
+  box: hashexpression/symphony_env
+  steps:
+    - script:
+        name: Remove unncessary directories & files
+        code: |
+          rm -rf .stack-work
+          rm -rf .git
+    - script:
+        name: Copy symphony to PATH
+        code: |
+          cp bins/symphony /usr/bin
+    - internal/docker-push:
+        username: $DOCKERHUB_USERNAME # Registry username
+        password: $DUCKERHUB_PASSWORD # Registry password
+        repository: hashexpression/symphony
+
+
