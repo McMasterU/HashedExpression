@@ -12,6 +12,20 @@ $ stack install --ghc-options -O2
 ```
 
 ### Usage
+The following example is minizing the simple entropy function [![image](https://latex.codecogs.com/gif.latex?%5Cdpi%7B200%7D%20%5CLARGE%20f%28p%29%20%3D%20%5Csum_%7Bi%20%3D%201%7D%5En%20p_i%20%5Clog%28p_i%29)]
+
+Create `rosenbrock.sp`: 
+```haskell
+variables:
+  x[10][10]
+
+constraints: 
+  x > 1
+
+```
+
+
+
 Below is an example of an optimization problem to reconstruct image from loss MRI signal, details about the problem can be found at
 [MRI-Image-Reconstruction](examples/MRI-Image-Reconstruction.pdf).
 
@@ -42,42 +56,6 @@ Running:
 ```terminal
 $ symphony mri.sp
 ```
-Will generate `problem.c` with the following interface:
-
-```c++
-#define NUM_VARIABLES 1
-#define NUM_ACTUAL_VARIABLES 16384
-#define MEM_SIZE 671774
-
-// all the actual double variables are allocated
-// one after another, starts from here
-#define VARS_START_OFFSET 0
-
-
-const char* var_name[NUM_VARIABLES] = {"x"};
-const int var_num_dim[NUM_VARIABLES] = {2};
-const int var_shape[NUM_VARIABLES][3] = {{128, 128, 1}};
-const int var_size[NUM_VARIABLES] = {16384};
-const int var_offset[NUM_VARIABLES] = {0};
-const int partial_derivative_offset[NUM_VARIABLES] = {65543};
-const int objective_offset = 81927;
-double ptr[MEM_SIZE];
-
-
-const int bound_pos[NUM_VARIABLES] = {0};
-double lower_bound[NUM_ACTUAL_VARIABLES];
-double upper_bound[NUM_ACTUAL_VARIABLES];
-
-...
-
-void evaluate_partial_derivatives_and_objective() { .. } ;
-void evaluate_objective() { .. };
-void evaluate_partial_derivatives() { .. } ;
-...
-```
-Which you can plug to your favorite optimization solver.  
-We provide several optimization solvers (LBFGS, LBFGS-b, Ipopt) adapter in `algorithms` directory,  
-e.g: [LBFGS-b](https://github.com/dalvescb/HashedExpression/blob/master/algorithms/lbfgs-b/lbfgs-b.c).
 
 ### Usage Docker
 To use symphony through docker (if you wish to avoid installing stack), build the docker image with
@@ -92,18 +70,6 @@ docker run -v /some/path:/target symphony
 ```
 Copy the resulting */some/path/problem.c* into your chosen *algorithms* directory (i.e ipopt, lbfgs, etc),
 which contain their own Dockerfile's for executing the optimization problem (see respective README's)
-
-## Generating Haddock (with Docker)
-Build the docker image located in docs (it's important you do this from the root of the repo), with
-```terminal
-docker build -t hashed-docker -f docs/Dockerfile .
-```
--Then run the docker container to generate the haddock documentation (NOTE: every time you alter the 
--code base you'll have to rebuild the image)
-```terminal
--docker run -v /some/path:/home/HashedExpression/docs hashed-docker
-```
--this will generate all the haddock documentation (in html) into */some/path* on your local system
 
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.
