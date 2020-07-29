@@ -67,6 +67,7 @@ transBlock x = case x of
   BlockConstraint constraintdeclss -> failure x
   BlockLet letdeclss -> failure x
   BlockMinimize exp -> failure x
+  BlockSolver pident -> failure x
 transTInt :: TInt -> Result
 transTInt x = case x of
   IntPos pinteger -> failure x

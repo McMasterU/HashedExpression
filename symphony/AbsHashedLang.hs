@@ -60,6 +60,7 @@ data Block
     | BlockConstraint [[ConstraintDecl]]
     | BlockLet [[LetDecl]]
     | BlockMinimize Exp
+    | BlockSolver PIdent
   deriving (Eq, Ord, Show, Read)
 
 data TInt = IntPos PInteger | IntNeg TokenSub PInteger

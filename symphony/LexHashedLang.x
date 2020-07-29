@@ -168,7 +168,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "Random" 15 (b "=" 8 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) (b "<=" 7 N N))) (b "File" 12 (b ">=" 10 (b "==" 9 N N) (b "Dataset" 11 N N)) (b "Pattern" 14 (b "Image" 13 N N) N))) (b "let" 23 (b "constants" 19 (b "]" 17 (b "[" 16 N N) (b "constant" 18 N N)) (b "constraints" 21 (b "constraint" 20 N N) (b "it" 22 N N))) (b "variables" 27 (b "otherwise" 25 (b "minimize" 24 N N) (b "variable" 26 N N)) (b "}" 29 (b "{" 28 N N) N)))
+resWords = b "[" 16 (b "=" 8 (b "->" 4 (b ")" 2 (b "(" 1 N N) (b "," 3 N N)) (b ";" 6 (b ":" 5 N N) (b "<=" 7 N N))) (b "File" 12 (b ">=" 10 (b "==" 9 N N) (b "Dataset" 11 N N)) (b "Pattern" 14 (b "Image" 13 N N) (b "Random" 15 N N)))) (b "minimize" 24 (b "constraint" 20 (b "constant" 18 (b "]" 17 N N) (b "constants" 19 N N)) (b "it" 22 (b "constraints" 21 N N) (b "let" 23 N N))) (b "variables" 28 (b "solver" 26 (b "otherwise" 25 N N) (b "variable" 27 N N)) (b "}" 30 (b "{" 29 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

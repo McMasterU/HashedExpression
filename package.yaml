@@ -101,6 +101,7 @@ executables:
       - regex-posix
       - optparse-applicative
       - JuicyPixels
+      - process
 
 
 tests:

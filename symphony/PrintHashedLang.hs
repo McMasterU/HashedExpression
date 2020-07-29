@@ -147,6 +147,7 @@ instance Print AbsHashedLang.Block where
     AbsHashedLang.BlockConstraint constraintdeclss -> prPrec i 0 (concatD [doc (showString "constraints"), doc (showString ":"), doc (showString "{"), prt 0 constraintdeclss, doc (showString "}")])
     AbsHashedLang.BlockLet letdeclss -> prPrec i 0 (concatD [doc (showString "let"), doc (showString ":"), doc (showString "{"), prt 0 letdeclss, doc (showString "}")])
     AbsHashedLang.BlockMinimize exp -> prPrec i 0 (concatD [doc (showString "minimize"), doc (showString ":"), doc (showString "{"), prt 0 exp, doc (showString "}")])
+    AbsHashedLang.BlockSolver pident -> prPrec i 0 (concatD [doc (showString "solver"), doc (showString ":"), doc (showString "{"), prt 0 pident, doc (showString "}")])
   prtList _ [x] = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 

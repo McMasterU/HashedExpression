@@ -66,6 +66,7 @@ BlockConstraint. Block ::= "constraints" ":" "{" [[ConstraintDecl]] "}";
 BlockConstraint. Block ::= "constraint" ":" "{" [[ConstraintDecl]] "}";
 BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
+BlockSolver. Block ::= "solver" ":" "{" PIdent "}" ;
 separator nonempty Block "";
 
 IntPos. TInt ::= PInteger;

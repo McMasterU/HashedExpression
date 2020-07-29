@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4732ebeea96aa0ab53d093b2603034a50ca60eab42220b4cbf13a51f13e63d94
+-- hash: 8cd28a087f508490f3891da8fc8a23620f27f29dc9d0598d42e970b328291f71
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -22,7 +22,6 @@ extra-source-files:
     symphony/ComposOp.hs
     symphony/ErrM.hs
     symphony/LayoutHashedLang.hs
-    symphony/LexHashedLang.hs
     symphony/Main.hs
     symphony/ParHashedLang.hs
     symphony/PrintHashedLang.hs
@@ -132,7 +131,6 @@ executable symphony
       ErrM
       LayoutHashedLang
       LexHashedLang
-      LexHashedLang
       ParHashedLang
       ParHashedLang
       PrintHashedLang
@@ -140,6 +138,7 @@ executable symphony
       Symphony.Common
       Symphony.Entry
       Symphony.Exp
+      Symphony.Solver
       Symphony.Symphony
       Paths_HashedExpression
   hs-source-dirs:
