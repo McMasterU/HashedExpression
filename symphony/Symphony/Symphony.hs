@@ -215,7 +215,7 @@ getSolver (Problem blocks) =
     [] -> do
       lift $ putStrLn "No solver specified, default to L-BFGS-B (https://github.com/stephenbeckr/L-BFGS-B-C)"
       return LBFGSB
-    [BlockSolver (PIdent (_, name))]
+    [BlockSolver (SolverName name)]
       | map toLower name `elem` ["lbfgs-b", "lbfgsb", "l-bfgs-b"] -> return LBFGSB
       | map toLower name `elem` ["ipopt"] -> return Ipopt
       | otherwise -> throwError $ GeneralError "Unknown solver, should be (ipopt | lbfgs-b)"

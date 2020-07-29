@@ -2,6 +2,7 @@
 comment "//" ;
 comment "{*" "*/" ;
 -- Token
+token SolverName {"LBFGS-B"} | {"lbfgs-b"} | {"lbfgsb"} | {"ipopt"} | {"IPOPT"};
 token KWDataPattern
     {"FIRST_ROW_1"}
   | {"LAST_ROW_1"}
@@ -66,7 +67,7 @@ BlockConstraint. Block ::= "constraints" ":" "{" [[ConstraintDecl]] "}";
 BlockConstraint. Block ::= "constraint" ":" "{" [[ConstraintDecl]] "}";
 BlockLet. Block ::= "let" ":" "{" [[LetDecl]] "}";
 BlockMinimize. Block ::= "minimize" ":" "{" Exp "}";
-BlockSolver. Block ::= "solver" ":" "{" PIdent "}" ;
+BlockSolver. Block ::= "solver" ":" "{" SolverName "}" ;
 separator nonempty Block "";
 
 IntPos. TInt ::= PInteger;

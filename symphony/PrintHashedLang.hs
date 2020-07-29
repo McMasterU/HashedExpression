@@ -88,6 +88,9 @@ instance Print Integer where
 instance Print Double where
   prt _ x = doc (shows x)
 
+instance Print AbsHashedLang.SolverName where
+  prt _ (AbsHashedLang.SolverName i) = doc (showString i)
+
 instance Print AbsHashedLang.KWDataPattern where
   prt _ (AbsHashedLang.KWDataPattern i) = doc (showString i)
 
@@ -147,7 +150,7 @@ instance Print AbsHashedLang.Block where
     AbsHashedLang.BlockConstraint constraintdeclss -> prPrec i 0 (concatD [doc (showString "constraints"), doc (showString ":"), doc (showString "{"), prt 0 constraintdeclss, doc (showString "}")])
     AbsHashedLang.BlockLet letdeclss -> prPrec i 0 (concatD [doc (showString "let"), doc (showString ":"), doc (showString "{"), prt 0 letdeclss, doc (showString "}")])
     AbsHashedLang.BlockMinimize exp -> prPrec i 0 (concatD [doc (showString "minimize"), doc (showString ":"), doc (showString "{"), prt 0 exp, doc (showString "}")])
-    AbsHashedLang.BlockSolver pident -> prPrec i 0 (concatD [doc (showString "solver"), doc (showString ":"), doc (showString "{"), prt 0 pident, doc (showString "}")])
+    AbsHashedLang.BlockSolver solvername -> prPrec i 0 (concatD [doc (showString "solver"), doc (showString ":"), doc (showString "{"), prt 0 solvername, doc (showString "}")])
   prtList _ [x] = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 

@@ -3,6 +3,9 @@
 
 module AbsHashedLang where
 
+newtype SolverName = SolverName String
+  deriving (Eq, Ord, Show, Read)
+
 newtype KWDataPattern = KWDataPattern String
   deriving (Eq, Ord, Show, Read)
 
@@ -60,7 +63,7 @@ data Block
     | BlockConstraint [[ConstraintDecl]]
     | BlockLet [[LetDecl]]
     | BlockMinimize Exp
-    | BlockSolver PIdent
+    | BlockSolver SolverName
   deriving (Eq, Ord, Show, Read)
 
 data TInt = IntPos PInteger | IntNeg TokenSub PInteger

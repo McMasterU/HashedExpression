@@ -9,6 +9,9 @@ type Result = Err String
 failure :: Show a => a -> Result
 failure x = Bad $ "Undefined case: " ++ show x
 
+transSolverName :: SolverName -> Result
+transSolverName x = case x of
+  SolverName string -> failure x
 transKWDataPattern :: KWDataPattern -> Result
 transKWDataPattern x = case x of
   KWDataPattern string -> failure x
@@ -67,7 +70,7 @@ transBlock x = case x of
   BlockConstraint constraintdeclss -> failure x
   BlockLet letdeclss -> failure x
   BlockMinimize exp -> failure x
-  BlockSolver pident -> failure x
+  BlockSolver solvername -> failure x
 transTInt :: TInt -> Result
 transTInt x = case x of
   IntPos pinteger -> failure x

@@ -74,6 +74,7 @@ import ErrM
   '{' { PT _ (TS _ 29) }
   '}' { PT _ (TS _ 30) }
   L_quoted { PT _ (TL $$) }
+  L_SolverName { PT _ (T_SolverName $$) }
   L_KWDataPattern { PT _ (T_KWDataPattern $$) }
   L_PDoubleFun { PT _ (T_PDoubleFun _) }
   L_PUnaryFun { PT _ (T_PUnaryFun _) }
@@ -95,6 +96,9 @@ import ErrM
 
 String  :: { String }
 String   : L_quoted {  $1 }
+
+SolverName :: { SolverName}
+SolverName  : L_SolverName { SolverName ($1)}
 
 KWDataPattern :: { KWDataPattern}
 KWDataPattern  : L_KWDataPattern { KWDataPattern ($1)}
@@ -155,7 +159,7 @@ Block : 'variables' ':' '{' ListListVariableDecl '}' { AbsHashedLang.BlockVariab
       | 'constraint' ':' '{' ListListConstraintDecl '}' { AbsHashedLang.BlockConstraint $4 }
       | 'let' ':' '{' ListListLetDecl '}' { AbsHashedLang.BlockLet $4 }
       | 'minimize' ':' '{' Exp '}' { AbsHashedLang.BlockMinimize $4 }
-      | 'solver' ':' '{' PIdent '}' { AbsHashedLang.BlockSolver $4 }
+      | 'solver' ':' '{' SolverName '}' { AbsHashedLang.BlockSolver $4 }
 ListBlock :: { [Block] }
 ListBlock : Block { (:[]) $1 } | Block ListBlock { (:) $1 $2 }
 TInt :: { TInt }

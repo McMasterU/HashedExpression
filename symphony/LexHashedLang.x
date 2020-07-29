@@ -30,6 +30,8 @@ $u = [. \n]          -- universal: any character
 $white+ ;
 @rsyms
     { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
+L B F G S \- B | l b f g s \- b | l b f g s b | i p o p t | I P O P T
+    { tok (\p s -> PT p (eitherResIdent (T_SolverName . share) s)) }
 F I R S T \_ R O W \_ 1 | L A S T \_ R O W \_ 1 | F I R S T \_ C O L U M N \_ 1 | L A S T \_ C O L U M N \_ 1 | F I R S T \_ R O W \_ 0 | L A S T \_ R O W \_ 0 | F I R S T \_ C O L U M N \_ 0 | L A S T \_ C O L U M N \_ 0 | F I R S T \_ S L I C E \_ 1 | L A S T \_ S L I C E \_ 1
     { tok (\p s -> PT p (eitherResIdent (T_KWDataPattern . share) s)) }
 h u b e r | n o r m H u b e r
@@ -86,6 +88,7 @@ data Tok =
  | TV !String         -- identifiers
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
+ | T_SolverName !String
  | T_KWDataPattern !String
  | T_PDoubleFun !String
  | T_PUnaryFun !String
@@ -139,6 +142,7 @@ prToken t = case t of
   PT _ (TD s)   -> s
   PT _ (TC s)   -> s
   Err _         -> "#error"
+  PT _ (T_SolverName s) -> s
   PT _ (T_KWDataPattern s) -> s
   PT _ (T_PDoubleFun s) -> s
   PT _ (T_PUnaryFun s) -> s
