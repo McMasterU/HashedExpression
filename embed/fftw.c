@@ -1,11 +1,3 @@
-module HashedExpression.Embed.FFTW where
-
-import Data.String.Interpolate
-
--- | For computing fourier transform
-fftUtils :: String
-fftUtils =
-  [i|
 /**
 * ---------------------------FOURIER TRANSFORM HELPERS---------------------------------
 * ---------------------------------------START-----------------------------------------
@@ -114,4 +106,3 @@ void im_dft_twice_2d(int ROW, int COLUMN, double *in, double *out) {
 /**
 * ---------------------------------------END-------------------------------------------
 **/
-|]

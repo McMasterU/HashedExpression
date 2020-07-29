@@ -22,7 +22,7 @@ import qualified Data.Text.IO as TIO
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
-import HashedExpression.Embed.FFTW
+import HashedExpression.Embed
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding (InnerProductSpaceOp (..))
 import HashedExpression.Internal.Node

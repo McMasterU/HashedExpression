@@ -241,10 +241,11 @@ sToken p s = PT p (TS s i)
       "let" -> 23
       "minimize" -> 24
       "otherwise" -> 25
-      "variable" -> 26
-      "variables" -> 27
-      "{" -> 28
-      "}" -> 29
+      "solver" -> 26
+      "variable" -> 27
+      "variables" -> 28
+      "{" -> 29
+      "}" -> 30
       _ -> error $ "not a reserved word: " ++ show s
 
 -- | Get the position of a token.

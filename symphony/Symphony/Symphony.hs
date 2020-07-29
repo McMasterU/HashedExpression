@@ -12,6 +12,7 @@ import Codec.Picture
 import Control.Monad (when)
 import Control.Monad.Except
 import qualified Data.Array as Array
+import Data.Char (toLower)
 import Data.Complex
 import Data.List (intercalate)
 import Data.List.Extra (firstJust)
@@ -37,6 +38,7 @@ import LexHashedLang
 import ParHashedLang
 import Symphony.Common
 import Symphony.Exp
+import Symphony.Solver
 import Text.Regex.Posix
 
 myLLexer :: String -> [Token]
@@ -61,7 +63,7 @@ parse fileContent =
     r2c = Map.fromList . zip [1 ..] . map length . lines $ fileContent
     getNumColumn r = fromMaybe 0 $ Map.lookup r r2c
 
-data ValidSymphony = ValidSymphony (ExpressionMap, NodeID) Vars Consts [HS.ConstraintStatement]
+data ValidSymphony = ValidSymphony (ExpressionMap, NodeID) Vars Consts [HS.ConstraintStatement] AvailableSolver
 
 -------------------------------------------------------------------------------
 -- 1. Check if there is variables block
@@ -94,8 +96,10 @@ checkSemantic problem = do
   -- Objective
   parseObjectiveExp <- getMinimizeBlock problem
   objectiveExp <- constructExp finalContext (Just []) parseObjectiveExp
+  -- Solver
   let shape = getShape objectiveExp
       nt = getNT objectiveExp
+  solver <- getSolver problem
   when (shape /= [] || nt /= HE.R) $
     throwError $
       ErrorWithPosition
@@ -107,13 +111,13 @@ checkSemantic problem = do
         )
         (getBeginningPosition parseObjectiveExp)
   liftIO $ putStrLn "Syntax & semantic is correct"
-  return $ ValidSymphony objectiveExp vars consts css
+  return $ ValidSymphony objectiveExp vars consts css solver
 
 -------------------------------------------------------------------------------
 
 -- | Generate code
 generateCode :: String -> ValidSymphony -> Result ()
-generateCode outputPath (ValidSymphony objectiveExp vars consts css) = do
+generateCode outputPath (ValidSymphony objectiveExp vars consts css solver) = do
   let problemGen =
         HS.constructProblem
           -- Objective
@@ -129,7 +133,10 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css) = do
               `Map.union` Map.mapMaybeWithKey constVal consts
       case generateProblemCode CSimple.CSimpleConfig heProblem valMap of
         Invalid reason -> throwError $ GeneralError reason
-        Success res -> liftIO $ res outputPath
+        Success res -> do
+          liftIO $ res outputPath
+          liftIO $ putStrLn "Download solver & adapter......"
+          liftIO $ downloadSolver outputPath solver
     HS.ProblemInvalid reason -> throwError $ GeneralError reason
   where
     varVal _ (_, Just val) = Just val
@@ -200,6 +207,22 @@ getMinimizeBlock (Problem blocks) =
   where
     isMinimizeBlock (BlockMinimize declss) = True
     isMinimizeBlock _ = False
+
+-- | Get the solver
+getSolver :: Problem -> Result AvailableSolver
+getSolver (Problem blocks) =
+  case filter isSolverBlock blocks of
+    [] -> do
+      lift $ putStrLn "No solver specified, default to L-BFGS-B (https://github.com/stephenbeckr/L-BFGS-B-C)"
+      return LBFGSB
+    [BlockSolver (SolverName name)]
+      | map toLower name `elem` ["lbfgs-b", "lbfgsb", "l-bfgs-b"] -> return LBFGSB
+      | map toLower name `elem` ["ipopt"] -> return Ipopt
+      | otherwise -> throwError $ GeneralError "Unknown solver, should be (ipopt | lbfgs-b)"
+    _ -> throwError $ GeneralError "More than one solver specified"
+  where
+    isSolverBlock (BlockSolver name) = True
+    isSolverBlock _ = False
 
 -------------------------------------------------------------------------------
 

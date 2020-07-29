@@ -207,4 +207,3 @@ partialDerivativesMapByReverse (Expression rootID mp) =
               modifyComputedPartsByParents (IM.insertWith (++) x [dX])
       (_, res) = runState go init
    in (contextMap res, partialDerivativeMap res)
-
