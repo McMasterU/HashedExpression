@@ -40,7 +40,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Internal
+import HashedExpression.Internal.Context hiding (imFT, reFT)
+import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
+import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
@@ -50,6 +52,7 @@ import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
 import Prelude hiding (product, sum, (^))
 import qualified Prelude
+import Control.Monad.State.Strict 
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -106,7 +109,7 @@ normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pa
     pass =
       multipleTimes 1000 . chain $
         map
-          (toRecursiveTransformation . fromModification)
+          (toRecursiveTransformationHaha)
           [ reorderOperands,
             evaluateIfPossibleRules,
             groupConstantsRules,
@@ -373,7 +376,7 @@ rotateRules =
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
 --   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
-zeroOneSumProdRules :: Modification
+zeroOneSumProdRules :: Modification1
 zeroOneSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns
@@ -402,7 +405,7 @@ zeroOneSumProdRules exp@(mp, n) =
 -- | Rules for collapsing 'Sum' and 'Mul'
 --
 --   For example, if a sumP or product consists of only one entry, it can be extracted.
-collapseSumProdRules :: Modification
+collapseSumProdRules :: Modification1
 collapseSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
     Sum [nID] -> just nID
@@ -413,7 +416,7 @@ collapseSumProdRules exp@(mp, n) =
 --
 --   For example, if sumP or product contains sub-sum or sub-product, flatten them out. This is analogous to the `concat`
 --   function on lists.
-flattenSumProdRules :: Modification
+flattenSumProdRules :: Modification1
 flattenSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns ->
@@ -428,7 +431,7 @@ flattenSumProdRules exp@(mp, n) =
 
 -- | Rules for grouping constants
 --   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
-groupConstantsRules :: Modification
+groupConstantsRules :: Modification1
 groupConstantsRules exp@(mp, n) =
   let shape = retrieveShape n mp
    in case retrieveOp n mp of
@@ -450,13 +453,12 @@ groupConstantsRules exp@(mp, n) =
 --   * Sum [x,(-1) *. x,y] -> Sum [y]
 --   * Sum [2 *. x, (-1) *. x,y] -> Sum [x,y]
 --   * Sum [x,x,y] -> Sum [2 *. x,y]
-combineTermsRules :: Modification
+combineTermsRules :: Modification1
 combineTermsRules exp@(mp, n)
   | Sum ns <- retrieveOp n mp =
     sum_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
-    applyDiff' = applyDiff mp
     cntAppr nId
       | Scale scalerN scaleeN <- retrieveOp nId mp,
         Const val <- retrieveOp scalerN mp =
@@ -465,7 +467,7 @@ combineTermsRules exp@(mp, n)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
     fn x y = fst x == fst y
-    toDiff :: (Int, Double) -> Change
+    toDiff :: (Int, Double) -> State ExpressionMap NodeID
     toDiff (nId, val)
       | val == 1 = just nId
       | retrieveElementType nId mp == Covector = num_ val |*.| just nId
@@ -476,13 +478,12 @@ combineTermsRules exp@(mp, n)
 --   This includes the following scenarios:
 --   * Mul(x^(-1) * x,y) -> y
 --   * Mul(x,x,y) -> Mul(x^2,y), but we don't group Sum or Complex
-combineTermsRulesProd :: Modification
+combineTermsRulesProd :: Modification1
 combineTermsRulesProd exp@(mp, n)
   | Mul ns <- retrieveOp n mp =
     product_ . map (toDiff . combine) . groupBy fn . sortWith fst . map cntAppr $ ns
   | otherwise = just n
   where
-    applyDiff' = applyDiff mp
     cntAppr nId
       | Power value powerel <- retrieveOp nId mp = (powerel, value)
       | otherwise = (nId, 1)
@@ -502,7 +503,7 @@ combineTermsRulesProd exp@(mp, n)
 --   This includes rules like:
 --   * (x^2)^3 -> x^6
 --   * (x^2)^-1 -> x^-2
-combinePowerRules :: Modification
+combinePowerRules :: Modification1
 combinePowerRules exp@(mp, n)
   | Power outerVal outerN <- retrieveOp n mp,
     Power innerVal innerN <- retrieveOp outerN mp =
@@ -513,7 +514,7 @@ combinePowerRules exp@(mp, n)
 --
 --   * (a+b)^2 should be (a+b)*(a+b)
 --   * (a +: b) ^ 2 should be (a +: b) * (a +: b)
-powerSumRealImagRules :: Modification
+powerSumRealImagRules :: Modification1
 powerSumRealImagRules exp@(mp, n)
   | Power val nId <- retrieveOp n mp,
     isSumOrRealImag nId =
@@ -532,7 +533,7 @@ powerSumRealImagRules exp@(mp, n)
 -- | Rules for power product
 --
 --   * (a*b*c)^k should be a^k * b^k * c^k
-powerProdRules :: Modification
+powerProdRules :: Modification1
 powerProdRules exp@(mp, n)
   | Power val nId <- retrieveOp n mp,
     Mul args <- retrieveOp nId mp =
@@ -542,7 +543,7 @@ powerProdRules exp@(mp, n)
 -- | Rules for power scale
 --
 --   * (a*.b)^2 should be a^2 *. b^2
-powerScaleRules :: Modification
+powerScaleRules :: Modification1
 powerScaleRules exp@(mp, n)
   | Power val nId <- retrieveOp n mp,
     Scale scalar scalee <- retrieveOp nId mp,
@@ -553,7 +554,7 @@ powerScaleRules exp@(mp, n)
 -- | Rules for combining scalar scales and multiplications
 --
 --   * (a *. x) * (b *. y) * (c *. z) --> (a * b * c) *. (x * y * z) (if all are real)
-combineRealScalarRules :: Modification
+combineRealScalarRules :: Modification1
 combineRealScalarRules exp@(mp, n)
   | Mul ns <- retrieveOp n mp,
     retrieveElementType n mp == R,
@@ -575,7 +576,7 @@ combineRealScalarRules exp@(mp, n)
 -- | Rules that are applied in specific scenarios if possible
 --
 --   For instance, we can combine constants in 'Sum' and 'Mul' using regular Haskell arithmetic.
-evaluateIfPossibleRules :: Modification
+evaluateIfPossibleRules :: Modification1
 evaluateIfPossibleRules exp@(mp, n) =
   case (retrieveElementType n mp, node, pulledVals) of
     (R, Sum _, Just vals) -> res $ Prelude.sum vals
@@ -601,7 +602,7 @@ evaluateIfPossibleRules exp@(mp, n) =
 -- | Rules to normalize rotations
 --
 --   This ensures that rotateAmount in each direction always lie within (0, dim - 1)
-normalizeRotateRules :: Modification
+normalizeRotateRules :: Modification1
 normalizeRotateRules exp@(mp, n)
   | (shape, _, Rotate amount arg) <- retrieveNode n mp = rotate (zipWith mod amount shape) $ just arg
   | otherwise = just n
@@ -610,7 +611,7 @@ normalizeRotateRules exp@(mp, n)
 --
 --   This is to avoid having `Const (-0.0)` show up, which is considered different than `Const (0.0)`.
 --   Thus, instead we convert those to `Const (0.0)`.
-negativeZeroRules :: Modification
+negativeZeroRules :: Modification1
 negativeZeroRules exp@(mp, n)
   | (shape, _, Const val) <- retrieveNode n mp,
     val == 0.0 || val == (-0.0) =
@@ -622,7 +623,7 @@ negativeZeroRules exp@(mp, n)
 --   In particular, Piecewise of 'RealImag' is the same as 'RealImag' of piecewise functions.
 --
 --   * if a > 2 then x +: y else m +: n --> (if a > 2 then x else m) +: (if a > 2 then y else n)
-expandPiecewiseRealImag :: Modification
+expandPiecewiseRealImag :: Modification1
 expandPiecewiseRealImag exp@(mp, n)
   | Piecewise marks condition branches <- retrieveOp n mp,
     Just reIms <- mapM extract branches =
@@ -640,7 +641,7 @@ expandPiecewiseRealImag exp@(mp, n)
 -- | Rules for expanding piecewise functions
 --
 --   For example: `if x < 1 then x + 1 else x + y = (x + 1) * (if x < 1 then 1 else 0) + (x + y) * (if x < 1 then 0 else 1)`
-pullOutPiecewiseRules :: Modification
+pullOutPiecewiseRules :: Modification1
 pullOutPiecewiseRules exp@(mp, n) =
   case retrieveOp n mp of
     Piecewise marks condition branches
@@ -673,7 +674,7 @@ pullOutPiecewiseRules exp@(mp, n) =
 --
 -- twiceReFT is the same as (xRe . ft) . (xRe . ft). The former has better performance than the latter for the same
 -- operation. We can simplify this further as `twiceReFT(x) + twiceImFT(x) = (size(x) / 2) *. x`.
-twiceReFTAndImFTRules :: Modification
+twiceReFTAndImFTRules :: Modification1
 twiceReFTAndImFTRules exp@(mp, n)
   | Sum sumands <- retrieveOp n mp,
     retrieveElementType n mp == R,
@@ -709,7 +710,7 @@ twiceReFTAndImFTRules exp@(mp, n)
 
 -- | Re-order operands in associative-commutative operators like Sum or Mul
 -- or commutative binary like InnerProd for real
-reorderOperands :: Modification
+reorderOperands :: Modification1
 reorderOperands exp@(mp, n)
   | Sum operands <- retrieveOp n mp,
     let sortedOperands = sortOperands operands,
