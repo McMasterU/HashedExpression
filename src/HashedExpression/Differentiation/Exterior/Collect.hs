@@ -30,10 +30,11 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
+import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
+import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Pattern
@@ -74,7 +75,7 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
     applyRules =
       chain
         [ separateDVarAlone,
-          toTransformation $ fromModification groupByDVar,
+          toTransformationHaha groupByDVar,
           aggregateByDVar,
           normalizeEachPartialDerivative,
           removeUnreachable
@@ -100,7 +101,7 @@ separateDVarAlone =
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
 -- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->
 --   ((f * dx + 1 * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
-groupByDVar :: Modification
+groupByDVar :: Modification1
 groupByDVar exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns
