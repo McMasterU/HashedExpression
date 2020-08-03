@@ -1,13 +1,12 @@
-module HashedExpression.Internal.Haha where
+module HashedExpression.Internal.Context where
 
+import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
-import GHC.Stack (HasCallStack)
-
 
 -- |
 class (Monad m) => MonadExpression m where
@@ -22,20 +21,19 @@ perform spec operandIDs = do
   let node = createEntry spec operands
   introduceNode node
 
-
 instance (MonadExpression m) => Num (m NodeID) where
   (+) operand1 operand2 = do
-      x <- operand1
-      y <- operand2
-      perform (Nary specSum) [x, y]
+    x <- operand1
+    y <- operand2
+    perform (Nary specSum) [x, y]
   negate operand = do
-      x <- operand
-      perform (Unary specNeg) [x]
+    x <- operand
+    perform (Unary specNeg) [x]
   (*) :: m NodeID -> m NodeID -> m NodeID
   (*) operand1 operand2 = do
-      x <- operand1
-      y <- operand2
-      perform (Nary specMul) [x, y]
+    x <- operand1
+    y <- operand2
+    perform (Nary specMul) [x, y]
 
 instance (MonadExpression m) => Fractional (m NodeID) where
   (/) operand1 operand2 = do
@@ -144,3 +142,27 @@ imFT :: (MonadExpression m) => m NodeID -> m NodeID
 imFT operand = do
   x <- operand
   perform (Unary specImFT) [x]
+
+instance (MonadExpression m) => MulCovectorOp (m NodeID) (m NodeID) (m NodeID) where
+  (|*|) operand1 operand2 = do
+    x <- operand1
+    y <- operand2
+    perform (Binary specMulD) [x, y]
+
+instance (MonadExpression m) => ScaleCovectorOp (m NodeID) (m NodeID) (m NodeID) where
+  (|*.|) operand1 operand2 = do
+    x <- operand1
+    y <- operand2
+    perform (Binary specScaleD) [x, y]
+
+instance (MonadExpression m) => CovectorScaleOp (m NodeID) (m NodeID) (m NodeID) where
+  (|.*|) operand1 operand2 = do
+    x <- operand1
+    y <- operand2
+    perform (Binary specDScale) [x, y]
+
+instance (MonadExpression m) => InnerProductCovectorOp (m NodeID) (m NodeID) (m NodeID) where
+  (|<.>|) operand1 operand2 = do
+    x <- operand1
+    y <- operand2
+    perform (Binary specInnerProdD) [x, y]

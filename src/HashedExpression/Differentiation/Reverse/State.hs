@@ -19,7 +19,7 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Haha
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
@@ -47,13 +47,13 @@ modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (part
 type ComputeReverseM a = State ComputeDState a
 
 
-instance MonadExpression (State ComputeDState) where 
+instance MonadExpression (State ComputeDState) where
   introduceNode node = do
     mp <- gets contextMap
     let nID = hashNode (checkHashFromMap mp) node
-    modifyContextMap $ IM.insert nID node 
+    modifyContextMap $ IM.insert nID node
     return nID
-  
+
   getContextMap = gets contextMap
 
 
