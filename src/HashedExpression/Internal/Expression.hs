@@ -408,7 +408,7 @@ class InnerProductSpaceOp a b c | a b -> c where
 
 -- | Interface for rotation combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
-class RotateOp k a | a -> k where
+class RotateOp k a  where
   rotate :: k -> a -> a
 
 -- | Interface for rotation combinator for constructing 'Expression' types. Can be overloaded

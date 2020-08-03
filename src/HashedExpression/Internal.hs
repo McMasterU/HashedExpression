@@ -107,7 +107,8 @@ apply option exps = (IM.insert resID resNode mergedMap, resID)
   where
     (mergedMap, nIDs) = safeMerges exps
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
-    (resID, resNode) = createEntry (checkHashFromMap mergedMap) option operands
+    resNode = createEntry option operands
+    resID = hashNode (checkHashFromMap mergedMap) resNode
 
 applyUnary ::
   HasCallStack =>
@@ -577,23 +578,24 @@ applyDiff contextMp spec diffs = ExpressionDiff (IM.insert resID resNode mergedE
       | otherwise = error "applyDiff: Impossible"
     operands = zip nIDs $ map getNode nIDs
     checkHash = checkHashFromMaps [contextMp, mergedExtraEntries]
-    (resID, resNode) = createEntry checkHash spec operands
+    resNode = createEntry spec operands
+    resID = hashNode checkHash resNode
+    
+    
 
 -- |
 createEntry ::
-  -- | Check for hash collision function
-  CheckHash ->
   -- | Operation specification
   OperationSpec ->
   -- | Operands
   [(NodeID, Node)] ->
   -- | The entry that is collision-free from CheckHash
-  (NodeID, Node)
-createEntry checkHash spec args =
+  Node
+createEntry spec args =
   let shapeOf (nID, (shape, et, _)) = shape
       etOf (nID, (shape, et, _)) = et
       idOf (nID, (shape, et, _)) = nID
-      node = case (spec, args) of
+   in case (spec, args) of
         (Unary (UnarySpec toOp decideShape decideET), [arg]) ->
           ( decideShape (shapeOf arg),
             decideET (etOf arg),
@@ -615,4 +617,4 @@ createEntry checkHash spec args =
             toOp (idOf condition) (map idOf branches)
           )
         _ -> error "Unfaithful with operation spec"
-   in (hashNode checkHash node, node)
+

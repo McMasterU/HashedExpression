@@ -19,6 +19,7 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Haha
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
@@ -43,154 +44,23 @@ modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> Comput
 modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (partialDerivativeMap s)}
 
 -- |
+type ComputeReverseM a = State ComputeDState a
+
+
+instance MonadExpression (State ComputeDState) where 
+  introduceNode node = do
+    mp <- gets contextMap
+    let nID = hashNode (checkHashFromMap mp) node
+    modifyContextMap $ IM.insert nID node 
+    return nID
+  
+  getContextMap = gets contextMap
+
+
+-- |
 from :: NodeID -> ComputeReverseM NodeID
 from = return
 
 -- |
 sNum :: Double -> ComputeReverseM NodeID
 sNum val = introduceNode ([], R, Const val)
-
--- |
-introduceNode :: Node -> ComputeReverseM NodeID
-introduceNode node = do
-  mp <- gets contextMap
-  let nID = hashNode (checkHashFromMap mp) node
-  modify' $ \s -> s {contextMap = IM.insert nID node mp}
-  return nID
-
--- |
-perform :: OperationSpec -> [NodeID] -> ComputeReverseM NodeID
-perform spec operandIDs = do
-  mp <- gets contextMap
-  let operands = map (\nID -> (nID, retrieveNode nID mp)) operandIDs
-  let (nID, node) = createEntry (checkHashFromMap mp) spec operands
-  modify' $ \s -> s {contextMap = IM.insert nID node mp}
-  return nID
-
--- |
-type ComputeReverseM a = State ComputeDState a
-
-instance Num (ComputeReverseM NodeID) where
-  (+) operand1 operand2 =
-    do
-      x <- operand1
-      y <- operand2
-      perform (Nary specSum) [x, y]
-  negate operand =
-    do
-      x <- operand
-      perform (Unary specNeg) [x]
-  (*) :: HasCallStack => ComputeReverseM NodeID -> ComputeReverseM NodeID -> ComputeReverseM NodeID
-  (*) operand1 operand2 =
-    do
-      x <- operand1
-      y <- operand2
-      perform (Nary specMul) [x, y]
-
-instance Fractional (ComputeReverseM NodeID) where
-  (/) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specDiv) [x, y]
-
-  fromRational r = error "N/A"
-
-instance Floating (ComputeReverseM NodeID) where
-  sqrt operand = do
-    x <- operand
-    perform (Unary specSqrt) [x]
-  exp operand = do
-    x <- operand
-    perform (Unary specExp) [x]
-  log operand = do
-    x <- operand
-    perform (Unary specLog) [x]
-  sin operand = do
-    x <- operand
-    perform (Unary specSin) [x]
-  cos operand = do
-    x <- operand
-    perform (Unary specCos) [x]
-  tan operand = do
-    x <- operand
-    perform (Unary specTan) [x]
-  asin operand = do
-    x <- operand
-    perform (Unary specAsin) [x]
-  acos operand = do
-    x <- operand
-    perform (Unary specAcos) [x]
-  atan operand = do
-    x <- operand
-    perform (Unary specAtan) [x]
-  sinh operand = do
-    x <- operand
-    perform (Unary specSinh) [x]
-  cosh operand = do
-    x <- operand
-    perform (Unary specCosh) [x]
-  tanh operand = do
-    x <- operand
-    perform (Unary specTanh) [x]
-  asinh operand = do
-    x <- operand
-    perform (Unary specAsinh) [x]
-  acosh operand = do
-    x <- operand
-    perform (Unary specAcosh) [x]
-  atanh operand = do
-    x <- operand
-    perform (Unary specAtanh) [x]
-
-instance PowerOp (ComputeReverseM NodeID) Int where
-  (^) operand alpha = do
-    x <- operand
-    perform (Unary (specPower alpha)) [x]
-
-instance VectorSpaceOp (ComputeReverseM NodeID) (ComputeReverseM NodeID) where
-  scale operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specScale) [x, y]
-
-instance ComplexRealOp (ComputeReverseM NodeID) (ComputeReverseM NodeID) where
-  (+:) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specRealImag) [x, y]
-  xRe operand1 = do
-    x <- operand1
-    perform (Unary specRealPart) [x]
-  xIm operand1 = do
-    x <- operand1
-    perform (Unary specImagPart) [x]
-  conjugate operand = do
-    x <- operand
-    perform (Unary specConjugate) [x]
-
-instance InnerProductSpaceOp (ComputeReverseM NodeID) (ComputeReverseM NodeID) (ComputeReverseM NodeID) where
-  (<.>) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specInnerProd) [x, y]
-
-instance RotateOp RotateAmount (ComputeReverseM NodeID) where
-  rotate ra operand = do
-    x <- operand
-    perform (Unary (specRotate ra)) [x]
-
-instance PiecewiseOp (ComputeReverseM NodeID) (ComputeReverseM NodeID) where
-  piecewise marks condition branches = do
-    conditionID <- condition
-    branchIDs <- sequence branches
-    perform (ConditionAry (specPiecewise marks)) $ conditionID : branchIDs
-
-reFT :: ComputeReverseM NodeID -> ComputeReverseM NodeID
-reFT operand = do
-  x <- operand
-  perform (Unary specReFT) [x]
-
-imFT :: ComputeReverseM NodeID -> ComputeReverseM NodeID
-imFT operand = do
-  x <- operand
-  perform (Unary specImFT) [x]

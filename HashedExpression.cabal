@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8cd28a087f508490f3891da8fc8a23620f27f29dc9d0598d42e970b328291f71
+-- hash: 1cf3cc2bf512715a7344ba4203bf500a85c937c7779da131c278f7083035c591
 
 name:           HashedExpression
 version:        0.1.0.0
@@ -47,6 +47,7 @@ library
       HashedExpression.Internal
       HashedExpression.Internal.Collision
       HashedExpression.Internal.Expression
+      HashedExpression.Internal.Haha
       HashedExpression.Internal.Hash
       HashedExpression.Internal.Node
       HashedExpression.Internal.Normalize
