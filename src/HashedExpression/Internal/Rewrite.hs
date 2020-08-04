@@ -31,6 +31,7 @@ import Prelude hiding ((^))
 
 type Modification = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
 
+
 toTransformation :: Modification -> Transformation
 toTransformation modify exp =
   let (nID, newMp) = runState (modify exp) (fst exp)

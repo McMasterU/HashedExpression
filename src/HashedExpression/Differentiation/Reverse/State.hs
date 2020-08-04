@@ -17,9 +17,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Context
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
@@ -27,7 +27,7 @@ import Prelude hiding ((^))
 
 data ComputeDState = ComputeDState
   { contextMap :: ExpressionMap,
-    computedPartsByParents :: IM.IntMap [NodeID],
+    cumulativeDerivatives :: IM.IntMap [NodeID], -- cumulative derivatives incurred by parents 
     partialDerivativeMap :: Map String NodeID
   }
 
@@ -36,8 +36,8 @@ modifyContextMap :: (ExpressionMap -> ExpressionMap) -> ComputeReverseM ()
 modifyContextMap f = modify' $ \s -> s {contextMap = f (contextMap s)}
 
 -- |
-modifyComputedPartsByParents :: (IM.IntMap [NodeID] -> IM.IntMap [NodeID]) -> ComputeReverseM ()
-modifyComputedPartsByParents f = modify' $ \s -> s {computedPartsByParents = f (computedPartsByParents s)}
+addDerivative :: NodeID -> NodeID -> ComputeReverseM ()
+addDerivative x dx = modify' $ \s -> s {cumulativeDerivatives = IM.insertWith (++) x [dx] (cumulativeDerivatives s)}
 
 -- |
 modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
@@ -45,7 +45,6 @@ modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (part
 
 -- |
 type ComputeReverseM a = State ComputeDState a
-
 
 instance MonadExpression (State ComputeDState) where
   introduceNode node = do
@@ -55,7 +54,6 @@ instance MonadExpression (State ComputeDState) where
     return nID
 
   getContextMap = gets contextMap
-
 
 -- |
 from :: NodeID -> ComputeReverseM NodeID
