@@ -109,7 +109,7 @@ normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pa
     pass =
       multipleTimes 1000 . chain $
         map
-          (toRecursiveTransformationHaha)
+          toRecursiveTransformationHaha
           [ reorderOperands,
             evaluateIfPossibleRules,
             groupConstantsRules,
@@ -157,7 +157,7 @@ normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pa
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
 toMultiplyIfPossible :: Transformation
 toMultiplyIfPossible =
-  chain . map (toRecursiveTransformation . fromSubstitution) $
+  chain . map (toRecursiveTransformationHaha . fromSubstitution1) $
     [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y,
       x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
       x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
@@ -168,7 +168,7 @@ toMultiplyIfPossible =
 -- | Create a transformation which combines together the various rules listed in this module.
 rulesFromPattern :: Transformation
 rulesFromPattern =
-  chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+  chain . map (toRecursiveTransformationHaha . fromSubstitution1) . concat $
     [ complexNumRules,
       zeroOneRules,
       scaleRules,

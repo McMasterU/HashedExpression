@@ -157,13 +157,13 @@ applyConditionAry ::
 applyConditionAry spec e branches =
   wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
 
-const_ :: Shape -> Double -> ExpressionMap -> ExpressionDiff
-const_ shape val mp =
-  let node = (shape, R, Const val)
-      nID = hashNode (checkHashFromMap mp) node
-   in case IM.lookup nID mp of
-        Just _ -> ExpressionDiff IM.empty nID
-        _ -> ExpressionDiff (IM.singleton nID node) nID
+--const_ :: Shape -> Double -> ExpressionMap -> ExpressionDiff
+--const_ shape val mp =
+--  let node = (shape, R, Const val)
+--      nID = hashNode (checkHashFromMap mp) node
+--   in case IM.lookup nID mp of
+--        Just _ -> ExpressionDiff IM.empty nID
+--        _ -> ExpressionDiff (IM.singleton nID node) nID
 
 -------------------------------------------------------------------------------
 

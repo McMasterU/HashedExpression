@@ -142,6 +142,27 @@ imFT :: (MonadExpression m) => m NodeID -> m NodeID
 imFT operand = do
   x <- operand
   perform (Unary specImFT) [x]
+  
+reFT1 :: (MonadExpression m) => m NodeID -> m NodeID
+reFT1 operand = do
+  x <- operand
+  perform (Unary specReFT) [x]
+
+imFT1 :: (MonadExpression m) => m NodeID -> m NodeID
+imFT1 operand = do
+  x <- operand
+  perform (Unary specImFT) [x]
+
+twiceReFT1 :: (MonadExpression m) => m NodeID -> m NodeID
+twiceReFT1 operand = do
+  x <- operand
+  perform (Unary specTwiceReFT) [x]
+
+twiceImFT1 :: (MonadExpression m) => m NodeID -> m NodeID
+twiceImFT1 operand = do
+  x <- operand
+  perform (Unary specTwiceImFT) [x]
+
 
 instance (MonadExpression m) => MulCovectorOp (m NodeID) (m NodeID) (m NodeID) where
   (|*|) operand1 operand2 = do

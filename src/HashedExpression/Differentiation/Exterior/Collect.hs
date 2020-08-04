@@ -87,7 +87,7 @@ inspect exp = traceShow (debugPrint exp) exp
 -- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
-  multipleTimes 1000 . chain . map (toRecursiveTransformation . fromSubstitution) $
+  multipleTimes 1000 . chain . map (toRecursiveTransformationHaha . fromSubstitution1) $
     [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
@@ -133,7 +133,7 @@ groupByDVar exp@(mp, n) =
 --   --> ((f + x) * dx) + (h * dy) + ((t1 + f1) <.> dx1)
 aggregateByDVar :: Transformation
 aggregateByDVar =
-  chain . map (toRecursiveTransformation . fromSubstitution) $
+  chain . map (toRecursiveTransformationHaha . fromSubstitution1) $
     [ sumP (mapL (|*| y) xs) |. isDVar y ~~~~~~> sumP xs |*| y,
       sumP (mapL (|<.>| y) xs) |. isDVar y ~~~~~~> sumP xs |<.>| y
     ]
