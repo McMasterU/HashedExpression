@@ -75,7 +75,7 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
     applyRules =
       chain
         [ separateDVarAlone,
-          toTransformationHaha groupByDVar,
+          toTransformation groupByDVar,
           aggregateByDVar,
           normalizeEachPartialDerivative,
           removeUnreachable
@@ -87,7 +87,7 @@ inspect exp = traceShow (debugPrint exp) exp
 -- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
-  multipleTimes 1000 . chain . map (toRecursiveTransformationHaha . fromSubstitution1) $
+  multipleTimes 1000 . chain . map (toRecursiveTransformation . fromSubstitution) $
     [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
@@ -101,7 +101,7 @@ separateDVarAlone =
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
 -- (f * dx + h * dy + dx + t1 <.> dx1 + f1 <.> dx1) -->
 --   ((f * dx + 1 * dx) + (h * dy) + (t1 <.> dx1 + f1 <.> dx1)
-groupByDVar :: Modification1
+groupByDVar :: Modification
 groupByDVar exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns
@@ -133,7 +133,7 @@ groupByDVar exp@(mp, n) =
 --   --> ((f + x) * dx) + (h * dy) + ((t1 + f1) <.> dx1)
 aggregateByDVar :: Transformation
 aggregateByDVar =
-  chain . map (toRecursiveTransformationHaha . fromSubstitution1) $
+  chain . map (toRecursiveTransformation . fromSubstitution) $
     [ sumP (mapL (|*| y) xs) |. isDVar y ~~~~~~> sumP xs |*| y,
       sumP (mapL (|<.>| y) xs) |. isDVar y ~~~~~~> sumP xs |<.>| y
     ]

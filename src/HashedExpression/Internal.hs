@@ -9,7 +9,8 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- Inner HashedExpression functionality, contains transformations and combinators for manually manipulating HashedExpressions.
+-- Inner HashedExpression functionality, contains combinators for manually manipulating HashedExpressions including merging 
+-- expression maps, create new entry, etc.
 module HashedExpression.Internal where
 
 import Control.Monad (forM, forM_, unless, when)
@@ -45,42 +46,8 @@ unwrap (Expression n mp) = (mp, n)
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
--------------------------------------------------------------------------------
-addEntryWithContextTo ::
-  ExpressionMap ->
-  OperationSpec ->
-  [NodeID] ->
-  ExpressionMap ->
-  (ExpressionMap, NodeID)
-addEntryWithContextTo contextMp spec args mp =
-  let shapeOf nID = retrieveShape nID contextMp
-      etOf nID = retrieveElementType nID contextMp
-      (shape, et, op) = case (spec, args) of
-        (Unary (UnarySpec toOp decideShape decideET), [arg]) ->
-          ( decideShape (shapeOf arg),
-            decideET (etOf arg),
-            toOp arg
-          )
-        (Binary (BinarySpec toOp decideShape decideET), [arg1, arg2]) ->
-          ( decideShape (shapeOf arg1) (shapeOf arg2),
-            decideET (etOf arg1) (etOf arg2),
-            toOp arg1 arg2
-          )
-        (Nary (NarySpec toOp decideShape decideET), args) ->
-          ( decideShape (map shapeOf args),
-            decideET (map etOf args),
-            toOp args
-          )
-        (ConditionAry (ConditionarySpec toOp decideShape decideET), condition : branches) ->
-          ( decideShape (shapeOf condition) (map shapeOf branches),
-            decideET (etOf condition) (map etOf branches),
-            toOp condition branches
-          )
-        _ -> error "Unfaithful with operation spec"
-   in addNode mp (shape, et, op)
 
 -------------------------------------------------------------------------------
-
 -- | Generic N-Ary multiplication operator, constructed using 'apply'
 --   with 'ElementDefault' to default to the 'ElementType' of it's arguments
 mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
@@ -157,13 +124,6 @@ applyConditionAry ::
 applyConditionAry spec e branches =
   wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
 
---const_ :: Shape -> Double -> ExpressionMap -> ExpressionDiff
---const_ shape val mp =
---  let node = (shape, R, Const val)
---      nID = hashNode (checkHashFromMap mp) node
---   in case IM.lookup nID mp of
---        Just _ -> ExpressionDiff IM.empty nID
---        _ -> ExpressionDiff (IM.singleton nID node) nID
 
 -------------------------------------------------------------------------------
 
@@ -196,54 +156,6 @@ data ET_
 --   Construct using the 'toTransformation' function
 type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 
--- | Take a function from a (unwrapped) 'Expression' to an 'ExpressionDiff' and create
---   a transformation. See 'fromModification' for turning a 'Modification' into a 'Transformation'
-toTransformation ::
-  -- | argument provided by 'fromModification'
-  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  -- | resulting transformation
-  Transformation
-toTransformation normalizer exp@(mp, n) =
-  let diff = normalizer exp
-      -- Safe to merge here
-      newMp = IM.union mp (extraEntries diff)
-      newN = newRootId diff
-   in (newMp, newN)
-
--- | A Modification type takes a base 'Expression' (in unwrapped form) to propogate through a 'Change' combinator.
---   Use 'fromModification' in conjunction with 'toTransformation' to turn a 'Modification' into a 'Transformation'
---type Modification = (ExpressionMap, NodeID) -> Change
-
--- | Takes a 'Modification' and returns a corresponding function
---fromModification :: Modification -> ((ExpressionMap, NodeID) -> ExpressionDiff)
---fromModification mkDiff exp@(mp, n) = mkDiff exp mp
-
--- | Used to apply rules (which can be generated with 'fromModification') to every 'Node' in an 'Expression' bottom up
-toRecursiveTransformation ::
-  -- | rule applied to a single 'Node'
-  ((ExpressionMap, NodeID) -> ExpressionDiff) ->
-  -- | resulting rule applied to every 'Node'
-  Transformation
-toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup headN finalSub)
-  where
-    -------------------------------------------------------------------------------
-    topoOrder :: [NodeID]
-    topoOrder = topologicalSort exp
-    -------------------------------------------------------------------------------
-    f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
-    f (accMp, sub) nID =
-      let node = mapNode (toTotal sub) (retrieveNode nID accMp)
-          nodeID = hashNode (checkHashFromMap accMp) node
-          updatedMp = if nodeID == nID then accMp else IM.insert nodeID node accMp
-          -- Exp built from applied children
-          curExp = (updatedMp, nodeID)
-          ExpressionDiff extraEntries newNodeID = smp curExp
-       in -- extraEntries is diffed from updatedMp
-          -- thus they are safe to merge
-          (IM.union extraEntries updatedMp, IM.insert nID newNodeID sub)
-    -------------------------------------------------------------------------------
-    (finalMap, finalSub) = foldl' f (mp, IM.empty) topoOrder
-
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
 removeUnreachable (mp, n) =
@@ -267,31 +179,6 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
 
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Expression Diffs
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- | When performing a 'Change' on an 'ExpressionMap', the extra entries created by the change
---   (i.e not included in the original 'ExpressionMap') and a new root 'NodeID' are stored in the ExpressionDiff type
-data ExpressionDiff = ExpressionDiff
-  { -- | Extra entries we need to add to the original Expression Map
-    extraEntries :: ExpressionMap,
-    -- | New root of the expression (can change, can be the same)
-    newRootId :: NodeID
-  }
-  deriving (Eq, Ord, Show)
-
-dZeroWithShape :: Shape -> ExpressionDiff
-dZeroWithShape shape = ExpressionDiff mp n
-  where
-    Expression n mp = fromNode (shape, Covector, DZero)
-
--- | The ExpressionDiff corresponding to no change in this node
-noChange :: NodeID -> ExpressionDiff
-noChange = ExpressionDiff IM.empty
-
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -307,11 +194,6 @@ topologicalSort ::
   -- | list in topological order (independent to dependent)
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
-
--- | Topological sort the ExpressionDiff. Note that there are some NodeID getting referred in ExpressionDiff
--- but dont appears on it's extraEntries. However, the extraEries still form a DAG.
-topologicalSortExpressionDiff :: ExpressionDiff -> [NodeID]
-topologicalSortExpressionDiff (ExpressionDiff mp n) = topologicalSortManyRoots (mp, [n])
 
 -- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
@@ -375,6 +257,8 @@ toTotal mp nID = case IM.lookup nID mp of
 -- | Merge the second map into the first map, resolve hash collision if occur
 safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 safeMerge accMp (mp, n) =
+  -- | Merge the subexpression to main expression map
+  -- produce `sub` as the map from old hash to new hash if there is any hash-collision
   let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
       f (acc, sub) nodeID =
         let -- the node needed to be added to accMp
@@ -386,8 +270,10 @@ safeMerge accMp (mp, n) =
                 then sub
                 else IM.insert nodeID newNodeID sub
             )
+      -- | Fold over all sub-expressions by topological order
       (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
    in (mergedMap, toTotal finalSub n)
+
 
 safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
@@ -398,99 +284,16 @@ safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
       let (mergedMap, nID) = safeMerge acc (valMP, valNID)
        in (mergedMap, accIds ++ [nID])
 
---
-
--- | Merge the second diff's extra entries to first's, resolve hash collision if occur
---   This is the auxiliary function for many other hash-collision handling functions, e.g safeMergeDiffs
---   Precondition:
---   + accMp is collision-free w.r.t contextMp
---   + diff's extra entries is collision-free w.r.t contextMp
---   Post condition:
---   + mp is collision-free w.r.t contextMp
-safeMergeDiff ::
-  -- | Hashing scheme, this would normally be HashedExpression.Hash.hashNode
-  -- but this should work for any hashing scheme
-  (CheckHash -> Node -> NodeID) ->
-  -- | Context expression map where the diff is computed from: contextMp
-  ExpressionMap ->
-  -- | The expression map where the diff will be merged into: accMp
-  ExpressionMap ->
-  -- | The expression diff which will be merged: diff
-  ExpressionDiff ->
-  -- | New merged expression map and new NodeID corresponding to the merged diff. (mp, nID)
-  (ExpressionMap, NodeID)
-safeMergeDiff hash contextMp accMp diff@(ExpressionDiff diffExtraEntries diffRootID) = case IM.lookup diffRootID finalSub of
-  Just newRootID -> (mergedMap, newRootID)
-  _ -> (mergedMap, diffRootID)
-  where
-    f :: (ExpressionMap, IM.IntMap Int) -> NodeID -> (ExpressionMap, IM.IntMap Int)
-    f (acc, sub) nodeID =
-      let -- the node needed to be added to accMp
-          node = mapNode (toTotal sub) (retrieveNode nodeID diffExtraEntries)
-          -- get the new hash that is collision-free to both acc and contextMp
-          newNodeID = hash (checkHashFromMaps [acc, contextMp]) node
-       in ( IM.insert newNodeID node acc,
-            if newNodeID == nodeID
-              then sub
-              else IM.insert nodeID newNodeID sub
-          )
-    (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSortExpressionDiff diff
-
--- | Merge all the expression diffs, resolve any hash collision if occur
---   Precondition:
---      ∀ d in diffs: d is collision-free w.r.t contextMp
---   Post condition
---      mp is collision-free w.r.t contextMp
-safeMergeDiffs ::
-  -- | The context expression map: contextMp
-  ExpressionMap ->
-  -- | The diffs to be merged: diffs
-  [ExpressionDiff] ->
-  -- | Result (mp, nIDs) where:
-  --   + mp is the merged expression map of all ExpresisonDiffs' extraEntrries
-  --   + nIDs are new root IDs of the input diffs
-  --   + nIDs are keys of mp
-  (ExpressionMap, [NodeID])
-safeMergeDiffs contextMp diffs = foldl' f (extraEntries headDiff, [newRootId headDiff]) restDiffs
-  where
-    (headDiff : restDiffs) = diffs
-    f :: (ExpressionMap, [NodeID]) -> ExpressionDiff -> (ExpressionMap, [NodeID])
-    f (accMp, nIDs) diff =
-      let (nextAccMp, nID) = safeMergeDiff hashNode contextMp accMp diff
-       in (nextAccMp, nIDs ++ [nID])
-
--- | Compute a new 'ExpressionDiff' (with respect to a base 'ExpressionMap') when applying an operation to
---   other 'ExpressionDiff'
-applyDiff ::
-  -- | the base map to find diffs w.r.t
-  ExpressionMap ->
-  -- | the operation to apply
-  OperationSpec ->
-  -- | the operands (also in diff to the base map)
-  [ExpressionDiff] ->
-  -- | the result (combined diffs with new nodes)
-  ExpressionDiff
-applyDiff contextMp spec diffs = ExpressionDiff (IM.insert resID resNode mergedExtraEntries) resID
-  where
-    (mergedExtraEntries, nIDs) = safeMergeDiffs contextMp diffs
-    getNode nID
-      | Just node <- IM.lookup nID mergedExtraEntries = node
-      | Just node <- IM.lookup nID contextMp = node
-      | otherwise = error "applyDiff: Impossible"
-    operands = zip nIDs $ map getNode nIDs
-    checkHash = checkHashFromMaps [contextMp, mergedExtraEntries]
-    resNode = createEntry spec operands
-    resID = hashNode checkHash resNode
-    
-    
-
 -- |
+-- Create an node out of operation spec and its operands.
+-- Operands must follow the spec in terms of input and output's element types & shape
+--
 createEntry ::
   -- | Operation specification
   OperationSpec ->
   -- | Operands
   [(NodeID, Node)] ->
-  -- | The entry that is collision-free from CheckHash
+  -- | Result Node
   Node
 createEntry spec args =
   let shapeOf (nID, (shape, et, _)) = shape
@@ -518,4 +321,14 @@ createEntry spec args =
             toOp (idOf condition) (map idOf branches)
           )
         _ -> error "Unfaithful with operation spec"
+
+
+-- | Operations such as ImFT, ReFT, etc are for internal used only.
+--
+class FTRelatedOp a b | a -> b where
+  imFT :: a -> b
+  reFT :: a -> b
+  twiceImFT :: a -> b
+  twiceReFT :: a -> b
+
 

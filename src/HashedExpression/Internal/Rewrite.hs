@@ -20,7 +20,7 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
+import HashedExpression.Internal
 import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -29,18 +29,18 @@ import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
-type Modification1 = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
+type Modification = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
 
-toTransformationHaha :: Modification1 -> Transformation
-toTransformationHaha modify exp =
+toTransformation :: Modification -> Transformation
+toTransformation modify exp =
   let (nID, newMp) = runState (modify exp) (fst exp)
    in (newMp, nID)
 
-toRecursiveTransformationHaha ::
-  Modification1 ->
+toRecursiveTransformation ::
+  Modification ->
   -- | resulting rule applied to every 'Node'
   Transformation
-toRecursiveTransformationHaha smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup headN finalSub)
+toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup headN finalSub)
   where
     -------------------------------------------------------------------------------
     topoOrder :: [NodeID]

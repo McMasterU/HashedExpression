@@ -1,3 +1,12 @@
+{-# OPTIONS_GHC -Wno-missing-methods #-}
+
+-- |
+-- Module      :  HashedExpression.Internal.Expression
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
 module HashedExpression.Internal.Context where
 
 import GHC.Stack (HasCallStack)
@@ -133,36 +142,26 @@ instance (MonadExpression m) => PiecewiseOp (m NodeID) (m NodeID) where
     branchIDs <- sequence branches
     perform (ConditionAry (specPiecewise marks)) $ conditionID : branchIDs
 
-reFT :: (MonadExpression m) => m NodeID -> m NodeID
-reFT operand = do
-  x <- operand
-  perform (Unary specReFT) [x]
+instance (MonadExpression m) => FTRelatedOp (m NodeID) (m NodeID) where
+  reFT :: (MonadExpression m) => m NodeID -> m NodeID
+  reFT operand = do
+    x <- operand
+    perform (Unary specReFT) [x]
 
-imFT :: (MonadExpression m) => m NodeID -> m NodeID
-imFT operand = do
-  x <- operand
-  perform (Unary specImFT) [x]
-  
-reFT1 :: (MonadExpression m) => m NodeID -> m NodeID
-reFT1 operand = do
-  x <- operand
-  perform (Unary specReFT) [x]
+  imFT :: (MonadExpression m) => m NodeID -> m NodeID
+  imFT operand = do
+    x <- operand
+    perform (Unary specImFT) [x]
 
-imFT1 :: (MonadExpression m) => m NodeID -> m NodeID
-imFT1 operand = do
-  x <- operand
-  perform (Unary specImFT) [x]
+  twiceReFT :: (MonadExpression m) => m NodeID -> m NodeID
+  twiceReFT operand = do
+    x <- operand
+    perform (Unary specTwiceReFT) [x]
 
-twiceReFT1 :: (MonadExpression m) => m NodeID -> m NodeID
-twiceReFT1 operand = do
-  x <- operand
-  perform (Unary specTwiceReFT) [x]
-
-twiceImFT1 :: (MonadExpression m) => m NodeID -> m NodeID
-twiceImFT1 operand = do
-  x <- operand
-  perform (Unary specTwiceImFT) [x]
-
+  twiceImFT :: (MonadExpression m) => m NodeID -> m NodeID
+  twiceImFT operand = do
+    x <- operand
+    perform (Unary specTwiceImFT) [x]
 
 instance (MonadExpression m) => MulCovectorOp (m NodeID) (m NodeID) (m NodeID) where
   (|*|) operand1 operand2 = do

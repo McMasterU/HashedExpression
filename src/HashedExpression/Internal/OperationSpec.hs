@@ -1,6 +1,15 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
+-- |
+-- Module      :  HashedExpression.Differentiation.Exterior.Derivative
+-- Copyright   :  (c) OCA 2020
+-- License     :  MIT (see the LICENSE file)
+-- Maintainer  :  anandc@mcmaster.ca
+-- Stability   :  provisional
+-- Portability :  unportable
+--
+-- This modules contains specification for all operations (each corresponding to a constructor of @Op)
 module HashedExpression.Internal.OperationSpec where
 
 import Data.List (sort)

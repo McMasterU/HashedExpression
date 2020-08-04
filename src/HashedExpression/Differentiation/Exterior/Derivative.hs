@@ -41,6 +41,9 @@ import HashedExpression.Operation
 import HashedExpression.Prettify
 import Prelude hiding ((^))
 
+
+
+
 -- | Compute the exterior derivative w.r.t the given variable identifiers (the 'String' wrapped by 'Var'). This transforms a real expression
 --   @Expression d R@ into @Expression d Covector@ (an expression with 'DVar' terms). This is because we compute derivatives symbolically
 --   using exterior algebra, so derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field. For example,
@@ -72,8 +75,8 @@ derivativeAllVars ::
 derivativeAllVars expr =
   exteriorDerivative (Set.fromList . map fst $ expressionVarNodes expr) expr
 
--- | We can write our coerce function because Expression data constructor is exposed, but users can't
-coerce :: Expression d1 et1 -> Expression d2 et2
+-- | Use with caution, only used if either d2 or d1 is D_ and we want to generalize/specify the dimension type
+coerce :: (ElementType et) => Expression d1 et -> Expression d2 et
 coerce (Expression n mp) = Expression n mp
 
 -- | Hidden computation for exterior derivative
@@ -133,15 +136,12 @@ hiddenDerivative vars (Expression n mp) = coerce res
               g = asR arg2
               df = d f
               dg = d g
-              part1 = (g / g ^ 2) |*| df
-              part2 = (f / g ^ 2) |*| dg
-           in part1 - part2
+           in (one / g) |*| df - (f / g ^ 2) |*| dg
         Sqrt arg ->
           -- d(sqrt(f)) = 1 / (2 * sqrt(f)) * df
           let f = asR arg
               df = d f
-              recipSqrtF = constant 0.5 *. (one / sqrt f)
-           in recipSqrtF |*| df
+           in (constant 0.5 *. (one / sqrt f)) |*| df
         Sin arg ->
           -- d(sin(f)) = cos(f) * d(f)
           let f = asR arg
@@ -156,8 +156,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
           -- d(tan(f)) = -1/(cos^2(f)) * d(f)
           let f = asR arg
               df = d f
-              sqrRecip = one / cos f ^ 2
-           in sqrRecip |*| df
+           in (one / cos f ^ 2) |*| df
         Exp arg ->
           -- d(exp(f)) = exp(f) * d(f)
           let f = asR arg
