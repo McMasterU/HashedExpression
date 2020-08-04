@@ -1,10 +1,10 @@
 name:                HashedExpression
-version:             0.1.0.0
-github:              "githubuser/HashedExpression"
+version:             0.0.2
+github:              "McMasterU/HashedExpression"
 license:             BSD3
-author:              "McMaster Start Coding"
-maintainer:          "example@example.com"
-copyright:           "2019 McMaster Start Coding"
+author:              "OCA & McMaster Start Coding"
+maintainer:          "anandc@mcmaster.ca"
+copyright:           "2019 OCA"
 
 
 # Metadata used when publishing your package
