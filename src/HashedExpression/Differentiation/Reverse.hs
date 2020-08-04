@@ -41,9 +41,9 @@ partialDerivativesMapByReverse (Expression rootID mp) =
           if nID == rootID
             then sNum 1
             else do
-              dPartsFromParent <- IM.lookup nID <$> gets computedPartsByParents
+              derivativeParts <- IM.lookup nID <$> gets cumulativeDerivatives
               -- Sum all the derivative parts incurred by its parents
-              case dPartsFromParent of
+              case derivativeParts of
                 Just [d] -> from d
                 Just ds -> perform (Nary specSum) ds
         curMp <- gets contextMap

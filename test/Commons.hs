@@ -36,7 +36,7 @@ import Var
 import Prelude hiding ((^))
 
 sizeReduceFactor :: Int
-sizeReduceFactor = 20
+sizeReduceFactor = 5
 
 -- |
 --

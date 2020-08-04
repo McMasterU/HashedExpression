@@ -18,6 +18,7 @@ module HashedExpression.Internal.Normalize
   )
 where
 
+import Control.Monad.State.Strict
 import Data.Eq.HT (equating)
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
@@ -40,19 +41,18 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
-import HashedExpression.Internal.Context hiding (imFT, reFT)
 import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
-import HashedExpression.Internal.Rewrite
+import HashedExpression.Internal.Context hiding (imFT, reFT)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
+import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
 import Prelude hiding (product, sum, (^))
 import qualified Prelude
-import Control.Monad.State.Strict
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -107,35 +107,35 @@ normalizingTransformation :: Transformation
 normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pass
   where
     pass =
-      multipleTimes 1000 . chain $
-        map
-          toRecursiveTransformation
-          [ reorderOperands,
-            evaluateIfPossibleRules,
-            groupConstantsRules,
-            combineTermsRules,
-            combineTermsRulesProd,
-            powerProdRules,
-            powerScaleRules,
-            combinePowerRules,
-            powerSumRealImagRules,
-            combineRealScalarRules,
-            flattenSumProdRules,
-            zeroOneSumProdRules,
-            collapseSumProdRules,
-            normalizeRotateRules,
-            negativeZeroRules,
-            pullOutPiecewiseRules,
-            expandPiecewiseRealImag,
-            twiceReFTAndImFTRules
-          ]
-          ++ [rulesFromPattern]
-
+      multipleTimes 1000 $
+        toRecursiveTransformation $
+          chainModifications
+            ( [ reorderOperands,
+                evaluateIfPossibleRules,
+                groupConstantsRules,
+                combineTermsRules,
+                combineTermsRulesProd,
+                powerProdRules,
+                powerScaleRules,
+                combinePowerRules,
+                powerSumRealImagRules,
+                combineRealScalarRules,
+                flattenSumProdRules,
+                zeroOneSumProdRules,
+                collapseSumProdRules,
+                normalizeRotateRules,
+                negativeZeroRules,
+                pullOutPiecewiseRules,
+                expandPiecewiseRealImag,
+                twiceReFTAndImFTRules
+              ]
+                ++ rulesFromPattern
+            )
 
 -- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
 toMultiplyIfPossible :: Transformation
 toMultiplyIfPossible =
-  chain . map (toRecursiveTransformation . fromSubstitution) $
+  toRecursiveTransformation . chainModifications . map fromSubstitution $
     [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y,
       x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
       x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
@@ -144,9 +144,9 @@ toMultiplyIfPossible =
     ]
 
 -- | Create a transformation which combines together the various rules listed in this module.
-rulesFromPattern :: Transformation
+rulesFromPattern :: [Modification]
 rulesFromPattern =
-  chain . map (toRecursiveTransformation . fromSubstitution) . concat $
+  map fromSubstitution . concat $
     [ complexNumRules,
       zeroOneRules,
       scaleRules,

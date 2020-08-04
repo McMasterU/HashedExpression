@@ -78,6 +78,7 @@ import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable, typeRep)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Prelude hiding ((^))
+import GHC.Stack (HasCallStack)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -425,7 +426,7 @@ class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
   (|*|) :: a -> b -> c
 
 class ScaleCovectorOp a b c | a b -> c where
-  (|*.|) :: a -> b -> c
+  (|*.|) :: HasCallStack => a -> b -> c
 
 class CovectorScaleOp a b c | a b -> c where
   (|.*|) :: a -> b -> c

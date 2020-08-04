@@ -31,6 +31,15 @@ import Prelude hiding ((^))
 
 type Modification = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
 
+chainModifications :: [Modification] -> Modification
+chainModifications fs expr =
+  foldM
+    ( \nID f -> do
+        curM <- get
+        f (curM, nID)
+    )
+    (snd expr)
+    fs
 
 toTransformation :: Modification -> Transformation
 toTransformation modify exp =
@@ -81,4 +90,3 @@ const_ shape val = introduceNode (shape, R, Const val)
 
 num_ :: Double -> State ExpressionMap NodeID
 num_ = const_ []
-
