@@ -37,13 +37,13 @@ import Prelude hiding ((^))
 
 main :: IO ()
 main = do
-  hspecWith defaultConfig {configQuickCheckSeed = Just 45924570, configQuickCheckMaxSuccess = Just 100} $ do
---    describe "CollisionSpec" CollisionSpec.spec
---    describe "ProblemSpec" ProblemSpec.spec
---    describe "NormalizeSpec" NormalizeSpec.spec
---    describe "HashedInterpSpec" InterpSpec.spec
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
+    describe "CollisionSpec" CollisionSpec.spec
+    describe "ProblemSpec" ProblemSpec.spec
+    describe "NormalizeSpec" NormalizeSpec.spec
+    describe "HashedInterpSpec" InterpSpec.spec
     describe "HashedCollectSpec" CollectSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---    describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+    describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
 --  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} $ do
 --    describe "CSimpleSpec" CSimpleSpec.spec

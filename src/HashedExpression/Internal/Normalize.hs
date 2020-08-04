@@ -140,6 +140,7 @@ toMultiplyIfPossible =
       x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
       x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
       x |*.| dy |. isScalar dy ~~~~~~> x |*| dy,
+      dy |.*| x |. isScalar x ~~~~~~> x |*| dy,
       x |<.>| dy |. isScalar x &&. isScalar dy ~~~~~~> x |*| dy
     ]
 
@@ -204,7 +205,8 @@ scaleRules =
     -- Covector
     x |*.| (y |*.| dz) |.~~~~~~> (x * y) |*.| dz,
     negate (s |*.| dx) |.~~~~~~> negate s |*.| dx,
-    x |*| (s |*.| dy) |.~~~~~~> (s *. x) |*.| dy
+    x |*| (s |*.| dy) |.~~~~~~> (s *. x) |*| dy,
+    x |*| (dy |.*| z) |.~~~~~~> dy |.*| (x * z)
   ]
 
 -- | Rules for operations on complex numbers
@@ -238,7 +240,8 @@ dotProductRules =
     x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y),
     -- Covector
     (s *. x) |<.>| dy |.~~~~~~> s |*.| (x |<.>| dy),
-    x |<.>| (s |*.| dy) |.~~~~~~> s |*.| (x |<.>| dy)
+    x |<.>| (s |*.| dy) |.~~~~~~> s |*.| (x |<.>| dy),
+    x |<.>| (dy |.*| z) |.~~~~~~> dy |.*| (x <.> z)
   ]
 
 -- | Rules for distributivity of scale, multiplication and dot product over sumP
