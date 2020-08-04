@@ -56,18 +56,20 @@ prop_DVarStayAlone exp = do
         Sum ns -> assertBool " " $ all isDVarAlone ns
         _ -> assertBool "" $ isDVarAlone rootId
 
-prop_DVarAppearOnce :: Expression Scalar R -> Bool
-prop_DVarAppearOnce exp = length (allDVarNames mp) == (Set.size . Set.fromList $ allDVarNames mp)
+prop_DVarAppearOnce :: Expression Scalar R -> Expectation
+prop_DVarAppearOnce exp = do
+  length (allDVarNames mp) `shouldBe` (Set.size . Set.fromList $ allDVarNames mp)
   where
     Expression rootId mp = collectDifferentials . exteriorDerivative allVars $ exp
 
 prop_DVarStayAloneWithOneR ::
-  Expression Default1D R -> Expression Default1D R -> Bool
-prop_DVarStayAloneWithOneR exp1 exp2 = prop_DVarAppearOnce (exp1 <.> exp2)
+  Expression Default1D R -> Expression Default1D R -> Expectation
+prop_DVarStayAloneWithOneR exp1 exp2 = prop_DVarStayAlone (exp1 <.> exp2)
 
 prop_DVarAppearOnceWithOneR ::
-  Expression Default1D R -> Expression Default1D R -> Bool
-prop_DVarAppearOnceWithOneR exp1 exp2 = prop_DVarAppearOnce (exp1 <.> exp2)
+  Expression Default1D R -> Expression Default1D R -> Expectation
+prop_DVarAppearOnceWithOneR exp1 exp2 = do
+  prop_DVarAppearOnce (exp1 <.> exp2)
 
 spec :: Spec
 spec =
@@ -76,9 +78,7 @@ spec =
       property prop_DVarStayAlone
     specify "Each DVar appears only once after collect differentials" $
       property prop_DVarAppearOnce
-    specify
-      "DVar should stay by itself after collect differentials (from dot product)"
-      $ property prop_DVarStayAloneWithOneR
-    specify
-      "Each DVar appears only once after collect differentials (from dot product)"
-      $ property prop_DVarAppearOnceWithOneR
+    specify "DVar should stay by itself after collect differentials (from dot product)" $
+      property prop_DVarStayAloneWithOneR
+    specify "Each DVar appears only once after collect differentials (from dot product)" $
+      property prop_DVarAppearOnceWithOneR

@@ -16,8 +16,8 @@ constraints:
   x >= xLowerBound, x <= xUpperBound
 
 let:
-  smootherX = rotate (0, 1) x + rotate (0, -1) x - 2 *. x
-  smootherY = rotate (1, 0) x + rotate (-1, 0) x - 2 *. x
+  smootherX = rotate (0, 1) x - x
+  smootherY = rotate (1, 0) x - x
   regularization = norm2square smootherX + norm2square smootherY
 
 
