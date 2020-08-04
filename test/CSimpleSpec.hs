@@ -49,7 +49,7 @@ localOffset shape indices
 -- | Generate a fully working C program that compute the expression and
 -- print out the result, mostly used for testing
 singleExpressionCProgram ::
-  (DimensionType d, NumType et) => ValMaps -> Expression d et -> Code
+  (Dimension d, NumType et) => ValMaps -> Expression d et -> Code
 singleExpressionCProgram valMaps expr =
   [ "#include <math.h>", --
     "#include <stdio.h>",
@@ -124,7 +124,7 @@ hasFFTW = do
   return $ exitCode == ExitSuccess
 
 -- |
-evaluateCodeC :: (DimensionType d, NumType et) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
+evaluateCodeC :: (Dimension d, NumType et) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']

@@ -86,7 +86,7 @@ powerZero = PPowerConst 0
 
 -- | For debugging a single normalizier rule
 makeTrans ::
-  (DimensionType d, ElementType et) =>
+  (Dimension d, ElementType et) =>
   Transformation ->
   Expression d et ->
   Expression d et
@@ -94,7 +94,7 @@ makeTrans smp = wrap . smp . unwrap
 
 -- | Normalize an expression considering all possible rewrite rules in this module
 normalize ::
-  (DimensionType d, ElementType et) =>
+  (Dimension d, ElementType et) =>
   Expression d et -> -- un-normalized expression
   Expression d et -- normalized expression
 normalize = wrap . normalizingTransformation . unwrap

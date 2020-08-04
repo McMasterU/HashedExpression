@@ -26,7 +26,7 @@ import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
-instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
+instance (Dimension d, NumType et) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
   (^) e1 x = applyUnary (specPower x) e1
 
@@ -35,11 +35,11 @@ instance (DimensionType d, NumType et) => PowerOp (Expression d et) Int where
 -- @
 --    (fromDouble 15) :: Expression Scalar R
 -- @
-fromDouble :: forall d. ToShape d => Double -> Expression d R
+fromDouble :: forall d. Dimension d => Double -> Expression d R
 fromDouble value = fromNode (toShape (Proxy @d), R, Const value)
 
 -- | Basic operations on Num class expressions with dimension constraint `d`
-instance ToShape d => Num (Expression d R) where
+instance Dimension d => Num (Expression d R) where
   e1 + e2 = applyNary specSum [e1, e2]
   e1 * e2 = applyNary specMul [e1, e2]
   negate = applyUnary specNeg
@@ -55,7 +55,7 @@ instance ToShape d => Num (Expression d R) where
 --    let e2 = (fromRational 12) :: Expression Scalar R
 --    e1 / e2
 -- @
-instance ToShape d => Fractional (Expression d R) where
+instance Dimension d => Fractional (Expression d R) where
   e1 / e2 = e1 * e2 ^ (-1)
   fromRational r = fromDouble $ fromRational r
 
@@ -65,7 +65,7 @@ instance ToShape d => Fractional (Expression d R) where
 --    let val = (fromDouble 1.2345) :: Expression Scalar R
 --    `function` val
 -- @
-instance ToShape d => Floating (Expression d R) where
+instance Dimension d => Floating (Expression d R) where
   pi = fromDouble pi
   sqrt = applyUnary specSqrt
   exp = applyUnary specExp
@@ -91,7 +91,7 @@ instance ToShape d => Floating (Expression d R) where
 --     e1 `binary operation` e2
 --     `unary operation` e1
 -- @
-instance ToShape d => Num (Expression d C) where
+instance Dimension d => Num (Expression d C) where
   e1 + e2 = applyNary specSum [e1, e2]
   e1 * e2 = applyNary specMul [e1, e2]
   negate = applyUnary specNeg
@@ -106,12 +106,12 @@ instance ToShape d => Num (Expression d C) where
 --     let e2 = ((fromRational 15) +: fromIntegral 3) :: Expression Scalar C
 --     e1 / e2
 -- @
-instance ToShape d => Fractional (Expression d C) where
+instance Dimension d => Fractional (Expression d C) where
   e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
   fromRational r = fromDouble (fromRational r) +: 0
 
 -- | Basic operations on covector expressions with dimension constraint `d`
-instance ToShape d => Num (Expression d Covector) where
+instance Dimension d => Num (Expression d Covector) where
   e1 + e2 = applyNary specSum [e1, e2]
   negate = applyUnary specNeg
   (*) = error "*: Not applicable to 1-form"
@@ -131,7 +131,7 @@ instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression
 --   xRe exp
 --   xIm exp
 --  @
-instance (DimensionType d) => ComplexRealOp (Expression d R) (Expression d C) where
+instance (Dimension d) => ComplexRealOp (Expression d R) (Expression d C) where
   (+:) :: Expression d R -> Expression d R -> Expression d C
   (+:) = applyBinary specRealImag
   xRe :: Expression d C -> Expression d R
@@ -150,7 +150,7 @@ instance
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
-huber :: forall d. (DimensionType d) => Double -> Expression d R -> Expression d R
+huber :: forall d. (Dimension d) => Double -> Expression d R -> Expression d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     one = constWithShape @d (expressionShape e) 1
@@ -159,11 +159,11 @@ huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
     outerRight = constant delta *. e - constant (delta * delta / 2) *. one
 
 -- | Norm 2 uses inner product space
-norm2 :: (DimensionType d) => Expression d R -> Expression Scalar R
+norm2 :: (Dimension d) => Expression d R -> Expression Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 ---- | Norm 1
-norm1 :: (DimensionType d) => Expression d R -> Expression Scalar R
+norm1 :: (Dimension d) => Expression d R -> Expression Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Norm 2 square interface
@@ -171,30 +171,30 @@ class Norm2SquareOp a b | a -> b where
   norm2square :: a -> b
 
 -- | Norm 2 square of real expression
-instance (DimensionType d) => Norm2SquareOp (Expression d R) (Expression Scalar R) where
+instance (Dimension d) => Norm2SquareOp (Expression d R) (Expression Scalar R) where
   norm2square :: Expression d R -> Expression Scalar R
   norm2square exp = exp <.> exp
 
 -- | Norm 2 square of complex expression
-instance (DimensionType d) => Norm2SquareOp (Expression d C) (Expression Scalar R) where
+instance (Dimension d) => Norm2SquareOp (Expression d C) (Expression Scalar R) where
   norm2square :: Expression d C -> Expression Scalar R
   norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
 
 -- | Outlier-sensitive error measure using huber loss
-huberNorm :: (DimensionType d) => Double -> Expression d R -> Expression Scalar R
+huberNorm :: (Dimension d) => Double -> Expression d R -> Expression Scalar R
 huberNorm alpha = sumElements . huber alpha
 
 -- | Discrete fourier transform
 --
 -- | Sum elements of a `d`-dimensional vector
-sumElements :: forall d. (DimensionType d) => Expression d R -> Expression Scalar R
+sumElements :: forall d. (Dimension d) => Expression d R -> Expression Scalar R
 sumElements expr = expr <.> one
   where
     one = constWithShape (expressionShape expr) 1 :: Expression d R
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance (DimensionType d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
+instance (Dimension d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
   piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
 
@@ -210,7 +210,7 @@ instance (DimensionType d, ElementType et) => PiecewiseOp (Expression d R) (Expr
 --      guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
 
 -- Fourier transform on complex expression
-instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
+instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
   ft :: Expression d C -> Expression d C
   ft e
     | isScalarShape $ expressionShape e = e
@@ -220,20 +220,20 @@ instance (DimensionType d) => FTOp (Expression d C) (Expression d C) where
        in reFT +: imFT
 
 -- Fourier transform on real expression which returns complex expression
-instance (DimensionType d) => FTOp (Expression d R) (Expression d C) where
+instance (Dimension d) => FTOp (Expression d R) (Expression d C) where
   ft :: Expression d R -> Expression d C
   ft e = ft (e +: constWithShape (expressionShape e) 0)
 
-instance (DimensionType d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
+instance (Dimension d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
   x |*| dy = applyBinary specMulD x dy
 
-instance (DimensionType d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where
+instance (Dimension d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where
   x |*.| dy = applyBinary specScaleD x dy
 
-instance (DimensionType d) => CovectorScaleOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where
+instance (Dimension d) => CovectorScaleOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where
   dx |.*| y = applyBinary specDScale dx y
 
-instance (DimensionType d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where
+instance (Dimension d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where
   x |<.>| dy = applyBinary specInnerProdD x dy
 
 -- |

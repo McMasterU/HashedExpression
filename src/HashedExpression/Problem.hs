@@ -145,7 +145,7 @@ infix 1 `between`, .>=, .<=, .==
 
 -- | The expression is greater than the given value
 (.>=) ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | The constraint expression
   Expression d R ->
   -- | The value of the lower bound
@@ -156,7 +156,7 @@ infix 1 `between`, .>=, .<=, .==
 
 -- | The expression is less than the given value
 (.<=) ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | The constraint expression
   Expression d R ->
   -- | The value of the upper bound
@@ -167,7 +167,7 @@ infix 1 `between`, .>=, .<=, .==
 
 -- | The expression is between two values
 between ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | The constraint expression
   Expression d R ->
   -- | The value of the lower and upper bounds
@@ -180,7 +180,7 @@ between exp = Between (unwrap exp)
 --
 --   Note: this is the same as setting the upper and lower bound to the same value
 (.==) ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | The expression
   Expression d R ->
   -- | The value to set equal to the expression

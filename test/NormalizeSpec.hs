@@ -22,10 +22,10 @@ import Test.QuickCheck (property)
 import Var
 import Prelude hiding ((^))
 
-reFT :: (DimensionType d) => Expression d R -> Expression d R
+reFT :: (Dimension d) => Expression d R -> Expression d R
 reFT = xRe . ft
 
-imFT :: (DimensionType d) => Expression d R -> Expression d R
+imFT :: (Dimension d) => Expression d R -> Expression d R
 imFT = xIm . ft
 
 prop_NormalizeIsIdempotent :: ArbitraryExpresion -> Expectation

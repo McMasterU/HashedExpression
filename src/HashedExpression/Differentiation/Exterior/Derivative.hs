@@ -52,7 +52,7 @@ import Prelude hiding ((^))
 --  Note: the partial derivatives are the terms scaling the differential variables (i.e 'DVar',dx,dy,etc), however you may need to factor them
 --  first using 'collectDifferentials'
 exteriorDerivative ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | Variable Identifiers to take derivative w.r.t
   Set String ->
   -- | Expression to take derivative on
@@ -64,7 +64,7 @@ exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 -- | Same as 'exteriorDerivative' except automatically perform derivative w.r.t all variables. Since derivatives are computed symbolically using
 --   exterior algebra, derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field.
 derivativeAllVars ::
-  DimensionType d =>
+  Dimension d =>
   -- | Expression to take derivative on
   Expression d R ->
   -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')

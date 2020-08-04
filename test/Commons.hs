@@ -501,7 +501,7 @@ instance (KnownNat m, KnownNat n) => Arbitrary (Expression '(m, n) C) where
   arbitrary = fst <$> sized (gen2DC @Default1D @m @n)
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (DimensionType d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
+data ArbitraryExpresion = forall d et. (Dimension d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
 
 instance Show ArbitraryExpresion where
   show (ArbitraryExpresion exp) = show exp
@@ -543,7 +543,7 @@ sz = IM.size . exMap
 infix 1 `shouldNormalizeTo`
 
 shouldNormalizeTo ::
-  (HasCallStack, DimensionType d, ElementType et, Typeable et, Typeable d) =>
+  (HasCallStack, Dimension d, ElementType et, Typeable et, Typeable d) =>
   Expression d et ->
   Expression d et ->
   IO ()
