@@ -76,9 +76,9 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable, typeRep)
+import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Prelude hiding ((^))
-import GHC.Stack (HasCallStack)
 
 -- --------------------------------------------------------------------------------------------------------------------
 

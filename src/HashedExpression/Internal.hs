@@ -9,7 +9,7 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- Inner HashedExpression functionality, contains combinators for manually manipulating HashedExpressions including merging 
+-- Inner HashedExpression functionality, contains combinators for manually manipulating HashedExpressions including merging
 -- expression maps, create new entry, etc.
 module HashedExpression.Internal where
 
@@ -46,8 +46,8 @@ unwrap (Expression n mp) = (mp, n)
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
 
-
 -------------------------------------------------------------------------------
+
 -- | Generic N-Ary multiplication operator, constructed using 'apply'
 --   with 'ElementDefault' to default to the 'ElementType' of it's arguments
 mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
@@ -124,7 +124,6 @@ applyConditionAry ::
 applyConditionAry spec e branches =
   wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
 
-
 -------------------------------------------------------------------------------
 
 -- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
@@ -178,7 +177,6 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
     go k lastExp curExp
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
-
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -257,7 +255,7 @@ toTotal mp nID = case IM.lookup nID mp of
 -- | Merge the second map into the first map, resolve hash collision if occur
 safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 safeMerge accMp (mp, n) =
-  -- | Merge the subexpression to main expression map
+  -- Merge the subexpression to main expression map
   -- produce `sub` as the map from old hash to new hash if there is any hash-collision
   let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
       f (acc, sub) nodeID =
@@ -270,10 +268,9 @@ safeMerge accMp (mp, n) =
                 then sub
                 else IM.insert nodeID newNodeID sub
             )
-      -- | Fold over all sub-expressions by topological order
+      -- Fold over all sub-expressions by topological order
       (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
    in (mergedMap, toTotal finalSub n)
-
 
 safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
@@ -287,7 +284,6 @@ safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
 -- |
 -- Create an node out of operation spec and its operands.
 -- Operands must follow the spec in terms of input and output's element types & shape
---
 createEntry ::
   -- | Operation specification
   OperationSpec ->
@@ -322,13 +318,9 @@ createEntry spec args =
           )
         _ -> error "Unfaithful with operation spec"
 
-
 -- | Operations such as ImFT, ReFT, etc are for internal used only.
---
 class FTRelatedOp a b | a -> b where
   imFT :: a -> b
   reFT :: a -> b
   twiceImFT :: a -> b
   twiceReFT :: a -> b
-
-

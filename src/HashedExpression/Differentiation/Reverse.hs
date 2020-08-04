@@ -18,9 +18,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Context
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
@@ -204,7 +204,21 @@ partialDerivativesMapByReverse (Expression rootID mp) =
               dX <- imFT (from dN)
               addDerivative x dX
             | otherwise -> do
-              dX <- imFT (from dN) +: (- reFT (from dN))
+              dX <- imFT (from dN) +: reFT (from dN)
+              addDerivative x dX
+          TwiceReFT x
+            | retrieveElementType x curMp == R -> do
+              dX <- twiceReFT (from dN)
+              addDerivative x dX
+            | otherwise -> do
+              dX <- twiceReFT (from dN) +: zero
+              addDerivative x dX
+          TwiceImFT x
+            | retrieveElementType x curMp == R -> do
+              dX <- twiceImFT (from dN)
+              addDerivative x dX
+            | otherwise -> do
+              dX <- zero +: twiceImFT (from dN)
               addDerivative x dX
       (_, res) = runState go init
    in (contextMap res, partialDerivativeMap res)

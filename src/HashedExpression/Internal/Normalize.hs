@@ -51,7 +51,7 @@ import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding (product, sum, (^))
+import Prelude hiding ((^))
 import qualified Prelude
 
 -- | Predefined holes used for pattern matching with 'Pattern'
@@ -104,45 +104,30 @@ normalize = wrap . normalizingTransformation . unwrap
 --   Pass two attempts to turn the expression into a top-level multiplication if possible (see `toMultiplyIfPossible`)
 --   See Internal.Inner.multipleTimes for greater control over this
 normalizingTransformation :: Transformation
-normalizingTransformation = removeUnreachable . pass . toMultiplyIfPossible . pass
+normalizingTransformation = removeUnreachable . pass
   where
     pass =
-      multipleTimes 1000 $
-        toRecursiveTransformation $
-          chainModifications
-            ( [ reorderOperands,
-                evaluateIfPossibleRules,
-                groupConstantsRules,
-                combineTermsRules,
-                combineTermsRulesProd,
-                powerProdRules,
-                powerScaleRules,
-                combinePowerRules,
-                powerSumRealImagRules,
-                combineRealScalarRules,
-                flattenSumProdRules,
-                zeroOneSumProdRules,
-                collapseSumProdRules,
-                normalizeRotateRules,
-                negativeZeroRules,
-                pullOutPiecewiseRules,
-                expandPiecewiseRealImag,
-                twiceReFTAndImFTRules
-              ]
-                ++ rulesFromPattern
-            )
-
--- | Equivalent version of toMultiplyIfPossible, but slower. Though I think it doesn't really matter which one we choose.
-toMultiplyIfPossible :: Transformation
-toMultiplyIfPossible =
-  toRecursiveTransformation . chainModifications . map fromSubstitution $
-    [ x *. y |. isReal y &&. isScalar y ~~~~~~> x * y,
-      x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
-      x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
-      x |*.| dy |. isScalar dy ~~~~~~> x |*| dy,
-      dy |.*| x |. isScalar x ~~~~~~> x |*| dy,
-      x |<.>| dy |. isScalar x &&. isScalar dy ~~~~~~> x |*| dy
-    ]
+      multipleTimes 1000 . toRecursiveTransformation . chainModifications $
+        [ reorderOperands,
+          evaluateIfPossibleRules,
+          groupConstantsRules,
+          combineTermsRules,
+          combineTermsRulesProd,
+          powerProdRules,
+          powerScaleRules,
+          combinePowerRules,
+          powerSumRealImagRules,
+          combineRealScalarRules,
+          flattenSumProdRules,
+          zeroOneSumProdRules,
+          collapseSumProdRules,
+          normalizeRotateRules,
+          negativeZeroRules,
+          pullOutPiecewiseRules,
+          expandPiecewiseRealImag,
+          twiceReFTAndImFTRules
+        ]
+          ++ rulesFromPattern
 
 -- | Create a transformation which combines together the various rules listed in this module.
 rulesFromPattern :: [Modification]
@@ -157,8 +142,19 @@ rulesFromPattern =
       exponentRules,
       rotateRules,
       fourierTransformRules,
+      toMultiplyIfPossible,
       otherRules
     ]
+
+toMultiplyIfPossible :: [Substitution]
+toMultiplyIfPossible =
+  [ x *. y |. isReal y &&. isScalar y &&. isNotConst x ~~~~~~> x * y,
+    x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
+    x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
+    x |*.| dy |. isScalar dy ~~~~~~> x |*| dy,
+    dy |.*| x |. isScalar x ~~~~~~> x |*| dy,
+    x |<.>| dy |. isScalar x &&. isScalar dy ~~~~~~> x |*| dy
+  ]
 
 -- | Rules with zero and one
 --
@@ -419,13 +415,13 @@ groupConstantsRules exp@(mp, n) =
         Sum ns
           | Just (_, cs) <- pullConstants mp ns,
             length cs > 1,
-            let total = const_ shape . Prelude.sum $ cs ->
+            let total = const_ shape . sum $ cs ->
             sum_ $ total : (map just . filter (not . isConstant mp) $ ns)
         Mul ns
           | Just (_, cs) <- pullConstants mp ns,
-            length cs > 1,
-            let total = const_ shape . Prelude.product $ cs ->
-            product_ $ total : (map just . filter (not . isConstant mp) $ ns)
+            rest@(x : _) <- filter (not . isConstant mp) ns,
+            let scalar = num_ . product $ cs ->
+            scalar *. product_ (map just rest)
         _ -> just n
 
 -- | Rules for combining and reducing the number of terms in 'Sum'
@@ -446,7 +442,7 @@ combineTermsRules exp@(mp, n)
         (scaleeN, val)
       | Neg negateeN <- retrieveOp nId mp = (negateeN, -1)
       | otherwise = (nId, 1)
-    combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
+    combine xs = (fst $ head xs, sum $ map snd xs)
     fn x y = fst x == fst y
     toDiff :: (Int, Double) -> State ExpressionMap NodeID
     toDiff (nId, val)
@@ -468,7 +464,7 @@ combineTermsRulesProd exp@(mp, n)
     cntAppr nId
       | Power value powerel <- retrieveOp nId mp = (powerel, value)
       | otherwise = (nId, 1)
-    combine xs = (fst $ head xs, Prelude.sum $ map snd xs)
+    combine xs = (fst $ head xs, sum $ map snd xs)
     fn (x, px) (y, py)
       | Sum _ <- retrieveOp x mp = False
       | Sum _ <- retrieveOp y mp = False
@@ -560,15 +556,15 @@ combineRealScalarRules exp@(mp, n)
 evaluateIfPossibleRules :: Modification
 evaluateIfPossibleRules exp@(mp, n) =
   case (retrieveElementType n mp, node, pulledVals) of
-    (R, Sum _, Just vals) -> res $ Prelude.sum vals
-    (R, Mul _, Just vals) -> res $ Prelude.product vals
+    (R, Sum _, Just vals) -> res $ sum vals
+    (R, Mul _, Just vals) -> res $ product vals
     (R, Scale _ _, Just [val1, val2]) -> res $ val1 * val2
     (R, Neg _, Just [val])
       | val /= 0 -> res (- val)
       | otherwise -> res 0
     (R, Power x _, Just [val]) -> res $ val ** fromIntegral x
     (R, InnerProd arg1 arg2, Just [val1, val2]) ->
-      res $ val1 * val2 * (fromIntegral . Prelude.product $ retrieveShape arg1 mp)
+      res $ val1 * val2 * (fromIntegral . product $ retrieveShape arg1 mp)
     (R, Rotate _ _, Just [val]) -> res val
     -- TODO: sin, sos, ...
     _ -> just n
@@ -662,7 +658,7 @@ twiceReFTAndImFTRules exp@(mp, n)
     Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands,
     Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
     let rest = map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
-        totalScaleFactor = scaleFactor * fromIntegral (Prelude.product $ retrieveShape innerArg mp)
+        totalScaleFactor = scaleFactor * fromIntegral (product $ retrieveShape innerArg mp)
         scalar = num_ totalScaleFactor
         scaled = scalar *. just innerArg
      in sum_ $ scaled : rest

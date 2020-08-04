@@ -30,14 +30,14 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
+import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
-import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
-import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Pattern
+import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
@@ -87,7 +87,7 @@ inspect exp = traceShow (debugPrint exp) exp
 -- | Move dVar out of operations (like reFT) that would prevent factoring
 separateDVarAlone :: Transformation
 separateDVarAlone =
-  multipleTimes 1000 . chain . map (toRecursiveTransformation . fromSubstitution) $
+  multipleTimes 1000 . toRecursiveTransformation . chainModifications . map fromSubstitution $
     [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
@@ -133,7 +133,7 @@ groupByDVar exp@(mp, n) =
 --   --> ((f + x) * dx) + (h * dy) + ((t1 + f1) <.> dx1)
 aggregateByDVar :: Transformation
 aggregateByDVar =
-  chain . map (toRecursiveTransformation . fromSubstitution) $
+  toRecursiveTransformation . chainModifications . map fromSubstitution $
     [ sumP (mapL (|*| y) xs) |. isDVar y ~~~~~~> sumP xs |*| y,
       sumP (mapL (|<.>| y) xs) |. isDVar y ~~~~~~> sumP xs |<.>| y
     ]

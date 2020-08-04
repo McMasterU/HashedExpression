@@ -193,13 +193,19 @@ containsFTNode mp = any isFT $ IM.elems mp
         _ -> False
 
 -------------------------------------------------------------------------------
---
 zipMp :: forall a b c. Ord a => Map a b -> Map a c -> Map a (b, c)
 zipMp mp1 mp2 = foldl' f Map.empty $ Map.keys mp1
   where
-    f :: Map a (b, c) -> a -> Map a (b, c)
     f acc k = case (Map.lookup k mp1, Map.lookup k mp2) of
       (Just v1, Just v2) -> Map.insert k (v1, v2) acc
+      _ -> acc
+
+-------------------------------------------------------------------------------
+zipMp3 :: forall a b c d. Ord a => Map a b -> Map a c -> Map a d -> Map a (b, c, d)
+zipMp3 mp1 mp2 mp3 = foldl' f Map.empty $ Map.keys mp1
+  where
+    f acc k = case (Map.lookup k mp1, Map.lookup k mp2, Map.lookup k mp3) of
+      (Just v1, Just v2, Just v3) -> Map.insert k (v1, v2, v3) acc
       _ -> acc
 
 -------------------------------------------------------------------------------

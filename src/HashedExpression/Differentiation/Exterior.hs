@@ -5,7 +5,6 @@
 -- Maintainer  :  anandc@mcmaster.ca
 -- Stability   :  provisional
 -- Portability :  unportable
--- 
 module HashedExpression.Differentiation.Exterior where
 
 import Data.Map.Strict (Map)

@@ -27,7 +27,7 @@ import Prelude hiding ((^))
 
 data ComputeDState = ComputeDState
   { contextMap :: ExpressionMap,
-    cumulativeDerivatives :: IM.IntMap [NodeID], -- cumulative derivatives incurred by parents 
+    cumulativeDerivatives :: IM.IntMap [NodeID], -- cumulative derivatives incurred by parents
     partialDerivativeMap :: Map String NodeID
   }
 

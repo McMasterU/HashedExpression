@@ -45,5 +45,5 @@ main = do
     describe "HashedCollectSpec" CollectSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
---  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} $ do
---    describe "CSimpleSpec" CSimpleSpec.spec
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} $ do
+    describe "CSimpleSpec" CSimpleSpec.spec

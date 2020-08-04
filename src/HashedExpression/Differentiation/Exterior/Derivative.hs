@@ -41,9 +41,6 @@ import HashedExpression.Operation
 import HashedExpression.Prettify
 import Prelude hiding ((^))
 
-
-
-
 -- | Compute the exterior derivative w.r.t the given variable identifiers (the 'String' wrapped by 'Var'). This transforms a real expression
 --   @Expression d R@ into @Expression d Covector@ (an expression with 'DVar' terms). This is because we compute derivatives symbolically
 --   using exterior algebra, so derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field. For example,

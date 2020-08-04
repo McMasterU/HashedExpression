@@ -74,31 +74,11 @@ prop_DVarAppearOnceWithOneR exp1 exp2 = do
 spec :: Spec
 spec =
   describe "Hashed collect differentials spec" $ do
-      specify "DVar should stay by itself after collect differentials" $
-        property prop_DVarStayAlone
-      specify "Each DVar appears only once after collect differentials" $
-        property prop_DVarAppearOnce
-      specify "DVar should stay by itself after collect differentials (from dot product)" $
-        property prop_DVarStayAloneWithOneR
-      specify "Each DVar appears only once after collect differentials (from dot product)" $ 
-        property prop_DVarAppearOnceWithOneR
-
---      exp1 exp2
-
---    let a =
---          ( (-1.0 |*| ((((m *. z1) + (-1.0 *. (reFT (9.93655070158036 [4])))) * (rotate [2] x1) * (rotate [2] s1)) |<.>| (reFT (dr1))))
---              + (-1.0 |*| ((reFT (r1)) |<.>| ((m *. (z1 * (rotate [2] x1))) |*| (rotate [2] ds1))))
---              + (6.984495243545078 |*| (s1 |<.>| ((-1.0 *. ((rotate [2] s1) * (reFT (9.93655070158036 [4])))) |*| (rotate [2] dx1))))
---              + (6.984495243545078 |*| (s1 |<.>| (((rotate [2] x1) * (rotate [2] s1)) |*| (dm |.*| z1))))
---              + (-1.0 |*| ((reFT (r1)) |<.>| (((rotate [2] x1) * (rotate [2] s1)) |*| (dm |.*| z1))))
---              + (-1.0 |*| ((reFT (r1)) |<.>| ((m *. (z1 * (rotate [2] s1))) |*| (rotate [2] dx1))))
---              + (6.984495243545078 |*| (s1 |<.>| ((m *. (z1 * (rotate [2] x1))) |*| (rotate [2] ds1))))
---              + (6.984495243545078 |*| (s1 |<.>| ((m *. ((rotate [2] x1) * (rotate [2] s1))) |*| dz1)))
---              + (-1.0 |*| ((reFT (r1)) |<.>| ((-1.0 *. ((rotate [2] x1) * (reFT (9.93655070158036 [4])))) |*| (rotate [2] ds1))))
---              + (6.984495243545078 |*| (s1 |<.>| ((m *. (z1 * (rotate [2] s1))) |*| (rotate [2] dx1))))
---              + (-1.0 |*| ((reFT (r1)) |<.>| ((m *. ((rotate [2] x1) * (rotate [2] s1))) |*| dz1)))
---              + (6.984495243545078 |*| (s1 |<.>| ((-1.0 *. ((rotate [2] x1) * (reFT (9.93655070158036 [4])))) |*| (rotate [2] ds1))))
---              + (6.984495243545078 |*| ((((m *. z1) + (-1.0 *. (reFT (9.93655070158036 [4])))) * (rotate [2] x1) * (rotate [2] s1)) |<.>| ds1))
---              + (-1.0 |*| ((reFT (r1)) |<.>| ((-1.0 *. ((rotate [2] s1) * (reFT (9.93655070158036 [4])))) |*| (rotate [2] dx1))))
---          )
---    undefined
+    specify "DVar should stay by itself after collect differentials" $
+      property prop_DVarStayAlone
+    specify "Each DVar appears only once after collect differentials" $
+      property prop_DVarAppearOnce
+    specify "DVar should stay by itself after collect differentials (from dot product)" $
+      property prop_DVarStayAloneWithOneR
+    specify "Each DVar appears only once after collect differentials (from dot product)" $
+      property prop_DVarAppearOnceWithOneR
