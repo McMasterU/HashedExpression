@@ -1,5 +1,4 @@
--- |
--- Module      :  HashedExpression.Differentiation.Exterior.Collect
+-- | Module      :  HashedExpression.Differentiation.Reverse
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
@@ -52,6 +51,7 @@ partialDerivativesMapByReverse (Expression rootID mp) =
         let zero = introduceNode (shape, R, Const 0)
         case op of
           Var name -> modifyPartialDerivativeMap (Map.insert name dN)
+          Param _ -> return ()
           Const _ -> return ()
           Sum args -> do
             forM_ args $ \x -> do
@@ -60,11 +60,11 @@ partialDerivativesMapByReverse (Expression rootID mp) =
           Mul args -> do
             forM_ (removeEach args) $ \(x, rest) -> do
               productRest <- perform (Nary specMul) rest
-              if et == R
-                then do
+              case et of
+                R -> do
                   dX <- from dN * from productRest
                   addDerivative x dX
-                else do
+                C -> do
                   dX <- from dN * conjugate (from productRest)
                   addDerivative x dX
           Power alpha x -> case et of
@@ -155,6 +155,9 @@ partialDerivativesMapByReverse (Expression rootID mp) =
             addDerivative re dRe
             dIm <- xIm $ from dN
             addDerivative im dIm
+          Conjugate x -> do
+            dX <- conjugate (from dN)
+            addDerivative x dX
           RealPart reIm -> do
             dReIm <- from dN +: zero
             addDerivative reIm dReIm

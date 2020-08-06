@@ -29,11 +29,11 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Debug.Trace (traceShow, traceShowId)
+import HashedExpression.Differentiation.Exterior.Normalize
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
@@ -52,7 +52,7 @@ import Prelude hiding ((^))
 --  Note: the partial derivatives are the terms scaling the differential variables (i.e 'DVar',dx,dy,etc), however you may need to factor them
 --  first using 'collectDifferentials'
 exteriorDerivative ::
-  (DimensionType d) =>
+  (Dimension d) =>
   -- | Variable Identifiers to take derivative w.r.t
   Set String ->
   -- | Expression to take derivative on
@@ -64,7 +64,7 @@ exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
 -- | Same as 'exteriorDerivative' except automatically perform derivative w.r.t all variables. Since derivatives are computed symbolically using
 --   exterior algebra, derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field.
 derivativeAllVars ::
-  DimensionType d =>
+  Dimension d =>
   -- | Expression to take derivative on
   Expression d R ->
   -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
@@ -104,6 +104,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
       case node of
         -- dx = dx if x is in vars, otherwise dzero
         Var name -> fromNode (shape, Covector, if Set.member name vars then DVar name else DZero)
+        Param name -> fromNode (shape, Covector, DZero)
         Const _ -> fromNode (shape, Covector, DZero)
         Sum args -> applyNary specSum $ map (d . asR) args
         Mul args ->

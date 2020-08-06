@@ -43,11 +43,9 @@ module HashedExpression.Internal.Expression
 
     -- | The following types and classes are used to contrain and inquire about
     --   vector dimensions of Expressions
-    Dimension,
+    Dimension (..),
     Scalar,
-    ToShape (..),
     Shape,
-    DimensionType,
     VectorSpace,
     InnerProductSpace,
 
@@ -119,9 +117,11 @@ type role Expression nominal nominal
 
 -- | The Op type provides constructors for variables, constants and operators used to create expressions.
 data Op
-  = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
+  = -- | variable with an identifier
     Var String
-  | -- | constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
+  | -- | parameter with an identifier
+    Param String
+  | -- | constants, only wrapped byf @Expression d R@
     Const Double
   | -- | element-wise sum
     Sum Args
@@ -260,13 +260,10 @@ class ElementType et => NumType et
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | An 'Expression' type is parameterized by two phantom types, the first of which should be 'DimensionType'.
---   Using the 'Dimension' and 'ToShape' classes provides the dimensions of an expression at the type and data level (respectively).
-type DimensionType d = (Dimension d, ToShape d)
-
 -- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class Dimension d
+class Dimension d where
+  toShape :: Proxy d -> Shape
 
 -- | Dummy type (no data) for the zero dimension vectors (i.e not a vector)
 --   When specifying vector dimensions for type class instances, in general
@@ -275,51 +272,50 @@ class Dimension d
 --   @
 --   variable "x" :: Expression Scalar R
 --   @
-data Scalar
-  deriving (Dimension, Typeable)
+data Scalar deriving (Typeable)
 
--- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
+---- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
+----
+----   @
+----   variable1D  "x" :: KnownNat n => Expression n R
+----   variable1D @10 "x" :: Expression 10 R
+----   @
+----
+----   With this instance, the above definition will satisfy the constraint
+----   @Dimension d => Expression d R@
+--instance (KnownNat n) => Dimension n
 --
---   @
---   variable1D  "x" :: KnownNat n => Expression n R
---   variable1D @10 "x" :: Expression 10 R
---   @
+---- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
+----
+----   @
+----   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
+----   variable2D @10 @5 "x" :: Expression '(10,5) R
+----   @
+----
+----   With this instance, the above definition will satisfy the constraint
+----   @Dimension d => Expression d R@
+--instance (KnownNat m, KnownNat n) => Dimension '(m, n)
 --
---   With this instance, the above definition will satisfy the constraint
---   @Dimension d => Expression d R@
-instance (KnownNat n) => Dimension n
-
--- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
---
---   @
---   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
---   variable2D @10 @5 "x" :: Expression '(10,5) R
---   @
---
---   With this instance, the above definition will satisfy the constraint
---   @Dimension d => Expression d R@
-instance (KnownNat m, KnownNat n) => Dimension '(m, n)
-
--- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
---
---   @
---   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
---   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
---   @
---
---   With this instance, the above definition will satisfy the constraint
---   @Dimension d => Expression d R@
-instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
+---- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
+----
+----   @
+----   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
+----   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
+----   @
+----
+----   With this instance, the above definition will satisfy the constraint
+----   @Dimension d => Expression d R@
+--instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
 -- | A @VectorSpace d et s@ is a space of vectors of @Dimension d@ and @ElementType et@,
 --   that can be scaled by values of @ElementType s@. Used primarily as a base for 'VectorSpaceOp'
 class VectorSpace d et s
 
 -- | A 'VectorSpace' exists for all 'DimensionType' and 'ElementType' if scaled by a 'R' (Real element type)
-instance (DimensionType d, NumType et) => VectorSpace d et R
+instance (Dimension d, NumType et) => VectorSpace d et R
 
 -- | A 'VectorSpace' exists for all 'DimensionType' over 'C' (Complex) vectors and scalings
-instance (DimensionType d) => VectorSpace d C C
+instance (Dimension d) => VectorSpace d C C
 
 -- | Every @VectorSpace@ that can be scaled by the same ElementType has an @InnerProductSpace@.
 --   Used primarily as a base for 'InnerProductSpaceOp'
@@ -329,26 +325,34 @@ class VectorSpace d s s => InnerProductSpace d s
 --   'InnerProductSpace'
 instance VectorSpace d s s => InnerProductSpace d s
 
--- | ToShape is used to reify dimensions/sizes encoded at the type level (i.e any implementation of 'Dimension')
---   The type level generally uses tuples with type level naturals (via 'KnownNat') to specify dimensions and
---   their respective sizes. The 'toShape' method reifies these types to a corresponding list of Int
-class (Dimension d) => ToShape d where
-  toShape :: Proxy d -> Shape
-
 -- | A scalar essentially has no dimensions/size, so we provide an empty list
-instance ToShape Scalar where
+instance Dimension Scalar where
   toShape _ = []
 
--- | Implementation for a 1D Vector
-instance (KnownNat n) => ToShape n where
+-- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
+--   @
+--   variable1D  "x" :: KnownNat n => Expression n R
+--   variable1D @10 "x" :: Expression 10 R
+--   @
+instance (KnownNat n) => Dimension n where
   toShape _ = [nat @n]
 
--- | Implementation for a 2D Vector
-instance (KnownNat m, KnownNat n) => ToShape '(m, n) where
+-- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
+--   variable2D @10 @5 "x" :: Expression '(10,5) R
+--   @
+instance (KnownNat m, KnownNat n) => Dimension '(m, n) where
   toShape _ = [nat @m, nat @n]
 
--- | Implementation for a 2D Vector
-instance (KnownNat m, KnownNat n, KnownNat p) => ToShape '(m, n, p) where
+-- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
+--   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
+--   @
+instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p) where
   toShape _ = [nat @m, nat @n, nat @p]
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value

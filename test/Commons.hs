@@ -21,8 +21,8 @@ import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
+import HashedExpression.Differentiation.Exterior.Normalize
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
@@ -63,11 +63,11 @@ inspect x =
     showExp x
     return x
 
--- | Vars list
-type Vars = [[String]] -- Vars 0D, 1D, 2D, 3D, ..
+-- | VarsAndParams list
+type VarsAndParams = [[String]] -- VarsAndParams 0D, 1D, 2D, 3D, ..
 
-mergeVars :: [Vars] -> Vars
-mergeVars = foldl f [[], [], [], []]
+mergeVarsAndParams :: [VarsAndParams] -> VarsAndParams
+mergeVarsAndParams = foldl f [[], [], [], []]
   where
     f x y = map removeDuplicate $ zipWith (++) x y
 
@@ -80,7 +80,7 @@ genDouble = arbitrary `suchThat` inSmallRange
 genValMap ::
   forall size1D size2D1 size2D2.
   (KnownNat size1D, KnownNat size2D1, KnownNat size2D2) =>
-  Vars ->
+  VarsAndParams ->
   Gen ValMaps
 genValMap vars = do
   let sz1D = valueFromNat @size1D
@@ -111,66 +111,72 @@ infix 1 `shouldApprox`
 
 liftE1 ::
   (Expression d1 et1 -> Expression d2 et2) ->
-  (Expression d1 et1, Vars) ->
-  (Expression d2 et2, Vars)
+  (Expression d1 et1, VarsAndParams) ->
+  (Expression d2 et2, VarsAndParams)
 liftE1 op (e, v) = (op e, v)
 
 liftE2 ::
   (Expression d1 et1 -> Expression d2 et2 -> Expression d3 et3) ->
-  (Expression d1 et1, Vars) ->
-  (Expression d2 et2, Vars) ->
-  (Expression d3 et3, Vars)
-liftE2 op (e1, v1) (e2, v2) = ((op e1 e2), (mergeVars [v1, v2]))
+  (Expression d1 et1, VarsAndParams) ->
+  (Expression d2 et2, VarsAndParams) ->
+  (Expression d3 et3, VarsAndParams)
+liftE2 op (e1, v1) (e2, v2) = (op e1 e2, mergeVarsAndParams [v1, v2])
 
 -------------------------------------------------------------------------------
-primitiveScalarR :: Gen (Expression Scalar R, Vars)
+primitiveScalarR :: Gen (Expression Scalar R, VarsAndParams)
 primitiveScalarR = do
-  name <- elements . map pure $ ['a' .. 'z']
+  varName <- elements . map pure $ ['a' .. 'z']
+  paramName <- elements . map (: "p") $ ['a' .. 'z']
   dbl <- genDouble
-  r <- (`mod` 10) <$> arbitrary
-  if r < 6
-    then return ((variable name), [[(name)], [], [], []])
-    else return ((constant dbl), [[], [], [], []])
+  elements
+    [ (variable varName, [[varName], [], [], []]),
+      (param paramName, [[paramName], [], [], []]),
+      (constant dbl, [[], [], [], []])
+    ]
 
-primitiveScalarC :: Gen (Expression Scalar C, Vars)
+primitiveScalarC :: Gen (Expression Scalar C, VarsAndParams)
 primitiveScalarC = liftE2 (+:) <$> primitiveScalarR <*> primitiveScalarR
 
 -------------------------------------------------------------------------------
 primitive1DR ::
   forall n.
   KnownNat n =>
-  Gen (Expression n R, Vars)
+  Gen (Expression n R, VarsAndParams)
 primitive1DR = do
-  name <- elements . map ((++ "1") . pure) $ ['a' .. 'z']
+  varName <- elements . map (: "1") $ ['a' .. 'z']
+  paramName <- elements . map (: "p1") $ ['a' .. 'z']
   dbl <- genDouble
-  r <- (`mod` 10) <$> arbitrary
-  if r < 6
-    then return ((variable1D @n name), [[], [(name)], [], []])
-    else return ((constant1D @n dbl), [[], [], [], []])
+  elements
+    [ (variable1D @n varName, [[], [varName], [], []]),
+      (param1D @n paramName, [[], [paramName], [], []]),
+      (constant1D @n dbl, [[], [], [], []])
+    ]
 
 primitive1DC ::
   forall n.
   KnownNat n =>
-  Gen (Expression n C, Vars)
+  Gen (Expression n C, VarsAndParams)
 primitive1DC = liftE2 (+:) <$> primitive1DR @n <*> primitive1DR @n
 
 -------------------------------------------------------------------------------
 primitive2DR ::
   forall m n.
   (KnownNat m, KnownNat n) =>
-  Gen (Expression '(m, n) R, Vars)
+  Gen (Expression '(m, n) R, VarsAndParams)
 primitive2DR = do
-  name <- elements . map ((++ "2") . pure) $ ['a' .. 'z']
+  varName <- elements . map (: "2") $ ['a' .. 'z']
+  paramName <- elements . map (: "p2") $ ['a' .. 'z']
   dbl <- genDouble
-  r <- (`mod` 10) <$> arbitrary
-  if r < 6
-    then return (variable2D @m @n name, [[], [], [(name)], []])
-    else return (constant2D @m @n dbl, [[], [], [], []])
+  elements
+    [ (variable2D @m @n varName, [[], [], [varName], []]),
+      (param2D @m @n paramName, [[], [], [paramName], []]),
+      (constant2D @m @n dbl, [[], [], [], []])
+    ]
 
 primitive2DC ::
   forall m n.
   (KnownNat m, KnownNat n) =>
-  Gen (Expression '(m, n) C, Vars)
+  Gen (Expression '(m, n) C, VarsAndParams)
 primitive2DC = liftE2 (+:) <$> primitive2DR @m @n <*> primitive2DR @m @n
 
 -------------------------------------------------------------------------------
@@ -178,7 +184,7 @@ genScalarR ::
   forall default1D default2D1 default2D2.
   (KnownNat default1D, KnownNat default2D1, KnownNat default2D2) =>
   Int ->
-  Gen (Expression Scalar R, Vars)
+  Gen (Expression Scalar R, VarsAndParams)
 genScalarR size
   | size == 0 = primitiveScalarR
   | otherwise =
@@ -191,7 +197,7 @@ genScalarR size
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
@@ -216,7 +222,7 @@ genScalarC ::
   forall default1D default2D1 default2D2.
   (KnownNat default1D, KnownNat default2D1, KnownNat default2D2) =>
   Int ->
-  Gen (Expression Scalar C, Vars)
+  Gen (Expression Scalar C, VarsAndParams)
 genScalarC size
   | size == 0 = primitiveScalarC
   | otherwise =
@@ -229,7 +235,7 @@ genScalarC size
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
@@ -253,7 +259,7 @@ gen1DR ::
   forall n default2D1 default2D2.
   (KnownNat n, KnownNat default2D1, KnownNat default2D2) =>
   Int ->
-  Gen (Expression n R, Vars)
+  Gen (Expression n R, VarsAndParams)
 gen1DR size
   | size == 0 = primitive1DR
   | otherwise =
@@ -265,7 +271,7 @@ gen1DR size
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
@@ -293,7 +299,7 @@ gen1DC ::
   forall n default2D1 default2D2.
   (KnownNat n, KnownNat default2D1, KnownNat default2D2) =>
   Int ->
-  Gen (Expression n C, Vars)
+  Gen (Expression n C, VarsAndParams)
 gen1DC size
   | size == 0 = primitive1DC
   | otherwise =
@@ -305,7 +311,7 @@ gen1DC size
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
@@ -331,7 +337,7 @@ gen2DR ::
   forall default1D m n.
   (KnownNat default1D, KnownNat m, KnownNat n) =>
   Int ->
-  Gen (Expression '(m, n) R, Vars)
+  Gen (Expression '(m, n) R, VarsAndParams)
 gen2DR size
   | size == 0 = primitive2DR
   | otherwise =
@@ -343,7 +349,7 @@ gen2DR size
           branches <- vectorOf numBranches sub
           condition <- sub
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
@@ -372,7 +378,7 @@ gen2DC ::
   forall default1D m n.
   (KnownNat default1D, KnownNat m, KnownNat n) =>
   Int ->
-  Gen (Expression '(m, n) C, Vars)
+  Gen (Expression '(m, n) C, VarsAndParams)
 gen2DC size
   | size == 0 = primitive2DC
   | otherwise =
@@ -384,7 +390,7 @@ gen2DC size
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let vars = mergeVars $ map snd branches ++ [snd condition]
+          let vars = mergeVarsAndParams $ map snd branches ++ [snd condition]
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
@@ -501,7 +507,7 @@ instance (KnownNat m, KnownNat n) => Arbitrary (Expression '(m, n) C) where
   arbitrary = fst <$> sized (gen2DC @Default1D @m @n)
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (DimensionType d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
+data ArbitraryExpresion = forall d et. (Dimension d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
 
 instance Show ArbitraryExpresion where
   show (ArbitraryExpresion exp) = show exp
@@ -539,14 +545,3 @@ getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 -- |
 sz :: Expression d et -> Int
 sz = IM.size . exMap
-
-infix 1 `shouldNormalizeTo`
-
-shouldNormalizeTo ::
-  (HasCallStack, DimensionType d, ElementType et, Typeable et, Typeable d) =>
-  Expression d et ->
-  Expression d et ->
-  IO ()
-shouldNormalizeTo exp1 exp2 = do
-  prettify (normalize exp1) `shouldBe` prettify (normalize exp2)
-  normalize exp1 `shouldBe` normalize exp2

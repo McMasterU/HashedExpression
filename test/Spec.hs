@@ -12,7 +12,6 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import HashedExpression.Differentiation.Exterior.Collect
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)

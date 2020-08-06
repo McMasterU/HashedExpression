@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
+
 -- |
 -- Module      :  HashedExpression.Internal.Hash
 -- Copyright   :  (c) OCA 2020
@@ -44,7 +46,7 @@ hashString [] = 0
 
 -- | Offset the hash by number of m
 -- Because each kind of node will be offset by a different offset
--- This means that 2 nodes of the same types (Var, Sum , ..) can't have the same hash
+-- nodes of the different constructors (Var, Sum , ..) can't have the same hash
 offsetHash :: Int -> Int -> Int
 offsetHash offset hash =
   if hash < modulo
@@ -55,8 +57,7 @@ offsetHash offset hash =
 separator :: String
 separator = "a"
 
--- | Compute a hash value for a given 'Node' (don't use this directly for identify a 'Node', instead use 'addNode' to generate a
---   specific 'NodeID')
+-- | Compute a hash value for a given 'Node' and number of rehash
 hash :: Node -> Int -> Int
 hash (shape, et, node) rehashNum =
   let hashString' s =
@@ -64,6 +65,7 @@ hash (shape, et, node) rehashNum =
           (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s ++ concat (replicate rehashNum "x")
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
+        Param name -> offsetHash 1 . hashString' $ name
         Const num -> offsetHash 2 . hashString' $ show num
         Sum args -> offsetHash 3 . hashString' $ intercalate separator . map show $ args
         Mul args -> offsetHash 4 . hashString' $ intercalate separator . map show $ args
@@ -107,12 +109,12 @@ hash (shape, et, node) rehashNum =
         TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
         TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
         -- Mark: Covector
-        DVar name -> offsetHash 1 . hashString' $ show name
-        DZero -> offsetHash 34 . hashString' $ "dzero"
-        MulD arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
-        ScaleD arg1 arg2 -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
-        DScale arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProdD arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
+        DVar name -> offsetHash 34 . hashString' $ show name
+        DZero -> offsetHash 35 . hashString' $ "dzero"
+        MulD arg1 arg2 -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
+        ScaleD arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
+        DScale arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
+        InnerProdD arg1 arg2 -> offsetHash 39 . hashString' $ show arg1 ++ separator ++ show arg2
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
+
 -- |
 -- Module      :  HashedExpression.Internal.Node
 -- Copyright   :  (c) OCA 2020
@@ -47,6 +49,7 @@ nodeTypeWeight node =
   case node of
     Const {} -> 0
     Var {} -> 1
+    Param {} -> 2
     Mul {} -> 3
     Power {} -> 4
     Neg {} -> 5
@@ -96,6 +99,7 @@ opArgs :: Op -> Args
 opArgs node =
   case node of
     Var _ -> []
+    Param _ -> []
     DVar _ -> []
     Const _ -> []
     Sum args -> args
@@ -141,6 +145,7 @@ mapOp f op =
   case op of
     Var x -> Var x
     DVar x -> DVar x
+    Param x -> Param x
     Const val -> Const val
     Sum args -> Sum $ map f args
     Mul args -> Mul $ map f args

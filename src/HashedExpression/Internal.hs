@@ -129,12 +129,11 @@ applyConditionAry spec e branches =
 -- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
 --   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
 --   (such as exterior derivatives)
-data D_
-  deriving (Typeable, Dimension)
+data D_ deriving (Typeable)
 
 -- | 'D_' is a placeholder type with no real Shape (i.e dimension/size). The method
 --   'toShape' should never actually be evaluated on this instance
-instance ToShape D_ where
+instance Dimension D_ where
   toShape =
     error "D_ is a place holder, init variable for D_ is not applicable"
 
@@ -226,20 +225,18 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
               let arrayPos = toPos u
               writeArray marked arrayPos True
               forM_ (adj u) $ \v -> do
-                when (isJust $ IM.lookup v mp) $ do
-                  isMarked <- readArray marked (toPos v)
-                  unless isMarked $ dfs v
+                isMarked <- readArray marked (toPos v)
+                unless isMarked $ dfs v
               cntVal <- readSTRef cnt
               writeArray order cntVal u
               writeSTRef cnt (cntVal + 1)
         forM_ ns $ \n -> do
-          when (isJust $ IM.lookup n mp) $ do
-            isMarked <- readArray marked (toPos n)
-            unless isMarked $ dfs n
+          isMarked <- readArray marked (toPos n)
+          unless isMarked $ dfs n
         return order
 
 -- | Retrieves all 'Var' nodes in an 'Expression'
-expressionVarNodes :: (DimensionType d, ElementType et) => Expression d et -> [(String, NodeID)]
+expressionVarNodes :: (Dimension d, ElementType et) => Expression d et -> [(String, NodeID)]
 expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
@@ -252,9 +249,8 @@ toTotal mp nID = case IM.lookup nID mp of
   Just other -> other
   _ -> nID
 
--- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
-safeMerge accMp (mp, n) =
+safeMergeManyRoots :: ExpressionMap -> (ExpressionMap, [NodeID]) -> (ExpressionMap, [NodeID])
+safeMergeManyRoots accMp (mp, ns) =
   -- Merge the subexpression to main expression map
   -- produce `sub` as the map from old hash to new hash if there is any hash-collision
   let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
@@ -269,8 +265,14 @@ safeMerge accMp (mp, n) =
                 else IM.insert nodeID newNodeID sub
             )
       -- Fold over all sub-expressions by topological order
-      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
-   in (mergedMap, toTotal finalSub n)
+      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSortManyRoots (mp, ns)
+   in (mergedMap, map (toTotal finalSub) ns)
+
+-- | Merge the second map into the first map, resolve hash collision if occur
+safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+safeMerge accMp (mp, n) =
+  let (resMp, [resN]) = safeMergeManyRoots accMp (mp, [n])
+   in (resMp, resN)
 
 safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
