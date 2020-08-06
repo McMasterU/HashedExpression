@@ -135,6 +135,7 @@ evaluating CSimpleCodegen {..} rootIDs =
       let (shape, et, op) = retrieveNode n cExpressionMap
        in case op of
             Var _ -> []
+            Param _ -> []
             Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
             Sum args
               | et == R ->
@@ -339,7 +340,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                in case shape of
                     [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
                     [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
-            node -> error $ "Other node type should not be here after normalized " ++ show node
+            node -> error $ "Not implemented " ++ show node
 
 -------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
@@ -378,18 +379,15 @@ instance Codegen CSimpleConfig where
       TIO.writeFile (folder </> "problem.c") $ T.intercalate "\n" codes
     where
       -------------------------------------------------------------------------------
-      -- variables we're trying to optimize over
+      -- variables
       vars :: [String]
       vars = map varName variables
-      -- check if this name is optimizing variable or fixed value
-      isVariable :: String -> Bool
-      isVariable v = v `elem` vars
-      -- var nodes, can be variables or values
+      -- params
+      params :: [String]
+      params = map fst $ paramNodesWithId expressionMap
+      -- value nodes
       vs :: [(String, Int)]
-      vs = sortOn fst $ varNodesWithId expressionMap
-      -- values node
-      vals :: [String]
-      vals = filter (not . isVariable) . map fst $ vs
+      vs = sortOn fst $ varNodesWithId expressionMap ++ paramNodesWithId expressionMap
       -- get shape of a variable
       variableShape :: String -> Shape
       variableShape name =
@@ -397,15 +395,15 @@ instance Codegen CSimpleConfig where
               Just var -> nodeId var
               _ -> error "not a variable but you're getting it's shape"
          in retrieveShape nId expressionMap
+      -------------------------------------------------------------------------------
       variableShapes :: [Shape]
       variableShapes = map (variableShape . varName) variables
-      -- size of each variable (product of it's shape)
       variableSizes :: [Int]
       variableSizes = map product variableShapes
       -------------------------------------------------------------------------------
       checkError :: Maybe String
       checkError
-        | Just name <- find (not . (`Map.member` valMaps)) vals = Just $ "No value provided for " ++ name
+        | Just name <- find (not . (`Map.member` valMaps)) params = Just $ "No value provided for " ++ name
         | otherwise,
           let isOk (var, nId)
                 | Just val <- Map.lookup var valMaps = compatible (retrieveShape nId expressionMap) val

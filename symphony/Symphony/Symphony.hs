@@ -74,16 +74,15 @@ data ValidSymphony = ValidSymphony (ExpressionMap, NodeID) Vars Consts [HS.Const
 -- 5. Gen code
 checkSemantic :: Problem -> Result ValidSymphony
 checkSemantic problem = do
-  let toExp name (shape, _) = varWithShape shape name
+  let toVar name (shape, _) = varWithShape shape name
+  let toParam name (shape, _) = paramWithShape shape name
   varDecls <- getVarDecls problem -- 1
   vars <- foldM checkVariableDecl Map.empty varDecls -- 2
   constDecls <- getConstDecls problem
   consts <- foldM (checkConstantDecl vars) Map.empty constDecls
   let initContext =
         Context
-          { declarations =
-              Map.mapWithKey toExp vars
-                `Map.union` Map.mapWithKey toExp consts,
+          { declarations = Map.mapWithKey toVar vars `Map.union` Map.mapWithKey toParam consts,
             vars = vars,
             consts = consts
           }
@@ -122,8 +121,6 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css solver) = do
         HS.constructProblem
           -- Objective
           (wrap objectiveExp)
-          -- Variables
-          (Map.keys vars)
           -- Constraints
           (HS.Constraint css)
   case problemGen of

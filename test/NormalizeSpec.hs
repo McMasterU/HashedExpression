@@ -10,8 +10,9 @@ import Data.Complex (Complex (..))
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
+import Data.Typeable (Typeable)
+import HashedExpression.Differentiation.Exterior.Normalize
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp (eval, (~=))
 import HashedExpression.Operation
@@ -21,6 +22,17 @@ import Test.Hspec
 import Test.QuickCheck (property)
 import Var
 import Prelude hiding ((^))
+
+infix 1 `shouldNormalizeTo`
+
+shouldNormalizeTo ::
+  (HasCallStack, Dimension d, ElementType et, Typeable et, Typeable d) =>
+  Expression d et ->
+  Expression d et ->
+  IO ()
+shouldNormalizeTo exp1 exp2 = do
+  prettify (normalize exp1) `shouldBe` prettify (normalize exp2)
+  normalize exp1 `shouldBe` normalize exp2
 
 reFT :: (Dimension d) => Expression d R -> Expression d R
 reFT = xRe . ft

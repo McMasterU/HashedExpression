@@ -249,9 +249,8 @@ toTotal mp nID = case IM.lookup nID mp of
   Just other -> other
   _ -> nID
 
--- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
-safeMerge accMp (mp, n) =
+safeMergeManyRoots :: ExpressionMap -> (ExpressionMap, [NodeID]) -> (ExpressionMap, [NodeID])
+safeMergeManyRoots accMp (mp, ns) =
   -- Merge the subexpression to main expression map
   -- produce `sub` as the map from old hash to new hash if there is any hash-collision
   let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
@@ -266,8 +265,14 @@ safeMerge accMp (mp, n) =
                 else IM.insert nodeID newNodeID sub
             )
       -- Fold over all sub-expressions by topological order
-      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSort (mp, n)
-   in (mergedMap, toTotal finalSub n)
+      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSortManyRoots (mp, ns)
+   in (mergedMap, map (toTotal finalSub) ns)
+
+-- | Merge the second map into the first map, resolve hash collision if occur
+safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+safeMerge accMp (mp, n) =
+  let (resMp, [resN]) = safeMergeManyRoots accMp (mp, [n])
+   in (resMp, resN)
 
 safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])

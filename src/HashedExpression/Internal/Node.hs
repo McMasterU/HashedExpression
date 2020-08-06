@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+
 -- |
 -- Module      :  HashedExpression.Internal.Node
 -- Copyright   :  (c) OCA 2020

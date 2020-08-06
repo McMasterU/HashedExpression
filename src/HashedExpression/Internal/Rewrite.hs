@@ -67,7 +67,7 @@ toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup 
       return $ IM.insert nID appliedRuleNodeID sub
     (finalSub, finalMap) = runState (foldM f IM.empty topoOrder) mp
 
-instance MonadExpression (State ExpressionMap) where
+instance (Monad m) => MonadExpression (StateT ExpressionMap m) where
   introduceNode node = do
     mp <- get
     let nID = hashNode (checkHashFromMap mp) node

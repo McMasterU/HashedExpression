@@ -6,7 +6,6 @@ import Data.Map.Strict (union)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)

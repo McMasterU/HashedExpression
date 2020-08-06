@@ -60,11 +60,11 @@ partialDerivativesMapByReverse (Expression rootID mp) =
           Mul args -> do
             forM_ (removeEach args) $ \(x, rest) -> do
               productRest <- perform (Nary specMul) rest
-              case et of 
+              case et of
                 R -> do
                   dX <- from dN * from productRest
                   addDerivative x dX
-                C -> do 
+                C -> do
                   dX <- from dN * conjugate (from productRest)
                   addDerivative x dX
           Power alpha x -> case et of
@@ -155,7 +155,7 @@ partialDerivativesMapByReverse (Expression rootID mp) =
             addDerivative re dRe
             dIm <- xIm $ from dN
             addDerivative im dIm
-          Conjugate x -> do 
+          Conjugate x -> do
             dX <- conjugate (from dN)
             addDerivative x dX
           RealPart reIm -> do

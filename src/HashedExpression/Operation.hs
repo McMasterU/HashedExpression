@@ -198,17 +198,6 @@ instance (Dimension d, ElementType et) => PiecewiseOp (Expression d R) (Expressi
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
   piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
 
---    | not (null marks),
---      (Set.toList . Set.fromList $ marks) == marks,
---      length marks + 1 == length branchExps =
---      guard $ applyConditionAry (conditionAry (Piecewise marks)) conditionExp branchExps
---    | otherwise =
---      error $
---        "Must satisfy number of marks = number of branches - 1, and marks are increasing "
---          ++ show marks
---    where
---      guard = ensureSameShapeList branchExps . ensureSameShape conditionExp (head branchExps)
-
 -- Fourier transform on complex expression
 instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
   ft :: Expression d C -> Expression d C
@@ -352,12 +341,11 @@ constant3D = constWithShape [size1, size2, size3]
     size2 = valueFromNat @n
     size3 = valueFromNat @p
 
-
--- | Create primitive expressions
+-- | Create parameter
 param :: String -> Expression Scalar R
 param name = fromNode ([], R, Param name)
 
--- | Create primitive expressions using Nat kind.
+-- | Create a param for one-dimensional nat values
 --
 -- @
 --   let exp = param1D "var"

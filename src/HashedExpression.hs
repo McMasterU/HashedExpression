@@ -43,24 +43,18 @@ module HashedExpression
     variable1D,
     variable2D,
     variable3D,
-    sum,
-    product,
-    normalize,
+    param,
+    param1D,
+    param2D,
+    param3D,
 
     -- * Evaluation
     Evaluable (..),
-
-    -- * Derivatives
-    exteriorDerivative,
-    derivativeAllVars,
     prettify,
   )
 where
 
-import HashedExpression.Differentiation.Exterior.Collect
-import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Normalize
 import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Prettify

@@ -26,11 +26,13 @@ import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Exterior
 import HashedExpression.Differentiation.Exterior.Collect
 import HashedExpression.Differentiation.Exterior.Derivative
+import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Normalize
 import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
@@ -55,15 +57,15 @@ data Variable = Variable
 data BoxConstraint
   = -- | An upper bound
     BoxUpper
-      String -- The name of the bound
+      String -- Name of bounded variable
       Val -- The value of the upper bound
   | -- | A lower bound
     BoxLower
-      String -- The name of the bound
+      String -- Name of bounded variable
       Val -- The value of the lower bound
   | -- | A range of values bound
     BoxBetween
-      String -- The name of the bound
+      String -- Name of bounded variable
       (Val, Val) -- (lower, upper)
 
 -- | A scalar constraint in an optimization problem
@@ -230,36 +232,9 @@ data ProblemResult
     ProblemInvalid String
   deriving (Show)
 
--------------------------------------------------------------------------------
-
--- | A function might be treated as function of variables that does not appears (like constraint of
--- optimization problem) so we want to pad zero partial derivative
---
--- @
---  (( ... ) dx + ( .... ) dy) [z, t] ---> (( ... ) dx + ( ... ) dy + 0dz + 0dt)
--- @
-introduceZeroPartialDerivatives ::
-  [(String, Shape)] ->
-  Expression Scalar Covector ->
-  Expression Scalar Covector
-introduceZeroPartialDerivatives varsAndShape (Expression n mp) =
-  let isD name nId
-        | DVar varName <- retrieveOp nId mp,
-          varName == name =
-          True
-        | otherwise = False
-      alreadyExist name = any (isD name) . IM.keys $ mp
-      makePart (name, shape)
-        | isScalarShape shape = apply (Binary specMulD) [aConst shape 0, dVarWithShape shape name]
-        | otherwise = apply (Binary specInnerProdD) [aConst shape 0, dVarWithShape shape name]
-      listToInsert = map makePart . filter ((not . alreadyExist) . fst) $ varsAndShape
-   in wrap $
-        case retrieveOp n mp of
-          Sum ns | retrieveElementType n mp == Covector -> sumMany $ map (mp,) ns ++ listToInsert
-          _ -> sumMany $ (mp, n) : listToInsert
-
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
+-------------------------------------------------------------------------------
 getBound :: (ExpressionMap, NodeID) -> [ConstraintStatement] -> (Double, Double)
 getBound (mp, n) = foldl update (ninf, inf)
   where
@@ -286,64 +261,83 @@ toBoxConstraint cs = case cs of
     let Var name = retrieveOp n mp
      in BoxBetween name vals
 
-constructProblemHelper :: Expression Scalar R -> [String] -> Constraint -> ProblemConstructingM Problem
-constructProblemHelper obj names (Constraint constraints) = do
-  let varsSet = Set.fromList names
-  let vs = varNodesWithShape (exMap obj) ++ concatMap (varNodesWithShape . fst . getExpressionCS) constraints
-  let varAndShape = filter (\(name, _) -> Set.member name varsSet) vs
+mergeToMain :: (ExpressionMap, NodeID) -> ProblemConstructingM NodeID
+mergeToMain (mp, nID) = do
+  curMp <- get
+  let (mergedMp, mergedNID) = safeMerge curMp (mp, nID)
+  put mergedMp
+  return mergedNID
+
+mergeToMainMany :: (ExpressionMap, [NodeID]) -> ProblemConstructingM [NodeID]
+mergeToMainMany (mp, nIDs) = do
+  curMp <- get
+  let (mergedMp, resIDs) = safeMergeManyRoots curMp (mp, nIDs)
+  put mergedMp
+  return resIDs
+
+varsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+varsWithShape = mapMaybe collect . IM.toList . fst
+  where
+    collect (nID, (shape, _, Var name)) = Just (name, shape)
+    collect _ = Nothing
+
+paramsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+paramsWithShape = mapMaybe collect . IM.toList . fst
+  where
+    collect (nID, (shape, _, Param name)) = Just (name, shape)
+    collect _ = Nothing
+
+constructProblemHelper :: Expression Scalar R -> Constraint -> ProblemConstructingM Problem
+constructProblemHelper obj (Constraint constraints) = do
+  let vs = concatMap varsWithShape $ unwrap obj : map getExpressionCS constraints
+  let ps = concatMap paramsWithShape $ unwrap obj : map getExpressionCS constraints
+  when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
+    throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
-  checkConflictVars vs
   forM_ constraints checkConstraint
-  -------------------------------------------------------------------------------
-  -- When taking derivatives, make sure all the variables are presented by introduceZeroPartialDerivatives
-  let takeDerivative =
-        introduceZeroPartialDerivatives varAndShape
-          . collectDifferentials
-          . exteriorDerivative varsSet
-  -------------------------------------------------------------------------------
   let (boxCS, scalarCS) = partition isBoxConstraint constraints
   let boxConstraints = map toBoxConstraint boxCS
   let expScalarConstraints = Set.toList . Set.fromList . map getExpressionCS $ scalarCS
   -------------------------------------------------------------------------------
-  let f = unwrap $ normalize obj
-  let df = unwrap $ takeDerivative obj
-  fID <- mergeToMain f
-  dfID <- mergeToMain df
+  let processF exp = do
+        let (mp, name2ID) = partialDerivativesMapByReverse exp
+        let (names, beforeMergeIDs) = unzip $ Map.toList name2ID
+        Map.fromList . zip names <$> mergeToMainMany (mp, beforeMergeIDs)
+  let lookupDerivative :: (String, Shape) -> Map String NodeID -> ProblemConstructingM NodeID
+      lookupDerivative (name, shape) dMap = case Map.lookup name dMap of
+        Just dID -> return dID
+        _ -> introduceNode (shape, R, Const 0)
   -------------------------------------------------------------------------------
-  let processScalarConstraint :: (ExpressionMap, NodeID) -> ProblemConstructingM (NodeID, NodeID, (Double, Double))
+  fID <- mergeToMain $ unwrap obj
+  fPartialDerivativeMap <- processF obj
+  -------------------------------------------------------------------------------
+  let processScalarConstraint :: (ExpressionMap, NodeID) -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
       processScalarConstraint (mp, nID) = do
         let (lb, ub) = getBound (mp, nID) scalarCS
-            exp = normalize $ Expression @Scalar @R nID mp
-            g = unwrap exp
-            dg = unwrap $ takeDerivative exp
-        gID <- mergeToMain g
-        dgID <- mergeToMain dg
-        return (gID, dgID, (lb, ub))
+            exp = Expression @Scalar @R nID mp
+        gID <- mergeToMain $ unwrap exp
+        mapHaha <- processF exp
+        return (gID, mapHaha, (lb, ub))
   scalarConstraintsInfo <- mapM processScalarConstraint expScalarConstraints
   -------------------------------------------------------------------------------
-  curMp <- get
-  let finalRelevantVars = filter (\(name, _) -> Set.member name varsSet) $ varNodesWithId curMp
-  let name2PartialDerivativeID :: Map String NodeID
-      name2PartialDerivativeID = partialDerivativesMap (curMp, dfID)
-      variables =
-        map
-          ( \(name, varNodeID) ->
-              Variable name varNodeID (fromJust $ Map.lookup name name2PartialDerivativeID)
-          )
-          finalRelevantVars
+  variableNodes <- varNodes <$> get
   -------------------------------------------------------------------------------
-  let scalarConstraints =
-        map
-          ( \(gID, dgID, (lb, ub)) ->
-              let name2PartialDerivativeID = partialDerivativesMap (curMp, dgID)
-               in ScalarConstraint
-                    { constraintValueId = gID,
-                      constraintPartialDerivatives = map (\(name, _) -> fromJust $ Map.lookup name name2PartialDerivativeID) finalRelevantVars,
-                      constraintLowerBound = lb,
-                      constraintUpperBound = ub
-                    }
-          )
-          scalarConstraintsInfo
+  let toVariable (name, shape, nID) = do
+        dID <- lookupDerivative (name, shape) fPartialDerivativeMap
+        return $ Variable name nID dID
+  variables <- mapM toVariable variableNodes
+  -------------------------------------------------------------------------------
+  let toScalarConstraint (gID, gPartialDerivativeMap, (lb, ub)) = do
+        partialDerivativeIDs <- mapM (\(name, shape, _) -> lookupDerivative (name, shape) gPartialDerivativeMap) variableNodes
+        return $
+          ScalarConstraint
+            { constraintValueId = gID,
+              constraintPartialDerivatives = partialDerivativeIDs,
+              constraintLowerBound = lb,
+              constraintUpperBound = ub
+            }
+  scalarConstraints <- mapM toScalarConstraint scalarConstraintsInfo
+  -------------------------------------------------------------------------------
   mergedMap <- get
   let rootNs =
         fID :
@@ -366,9 +360,9 @@ constructProblemHelper obj names (Constraint constraints) = do
       }
   where
     -------------------------------------------------------------------------------
-    checkConflictVars :: [(String, Shape)] -> ProblemConstructingM ()
-    checkConflictVars vs = case find (\ls -> length ls > 1) $ map nub $ groupOn fst . sortOn fst $ vs of
-      Just ((x, _) : _) -> throwError $ "Shape of variable " ++ show x ++ " is not consistent between objective and constraints"
+    checkConflictShape :: [(String, Shape)] -> ProblemConstructingM ()
+    checkConflictShape vs = case find (\ls -> length ls > 1) $ map nub $ groupOn fst . sortOn fst $ vs of
+      Just ((x, _) : _) -> throwError $ "Shape of " ++ show x ++ " is not consistent between objective and constraints"
       _ -> return ()
     -------------------------------------------------------------------------------
     checkConstraint :: ConstraintStatement -> ProblemConstructingM ()
@@ -384,19 +378,10 @@ constructProblemHelper obj names (Constraint constraints) = do
             throwError "Scalar expression must be bounded by scalar value"
           | otherwise -> return ()
         _ -> throwError "Only scalar inequality and box constraint for variable are supported"
-    -------------------------------------------------------------------------------
-    mergeToMain :: (ExpressionMap, NodeID) -> ProblemConstructingM NodeID
-    mergeToMain (mp, nID) = do
-      curMp <- get
-      let (mergedMp, mergedNID) = safeMerge curMp (mp, nID)
-      put mergedMp
-      return mergedNID
-
--------------------------------------------------------------------------------
 
 -- | Construct a Problem from given objective function and constraints
-constructProblem :: Expression Scalar R -> [String] -> Constraint -> ProblemResult
-constructProblem objectiveFunction varList constraint =
-  case runStateT (constructProblemHelper objectiveFunction varList constraint) IM.empty of
+constructProblem :: Expression Scalar R -> Constraint -> ProblemResult
+constructProblem objectiveFunction constraint =
+  case runStateT (constructProblemHelper objectiveFunction constraint) IM.empty of
     Left reason -> ProblemInvalid reason
     Right (problem, _) -> ProblemValid problem

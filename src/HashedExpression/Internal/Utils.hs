@@ -90,6 +90,9 @@ constWithShape shape val = fromNode (shape, R, Const val)
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
 
+paramWithShape :: Shape -> String -> (ExpressionMap, NodeID)
+paramWithShape shape name = fromNodeUnwrapped (shape, R, Param name)
+
 -- |
 isScalarShape :: Shape -> Bool
 isScalarShape = null
@@ -170,8 +173,21 @@ varNodesWithId :: ExpressionMap -> [(String, NodeID)]
 varNodesWithId mp = mapMaybe collect . IM.keys $ mp
   where
     collect nId
-      | Var varName <- retrieveOp nId mp = Just (varName, nId)
+      | Var name <- retrieveOp nId mp = Just (name, nId)
       | otherwise = Nothing
+
+paramNodesWithId :: ExpressionMap -> [(String, NodeID)]
+paramNodesWithId mp = mapMaybe collect . IM.keys $ mp
+  where
+    collect nId
+      | Param name <- retrieveOp nId mp = Just (name, nId)
+      | otherwise = Nothing
+
+varNodes :: ExpressionMap -> [(String, Shape, NodeID)]
+varNodes mp = mapMaybe collect $ IM.toList mp
+  where
+    collect (nID, (shape, _, Var varName)) = Just (varName, shape, nID)
+    collect _ = Nothing
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
 varNodesWithShape :: ExpressionMap -> [(String, Shape)]

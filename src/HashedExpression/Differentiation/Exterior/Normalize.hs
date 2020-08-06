@@ -1,16 +1,15 @@
 -- |
--- Module      :  HashedExpression.Internal.Normalize
+-- Module      :  HashedExpression.Differentiation.Exterior.Normalize
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module contains functionality for normalizing an 'Expression' using a variety of rewrite rules designed primarily to simplify and
--- reduce computation when evaluating. Currently there is no proof of confluence, however confluence is suspected
---
--- TODO haddock: should we summerize rewrite rules here???
-module HashedExpression.Internal.Normalize
+-- This module contains functionality for normalizing an 'Expression' using a variety of rewrite rules designed primarily to
+-- normalize expression to compute partial derivatives by exterior method.
+-- Currently there is no proof of confluence, however confluence is suspected
+module HashedExpression.Differentiation.Exterior.Normalize
   ( normalize,
     normalizingTransformation,
     flattenSumProdRules,
