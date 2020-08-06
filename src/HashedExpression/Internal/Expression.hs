@@ -187,9 +187,9 @@ data Op
     TwiceReFT Arg
   | -- | imag part of fourier transform, performed twice
     TwiceImFT Arg
-  | -- MARK: differential
-
-    -- | differentiable operator (such as dx), only wrapped by @Expression d Covector@ (1-form)
+  | FT Arg
+  | IFT Arg
+  | -- | differentiable operators (only for exterior method)
     DVar String
   | DZero
   | MulD Arg CovectorArg
@@ -425,6 +425,7 @@ class PiecewiseOp a b where
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class FTOp a b | a -> b where
   ft :: a -> b
+  ift :: b -> a
 
 class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
   (|*|) :: a -> b -> c

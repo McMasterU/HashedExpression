@@ -202,10 +202,8 @@ containsFTNode mp = any isFT $ IM.elems mp
   where
     isFT (_, _, op) =
       case op of
-        ReFT _ -> True
-        ImFT _ -> True
-        TwiceImFT _ -> True
-        TwiceReFT _ -> True
+        FT _ -> True
+        IFT _ -> True
         _ -> False
 
 -------------------------------------------------------------------------------

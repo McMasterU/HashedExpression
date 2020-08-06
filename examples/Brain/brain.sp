@@ -22,6 +22,6 @@ let:
 
 
 minimize:
-  norm2square ((mask +: 0) * (ft x - (re +: im))) + 3000 *. regularization
+  norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im))) + 3000 *. regularization
 
 solver: lbfgs-b

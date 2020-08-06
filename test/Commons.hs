@@ -289,9 +289,7 @@ gen1DR size
             liftE1 xRe <$> subC,
             liftE1 xIm <$> subC,
             liftE2 (*.) <$> subScalar <*> sub,
-            fromRotate,
-            liftE1 (xRe . ft) <$> sub,
-            liftE1 (xIm . ft) <$> sub
+            fromRotate
           ]
 
 -------------------------------------------------------------------------------
@@ -328,7 +326,8 @@ gen1DC size
             unary (^ 2),
             liftE2 (+:) <$> subR <*> subR,
             liftE2 (*.) <$> subScalar <*> sub,
-            liftE1 ft <$> sub,
+            unary ft,
+            unary ift,
             fromRotate
           ]
 
@@ -368,9 +367,7 @@ gen2DR size
             liftE1 xRe <$> subC,
             liftE1 xIm <$> subC,
             liftE2 (*.) <$> subScalar <*> sub,
-            fromRotate,
-            liftE1 (xRe . ft) <$> sub,
-            liftE1 (xIm . ft) <$> sub
+            fromRotate
           ]
 
 -------------------------------------------------------------------------------
@@ -408,7 +405,8 @@ gen2DC size
             unary (^ 2),
             liftE2 (+:) <$> subR <*> subR,
             liftE2 (*.) <$> subScalar <*> sub,
-            liftE1 ft <$> sub,
+            unary ft,
+            unary ift,
             fromRotate
           ]
 

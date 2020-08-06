@@ -168,7 +168,7 @@ prop_CEqualInterpScalarR (Suite exp valMaps) =
 
 -- |
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (Suite exp valMaps) =
+prop_CEqualInterpScalarC (Suite exp valMaps) = do
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW

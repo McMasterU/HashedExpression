@@ -201,17 +201,10 @@ instance (Dimension d, ElementType et) => PiecewiseOp (Expression d R) (Expressi
 -- Fourier transform on complex expression
 instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
   ft :: Expression d C -> Expression d C
-  ft e
-    | isScalarShape $ expressionShape e = e
-    | otherwise =
-      let reFT = applyUnary specReFT e
-          imFT = applyUnary specImFT e
-       in reFT +: imFT
+  ft = applyUnary specFT
 
--- Fourier transform on real expression which returns complex expression
-instance (Dimension d) => FTOp (Expression d R) (Expression d C) where
-  ft :: Expression d R -> Expression d C
-  ft e = ft (e +: constWithShape (expressionShape e) 0)
+  ift :: Expression d C -> Expression d C
+  ift = applyUnary specIFT
 
 instance (Dimension d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
   x |*| dy = applyBinary specMulD x dy

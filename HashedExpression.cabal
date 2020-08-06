@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 05ca677f42317de798883eea5124d0dba100a2a071b037fde9af53a43879fa91
+-- hash: 1990282503fb7bae5bc1baccc405c00afd75a472ba31b9053e2ce600c9fa10c9
 
 name:           HashedExpression
 version:        0.0.3
@@ -178,7 +178,6 @@ test-suite HashedExpression-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      CollectSpec
       CollisionSpec
       Commons
       CSimpleSpec

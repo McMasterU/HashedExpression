@@ -185,14 +185,12 @@ problemsRepo =
           f = x <.> y + z <.> t
           constraints =
             Constraint [x .>= VNum 5, y .<= VNum 10, x <.> z .>= VNum 18]
-          vars = ["x", "y", "z", "t"]
        in constructProblem f constraints,
       True
     ),
     ( let [x, y, z] = map (variable2D @100 @100) ["x", "y", "z"]
           f = x <.> y + z <.> z
           constraints = Constraint [y <.> z .<= VNum 1]
-          vars = ["x", "y", "z"]
        in constructProblem f constraints,
       True
     )

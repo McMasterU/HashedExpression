@@ -16,9 +16,13 @@ import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 
+{-# DEPRECATED
+  partialDerivativesMapByExterior
+  "Support for computing partial derivative by exterior method is dropped, consider using reverse method"
+  #-}
 partialDerivativesMapByExterior :: Expression Scalar R -> (ExpressionMap, Map String NodeID)
 partialDerivativesMapByExterior exp =
-  let (mp, rootID) = unwrap . collectDifferentials . derivativeAllVars $ exp
+  let (mp, rootID) = unwrap . collectDifferentials . exteriorDerivative $ exp
    in (mp, partialDerivativesMap (mp, rootID))
 
 -- | Return a map from variable name to the corresponding partial derivative node id

@@ -19,7 +19,6 @@
 -- to factor like terms for producing partial derivatives
 module HashedExpression.Differentiation.Exterior.Derivative
   ( exteriorDerivative,
-    derivativeAllVars,
   )
 where
 
@@ -46,44 +45,31 @@ import Prelude hiding ((^))
 --   using exterior algebra, so derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field. For example,
 --
 --  >>> let [x,y] = [variable "x",variable "y"]
---  >>> prettify $ exteriorDerivative (Set.fromList ["x","y"]) (2*x + y)
+--  >>> prettify $ exteriorDerivative (2*x + y)
 --  "((2.0*dx)+dy) :: Covector"
 --
 --  Note: the partial derivatives are the terms scaling the differential variables (i.e 'DVar',dx,dy,etc), however you may need to factor them
 --  first using 'collectDifferentials'
 exteriorDerivative ::
   (Dimension d) =>
-  -- | Variable Identifiers to take derivative w.r.t
-  Set String ->
   -- | Expression to take derivative on
   Expression d R ->
   -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
   Expression d Covector
-exteriorDerivative vars = normalize . hiddenDerivative vars . normalize
-
--- | Same as 'exteriorDerivative' except automatically perform derivative w.r.t all variables. Since derivatives are computed symbolically using
---   exterior algebra, derivatives w.r.t all variables can be represented by a single 'Expression' over a 'Covector' field.
-derivativeAllVars ::
-  Dimension d =>
-  -- | Expression to take derivative on
-  Expression d R ->
-  -- | Resulting Expression populated with 'DVar' (i.e a 'Covector')
-  Expression d Covector
-derivativeAllVars expr =
-  exteriorDerivative (Set.fromList . map fst $ expressionVarNodes expr) expr
+exteriorDerivative = normalize . hiddenDerivative . normalize
 
 -- | Use with caution, only used if either d2 or d1 is D_ and we want to generalize/specify the dimension type
 coerce :: (ElementType et) => Expression d1 et -> Expression d2 et
 coerce (Expression n mp) = Expression n mp
 
 -- | Hidden computation for exterior derivative
-hiddenDerivative :: Set String -> Expression d R -> Expression d Covector
-hiddenDerivative vars (Expression n mp) = coerce res
+hiddenDerivative :: Expression d R -> Expression d Covector
+hiddenDerivative (Expression n mp) = coerce res
   where
     (shape, R, node) = retrieveNode n mp
     -------------------------------------------------------------------------------
     d :: Expression d R -> Expression d Covector
-    d = hiddenDerivative vars
+    d = hiddenDerivative
     -------------------------------------------------------------------------------
     commute :: UnarySpec -> Arg -> Expression d Covector
     commute spec arg =
@@ -103,7 +89,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
     res =
       case node of
         -- dx = dx if x is in vars, otherwise dzero
-        Var name -> fromNode (shape, Covector, if Set.member name vars then DVar name else DZero)
+        Var name -> fromNode (shape, Covector, DVar name)
         Param name -> fromNode (shape, Covector, DZero)
         Const _ -> fromNode (shape, Covector, DZero)
         Sum args -> applyNary specSum $ map (d . asR) args
