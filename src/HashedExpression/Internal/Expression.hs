@@ -327,15 +327,29 @@ instance VectorSpace d s s => InnerProductSpace d s
 instance Dimension Scalar where
   toShape _ = []
 
--- | Implementation for a 1D Vector
+-- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
+--   @
+--   variable1D  "x" :: KnownNat n => Expression n R
+--   variable1D @10 "x" :: Expression 10 R
+--   @
 instance (KnownNat n) => Dimension n where
   toShape _ = [nat @n]
 
--- | Implementation for a 2D Vector
+-- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
+--   variable2D @10 @5 "x" :: Expression '(10,5) R
+--   @
 instance (KnownNat m, KnownNat n) => Dimension '(m, n) where
   toShape _ = [nat @m, nat @n]
 
--- | Implementation for a 2D Vector
+-- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
+--
+--   @
+--   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
+--   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
+--   @
 instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p) where
   toShape _ = [nat @m, nat @n, nat @p]
 

@@ -290,10 +290,11 @@ constructProblemHelper :: Expression Scalar R -> [String] -> Constraint -> Probl
 constructProblemHelper obj names (Constraint constraints) = do
   let varsSet = Set.fromList names
   let vs = varNodesWithShape (exMap obj) ++ concatMap (varNodesWithShape . fst . getExpressionCS) constraints
+  let varAndShape = filter (\(name, _) -> Set.member name varsSet) vs
+  -------------------------------------------------------------------------------
   checkConflictVars vs
   forM_ constraints checkConstraint
   -------------------------------------------------------------------------------
-  let varAndShape = filter (\(name, _) -> Set.member name varsSet) vs
   -- When taking derivatives, make sure all the variables are presented by introduceZeroPartialDerivatives
   let takeDerivative =
         introduceZeroPartialDerivatives varAndShape
