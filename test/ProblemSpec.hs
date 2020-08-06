@@ -252,7 +252,6 @@ spec =
       forM_ problemsRepo $ \(problemResult, expected) -> do
         case (problemResult, expected) of
           (ProblemValid p, True) -> do
-            print p
             return ()
           (ProblemInvalid _, False) ->
             return ()

@@ -90,7 +90,6 @@ instance Approximable Double where
   prettifyShow a
     | abs a < 1e-10 = "0" --  in prettify, inputs less than a small condition value consider as zero,
     | otherwise = printf "%.2f" a --  otherwise, it shows the exact input.
-    --  [TODO] Is it a specific condition value for prettify?
 
 {-
 Instance which belongs to approximable class for Complex Double precision inputs.
