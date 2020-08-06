@@ -104,6 +104,7 @@ hiddenDerivative vars (Expression n mp) = coerce res
       case node of
         -- dx = dx if x is in vars, otherwise dzero
         Var name -> fromNode (shape, Covector, if Set.member name vars then DVar name else DZero)
+        Param name -> fromNode (shape, Covector, DZero)
         Const _ -> fromNode (shape, Covector, DZero)
         Sum args -> applyNary specSum $ map (d . asR) args
         Mul args ->

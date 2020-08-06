@@ -183,6 +183,10 @@ instance Evaluable Scalar R Double where
           case Map.lookup name valMap of
             Just (VScalar val) -> val
             _ -> error "no value associated with the variable"
+        Param name ->
+          case Map.lookup name valMap of
+            Just (VScalar val) -> val
+            _ -> error "no value associated with the parameter"
         Const val -> val
         Sum args -> sum . map (eval valMap . expZeroR mp) $ args --  sum of a scalar is of the type of R
         Mul args -> product . map (eval valMap . expZeroR mp) $ args --  mul of a scalar is of the type of R
@@ -351,6 +355,10 @@ evaluate1DReal valMap (mp, n)
         case Map.lookup name valMap of
           Just (V1D val) -> val
           _ -> error "no value associated with the variable"
+      Param name ->
+        case Map.lookup name valMap of
+          Just (V1D val) -> val
+          _ -> error "no value associated with the parameter"
       Const val -> listArray (0, size - 1) $ replicate size val
       Sum args ->
         --  evaluate the sum over undefined input arguments
@@ -510,6 +518,10 @@ evaluate2DReal valMap (mp, n)
         case Map.lookup name valMap of
           Just (V2D val) -> val
           _ -> error $ "no value associated with the variable" ++ name
+      Param name ->
+        case Map.lookup name valMap of
+          Just (V2D val) -> val
+          _ -> error "no value associated with the parameter"
       Const val ->
         listArray ((0, 0), (size1 - 1, size2 - 1)) $
           replicate (size1 * size2) val
@@ -694,6 +706,10 @@ evaluate3DReal valMap (mp, n)
         case Map.lookup name valMap of
           Just (V3D val) -> val
           _ -> error "no value associated with the variable"
+      Param name ->
+        case Map.lookup name valMap of
+          Just (V3D val) -> val
+          _ -> error "no value associated with the parameter"
       Const val ->
         listArray ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1)) $
           replicate (size1 * size2 * size3) val

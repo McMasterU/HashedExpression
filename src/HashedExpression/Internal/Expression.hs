@@ -117,9 +117,11 @@ type role Expression nominal nominal
 
 -- | The Op type provides constructors for variables, constants and operators used to create expressions.
 data Op
-  = -- | variable with an identifier, wrapped by either @Expression d R@ or @Expression d C@
+  = -- | variable with an identifier
     Var String
-  | -- | constants, only wrapped byf @Expression d R@, non-scalar constants repeat the same value
+  | -- | parameter with an identifier
+    Param String
+  | -- | constants, only wrapped byf @Expression d R@
     Const Double
   | -- | element-wise sum
     Sum Args
