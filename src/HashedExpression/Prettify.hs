@@ -174,6 +174,8 @@ hiddenPrettify pastable (mp, n) =
               Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
               ReFT arg -> T.concat ["reFT", wrapParentheses $ innerPrettify arg]
               ImFT arg -> T.concat ["imFT", wrapParentheses $ innerPrettify arg]
+              FT arg -> T.concat ["FT", wrapParentheses $ innerPrettify arg]
+              IFT arg -> T.concat ["IFT", wrapParentheses $ innerPrettify arg]
               TwiceReFT arg -> T.concat ["twiceReFT", wrapParentheses $ innerPrettify arg]
               TwiceImFT arg -> T.concat ["twiceImFT", wrapParentheses $ innerPrettify arg]
               MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]

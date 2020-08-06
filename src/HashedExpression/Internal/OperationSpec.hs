@@ -212,6 +212,12 @@ specPiecewise marks =
 specRotate :: HasCallStack => RotateAmount -> UnarySpec
 specRotate ra = defaultUnary (Rotate ra) [R, C, Covector]
 
+specFT :: HasCallStack => UnarySpec
+specFT = defaultUnary FT [C]
+
+specIFT :: HasCallStack => UnarySpec
+specIFT = defaultUnary IFT [C]
+
 specReFT :: HasCallStack => UnarySpec
 specReFT =
   UnarySpec {toOp = ReFT, decideShape = id, decideET = decideET}

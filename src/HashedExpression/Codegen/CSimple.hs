@@ -322,24 +322,14 @@ evaluating CSimpleCodegen {..} rootIDs =
                                      [I.i|#{n `imAt` (toIndex i j k)} = #{arg `imAt` (toIndex "ai" "aj" "ak")};|]
                                    ]
                              )
-            TwiceReFT arg ->
+            FT arg ->
               case shape of
-                [size] | et == R -> [[I.i|re_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
-                [size1, size2] | et == R -> [[I.i|re_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
-            TwiceImFT arg ->
+                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, FFTW_FORWARD);|]]
+                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, FFTW_FORWARD);|]]
+            IFT arg ->
               case shape of
-                [size] | et == R -> [[I.i|im_dft_twice_1d(#{size}, #{addressOf arg}, #{addressOf n});|]]
-                [size1, size2] | et == R -> [[I.i|im_dft_twice_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n});|]]
-            ReFT arg ->
-              let inputType = if retrieveElementType arg cExpressionMap == R then "INPUT_REAL" else "INPUT_COMPLEX"
-               in case shape of
-                    [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
-                    [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, REAL);|]]
-            ImFT arg ->
-              let inputType = if retrieveElementType arg cExpressionMap == R then "INPUT_REAL" else "INPUT_COMPLEX"
-               in case shape of
-                    [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
-                    [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, #{inputType}, IMAG);|]]
+                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
+                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
             node -> error $ "Not implemented " ++ show node
 
 -------------------------------------------------------------------------------

@@ -34,12 +34,6 @@ shouldNormalizeTo exp1 exp2 = do
   prettify (normalize exp1) `shouldBe` prettify (normalize exp2)
   normalize exp1 `shouldBe` normalize exp2
 
-reFT :: (Dimension d) => Expression d R -> Expression d R
-reFT = xRe . ft
-
-imFT :: (Dimension d) => Expression d R -> Expression d R
-imFT = xIm . ft
-
 prop_NormalizeIsIdempotent :: ArbitraryExpresion -> Expectation
 prop_NormalizeIsIdempotent (ArbitraryExpresion exp) =
   exp `shouldNormalizeTo` normalize exp
@@ -163,30 +157,6 @@ spec = do
       piecewise [1, 2] c [zero, x *. y, zero] `shouldNormalizeTo` x *. piecewise [1, 2] c [zero, y, zero]
       piecewise [4, 5] x1 [zero1, x1 * (s *. y1), zero1] `shouldNormalizeTo` s *. piecewise [4, 5] x1 [zero1, x1 * y1, zero1]
       piecewise [1] c1 [c1 +: y1, z1 +: t1] `shouldNormalizeTo` piecewise [1] c1 [c1, z1] +: piecewise [1] c1 [y1, t1]
-  describe "Fourier transform" $
-    specify "some Ft rules" $ do
-      reFT (reFT x1) + imFT (imFT x1) `shouldNormalizeTo` constant (fromIntegral defaultDim1D) *. x1
-      reFT (reFT x2) + imFT (imFT x2) `shouldNormalizeTo` constant (fromIntegral (default1stDim2D * default2ndDim2D)) *. x2
-      let x = variable1D @10 "x"
-          y = variable1D @10 "y"
-          z = variable1D @10 "z"
-          t = variable1D @10 "t"
-          valMap =
-            Map.fromList
-              [ ("x", V1D $ listArray (0, 9) [1 ..]),
-                ("y", V1D $ listArray (0, 9) [2, 5 ..]),
-                ("z", V1D $ listArray (0, 9) [3, 8 ..]),
-                ("t", V1D $ listArray (0, 9) [0, -1 ..])
-              ]
-      let res1 = eval valMap $ reFT (reFT (x * y + z * t))
-          res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t))
-      res1 `shouldApprox` res2
-      let res1 = eval valMap $ imFT (imFT (x * y + z * t))
-          res2 = eval valMap . normalize $ imFT (imFT (x * y + z * t))
-      res1 `shouldApprox` res2
-      let res1 = eval valMap $ reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
-          res2 = eval valMap . normalize $ reFT (reFT (x * y + z * t)) + imFT (imFT (x * y + z * t))
-      res1 `shouldApprox` res2
   describe "Unit tests" $
     specify "should properly normalize hard-coded exp" $ do
       x `shouldNormalizeTo` x

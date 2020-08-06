@@ -195,33 +195,13 @@ partialDerivativesMapByReverse (Expression rootID mp) =
             dX <- perform (Unary (specRotate (map negate amount))) [dN]
             dX <- rotate (map negate amount) $ from dN
             addDerivative x dX
-          ReFT x
-            | retrieveElementType x curMp == R -> do
-              dX <- reFT (from dN)
-              addDerivative x dX
-            | otherwise -> do
-              dX <- reFT (from dN) +: (- imFT (from dN))
-              addDerivative x dX
-          ImFT x
-            | retrieveElementType x curMp == R -> do
-              dX <- imFT (from dN)
-              addDerivative x dX
-            | otherwise -> do
-              dX <- imFT (from dN) +: reFT (from dN)
-              addDerivative x dX
-          TwiceReFT x
-            | retrieveElementType x curMp == R -> do
-              dX <- twiceReFT (from dN)
-              addDerivative x dX
-            | otherwise -> do
-              dX <- twiceReFT (from dN) +: zero
-              addDerivative x dX
-          TwiceImFT x
-            | retrieveElementType x curMp == R -> do
-              dX <- twiceImFT (from dN)
-              addDerivative x dX
-            | otherwise -> do
-              dX <- zero +: twiceImFT (from dN)
-              addDerivative x dX
+          FT x -> do
+            let sz = fromIntegral $ product shape
+            dX <- sNum sz *. ift (from dN)
+            addDerivative x dX
+          IFT x -> do
+            let sz = fromIntegral $ product shape
+            dX <- sNum (1.0 / sz) *. ft (from dN)
+            addDerivative x dX
       (_, res) = runState go init
    in (contextMap res, partialDerivativeMap res)

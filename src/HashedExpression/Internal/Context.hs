@@ -163,6 +163,17 @@ instance (MonadExpression m) => FTRelatedOp (m NodeID) (m NodeID) where
     x <- operand
     perform (Unary specTwiceImFT) [x]
 
+instance (MonadExpression m) => FTOp (m NodeID) (m NodeID) where
+  ft operand = do
+    x <- operand
+    perform (Unary specFT) [x]
+
+  ift operand = do
+    x <- operand
+    perform (Unary specIFT) [x]
+
+-------------------------------------------------------------------------------
+
 instance (MonadExpression m) => MulCovectorOp (m NodeID) (m NodeID) (m NodeID) where
   (|*|) operand1 operand2 = do
     x <- operand1

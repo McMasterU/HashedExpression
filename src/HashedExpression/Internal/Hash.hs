@@ -93,7 +93,6 @@ hash (shape, et, node) rehashNum =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
-        Conjugate arg -> offsetHash 39 . hashString' $ show arg
         --
         InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
         Piecewise marks arg branches ->
@@ -104,17 +103,21 @@ hash (shape, et, node) rehashNum =
               ++ separator
               ++ (intercalate separator . map show $ branches)
         Rotate amount arg -> offsetHash 29 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
-        ReFT arg -> offsetHash 30 . hashString' $ show arg
-        ImFT arg -> offsetHash 31 . hashString' $ show arg
-        TwiceReFT arg -> offsetHash 32 . hashString' $ show arg
-        TwiceImFT arg -> offsetHash 33 . hashString' $ show arg
+        FT arg -> offsetHash 30 . hashString' $ show arg
+        IFT arg -> offsetHash 31 . hashString' $ show arg
+        -------------------------------------------------------------------------------
+        ReFT arg -> offsetHash 32 . hashString' $ show arg
+        ImFT arg -> offsetHash 33 . hashString' $ show arg
+        TwiceReFT arg -> offsetHash 34 . hashString' $ show arg
+        TwiceImFT arg -> offsetHash 35 . hashString' $ show arg
+        Conjugate arg -> offsetHash 37 . hashString' $ show arg
         -- Mark: Covector
-        DVar name -> offsetHash 34 . hashString' $ show name
-        DZero -> offsetHash 35 . hashString' $ "dzero"
-        MulD arg1 arg2 -> offsetHash 36 . hashString' $ show arg1 ++ separator ++ show arg2
-        ScaleD arg1 arg2 -> offsetHash 37 . hashString' $ show arg1 ++ separator ++ show arg2
-        DScale arg1 arg2 -> offsetHash 38 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProdD arg1 arg2 -> offsetHash 39 . hashString' $ show arg1 ++ separator ++ show arg2
+        DVar name -> offsetHash 37 . hashString' $ show name
+        DZero -> offsetHash 38 . hashString' $ "dzero"
+        MulD arg1 arg2 -> offsetHash 39 . hashString' $ show arg1 ++ separator ++ show arg2
+        ScaleD arg1 arg2 -> offsetHash 40 . hashString' $ show arg1 ++ separator ++ show arg2
+        DScale arg1 arg2 -> offsetHash 41 . hashString' $ show arg1 ++ separator ++ show arg2
+        InnerProdD arg1 arg2 -> offsetHash 42 . hashString' $ show arg1 ++ separator ++ show arg2
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

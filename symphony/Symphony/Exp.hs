@@ -275,9 +275,8 @@ constructExp context shapeInfo exp =
               onlyForComplexVector operand
               return $ app specImagPart operand
             "ft" -> do
-              let reFT = app specReFT operand
-              let imFT = app specImFT operand
-              return $ reIm reFT imFT
+              onlyForComplexVector operand
+              return $ app specFT operand
             "sumElements" -> do
               onlyForRealVector operand
               return $ dot operand (HU.aConst (getShape operand) 1)
