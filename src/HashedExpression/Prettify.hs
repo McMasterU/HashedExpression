@@ -122,7 +122,8 @@ hiddenPrettify pastable (mp, n) =
             [x, y, z] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]", "[", T.pack . show $ z, "]"]
             _ -> error "TODO: not yet support more than 3D"
    in case node of
-        Var name -> T.concat [T.pack name]
+        Var name -> T.pack name
+        Param name -> T.pack name
         Const val
           | pastable ->
             case shape of

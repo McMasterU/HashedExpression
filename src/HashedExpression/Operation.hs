@@ -351,3 +351,54 @@ constant3D = constWithShape [size1, size2, size3]
     size1 = valueFromNat @m
     size2 = valueFromNat @n
     size3 = valueFromNat @p
+
+
+-- | Create primitive expressions
+param :: String -> Expression Scalar R
+param name = fromNode ([], R, Param name)
+
+-- | Create primitive expressions using Nat kind.
+--
+-- @
+--   let exp = param1D "var"
+--   let exp = param1D \@10 "var"
+-- @
+param1D ::
+  forall n.
+  (KnownNat n) =>
+  String ->
+  Expression n R
+param1D name = fromNode ([size], R, Param name)
+  where
+    size = valueFromNat @n
+
+-- | Create a param for two-dimensional nat values
+-- @
+--  exp = param2D "var"
+--  exp = param2D \@10 \@20 "var"
+-- @
+param2D ::
+  forall m n.
+  (KnownNat m, KnownNat n) =>
+  String ->
+  Expression '(m, n) R
+param2D name = fromNode ([size1, size2], R, Param name)
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+
+-- | Create a param for three-dimensional nat values
+-- @
+--  exp = param3D "var"
+--  exp = param3D @10 @20 @30 "var"
+-- @
+param3D ::
+  forall m n p.
+  (KnownNat m, KnownNat n, KnownNat p) =>
+  String ->
+  Expression '(m, n, p) R
+param3D name = fromNode ([size1, size3], R, Param name)
+  where
+    size1 = valueFromNat @m
+    size2 = valueFromNat @n
+    size3 = valueFromNat @p

@@ -45,7 +45,7 @@ hashString [] = 0
 
 -- | Offset the hash by number of m
 -- Because each kind of node will be offset by a different offset
--- This means that 2 nodes of the same types (Var, Sum , ..) can't have the same hash
+-- nodes of the different constructors (Var, Sum , ..) can't have the same hash
 offsetHash :: Int -> Int -> Int
 offsetHash offset hash =
   if hash < modulo
