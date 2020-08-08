@@ -38,6 +38,7 @@ extern void evaluate_objective();
 extern void evaluate_partial_derivatives();
 extern void evaluate_scalar_constraints();
 extern void evaluate_scalar_constraints_jacobian();
+extern void write_result();
 
 /* Ipopt Function Declarations */
 Bool eval_f(
@@ -223,6 +224,7 @@ int main()
       }
 
       printf("\n\nObjective value\nf(x*) = %e\n", obj);
+      write_result();
    }
    else
    {

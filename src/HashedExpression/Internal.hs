@@ -319,10 +319,3 @@ createEntry spec args =
             toOp (idOf condition) (map idOf branches)
           )
         _ -> error "Unfaithful with operation spec"
-
--- | Operations such as ImFT, ReFT, etc are for internal used only.
-class FTRelatedOp a b | a -> b where
-  imFT :: a -> b
-  reFT :: a -> b
-  twiceImFT :: a -> b
-  twiceReFT :: a -> b

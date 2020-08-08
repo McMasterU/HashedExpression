@@ -19,7 +19,6 @@ import HashedExpression.Internal
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)

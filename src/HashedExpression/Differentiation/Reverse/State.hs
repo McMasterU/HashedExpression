@@ -1,5 +1,5 @@
 -- |
--- Module      :  HashedExpression.Differentiation.Exterior.Collect
+-- Module      :  HashedExpression.Differentiation.Reverse.State
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
@@ -22,7 +22,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Structure
 import Prelude hiding ((^))
 
 data ComputeDState = ComputeDState

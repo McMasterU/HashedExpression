@@ -77,10 +77,6 @@ nodeTypeWeight node =
     Rotate {} -> 29
     FT {} -> 30
     IFT {} -> 31
-    ReFT {} -> 32
-    ImFT {} -> 33
-    TwiceReFT {} -> 34
-    TwiceImFT {} -> 35
     Scale {} -> 36 -- Right after RealImag
     RealImag {} -> 37 -- At the end right after sum
     Sum {} -> 38 -- Sum at the end
@@ -134,10 +130,6 @@ opArgs node =
     Rotate _ arg -> [arg]
     FT arg -> [arg]
     IFT arg -> [arg]
-    ReFT arg -> [arg]
-    ImFT arg -> [arg]
-    TwiceReFT arg -> [arg]
-    TwiceImFT arg -> [arg]
     DZero -> []
     MulD arg1 arg2 -> [arg1, arg2]
     ScaleD arg1 arg2 -> [arg1, arg2]
@@ -181,10 +173,6 @@ mapOp f op =
     Rotate am arg -> Rotate am (f arg)
     FT arg -> FT (f arg)
     IFT arg -> IFT (f arg)
-    ReFT arg -> ReFT (f arg)
-    ImFT arg -> ImFT (f arg)
-    TwiceReFT arg -> TwiceReFT (f arg)
-    TwiceImFT arg -> TwiceImFT (f arg)
     DZero -> DZero
     MulD arg1 arg2 -> MulD (f arg1) (f arg2)
     ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)

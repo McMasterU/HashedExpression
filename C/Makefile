@@ -1,0 +1,3 @@
+clean:
+	git clean -dfX
+

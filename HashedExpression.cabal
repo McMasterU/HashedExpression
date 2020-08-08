@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1990282503fb7bae5bc1baccc405c00afd75a472ba31b9053e2ce600c9fa10c9
+-- hash: d4444dfd1605daf89e0a14d9c2875a407bff5bdf0615c4aed7af93cd35fb0760
 
 name:           HashedExpression
 version:        0.0.3
@@ -54,7 +54,7 @@ library
       HashedExpression.Internal.Pattern
       HashedExpression.Internal.Plot
       HashedExpression.Internal.Rewrite
-      HashedExpression.Internal.Structure
+      HashedExpression.Internal.Simplify
       HashedExpression.Internal.Utils
       HashedExpression.Interp
       HashedExpression.Operation
@@ -182,9 +182,10 @@ test-suite HashedExpression-test
       Commons
       CSimpleSpec
       InterpSpec
-      NormalizeSpec
       ProblemSpec
       ReverseDifferentiationSpec
+      SimplifySpec
+      SolverSpec
       StructureSpec
       Var
       Paths_HashedExpression

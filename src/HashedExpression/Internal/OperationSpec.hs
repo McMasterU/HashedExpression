@@ -2,7 +2,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 -- |
--- Module      :  HashedExpression.Differentiation.Exterior.Derivative
+-- Module      :  HashedExpression.Internal.OperationSpec
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
@@ -218,37 +218,7 @@ specFT = defaultUnary FT [C]
 specIFT :: HasCallStack => UnarySpec
 specIFT = defaultUnary IFT [C]
 
-specReFT :: HasCallStack => UnarySpec
-specReFT =
-  UnarySpec {toOp = ReFT, decideShape = id, decideET = decideET}
-  where
-    decideET x
-      | x == R || x == C = R
-      | x == Covector = Covector
-
-specImFT :: HasCallStack => UnarySpec
-specImFT =
-  UnarySpec {toOp = ImFT, decideShape = id, decideET = decideET}
-  where
-    decideET x
-      | x == R || x == C = R
-      | x == Covector = Covector
-
-specTwiceReFT :: HasCallStack => UnarySpec
-specTwiceReFT =
-  UnarySpec {toOp = TwiceReFT, decideShape = id, decideET = decideET}
-  where
-    decideET x
-      | x == R || x == C = R
-      | x == Covector = Covector
-
-specTwiceImFT :: HasCallStack => UnarySpec
-specTwiceImFT =
-  UnarySpec {toOp = TwiceImFT, decideShape = id, decideET = decideET}
-  where
-    decideET x
-      | x == R || x == C = R
-      | x == Covector = Covector
+-------------------------------------------------------------------------------
 
 specMulD :: HasCallStack => BinarySpec
 specMulD =

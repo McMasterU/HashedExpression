@@ -23,9 +23,6 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust, fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
-import HashedExpression.Differentiation.Exterior
-import HashedExpression.Differentiation.Exterior.Collect
-import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
 import HashedExpression.Internal.Context
@@ -33,7 +30,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value
@@ -300,7 +296,7 @@ constructProblemHelper obj (Constraint constraints) = do
   let expScalarConstraints = Set.toList . Set.fromList . map getExpressionCS $ scalarCS
   -------------------------------------------------------------------------------
   let processF exp = do
-        let (mp, name2ID) = partialDerivativesMapByReverse exp
+        let (mp, name2ID) = partialDerivativesMap exp
         let (names, beforeMergeIDs) = unzip $ Map.toList name2ID
         Map.fromList . zip names <$> mergeToMainMany (mp, beforeMergeIDs)
   let lookupDerivative :: (String, Shape) -> Map String NodeID -> ProblemConstructingM NodeID

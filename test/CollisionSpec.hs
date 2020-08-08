@@ -43,7 +43,7 @@ import Test.QuickCheck
 --        f previous = do
 --          ls <- vectorOf 3 $ elements $ map fst previous
 --          let [x, y, z] = ls
---          nextOp <- elements [Sum [x, y, z], Sum [x, y], Mul [x, y], InnerProdD x y, Div x y, Rotate [] x, ReFT x, ReFT y]
+--          nextOp <- elements [Sum [x, y, z], Sum [x, y], Mul [x, y], InnerProdD x y, Div x y, Rotate [] x]
 --          return $ previous ++ [(1 + maximum (map fst previous), ([], R, nextOp))]
 --    numExtra <- elements [15 .. 20]
 --    contextEntries <- nest numExtra f baseNodes

@@ -18,6 +18,7 @@ extern double ptr[MEM_SIZE];
 
 extern void assign_values();
 extern void evaluate_partial_derivatives_and_objective();
+extern void write_result();
 
 int num_iterations;
 
@@ -25,30 +26,6 @@ double random_in(double min, double max) {
   double range = (max - min);
   double div = RAND_MAX / range;
   return min + (rand() / div);
-}
-
-void print_vars() {
-  int i;
-  for (i = 0; i < NUM_VARIABLES; i++) {
-    char* var_file_name = (char*) malloc(strlen(var_name[i]) + 7);
-    strcpy(var_file_name, var_name[i]);
-    strcat(var_file_name, "_out.h5");
-    if (var_num_dim[i] == 0) {
-      printf("%s = %lf\n", var_name[i], ptr[var_offset[i]]);
-    } else {
-      printf("Writing %s to %s...\n", var_name[i], var_file_name);
-      hid_t file, space, dset;
-      hsize_t dims[3] = { (hsize_t) var_shape[i][0], (hsize_t) var_shape[i][1], (hsize_t) var_shape[i][2]};
-      file = H5Fcreate(var_file_name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-      space = H5Screate_simple (var_num_dim[i], dims, NULL);
-      dset = H5Dcreate (file, var_name[i], H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-      H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + var_offset[i]);
-      H5Dclose(dset);
-      H5Sclose(space);
-      H5Fclose(file);
-    }
-    free(var_file_name);
-  }
 }
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x,
@@ -103,7 +80,7 @@ int main() {
 
   printf("After %d iterations: \n", num_iterations);
   printf("f_min = %f\n", fx);
-  print_vars();
+  write_result();
   printf("Done\n");
 
   lbfgs_free(x);

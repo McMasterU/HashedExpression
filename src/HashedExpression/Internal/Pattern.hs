@@ -88,7 +88,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
 import HashedExpression.Internal
-import HashedExpression.Internal.Context hiding (imFT, reFT)
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
@@ -235,14 +235,6 @@ data Pattern
     PPower Pattern PatternPower
   | -- | pattern that has a rotate operator with a 'PatternRotateAmount' applied to it
     PRotate PatternRotateAmount Pattern
-  | -- | pattern that has a real fourier transform applied to it
-    PReFT Pattern
-  | -- | pattern that has a imaginary fourier transform applied to it
-    PImFT Pattern
-  | -- | pattern that has a real fourier transform applied to it twice
-    PTwiceReFT Pattern
-  | -- | pattern that has a imaginary fourier transform applied to it twice
-    PTwiceImFT Pattern
   | PDZero
   | PMulD Pattern Pattern
   | PScaleD Pattern Pattern
@@ -274,13 +266,6 @@ data PatternRotateAmount
 
 -- | 'Pattern' holes are identified uniquely by a Capture id
 type Capture = Int
-
--- | pattern of fourier transforms related Op
-instance FTRelatedOp Pattern Pattern where
-  reFT = PReFT
-  imFT = PImFT
-  twiceReFT = PTwiceReFT
-  twiceImFT = PTwiceImFT
 
 dZero :: Pattern
 dZero = PDZero
@@ -350,7 +335,7 @@ instance ComplexRealOp Pattern Pattern where
   xIm = PImagPart
   conjugate = PConjugate
 
-instance InnerProductSpaceOp Pattern Pattern Pattern where
+instance InnerProductSpaceOp Pattern Pattern where
   (<.>) = PInnerProd
 
 instance PowerOp Pattern PatternPower where
@@ -694,10 +679,6 @@ match (mp, n) outerWH =
                         Map.fromList [(rotateAmountCapture, ra)]
                     } ->
             Just $ unionMatch matchInner matchRotateAmount
-        (ReFT arg, PReFT sp) -> recursiveAndCombine [arg] [sp]
-        (ImFT arg, PImFT sp) -> recursiveAndCombine [arg] [sp]
-        (TwiceReFT arg, PTwiceReFT sp) -> recursiveAndCombine [arg] [sp]
-        (TwiceImFT arg, PTwiceImFT sp) -> recursiveAndCombine [arg] [sp]
         (DZero, PDZero) -> Just emptyMatch
         (MulD arg1 arg2, PMulD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
         (ScaleD arg1 arg2, PScaleD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
@@ -809,10 +790,6 @@ buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape ori
         PRotate pra sp ->
           let rotateAmount = buildFromPatternRotateAmount match pra
            in rotate rotateAmount (build inferredShape sp)
-        PReFT sp -> reFT (build inferredShape sp)
-        PImFT sp -> imFT (build inferredShape sp)
-        PTwiceReFT sp -> twiceReFT $ build inferredShape sp
-        PTwiceImFT sp -> twiceImFT $ build inferredShape sp
         PDZero -> case inferredShape of
           Just shape -> introduceNode (shape, Covector, DZero)
           _ -> error "Can't infer shape of DZero"

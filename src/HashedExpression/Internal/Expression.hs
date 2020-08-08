@@ -17,6 +17,7 @@ module HashedExpression.Internal.Expression
     --   each 'Node' is either an atomic value like variables and constants or
     --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
     --   assuring reuse of common subexpressions
+    nat,
     Op (..),
     Node,
     NodeID,
@@ -179,14 +180,6 @@ data Op
     Piecewise [Double] ConditionArg [BranchArg]
   | -- | rotate transformation, rotates vector elements by 'RotateAmount'
     Rotate RotateAmount Arg
-  | -- | real part of fourier transform
-    ReFT Arg
-  | -- | imag part of fourier transform
-    ImFT Arg
-  | -- | real part of fourier transform, performed twice
-    TwiceReFT Arg
-  | -- | imag part of fourier transform, performed twice
-    TwiceImFT Arg
   | FT Arg
   | IFT Arg
   | -- | differentiable operators (only for exterior method)
@@ -273,39 +266,6 @@ class Dimension d where
 --   variable "x" :: Expression Scalar R
 --   @
 data Scalar deriving (Typeable)
-
----- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
-----
-----   @
-----   variable1D  "x" :: KnownNat n => Expression n R
-----   variable1D @10 "x" :: Expression 10 R
-----   @
-----
-----   With this instance, the above definition will satisfy the constraint
-----   @Dimension d => Expression d R@
---instance (KnownNat n) => Dimension n
---
----- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
-----
-----   @
-----   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
-----   variable2D @10 @5 "x" :: Expression '(10,5) R
-----   @
-----
-----   With this instance, the above definition will satisfy the constraint
-----   @Dimension d => Expression d R@
---instance (KnownNat m, KnownNat n) => Dimension '(m, n)
---
----- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
-----
-----   @
-----   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
-----   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
-----   @
-----
-----   With this instance, the above definition will satisfy the constraint
-----   @Dimension d => Expression d R@
---instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p)
 
 -- | A @VectorSpace d et s@ is a space of vectors of @Dimension d@ and @ElementType et@,
 --   that can be scaled by values of @ElementType s@. Used primarily as a base for 'VectorSpaceOp'
@@ -408,8 +368,8 @@ class ComplexRealOp r c | r -> c, c -> r where
 
 -- | Interface for Inner Product combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
-class InnerProductSpaceOp a b c | a b -> c where
-  (<.>) :: a -> b -> c
+class InnerProductSpaceOp a b | a -> b where
+  (<.>) :: a -> a -> b
 
 -- | Interface for rotation combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
@@ -423,7 +383,7 @@ class PiecewiseOp a b where
 
 -- | Interface for fourier transform on 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
-class FTOp a b | a -> b where
+class FTOp a b | a -> b, b -> a where
   ft :: a -> b
   ift :: b -> a
 

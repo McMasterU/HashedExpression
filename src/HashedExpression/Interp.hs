@@ -410,46 +410,6 @@ evaluate1DReal valMap (mp, n)
               ]
       Rotate [amount] arg ->
         rotate1D size amount (evaluate1DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
-        let innerRes = evaluate1DReal valMap $ (mp, arg)
-            scaleFactor = fromIntegral size / 2
-         in listArray
-              (0, size - 1)
-              [ scaleFactor
-                  * (innerRes ! i + innerRes ! ((size - i) `mod` size))
-                | i <- [0 .. size - 1]
-              ]
-      TwiceImFT arg ->
-        let innerRes = evaluate1DReal valMap $ (mp, arg)
-            scaleFactor = fromIntegral size / 2
-         in listArray
-              (0, size - 1)
-              [ scaleFactor
-                  * (innerRes ! i - innerRes ! ((size - i) `mod` size))
-                | i <- [0 .. size - 1]
-              ]
-      ReFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
-                ftResult = fourierTransform1D False size inner
-             in fmap realPart ftResult
-          C ->
-            let inner = evaluate1DComplex valMap $ (mp, arg)
-                ftResult = fourierTransform1D False size inner
-             in fmap realPart ftResult
-      ImFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate1DReal valMap $ (mp, arg)
-                ftResult = fourierTransform1D False size inner
-             in fmap imagPart ftResult
-          C ->
-            let inner = evaluate1DComplex valMap $ (mp, arg)
-                ftResult = fourierTransform1D False size inner
-             in fmap imagPart ftResult
       _ -> error "expression structure One R is wrong"
   | otherwise = error "one r but shape is not [size] ??"
 
@@ -579,54 +539,6 @@ evaluate2DReal valMap (mp, n)
           (size1, size2)
           (amount1, amount2)
           (evaluate2DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
-        let innerRes = evaluate2DReal valMap $ (mp, arg)
-            scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
-         in listArray
-              ((0, 0), (size1 - 1, size2 - 1))
-              [ scaleFactor
-                  * ( innerRes ! (i, j)
-                        + innerRes
-                        ! ((size1 - i) `mod` size1, (size2 - j) `mod` size2)
-                    )
-                | i <- [0 .. size1 - 1],
-                  j <- [0 .. size2 - 1]
-              ]
-      TwiceImFT arg ->
-        let innerRes = evaluate2DReal valMap $ (mp, arg)
-            scaleFactor = fromIntegral size1 * fromIntegral size2 / 2
-         in listArray
-              ((0, 0), (size1 - 1, size2 - 1))
-              [ scaleFactor
-                  * ( innerRes ! (i, j)
-                        - innerRes
-                        ! ((size1 - i) `mod` size1, (size2 - j) `mod` size2)
-                    )
-                | i <- [0 .. size1 - 1],
-                  j <- [0 .. size2 - 1]
-              ]
-      ReFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
-                ftResult = fourierTransform2D False (size1, size2) inner
-             in fmap realPart ftResult
-          C ->
-            let inner = evaluate2DComplex valMap $ (mp, arg)
-                ftResult = fourierTransform2D False (size1, size2) inner
-             in fmap realPart ftResult
-      ImFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate2DReal valMap $ (mp, arg)
-                ftResult = fourierTransform2D False (size1, size2) inner
-             in fmap imagPart ftResult
-          C ->
-            let inner = evaluate2DComplex valMap $ (mp, arg)
-                ftResult = fourierTransform2D False (size1, size2) inner
-             in fmap imagPart ftResult
       _ -> error "expression structure Two R is wrong"
   | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -768,72 +680,6 @@ evaluate3DReal valMap (mp, n)
           (size1, size2, size3)
           (amount1, amount2, amount3)
           (evaluate3DReal valMap $ (mp, arg))
-      TwiceReFT arg ->
-        let innerRes = evaluate3DReal valMap $ (mp, arg)
-            scaleFactor =
-              fromIntegral size1 * fromIntegral size2
-                * fromIntegral size3
-                / 2
-         in listArray
-              ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
-              [ scaleFactor
-                  * ( innerRes ! (i, j, k)
-                        + innerRes
-                        ! ( (size1 - i) `mod` size1,
-                            (size2 - j) `mod` size2,
-                            (size3 - k) `mod` size3
-                          )
-                    )
-                | i <- [0 .. size1 - 1],
-                  j <- [0 .. size2 - 1],
-                  k <- [0 .. size3 - 1]
-              ]
-      TwiceImFT arg ->
-        let innerRes = evaluate3DReal valMap $ (mp, arg)
-            scaleFactor =
-              fromIntegral size1 * fromIntegral size2
-                * fromIntegral size3
-                / 2
-         in listArray
-              ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
-              [ scaleFactor
-                  * ( innerRes ! (i, j, k)
-                        - innerRes
-                        ! ( (size1 - i) `mod` size1,
-                            (size2 - j) `mod` size2,
-                            (size3 - k) `mod` size3
-                          )
-                    )
-                | i <- [0 .. size1 - 1],
-                  j <- [0 .. size2 - 1],
-                  k <- [0 .. size3 - 1]
-              ]
-      ReFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
-                ftResult =
-                  fourierTransform3D False (size1, size2, size3) inner
-             in fmap realPart ftResult
-          C ->
-            let inner = evaluate3DComplex valMap $ (mp, arg)
-                ftResult =
-                  fourierTransform3D False (size1, size2, size3) inner
-             in fmap realPart ftResult
-      ImFT arg ->
-        case retrieveElementType arg mp of
-          R ->
-            let inner =
-                  fmap (:+ 0) . evaluate3DReal valMap $ (mp, arg)
-                ftResult =
-                  fourierTransform3D False (size1, size2, size3) inner
-             in fmap imagPart ftResult
-          C ->
-            let inner = evaluate3DComplex valMap $ (mp, arg)
-                ftResult =
-                  fourierTransform3D False (size1, size2, size3) inner
-             in fmap imagPart ftResult
       _ -> error "expression structure Three R is wrong"
   | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 

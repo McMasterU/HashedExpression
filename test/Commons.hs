@@ -21,7 +21,6 @@ import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
-import HashedExpression.Differentiation.Exterior.Normalize
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
@@ -36,7 +35,7 @@ import Var
 import Prelude hiding ((^))
 
 sizeReduceFactor :: Int
-sizeReduceFactor = 5
+sizeReduceFactor = 3
 
 -- |
 --
@@ -83,9 +82,9 @@ genValMap ::
   VarsAndParams ->
   Gen ValMaps
 genValMap vars = do
-  let sz1D = valueFromNat @size1D
-      sz2D1 = valueFromNat @size2D1
-      sz2D2 = valueFromNat @size2D2
+  let sz1D = nat @size1D
+      sz2D1 = nat @size2D1
+      sz2D2 = nat @size2D2
   let [names0d, names1d, names2d, names3d] = vars
   list0d <- vectorOf (length names0d) genDouble
   let vm0 = Map.fromList . zip names0d $ map VScalar list0d
@@ -275,7 +274,7 @@ gen1DR size
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
-          amount <- elements [- (valueFromNat @n) .. valueFromNat @n]
+          amount <- elements [- (nat @n) .. nat @n]
           liftE1 (rotate amount) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
@@ -313,7 +312,7 @@ gen1DC size
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
-          amount <- elements [- (valueFromNat @n) .. valueFromNat @n]
+          amount <- elements [- (nat @n) .. nat @n]
           liftE1 (rotate amount) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
@@ -352,8 +351,8 @@ gen2DR size
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
-          amount1 <- elements [- (valueFromNat @m) .. valueFromNat @m]
-          amount2 <- elements [- (valueFromNat @n) .. valueFromNat @n]
+          amount1 <- elements [- (nat @m) .. nat @m]
+          amount2 <- elements [- (nat @n) .. nat @n]
           liftE1 (rotate (amount1, amount2)) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
@@ -391,8 +390,8 @@ gen2DC size
               exp = piecewise marks (fst condition) $ map fst branches
           return (exp, vars)
         fromRotate = do
-          amount1 <- elements [- (valueFromNat @m) .. valueFromNat @m]
-          amount2 <- elements [- (valueFromNat @n) .. valueFromNat @n]
+          amount1 <- elements [- (nat @m) .. nat @m]
+          amount2 <- elements [- (nat @n) .. nat @n]
           liftE1 (rotate (amount1, amount2)) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
@@ -543,3 +542,8 @@ getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 -- |
 sz :: Expression d et -> Int
 sz = IM.size . exMap
+
+-------------------------------------------------------------------------------
+instance (Ix i, Num a) => Num (Array i a) where
+  (+) arr1 arr2 = listArray (bounds arr1) $ zipWith (+) (elems arr1) (elems arr2)
+  (*) arr1 arr2 = listArray (bounds arr1) $ zipWith (*) (elems arr1) (elems arr2)

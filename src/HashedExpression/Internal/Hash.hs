@@ -106,10 +106,6 @@ hash (shape, et, node) rehashNum =
         FT arg -> offsetHash 30 . hashString' $ show arg
         IFT arg -> offsetHash 31 . hashString' $ show arg
         -------------------------------------------------------------------------------
-        ReFT arg -> offsetHash 32 . hashString' $ show arg
-        ImFT arg -> offsetHash 33 . hashString' $ show arg
-        TwiceReFT arg -> offsetHash 34 . hashString' $ show arg
-        TwiceImFT arg -> offsetHash 35 . hashString' $ show arg
         Conjugate arg -> offsetHash 37 . hashString' $ show arg
         -- Mark: Covector
         DVar name -> offsetHash 37 . hashString' $ show name

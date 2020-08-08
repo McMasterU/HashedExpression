@@ -32,14 +32,12 @@ import Prelude hiding ((^))
 type Modification = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
 
 chainModifications :: [Modification] -> Modification
-chainModifications fs expr =
-  foldM
-    ( \nID f -> do
-        curM <- get
-        f (curM, nID)
-    )
-    (snd expr)
-    fs
+chainModifications rewrite expr = foldM f (snd expr) rewrite
+  where
+    f :: NodeID -> Modification -> State ExpressionMap NodeID
+    f nID rewrite = do
+      curM <- get
+      rewrite (curM, nID)
 
 toTransformation :: Modification -> Transformation
 toTransformation modify exp =

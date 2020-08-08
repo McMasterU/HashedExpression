@@ -34,7 +34,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import HashedExpression.Prettify
@@ -208,8 +207,4 @@ hiddenDerivative (Expression n mp) = coerce res
            in piecewise marks conditionExp $ map d branchExps
         -- Operations commute with taking differentials
         Rotate amount arg -> commute (specRotate amount) arg
-        ReFT arg -> commute specReFT arg
-        ImFT arg -> commute specImFT arg
-        TwiceReFT arg -> commute specTwiceReFT arg
-        TwiceImFT arg -> commute specTwiceImFT arg
         _ -> error $ show node
