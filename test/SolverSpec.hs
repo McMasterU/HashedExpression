@@ -48,10 +48,10 @@ runCommandIn cwd cmd = do
   (_, _, _, ph) <-
     createProcess
       (shell cmd)
-        { cwd = Just cwd,
-          std_in = NoStream,
-          std_out = NoStream,
-          std_err = NoStream
+        { cwd = Just cwd
+--          std_in = NoStream,
+--          std_out = NoStream,
+--          std_err = NoStream
         }
   waitForProcess ph
 
