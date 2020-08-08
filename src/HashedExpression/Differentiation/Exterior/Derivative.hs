@@ -34,7 +34,6 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation
 import HashedExpression.Prettify

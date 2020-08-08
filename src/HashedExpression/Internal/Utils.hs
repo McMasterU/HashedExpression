@@ -31,27 +31,6 @@ chain :: [a -> a] -> a -> a
 chain = flip $ foldl (|>)
 
 -- |
-read2DValues :: FilePath -> IO (Array (Int, Int) Double)
-read2DValues filePath = do
-  rows <- lines <$> readFile filePath
-  let doubleRows = map (map read . splitOn " ") rows
-  let numRow = length doubleRows
-      numCol = length . head $ doubleRows
-      allDoubles = concat doubleRows
-  return $ listArray ((0, 0), (numRow - 1, numCol - 1)) allDoubles
-
---        allDoubles = map read . concat $ rows
-
--- |
-mapBoth :: (a -> b) -> (a, a) -> (b, b)
-mapBoth f (x, y) = (f x, f y)
-
--- |
-mapSecond :: (b -> c) -> [(a, b)] -> [(a, c)]
-mapSecond _ [] = []
-mapSecond f ((x, y) : rest) = (x, f y) : mapSecond f rest
-
--- |
 measureTime :: IO a -> IO ()
 measureTime action = do
   beforeTime <- getCurrentTime
@@ -68,22 +47,6 @@ allEqual (x : y : xs) = x == y && allEqual (y : xs)
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-ensureSameShape :: Expression d et1 -> Expression d et2 -> a -> a
-ensureSameShape e1 e2 after
-  | expressionShape e1 == expressionShape e2 = after
-  | otherwise =
-    error $
-      "Ensure same shape failed "
-        ++ show (prettifyDebug e1)
-        ++ " "
-        ++ show (prettifyDebug e2)
-
-ensureSameShapeList :: [Expression d et] -> a -> a
-ensureSameShapeList es after
-  | allEqual (map expressionShape es) = after
-  | otherwise =
-    error $ "Ensure same shape failed " ++ show (map expressionShape es)
-
 constWithShape :: Shape -> Double -> Expression d R
 constWithShape shape val = fromNode (shape, R, Const val)
 
@@ -92,10 +55,6 @@ varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
 
 paramWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 paramWithShape shape name = fromNodeUnwrapped (shape, R, Param name)
-
--- |
-isScalarShape :: Shape -> Bool
-isScalarShape = null
 
 -- |
 pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)

@@ -16,7 +16,6 @@ import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal (D_, ET_, removeUnreachable, unwrap)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Structure
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)

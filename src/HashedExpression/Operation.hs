@@ -107,7 +107,7 @@ instance Dimension d => Num (Expression d C) where
 --     e1 / e2
 -- @
 instance Dimension d => Fractional (Expression d C) where
-  e1 / e2 = ensureSameShape e1 e2 $ e1 * e2 ^ (-1)
+  e1 / e2 = e1 * e2 ^ (-1)
   fromRational r = fromDouble (fromRational r) +: 0
 
 -- | Basic operations on covector expressions with dimension constraint `d`
