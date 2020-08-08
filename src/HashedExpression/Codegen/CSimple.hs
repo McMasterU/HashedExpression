@@ -480,12 +480,6 @@ instance Codegen CSimpleConfig where
           "const char* var_name[NUM_VARIABLES] = {"
             <> (T.intercalate ", " . map (showT . varName) $ variables)
             <> "};",
-          "const int var_num_dim[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map (showT . length) $ variableShapes)
-            <> "};",
-          "const int var_shape[NUM_VARIABLES][3] = {"
-            <> (T.intercalate ", " . map toShapeString $ variableShapes)
-            <> "};",
           "const int var_size[NUM_VARIABLES] = {"
             <> (T.intercalate ", " . map showT $ variableSizes)
             <> "};",
