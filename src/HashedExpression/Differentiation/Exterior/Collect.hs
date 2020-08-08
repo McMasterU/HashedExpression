@@ -84,18 +84,14 @@ collectDifferentials = wrap . applyRules . unwrap . normalize
 inspect :: Transformation
 inspect exp = traceShow (debugPrint exp) exp
 
--- | Move dVar out of operations (like reFT) that would prevent factoring
+-- | Move dVar out of operations
 separateDVarAlone :: Transformation
 separateDVarAlone =
   multipleTimes 1000 . toRecursiveTransformation . chainModifications . map fromSubstitution $
     [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
       s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
       s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
-      x |<.>| rotate amount dy |.~~~~~~> (rotate (negate amount) x |<.>| dy),
-      x |<.>| reFT dy |.~~~~~~> reFT x |<.>| dy,
-      x |<.>| imFT dy |.~~~~~~> imFT x |<.>| dy,
-      x |<.>| twiceReFT dy |.~~~~~~> twiceReFT x |<.>| dy,
-      x |<.>| twiceImFT dy |.~~~~~~> twiceImFT x |<.>| dy
+      x |<.>| rotate amount dy |.~~~~~~> (rotate (negate amount) x |<.>| dy)
     ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar

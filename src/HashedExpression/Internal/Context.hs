@@ -125,7 +125,7 @@ instance (MonadExpression m) => ComplexRealOp (m NodeID) (m NodeID) where
     x <- operand
     perform (Unary specConjugate) [x]
 
-instance (MonadExpression m) => InnerProductSpaceOp (m NodeID) (m NodeID) (m NodeID) where
+instance (MonadExpression m) => InnerProductSpaceOp (m NodeID) (m NodeID) where
   (<.>) operand1 operand2 = do
     x <- operand1
     y <- operand2
@@ -141,27 +141,6 @@ instance (MonadExpression m) => PiecewiseOp (m NodeID) (m NodeID) where
     conditionID <- condition
     branchIDs <- sequence branches
     perform (ConditionAry (specPiecewise marks)) $ conditionID : branchIDs
-
-instance (MonadExpression m) => FTRelatedOp (m NodeID) (m NodeID) where
-  reFT :: (MonadExpression m) => m NodeID -> m NodeID
-  reFT operand = do
-    x <- operand
-    perform (Unary specReFT) [x]
-
-  imFT :: (MonadExpression m) => m NodeID -> m NodeID
-  imFT operand = do
-    x <- operand
-    perform (Unary specImFT) [x]
-
-  twiceReFT :: (MonadExpression m) => m NodeID -> m NodeID
-  twiceReFT operand = do
-    x <- operand
-    perform (Unary specTwiceReFT) [x]
-
-  twiceImFT :: (MonadExpression m) => m NodeID -> m NodeID
-  twiceImFT operand = do
-    x <- operand
-    perform (Unary specTwiceImFT) [x]
 
 instance (MonadExpression m) => FTOp (m NodeID) (m NodeID) where
   ft operand = do

@@ -41,7 +41,7 @@ import Data.Maybe (catMaybes, fromJust, isJust, isNothing, mapMaybe)
 import Debug.Trace (traceShow, traceShowId)
 import GHC.Exts (sortWith)
 import HashedExpression.Internal hiding (const_, just, num_, product_, sum_)
-import HashedExpression.Internal.Context hiding (imFT, reFT)
+import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
@@ -123,8 +123,7 @@ normalizingTransformation = removeUnreachable . pass
           normalizeRotateRules,
           negativeZeroRules,
           pullOutPiecewiseRules,
-          expandPiecewiseRealImag,
-          twiceReFTAndImFTRules
+          expandPiecewiseRealImag
         ]
           ++ rulesFromPattern
 
@@ -140,7 +139,6 @@ rulesFromPattern =
       piecewiseRules,
       exponentRules,
       rotateRules,
-      fourierTransformRules,
       toMultiplyIfPossible,
       otherRules
     ]
@@ -266,41 +264,6 @@ distributiveRules =
     x |*.| sumP dys |.~~~~~~> sumP (mapL (x |*.|) dys),
     --
     dx |.*| sumP ys |.~~~~~~> sumP (mapL (dx |.*|) ys)
-  ]
-
--- | Rules for Fourier transform
---
---   This includes common Fourier transform theorems, including linearity, as well as simplfications that will reduce
---   computational complexity (for example, setting the imaginary-valued FT of a real-valued FT of x to 0).
--- TODO: TwiceImFT and TwiceReFT should be in Optimize module ?
-fourierTransformRules :: [Substitution]
-fourierTransformRules =
-  [ reFT (x +: y) |.~~~~~~> reFT x - imFT y,
-    imFT (x +: y) |.~~~~~~> imFT x + reFT y,
-    reFT (sumP xs) |.~~~~~~> sumP (mapL reFT xs),
-    imFT (sumP xs) |.~~~~~~> sumP (mapL imFT xs),
-    -- Real
-    reFT zero |.~~~~~~> zero,
-    imFT zero |.~~~~~~> zero,
-    twiceImFT zero |.~~~~~~> zero,
-    twiceReFT zero |.~~~~~~> zero,
-    imFT (reFT x) |. isReal x ~~~~~~> zero,
-    reFT (imFT x) |. isReal x ~~~~~~> zero,
-    reFT (s *. x) |. isReal s ~~~~~~> s *. reFT x,
-    imFT (s *. x) |. isReal s ~~~~~~> s *. imFT x,
-    reFT (reFT x) |. isReal x ~~~~~~> twiceReFT x,
-    imFT (imFT x) |. isReal x ~~~~~~> twiceImFT x,
-    -- Covector
-    reFT dZero |.~~~~~~> dZero,
-    imFT dZero |.~~~~~~> dZero,
-    twiceImFT dZero |.~~~~~~> dZero,
-    twiceReFT dZero |.~~~~~~> dZero,
-    imFT (reFT dx) |. isCovector dx ~~~~~~> dZero,
-    reFT (imFT dx) |. isCovector dx ~~~~~~> dZero,
-    reFT (s |*.| dx) |.~~~~~~> s |*.| reFT x,
-    imFT (s |*.| dx) |.~~~~~~> s |*.| imFT x,
-    reFT (dx |.*| y) |.~~~~~~> dx |.*| reFT y,
-    imFT (dx |.*| y) |.~~~~~~> dx |.*| imFT y
   ]
 
 -- | Rules for piecewise functions
@@ -645,44 +608,6 @@ pullOutPiecewiseRules exp@(mp, n) =
     shape = retrieveShape n mp
     one = const_ shape 1
     zero = const_ shape 0
-
--- | Rules for advanced FT simplification
---
--- twiceReFT is the same as (xRe . ft) . (xRe . ft). The former has better performance than the latter for the same
--- operation. We can simplify this further as `twiceReFT(x) + twiceImFT(x) = (size(x) / 2) *. x`.
-twiceReFTAndImFTRules :: Modification
-twiceReFTAndImFTRules exp@(mp, n)
-  | Sum sumands <- retrieveOp n mp,
-    retrieveElementType n mp == R,
-    Just (scaleFactor, twiceReFTid, innerArg) <- firstJust isTwiceReFT sumands,
-    Just twiceImFTid <- find (isTwiceImFTof innerArg scaleFactor) sumands =
-    let rest = map just . filter (\x -> x /= twiceReFTid && x /= twiceImFTid) $ sumands
-        totalScaleFactor = scaleFactor * fromIntegral (product $ retrieveShape innerArg mp)
-        scalar = num_ totalScaleFactor
-        scaled = scalar *. just innerArg
-     in sum_ $ scaled : rest
-  | otherwise = just n
-  where
-    isTwiceReFT nId
-      | TwiceReFT inner <- retrieveOp nId mp = Just (1, nId, inner)
-      | Scale scalarId scaleeId <- retrieveOp nId mp,
-        retrieveElementType nId mp == R,
-        Const val <- retrieveOp scalarId mp,
-        TwiceReFT inner <- retrieveOp scaleeId mp =
-        Just (val, nId, inner)
-      | otherwise = Nothing
-    isTwiceImFTof innerArg scaleFactor nId
-      | TwiceImFT x <- retrieveOp nId mp,
-        scaleFactor == 1 && x == innerArg =
-        True
-      | Scale scalarId scaleeId <- retrieveOp nId mp,
-        retrieveElementType nId mp == R,
-        Const val <- retrieveOp scalarId mp,
-        val == scaleFactor,
-        TwiceImFT x <- retrieveOp scaleeId mp,
-        x == innerArg =
-        True
-      | otherwise = False
 
 -- | Re-order operands in associative-commutative operators like Sum or Mul
 -- or commutative binary like InnerProd for real

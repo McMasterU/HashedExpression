@@ -141,10 +141,7 @@ instance (Dimension d) => ComplexRealOp (Expression d R) (Expression d C) where
   conjugate :: Expression d C -> Expression d C
   conjugate = applyUnary specConjugate
 
-instance
-  (InnerProductSpace d s) =>
-  InnerProductSpaceOp (Expression d s) (Expression d s) (Expression Scalar s)
-  where
+instance (InnerProductSpace d s) => InnerProductSpaceOp (Expression d s) (Expression Scalar s) where
   (<.>) :: Expression d s -> Expression d s -> Expression Scalar s
   (<.>) = applyBinary specInnerProd
 
@@ -188,9 +185,7 @@ huberNorm alpha = sumElements . huber alpha
 --
 -- | Sum elements of a `d`-dimensional vector
 sumElements :: forall d. (Dimension d) => Expression d R -> Expression Scalar R
-sumElements expr = expr <.> one
-  where
-    one = constWithShape (expressionShape expr) 1 :: Expression d R
+sumElements expr = expr <.> 1
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
@@ -234,10 +229,6 @@ instance
   rotate :: (Int, Int, Int) -> Expression '(m, n, p) et -> Expression '(m, n, p) et
   rotate (x, y, z) = applyUnary (specRotate [x, y, z])
 
--- | Returns an int from a type-level natural
-valueFromNat :: forall n. (KnownNat n) => Int
-valueFromNat = fromIntegral $ natVal (Proxy :: Proxy n)
-
 -- | Create primitive expressions
 variable :: String -> Expression Scalar R
 variable name = fromNode ([], R, Var name)
@@ -253,9 +244,7 @@ variable1D ::
   (KnownNat n) =>
   String ->
   Expression n R
-variable1D name = fromNode ([size], R, Var name)
-  where
-    size = valueFromNat @n
+variable1D name = fromNode ([nat @n], R, Var name)
 
 -- | Create a variable for two-dimensional nat values
 -- @
@@ -267,10 +256,7 @@ variable2D ::
   (KnownNat m, KnownNat n) =>
   String ->
   Expression '(m, n) R
-variable2D name = fromNode ([size1, size2], R, Var name)
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
+variable2D name = fromNode ([nat @m, nat @n], R, Var name)
 
 -- | Create a variable for three-dimensional nat values
 -- @
@@ -282,11 +268,7 @@ variable3D ::
   (KnownNat m, KnownNat n, KnownNat p) =>
   String ->
   Expression '(m, n, p) R
-variable3D name = fromNode ([size1, size3], R, Var name)
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    size3 = valueFromNat @p
+variable3D name = fromNode ([nat @m, nat @n, nat @p], R, Var name)
 
 -- | create a scalar (non-vector) constant Expression
 constant :: Double -> Expression Scalar R
@@ -301,9 +283,7 @@ constant1D ::
   (KnownNat n) =>
   Double ->
   Expression n R
-constant1D = constWithShape [size]
-  where
-    size = valueFromNat @n
+constant1D = constWithShape [nat @n]
 
 -- | Two-dimensional constant
 -- @
@@ -314,10 +294,7 @@ constant2D ::
   (KnownNat m, KnownNat n) =>
   Double ->
   Expression '(m, n) R
-constant2D = constWithShape [size1, size2]
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
+constant2D = constWithShape [nat @m, nat @n]
 
 -- | Three-dimensional constant
 -- @
@@ -328,11 +305,7 @@ constant3D ::
   (KnownNat m, KnownNat n, KnownNat p) =>
   Double ->
   Expression '(m, n, p) R
-constant3D = constWithShape [size1, size2, size3]
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    size3 = valueFromNat @p
+constant3D = constWithShape [nat @m, nat @n, nat @p]
 
 -- | Create parameter
 param :: String -> Expression Scalar R
@@ -349,9 +322,7 @@ param1D ::
   (KnownNat n) =>
   String ->
   Expression n R
-param1D name = fromNode ([size], R, Param name)
-  where
-    size = valueFromNat @n
+param1D name = fromNode ([nat @n], R, Param name)
 
 -- | Create a param for two-dimensional nat values
 -- @
@@ -363,10 +334,7 @@ param2D ::
   (KnownNat m, KnownNat n) =>
   String ->
   Expression '(m, n) R
-param2D name = fromNode ([size1, size2], R, Param name)
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
+param2D name = fromNode ([nat @m, nat @n], R, Param name)
 
 -- | Create a param for three-dimensional nat values
 -- @
@@ -378,8 +346,4 @@ param3D ::
   (KnownNat m, KnownNat n, KnownNat p) =>
   String ->
   Expression '(m, n, p) R
-param3D name = fromNode ([size1, size3], R, Param name)
-  where
-    size1 = valueFromNat @m
-    size2 = valueFromNat @n
-    size3 = valueFromNat @p
+param3D name = fromNode ([nat @m, nat @n, nat @p], R, Param name)

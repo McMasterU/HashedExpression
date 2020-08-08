@@ -24,7 +24,7 @@ import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression hiding (InnerProductSpaceOp (..))
+import HashedExpression.Internal.Expression 
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
