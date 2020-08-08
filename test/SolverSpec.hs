@@ -1,0 +1,131 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+
+module SolverSpec where
+
+import Commons
+import Control.Applicative (liftA2)
+import Control.Concurrent
+import Control.Monad (forM, replicateM_, unless, when)
+import Data.Array
+import Data.Complex (Complex (..))
+import qualified Data.IntMap.Strict as IM
+import Data.List (intercalate, sort, tails)
+import Data.List.Extra (trim)
+import Data.List.Split (splitOn)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust, mapMaybe)
+import qualified Data.String.Interpolate as I
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import GHC.IO.Exception (ExitCode (..))
+import HashedExpression.Codegen
+import HashedExpression.Codegen.CSimple
+import HashedExpression.Embed
+import HashedExpression.Internal
+import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Node
+import HashedExpression.Internal.Utils
+import HashedExpression.Interp
+import HashedExpression.Operation
+import HashedExpression.Prettify
+import HashedExpression.Problem
+import qualified HashedExpression.Problem as P
+import HashedExpression.Value
+import System.FilePath hiding ((<.>))
+import System.Process
+import System.Time.Extra (sleep)
+import Test.Hspec
+import Test.QuickCheck hiding (Success)
+import Var
+import Prelude hiding ((!!), (^))
+
+runCommandIn :: FilePath -> String -> IO ExitCode
+runCommandIn cwd cmd = do
+  (_, _, _, ph) <-
+    createProcess
+      (shell cmd)
+        { cwd = Just cwd,
+          std_in = NoStream,
+          std_out = NoStream,
+          std_err = NoStream
+        }
+  waitForProcess ph
+
+readValScalar :: String -> Double
+readValScalar = read . trim
+
+readVal1D :: Int -> String -> Array Int Double
+readVal1D sz content = listArray (0, sz - 1) . map read . splitOn " " $ trim content
+
+readVal2D :: (Int, Int) -> String -> Array (Int, Int) Double
+readVal2D (sz1, sz2) content = listArray ((0, 0), (sz1 - 1, sz2 - 1)) . map read . splitOn " " $ trim content
+
+getValueScalar :: String -> Map String String -> Double
+getValueScalar name = readValScalar . fromJust . Map.lookup name
+
+getValue1D :: String -> Int -> Map String String -> Array Int Double
+getValue1D name size = readVal1D size . fromJust . Map.lookup name
+
+getValue2D :: String -> (Int, Int) -> Map String String -> Array (Int, Int) Double
+getValue2D name size = readVal2D size . fromJust . Map.lookup name
+
+solveProblem :: Problem -> ValMaps -> IO (Map String String)
+solveProblem problem valMap = do
+  case generateProblemCode CSimpleConfig {output = OutputText} problem valMap of
+    -- TODO: refine this
+    Success proceed -> do
+      folderName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
+      let cwd = "C" </> folderName
+      readProcess "cp" ["-R", "algorithms/lbfgs-b", cwd] ""
+      proceed cwd
+      runCommandIn cwd "make"
+      runCommandIn cwd "./lbfgs-b"
+      result <- forM (variables problem) $ \v -> do
+        let outputFile = varName v ++ "_out.txt"
+        content <- readFile $ cwd </> outputFile
+        return (varName v, content)
+      readProcess "rm" ["-rf", cwd] ""
+      return $ Map.fromList result
+
+prop_Rosenbrock :: Double -> Double -> Property
+prop_Rosenbrock a b =
+  (a /= 0 && b > 0) ==> do
+    let x = variable "x"
+        y = variable "y"
+    let obj = (constant a - x) ^ 2 + constant b * (y - x ^ 2) ^ 2
+    case constructProblem obj (Constraint []) of
+      ProblemValid p -> do
+        res <- solveProblem p Map.empty
+        let xGot = getValueScalar "x" res
+        let yGot = getValueScalar "y" res
+        xGot `shouldApprox` a
+        yGot `shouldApprox` a ^ 2
+
+-- | Spec
+spec :: Spec
+spec =
+  describe "Optimization solver spec" $ do
+    specify "Simple paraboloid" $ do
+      let x = variable1D @10 "x"
+      let obj = (x - 10) <.> (x - 10)
+      case constructProblem obj (Constraint []) of
+        ProblemValid p -> do
+          res <- solveProblem p Map.empty
+          let xGot = getValue1D "x" 10 res
+          let xExpect = listArray (0, 9) $ replicate 10 10
+          xGot `shouldApprox` xExpect
+    specify "Entropy" $ do
+      let x = variable2D @5 @5 "x"
+      let obj = (x * log x) <.> 1
+      case constructProblem obj (Constraint []) of
+        ProblemValid p -> do
+          res <- solveProblem p Map.empty
+          let xGot = getValue2D "x" (5, 5) res
+          let xExpect = listArray ((0, 0), (4, 4)) $ replicate 25 (1 / 2.7182818285)
+          xGot `shouldApprox` xExpect
+    specify "Banana function" $ do
+      property prop_Rosenbrock

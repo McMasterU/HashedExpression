@@ -128,7 +128,7 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css solver) = do
       let valMap =
             Map.mapMaybeWithKey varVal vars
               `Map.union` Map.mapMaybeWithKey constVal consts
-      case generateProblemCode CSimple.CSimpleConfig { output = CSimple.OutputHDF5 } heProblem valMap of
+      case generateProblemCode CSimple.CSimpleConfig {output = CSimple.OutputHDF5} heProblem valMap of
         Invalid reason -> throwError $ GeneralError reason
         Success res -> do
           liftIO $ res outputPath

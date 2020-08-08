@@ -64,7 +64,7 @@ singleExpressionCProgram valMaps expr =
     (mp, n) = unwrap expr
     bound = product (retrieveShape n mp)
     et = retrieveElementType n mp
-    codeGen = initCodegen CSimpleConfig { output = OutputText } mp []
+    codeGen = initCodegen CSimpleConfig {output = OutputText} mp []
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]]
     -- assign value to variables

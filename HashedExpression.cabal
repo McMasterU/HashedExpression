@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b28f49fb572d2417e89ad5242364e38b62aca9e983476ad6993ee9895c3062de
+-- hash: d4444dfd1605daf89e0a14d9c2875a407bff5bdf0615c4aed7af93cd35fb0760
 
 name:           HashedExpression
 version:        0.0.3
@@ -185,6 +185,7 @@ test-suite HashedExpression-test
       ProblemSpec
       ReverseDifferentiationSpec
       SimplifySpec
+      SolverSpec
       StructureSpec
       Var
       Paths_HashedExpression
