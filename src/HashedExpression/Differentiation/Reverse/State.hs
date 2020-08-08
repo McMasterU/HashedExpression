@@ -1,5 +1,5 @@
 -- |
--- Module      :  HashedExpression.Differentiation.Exterior.Collect
+-- Module      :  HashedExpression.Differentiation.Reverse.State
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca

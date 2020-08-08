@@ -38,9 +38,9 @@ prop_Linearity (Suite f valMap1) (Suite g valMap2) =
   sharedVariables valMap1 valMap2 /= [] ==> do
     let svs = sharedVariables valMap1 valMap2
     let valMap = Map.union valMap1 valMap2
-    let (mpSum, pdSum) = partialDerivativesMapByReverse (f + g)
-    let (mpF, pdF) = partialDerivativesMapByReverse f
-    let (mpG, pdG) = partialDerivativesMapByReverse g
+    let (mpSum, pdSum) = partialDerivativesMap (f + g)
+    let (mpF, pdF) = partialDerivativesMap f
+    let (mpG, pdG) = partialDerivativesMap g
     forM_ svs $ \name -> do
       let pIDSum = fromJust $ Map.lookup name pdSum
       let pIDF = fromJust $ Map.lookup name pdF

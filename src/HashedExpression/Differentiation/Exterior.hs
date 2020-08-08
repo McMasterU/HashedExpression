@@ -23,12 +23,12 @@ import HashedExpression.Internal.Node
 partialDerivativesMapByExterior :: Expression Scalar R -> (ExpressionMap, Map String NodeID)
 partialDerivativesMapByExterior exp =
   let (mp, rootID) = unwrap . collectDifferentials . exteriorDerivative $ exp
-   in (mp, partialDerivativesMap (mp, rootID))
+   in (mp, extract (mp, rootID))
 
 -- | Return a map from variable name to the corresponding partial derivative node id
 --   Partial derivatives in Expression Scalar Covector should be collected before passing to this function
-partialDerivativesMap :: (ExpressionMap, NodeID) -> Map String NodeID
-partialDerivativesMap (dfMp, dfId) =
+extract :: (ExpressionMap, NodeID) -> Map String NodeID
+extract (dfMp, dfId) =
   case retrieveOp dfId dfMp of
     Sum ns | retrieveElementType dfId dfMp == Covector -> Map.fromList $ mapMaybe getPartial ns
     _ -> Map.fromList $ mapMaybe getPartial [dfId]

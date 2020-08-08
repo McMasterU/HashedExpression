@@ -24,8 +24,6 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Debug.Trace (traceShowId)
 import GHC.IO.Exception (ExitCode (..))
-import HashedExpression.Differentiation.Exterior.Collect
-import HashedExpression.Differentiation.Exterior.Derivative
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
@@ -53,15 +51,6 @@ prop_constructProblemNoConstraint (Suite exp valMap) = do
       assertFailure $ "Can't construct problem: " ++ reason
     ProblemValid Problem {..} -> do
       return ()
-
---      let vars = map varName variables
---      vars `shouldBe` Map.keys pdMap -- vars should be keys of partial differential map
---      let ok variable
---            | Just pId <- Map.lookup (varName variable) pdMap,
---              pId == partialDerivativeId variable =
---              True
---            | otherwise = False
---      assertBool "partial derivative ids aren't correct" $ all ok variables
 
 -- |
 makeValidBoxConstraint :: (String, Shape) -> IO ConstraintStatement

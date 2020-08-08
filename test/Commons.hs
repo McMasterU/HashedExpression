@@ -21,7 +21,6 @@ import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
-import HashedExpression.Differentiation.Exterior.Normalize
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp

@@ -282,7 +282,6 @@ combineTermsRules exp@(mp, n)
     build :: (Int, Double) -> State ExpressionMap NodeID
     build (nId, val)
       | val == 1 = just nId
-      | retrieveElementType nId mp == Covector = num_ val |*.| just nId
       | otherwise = num_ val *. just nId
 
 -- | Rules for combining and reducing the numbers of terms in 'Mul'

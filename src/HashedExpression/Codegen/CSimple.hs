@@ -14,7 +14,7 @@ import Control.Monad (forM_, when)
 import Data.Array (indices, (!))
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
-import Data.List (find, foldl', partition, sortOn, tails)
+import Data.List (find, foldl', intercalate, partition, sortOn, tails)
 import Data.List.HT (viewR)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -37,8 +37,13 @@ import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
 
+data DataOutput = OutputText | OutputHDF5 deriving (Eq, Show)
+
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
+  { output :: DataOutput
+  }
+  deriving (Eq, Show)
 
 -- | Offset w.r.t "ptr"
 type Address = Int
@@ -54,7 +59,8 @@ data CSimpleCodegen = CSimpleCodegen
     cMemSize :: Int,
     (!!) :: NodeID -> Index -> Text,
     imAt :: NodeID -> Index -> Text,
-    reAt :: NodeID -> Index -> Text
+    reAt :: NodeID -> Index -> Text,
+    config :: CSimpleConfig
   }
 
 -------------------------------------------------------------------------------
@@ -88,14 +94,15 @@ else_ :: Code -> Code
 else_ codes = ["else"] ++ scoped codes
 
 initCodegen :: CSimpleConfig -> ExpressionMap -> [NodeID] -> CSimpleCodegen
-initCodegen _ mp consecutiveIDs =
+initCodegen config mp consecutiveIDs =
   CSimpleCodegen
     { cExpressionMap = mp,
       cAddress = addressMap,
       cMemSize = totalSize,
       (!!) = access,
       imAt = imAt,
-      reAt = reAt
+      reAt = reAt,
+      config = config
     }
   where
     (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
@@ -126,11 +133,11 @@ evaluating CSimpleCodegen {..} rootIDs =
   where
     shapeOf nID = retrieveShape nID cExpressionMap
     elementTypeOf nID = retrieveElementType nID cExpressionMap
-    addressOf :: Int -> Text
+    addressOf :: NodeID -> Text
     addressOf nID = [I.i|(ptr + #{cAddress nID})|]
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     len nID = product (retrieveShape nID cExpressionMap)
-    genCode :: Int -> Code
+    genCode :: NodeID -> Code
     genCode n =
       let (shape, et, op) = retrieveNode n cExpressionMap
        in case op of
@@ -335,7 +342,7 @@ evaluating CSimpleCodegen {..} rootIDs =
 -------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
   generateProblemCode :: CSimpleConfig -> Problem -> ValMaps -> GenResult
-  generateProblemCode config Problem {..} valMaps
+  generateProblemCode cf@CSimpleConfig {..} Problem {..} valMaps
     | Just errorMsg <- checkError = Invalid errorMsg
     | otherwise = Success $ \folder -> do
       -- If the value is not from file, write all the values into
@@ -359,7 +366,7 @@ instance Codegen CSimpleConfig where
               [ defineStuffs,
                 constraintCodes,
                 readValsCodes,
-                --                writeVarCodes,
+                writeResultCodes,
                 evaluatingCodes,
                 evaluateObjectiveCodes,
                 evaluatePartialDerivativesCodes,
@@ -402,7 +409,7 @@ instance Codegen CSimpleConfig where
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
       -------------------------------------------------------------------------------
-      codegen@CSimpleCodegen {..} = initCodegen config expressionMap (map nodeId variables)
+      codegen@CSimpleCodegen {..} = initCodegen cf expressionMap (map nodeId variables)
       variableOffsets = map (cAddress . nodeId) variables
       partialDerivativeOffsets = map (cAddress . partialDerivativeId) variables
       objectiveOffset = cAddress objectiveId
@@ -421,14 +428,35 @@ instance Codegen CSimpleConfig where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      --      writeVarCodeEach (name, nId) =
-      --        [ [i|for (i = 0; i < #{product shape}; i++){|],
-      --          [i|  fprintf(fp,"#{name} %d %f",i,ptr[#{offset} + i]);|],
-      --          "}"
-      --        ]
-      --        where
-      --          offset = cAddress nId
-      --          shape = retrieveShape nId expressionMap
+      writeResultCodeEach :: (String, NodeID) -> Code
+      writeResultCodeEach (name, nId)
+        | output == OutputHDF5 =
+          scoped
+            [ [i|printf("Writing #{name} to #{name}_out.h5...\\n");|],
+              "hid_t file, space, dset;",
+              [i|hsize_t dims[#{length shape}] = {#{intercalate ", " . map show $ shape}};|],
+              [i|file = H5Fcreate("#{name}_out.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);|],
+              [i|space = H5Screate_simple (#{length shape}, dims, NULL);|],
+              [i|dset = H5Dcreate (file, "#{name}", H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);|],
+              [i|H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + #{offset});|],
+              "H5Dclose(dset);",
+              "H5Sclose(space);",
+              "H5Fclose(file);"
+            ]
+        | output == OutputText =
+          scoped $
+            [ [i|printf("Writing #{name} to #{name}_out.txt...\\n");|],
+              "FILE *file;",
+              [i|file = fopen("#{name}_out.txt", "w");|]
+            ]
+              ++ ( for "i" (product shape) $
+                     [ [i|fprintf(file, "%f ", ptr[#{offset} + i]);|]
+                     ]
+                 )
+              ++ ["fclose(file);"]
+        where
+          offset = cAddress nId
+          shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       defineStuffs :: Code
       defineStuffs =
@@ -536,14 +564,10 @@ instance Codegen CSimpleConfig where
           ++ scoped (concatMap readValCodeEach vs)
           ++ ["}"] --
           -------------------------------------------------------------------------------
-          --      writeVarCodes =
-          --        ["void print_vars() {"]
-          --          ++ [[i|  FILE *fp = fopen("solutions.out","w");|]]
-          --          ++ scoped (["  int i;"] ++ concatMap writeVarCodeEach vs)
-          --          ++ [ "  fclose(fp);",
-          --               "}"
-          --             ]
-          -------------------------------------------------------------------------------
+      writeResultCodes =
+        ["void write_result()"]
+          ++ scoped (concatMap writeResultCodeEach vs)
+      -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
           ++ scoped (evaluating codegen $ objectiveId : map partialDerivativeId variables)
@@ -605,7 +629,7 @@ generateReadValuesCode (name, size) address val =
         ]
     readFileHD5 filePath dataset =
       scoped
-        [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} ... \\n");|],
+        [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} from #{filePath} ... \\n");|],
           "hid_t file, dset;",
           [i|file = H5Fopen("#{filePath}", H5F_ACC_RDONLY, H5P_DEFAULT);|],
           [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);|],

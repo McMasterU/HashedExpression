@@ -14,7 +14,8 @@ import Data.STRef.Strict
 import qualified Data.Set as Set
 import Graphics.EasyPlot
 import HashedExpression
-import HashedExpression.Differentiation.Exterior.Derivative
+import HashedExpression.Codegen
+import HashedExpression.Codegen.CSimple
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Interp
 import HashedExpression.Operation
@@ -29,8 +30,10 @@ main :: IO ()
 main = do
   let x = variable2D @10 @10 "x"
   let y = variable2D @10 @10 "y"
-  let f = norm2square (xRe (ft (x +: y)))
-  let (mp, es) = partialDerivativesMapByReverse f
-  forM_ (Map.toList es) $ \(name, iD) -> do 
-    print $ debugPrint (mp, iD)
-  print $ constructProblem f (Constraint [])
+  let f = norm2square (ift (ft (x +: 0)) - 5)
+  case constructProblem f (Constraint []) of
+    ProblemValid problem ->
+      case generateProblemCode (CSimpleConfig { output = OutputText }) problem Map.empty of
+        Success proceed -> proceed "algorithms/lbfgs-b"
+        _ -> return ()
+    _ -> return ()

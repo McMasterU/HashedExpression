@@ -25,10 +25,10 @@ import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((^))
 
 -- |
-partialDerivativesMapByReverse ::
+partialDerivativesMap ::
   Expression Scalar R ->
   (ExpressionMap, Map String NodeID)
-partialDerivativesMapByReverse (Expression rootID mp) =
+partialDerivativesMap (Expression rootID mp) =
   let reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
       init = ComputeDState mp IM.empty Map.empty
       -- Chain rule

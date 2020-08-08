@@ -383,7 +383,7 @@ class PiecewiseOp a b where
 
 -- | Interface for fourier transform on 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
-class FTOp a b | a -> b where
+class FTOp a b | a -> b, b -> a where
   ft :: a -> b
   ift :: b -> a
 

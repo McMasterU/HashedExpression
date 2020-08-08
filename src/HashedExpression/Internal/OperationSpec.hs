@@ -2,7 +2,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 -- |
--- Module      :  HashedExpression.Differentiation.Exterior.Derivative
+-- Module      :  HashedExpression.Internal.OperationSpec
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
