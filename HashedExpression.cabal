@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7d8fad9901d97db25d82ad89d575d5d3f983c985e6a77b5b3b7e94197a8cdb83
+-- hash: b28f49fb572d2417e89ad5242364e38b62aca9e983476ad6993ee9895c3062de
 
 name:           HashedExpression
 version:        0.0.3
@@ -182,9 +182,9 @@ test-suite HashedExpression-test
       Commons
       CSimpleSpec
       InterpSpec
-      NormalizeSpec
       ProblemSpec
       ReverseDifferentiationSpec
+      SimplifySpec
       StructureSpec
       Var
       Paths_HashedExpression

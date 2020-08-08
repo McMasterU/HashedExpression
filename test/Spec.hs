@@ -17,9 +17,9 @@ import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import qualified InterpSpec
-import qualified NormalizeSpec
 import qualified ProblemSpec
 import qualified ReverseDifferentiationSpec
+import qualified SimplifySpec
 import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
@@ -29,9 +29,9 @@ import Prelude hiding ((^))
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 100} $ do
+    describe "SimplifySpec" SimplifySpec.spec
     describe "CollisionSpec" CollisionSpec.spec
     describe "ProblemSpec" ProblemSpec.spec
-    describe "NormalizeSpec" NormalizeSpec.spec
     describe "HashedInterpSpec" InterpSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec

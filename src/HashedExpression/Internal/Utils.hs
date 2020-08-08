@@ -181,48 +181,5 @@ zipMp3 mp1 mp2 mp3 = foldl' f Map.empty $ Map.keys mp1
       (Just v1, Just v2, Just v3) -> Map.insert k (v1, v2, v3) acc
       _ -> acc
 
--------------------------------------------------------------------------------
-instance Num (Array Int Double) where
-  (+) arr1 arr2 =
-    listArray
-      (0, size - 1)
-      [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
-    where
-      size = length . elems $ arr1
-  negate arr =
-    listArray (0, size - 1) [- x | i <- [0 .. size - 1], let x = arr ! i]
-    where
-      size = length . elems $ arr
-  (*) arr1 arr2 =
-    listArray
-      (0, size - 1)
-      [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
-    where
-      size = length . elems $ arr1
-  abs = error "TODO"
-  signum = error "N/A"
-  fromInteger = error "TODO"
-
-instance Num (Array Int (Complex Double)) where
-  (+) arr1 arr2 =
-    listArray
-      (0, size - 1)
-      [x + y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
-    where
-      size = length . elems $ arr1
-  negate arr =
-    listArray (0, size - 1) [- x | i <- [0 .. size - 1], let x = arr ! i]
-    where
-      size = length . elems $ arr
-  (*) arr1 arr2 =
-    listArray
-      (0, size - 1)
-      [x * y | i <- [0 .. size - 1], let x = arr1 ! i, let y = arr2 ! i]
-    where
-      size = length . elems $ arr1
-  abs = error "TODO"
-  signum = error "N/A"
-  fromInteger = error "TODO"
-
 instance PowerOp Double Int where
   (^) x y = x Prelude.^ y

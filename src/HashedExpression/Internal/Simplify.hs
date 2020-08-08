@@ -7,7 +7,7 @@
 -- Portability :  unportable
 --
 -- Simplifying expressions
-module HashedExpression.Internal.Simplify where
+module HashedExpression.Internal.Simplify (simplify) where
 
 import Control.Monad.State.Strict
 import Data.Eq.HT (equating)
@@ -42,10 +42,10 @@ import HashedExpression.Prettify
 import Prelude hiding ((^))
 import qualified Prelude
 
-simplify :: (Dimension d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . unwrap
+simplify :: forall d et. (Dimension d, ElementType et) => Expression d et -> Expression d et
+simplify = wrap . removeUnreachable . apply . unwrap
   where
-    rules =
+    apply =
       multipleTimes 1000 . toRecursiveTransformation . chainModifications $
         [ zeroOneSumProdRules,
           collapseSumProdRules,

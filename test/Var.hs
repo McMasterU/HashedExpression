@@ -7,27 +7,27 @@ import Prelude hiding (const)
 
 type Default1D = 4
 
-defaultDim1D = valueFromNat @Default1D
+defaultDim1D = nat @Default1D
 
 type Default2D1 = 5
 
-default1stDim2D = valueFromNat @Default2D1
+default1stDim2D = nat @Default2D1
 
 type Default2D2 = 6
 
-default2ndDim2D = valueFromNat @Default2D2
+default2ndDim2D = nat @Default2D2
 
 type Default3D1 = 5
 
-default1stDim3D = valueFromNat @Default3D1
+default1stDim3D = nat @Default3D1
 
 type Default3D2 = 5
 
-default2ndDim3D = valueFromNat @Default3D2
+default2ndDim3D = nat @Default3D2
 
 type Default3D3 = 5
 
-default3rdDim3D = valueFromNat @Default3D3
+default3rdDim3D = nat @Default3D3
 
 [zero, one] = map constant [0, 1]
 

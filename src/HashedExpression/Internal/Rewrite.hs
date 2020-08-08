@@ -33,12 +33,11 @@ type Modification = (ExpressionMap, NodeID) -> State ExpressionMap NodeID
 
 chainModifications :: [Modification] -> Modification
 chainModifications rewrite expr = foldM f (snd expr) rewrite
-  where 
+  where
     f :: NodeID -> Modification -> State ExpressionMap NodeID
-    f nID rewrite = do 
-      curM <- get 
+    f nID rewrite = do
+      curM <- get
       rewrite (curM, nID)
-      
 
 toTransformation :: Modification -> Transformation
 toTransformation modify exp =
