@@ -35,7 +35,7 @@ main = do
     describe "HashedInterpSpec" InterpSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
-  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
-    describe "SolverSpec" SolverSpec.spec
+--  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
+--    describe "SolverSpec" SolverSpec.spec
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 20} $ do
     describe "CSimpleSpec" CSimpleSpec.spec
