@@ -22,6 +22,7 @@ module HashedExpression.Internal.Expression
     Node,
     NodeID,
     DimSelector(..),
+    ProjectionOp(..),
     ExpressionMap,
     Expression (..),
     Arg,
@@ -216,7 +217,7 @@ type Position = [Int]
 
 -- | DimSelector for projection
 data DimSelector
-  = Specific Int -- Will collapse the corresponding dimension
+  = At Int -- Will collapse the corresponding dimension
   | Range -- (inclusion)
       Int -- start
       Int -- end
@@ -403,6 +404,13 @@ class FTOp a b | a -> b, b -> a where
   ft :: a -> b
   ift :: b -> a
 
+
+-- | 
+--
+class ProjectionOp s a b | s a -> b where
+  project :: s -> a -> b
+
+-------------------------------------------------------------------------------
 class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
   (|*|) :: a -> b -> c
 

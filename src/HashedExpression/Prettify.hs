@@ -92,6 +92,12 @@ showAllEntries e = do
   where
     mkString (n, str) = show n ++ " --> " ++ str
 
+-- |
+prettifyDimSelector :: DimSelector -> String
+prettifyDimSelector (At i) = show i
+prettifyDimSelector (Range start end 1) = show start ++ ":" ++ show end
+prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" ++ show n
+
 -- | same as 'prettify' without any overhead
 debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
@@ -174,6 +180,13 @@ hiddenPrettify pastable (mp, n) =
               Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
               FT arg -> T.concat ["FT", wrapParentheses $ innerPrettify arg]
               IFT arg -> T.concat ["IFT", wrapParentheses $ innerPrettify arg]
+              Project ss arg ->
+                T.concat
+                  [ wrapParentheses $ innerPrettify arg,
+                    "[",
+                    T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
+                    "]"
+                  ]
               MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
               ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
               DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]

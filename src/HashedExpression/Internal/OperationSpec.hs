@@ -224,7 +224,7 @@ specProject dmSelectors =
   where
     process [] [] = []
     process (size : xs) ((Range start end step) : ss) = (((end - start) `mod` size) `div` step + 1) : process xs ss
-    process (_ : xs) ((Specific _) : ss) = process xs ss -- collapse the corresponding dimension
+    process (_ : xs) ((At _) : ss) = process xs ss -- collapse the corresponding dimension
     decideShape shape
       | length shape == length dmSelectors = process shape dmSelectors
       | otherwise = error "dim selectors and shape must be of same length"
