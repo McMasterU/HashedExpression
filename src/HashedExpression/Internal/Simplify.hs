@@ -7,7 +7,7 @@
 -- Portability :  unportable
 --
 -- Simplifying expressions
-module HashedExpression.Internal.Simplify (simplify) where
+module HashedExpression.Internal.Simplify (simplify, simplifyUnwrapped) where
 
 import Control.Monad.State.Strict
 import Data.Eq.HT (equating)
@@ -42,8 +42,8 @@ import HashedExpression.Prettify
 import Prelude hiding ((^))
 import qualified Prelude
 
-simplify :: forall d et. (Dimension d, ElementType et) => Expression d et -> Expression d et
-simplify = wrap . removeUnreachable . apply . unwrap
+simplifyUnwrapped :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+simplifyUnwrapped = removeUnreachable . apply
   where
     apply =
       multipleTimes 1000 . toRecursiveTransformation . chainModifications $
@@ -72,6 +72,9 @@ simplify = wrap . removeUnreachable . apply . unwrap
                   rotateRules
                 ]
             )
+
+simplify :: forall d et. (Dimension d, ElementType et) => Expression d et -> Expression d et
+simplify = wrap . simplifyUnwrapped . unwrap
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -199,17 +202,15 @@ zeroOneSumProdRules :: Modification
 zeroOneSumProdRules exp@(mp, n) =
   case retrieveOp n mp of
     Sum ns
-      -- to make sure filter (not . isZero mp) ns is not empty
-      | all (isZero mp) ns -> just $ head ns
       -- if the sumP has any zero, remove them
       -- sum(x, y, z, 0, t, 0) = sum(x, y, z, t)
-      | any (isZero mp) ns -> sum_ . map just . filter (not . isZero mp) $ ns
+      | (x : _, []) <- partition (isZero mp) ns -> just x
+      | (_, nonZeros) <- partition (isZero mp) ns -> sum_ . map just $ nonZeros
     Mul ns
-      -- to make sure filter (not . isOne mp) ns is not empty
-      | all (isOne mp) ns -> just $ head ns
       -- if the product has any one, remove them
       -- product(x, y, z, 1, t, 1) = product(x, y, z, t)
-      | any (isOne mp) ns -> product_ . map just . filter (not . isOne mp) $ ns
+      | (x : _, []) <- partition (isOne mp) ns -> just x
+      | (_, nonOnes) <- partition (isOne mp) ns -> product_ . map just $ nonOnes
       -- if any is zero, collapse to zero
       -- product(x, y, z, 0, t, u, v) = 0
       | nId : _ <- filter (isZero mp) ns -> just nId

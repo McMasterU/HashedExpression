@@ -1,7 +1,8 @@
 module HashedExpression.Internal.Utils where
 
 import Data.Array
-import Data.Complex
+import qualified Data.Complex as Complex
+import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
 import Data.List.Split (splitOn)
@@ -183,3 +184,10 @@ zipMp3 mp1 mp2 mp3 = foldl' f Map.empty $ Map.keys mp1
 
 instance PowerOp Double Int where
   (^) x y = x Prelude.^ y
+
+instance ComplexRealOp Double (Complex Double) where 
+  (+:) = (:+)
+  xRe = Complex.realPart
+  xIm = Complex.imagPart
+  conjugate = Complex.conjugate
+  

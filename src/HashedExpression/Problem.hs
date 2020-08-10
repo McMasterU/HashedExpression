@@ -30,6 +30,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
+import HashedExpression.Internal.Simplify
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (debugPrint)
 import HashedExpression.Value
@@ -195,6 +196,13 @@ getExpressionCS cs =
     Upper exp _ -> exp
     Between exp _ -> exp
 
+mapExpressionCS :: ((ExpressionMap, NodeID) -> (ExpressionMap, NodeID)) -> ConstraintStatement -> ConstraintStatement
+mapExpressionCS f cs =
+  case cs of
+    Lower exp v -> Lower (f exp) v
+    Upper exp v -> Upper (f exp) v
+    Between exp v -> Between (f exp) v
+
 -- | Extract the value from the 'ConstraintStatement'
 getValCS :: ConstraintStatement -> [Val]
 getValCS cs =
@@ -264,13 +272,6 @@ mergeToMain (mp, nID) = do
   put mergedMp
   return mergedNID
 
-mergeToMainMany :: (ExpressionMap, [NodeID]) -> ProblemConstructingM [NodeID]
-mergeToMainMany (mp, nIDs) = do
-  curMp <- get
-  let (mergedMp, resIDs) = safeMergeManyRoots curMp (mp, nIDs)
-  put mergedMp
-  return resIDs
-
 varsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
 varsWithShape = mapMaybe collect . IM.toList . fst
   where
@@ -298,7 +299,8 @@ constructProblemHelper obj (Constraint constraints) = do
   let processF exp = do
         let (mp, name2ID) = partialDerivativesMap exp
         let (names, beforeMergeIDs) = unzip $ Map.toList name2ID
-        Map.fromList . zip names <$> mergeToMainMany (mp, beforeMergeIDs)
+        afterMergedIDs <- mapM (mergeToMain . simplifyUnwrapped . (mp, )) beforeMergeIDs 
+        return $ Map.fromList $ zip names afterMergedIDs
   let lookupDerivative :: (String, Shape) -> Map String NodeID -> ProblemConstructingM NodeID
       lookupDerivative (name, shape) dMap = case Map.lookup name dMap of
         Just dID -> return dID
@@ -377,7 +379,10 @@ constructProblemHelper obj (Constraint constraints) = do
 
 -- | Construct a Problem from given objective function and constraints
 constructProblem :: Expression Scalar R -> Constraint -> ProblemResult
-constructProblem objectiveFunction constraint =
-  case runStateT (constructProblemHelper objectiveFunction constraint) IM.empty of
+constructProblem objectiveFunction (Constraint cs) =
+  case runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty of
     Left reason -> ProblemInvalid reason
     Right (problem, _) -> ProblemValid problem
+  where
+    simplifiedObjective = simplify objectiveFunction
+    simplifiedConstraint = Constraint $ map (mapExpressionCS simplifyUnwrapped) cs

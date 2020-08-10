@@ -383,8 +383,8 @@ instance Codegen CSimpleConfig where
       params :: [String]
       params = map fst $ paramNodesWithId expressionMap
       -- value nodes
-      vs :: [(String, Int)]
-      vs = sortOn fst $ varNodesWithId expressionMap ++ paramNodesWithId expressionMap
+      varsAndParams :: [(String, Int)]
+      varsAndParams = sortOn fst $ varNodesWithId expressionMap ++ paramNodesWithId expressionMap
       -- get shape of a variable
       variableShape :: String -> Shape
       variableShape name =
@@ -405,7 +405,7 @@ instance Codegen CSimpleConfig where
           let isOk (var, nId)
                 | Just val <- Map.lookup var valMaps = compatible (retrieveShape nId expressionMap) val
                 | otherwise = True,
-          Just (var, shape) <- find (not . isOk) vs =
+          Just (var, shape) <- find (not . isOk) varsAndParams =
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
       -------------------------------------------------------------------------------
@@ -428,8 +428,8 @@ instance Codegen CSimpleConfig where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      writeResultCodeEach :: (String, NodeID) -> Code
-      writeResultCodeEach (name, nId)
+      writeResultCodeEach :: Variable -> Code
+      writeResultCodeEach variable
         | output == OutputHDF5 =
           scoped
             [ [i|printf("Writing #{name} to #{name}_out.h5...\\n");|],
@@ -455,6 +455,8 @@ instance Codegen CSimpleConfig where
                  )
               ++ ["fclose(file);"]
         where
+          nId = nodeId variable
+          name = varName variable
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
@@ -555,12 +557,12 @@ instance Codegen CSimpleConfig where
       readValsCodes =
         ["void read_values() {"]
           ++ ["  srand(time(NULL));"] --
-          ++ scoped (concatMap readValCodeEach vs)
+          ++ scoped (concatMap readValCodeEach varsAndParams)
           ++ ["}"] --
           -------------------------------------------------------------------------------
       writeResultCodes =
         ["void write_result()"]
-          ++ scoped (concatMap writeResultCodeEach vs)
+          ++ scoped (concatMap writeResultCodeEach variables)
       -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]

@@ -48,10 +48,10 @@ runCommandIn cwd cmd = do
   (_, _, _, ph) <-
     createProcess
       (shell cmd)
-        { cwd = Just cwd
---          std_in = NoStream,
---          std_out = NoStream,
---          std_err = NoStream
+        { cwd = Just cwd,
+          std_in = NoStream,
+          std_out = NoStream,
+          std_err = NoStream
         }
   waitForProcess ph
 
@@ -126,6 +126,22 @@ spec =
           res <- solveProblem p Map.empty
           let xGot = getValue2D "x" (5, 5) res
           let xExpect = listArray ((0, 0), (4, 4)) $ replicate 25 (1 / 2.7182818285)
+          xGot `shouldApprox` xExpect
+    specify "Fourier transform" $ do
+      let x = variable1D @10 "x"
+      let y = variable1D @10 "y"
+      let a = param1D @10 "a"
+      let b = param1D @10 "b"
+      let obj = norm2square (ft (x +: y) - (a +: b))
+      case constructProblem obj (Constraint []) of
+        ProblemValid p -> do
+          valA <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
+          valB <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
+          res <- solveProblem p (Map.fromList [("a", V1D valA), ("b", V1D valB)])
+          let xGot = getValue1D "x" 10 res
+          let yGot = getValue1D "y" 10 res
+          let xExpect = xRe (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
+          let yExpect = xIm (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
           xGot `shouldApprox` xExpect
     specify "Banana function" $ do
       property prop_Rosenbrock

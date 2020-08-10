@@ -131,6 +131,8 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css solver) = do
       case generateProblemCode CSimple.CSimpleConfig {output = CSimple.OutputHDF5} heProblem valMap of
         Invalid reason -> throwError $ GeneralError reason
         Success res -> do
+          liftIO $ putStrLn "Problem detail:"
+          liftIO $ print $ heProblem
           liftIO $ res outputPath
           liftIO $ putStrLn "Download solver & adapter......"
           liftIO $ downloadSolver outputPath solver

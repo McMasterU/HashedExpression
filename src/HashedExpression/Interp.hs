@@ -16,6 +16,10 @@ module HashedExpression.Interp
     evaluate2DComplex,
     evaluate3DReal,
     evaluate3DComplex,
+    fourierTransform1D,
+    fourierTransform2D,
+    fourierTransform3D,
+    FTMode(..),
   )
 where
 
@@ -463,8 +467,8 @@ evaluate1DComplex valMap (mp, n)
               ]
       Rotate [amount] arg ->
         rotate1D size amount (evaluate1DComplex valMap $ (mp, arg))
-      FT arg -> fourierTransform1D False size $ evaluate1DComplex valMap (mp, arg)
-      IFT arg -> fourierTransform1D True size $ evaluate1DComplex valMap (mp, arg)
+      FT arg -> fourierTransform1D FT_FORWARD size $ evaluate1DComplex valMap (mp, arg)
+      IFT arg -> fourierTransform1D FT_BACKWARD size $ evaluate1DComplex valMap (mp, arg)
       _ -> error "expression structure One C is wrong"
   | otherwise = error "one C but shape is not [size] ??"
 
@@ -600,8 +604,8 @@ evaluate2DComplex valMap (mp, n)
           (size1, size2)
           (amount1, amount2)
           (evaluate2DComplex valMap $ (mp, arg))
-      FT arg -> fourierTransform2D False (size1, size2) $ evaluate2DComplex valMap (mp, arg)
-      IFT arg -> fourierTransform2D True (size1, size2) $ evaluate2DComplex valMap (mp, arg)
+      FT arg -> fourierTransform2D FT_FORWARD (size1, size2) $ evaluate2DComplex valMap (mp, arg)
+      IFT arg -> fourierTransform2D FT_BACKWARD (size1, size2) $ evaluate2DComplex valMap (mp, arg)
       _ -> error "expression structure Two C is wrong"
   | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -739,8 +743,8 @@ evaluate3DComplex valMap (mp, n)
           (size1, size2, size3)
           (amount1, amount2, amount3)
           (evaluate3DComplex valMap $ (mp, arg))
-      FT arg -> fourierTransform3D False (size1, size2, size3) $ evaluate3DComplex valMap (mp, arg)
-      IFT arg -> fourierTransform3D True (size1, size2, size3) $ evaluate3DComplex valMap (mp, arg)
+      FT arg -> fourierTransform3D FT_FORWARD (size1, size2, size3) $ evaluate3DComplex valMap (mp, arg)
+      IFT arg -> fourierTransform3D FT_BACKWARD (size1, size2, size3) $ evaluate3DComplex valMap (mp, arg)
       _ -> error "expression structure Three C is wrong"
   | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 
@@ -816,6 +820,8 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
         k <- [0 .. size3 - 1]
     ]
 
+data FTMode = FT_FORWARD | FT_BACKWARD deriving (Eq, Ord)
+
 -- | Fourier Transform in 1D.
 --  Frequency is just in one dimension.
 --  Consider a real-valued function, S(x),
@@ -824,14 +830,14 @@ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr =
 --  length of cycle is P/n, and frequency is n/P.
 --  so for input i the frequency is (2*pi*i*n)/P
 fourierTransform1D ::
-  Bool -> Int -> Array Int (Complex Double) -> Array Int (Complex Double)
-fourierTransform1D inverse size arr =
+  FTMode -> Int -> Array Int (Complex Double) -> Array Int (Complex Double)
+fourierTransform1D mode size arr =
   listArray (0, size - 1) [computeX i | i <- [0 .. size - 1]]
   where
-    s = if inverse then fromIntegral size else 1
+    s = if mode == FT_BACKWARD then fromIntegral size else 1
     computeX i = (sum $ zipWithA (*) arr (fourierBasis i)) / s
     fourierBasis i =
-      let frequency n = (2 * pi * fromIntegral (i * n) / fromIntegral size) * (if inverse then -1 else 1)
+      let frequency n = (2 * pi * fromIntegral (i * n) / fromIntegral size) * (if mode == FT_BACKWARD then -1 else 1)
        in listArray
             (0, size - 1)
             [ cos (frequency n) :+ (- sin (frequency n))
@@ -847,23 +853,23 @@ fourierTransform1D inverse size arr =
 --  so for input i the frequency is (2*pi*i*n)/P
 --  the frequency should be calculated in both dimensions for i and j
 fourierTransform2D ::
-  Bool ->
+  FTMode ->
   (Int, Int) ->
   Array (Int, Int) (Complex Double) ->
   Array (Int, Int) (Complex Double)
-fourierTransform2D inverse (size1, size2) arr =
+fourierTransform2D mode (size1, size2) arr =
   listArray
     ((0, 0), (size1 - 1, size2 - 1))
     [computeX i j | i <- [0 .. size1 - 1], j <- [0 .. size2 - 1]]
   where
-    s = if inverse then fromIntegral (size1 * size2) else 1
+    s = if mode == FT_BACKWARD then fromIntegral (size1 * size2) else 1
     computeX i j = (sum $ zipWithA (*) arr (fourierBasis i j)) / s
     fourierBasis i j =
       let frequency m n =
             ( 2 * pi * fromIntegral (i * m) / fromIntegral size1
                 + 2 * pi * fromIntegral (j * n) / fromIntegral size2
             )
-              * (if inverse then -1 else 1)
+              * (if mode == FT_BACKWARD then -1 else 1)
        in listArray
             ((0, 0), (size1 - 1, size2 - 1))
             [ cos (frequency m n) :+ (- sin (frequency m n))
@@ -880,11 +886,11 @@ fourierTransform2D inverse (size1, size2) arr =
 --   so for input i the frequency is (2*pi*i*n)/P
 --   the frequency should be calculated for all dimensions, i , j , k
 fourierTransform3D ::
-  Bool ->
+  FTMode ->
   (Int, Int, Int) ->
   Array (Int, Int, Int) (Complex Double) ->
   Array (Int, Int, Int) (Complex Double)
-fourierTransform3D inverse (size1, size2, size3) arr =
+fourierTransform3D mode (size1, size2, size3) arr =
   listArray
     ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
     [ computeX i j k
@@ -893,7 +899,7 @@ fourierTransform3D inverse (size1, size2, size3) arr =
         k <- [0 .. size3 - 1]
     ]
   where
-    s = if inverse then fromIntegral (size1 * size2) else 1
+    s = if mode == FT_BACKWARD then fromIntegral (size1 * size2) else 1
     computeX i j k = (sum $ zipWithA (*) arr (fourierBasis i j k)) / s
     fourierBasis i j k =
       let frequency m n p =
@@ -901,7 +907,7 @@ fourierTransform3D inverse (size1, size2, size3) arr =
                 + 2 * pi * fromIntegral (j * n) / fromIntegral size2
                 + 2 * pi * fromIntegral (k * p) / fromIntegral size3
             )
-              * (if inverse then -1 else 1)
+              * (if mode == FT_BACKWARD then -1 else 1)
        in listArray
             ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
             [ cos (frequency m n p) :+ (- sin (frequency m n p))
