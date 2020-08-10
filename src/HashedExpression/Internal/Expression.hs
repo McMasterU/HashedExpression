@@ -21,6 +21,7 @@ module HashedExpression.Internal.Expression
     Op (..),
     Node,
     NodeID,
+    DimSelector(..),
     ExpressionMap,
     Expression (..),
     Arg,
@@ -182,6 +183,8 @@ data Op
     Rotate RotateAmount Arg
   | FT Arg
   | IFT Arg
+  | -- | Projection
+    Project [DimSelector] Arg
   | -- | differentiable operators (only for exterior method)
     DVar String
   | DZero
@@ -205,7 +208,20 @@ type ConditionArg = NodeID
 --   of a 'ConditionArg' expression
 type BranchArg = NodeID
 
+-- |
 type CovectorArg = NodeID
+
+-- |
+type Position = [Int]
+
+-- | DimSelector for projection
+data DimSelector
+  = Specific Int -- Will collapse the corresponding dimension
+  | Range -- (inclusion)
+      Int -- start
+      Int -- end
+      Int -- step
+  deriving (Show, Eq, Ord)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
