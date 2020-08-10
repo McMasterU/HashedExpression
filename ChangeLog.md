@@ -1,8 +1,10 @@
 # Changelog for HashedExpression & Symphony
 
+## 0.0.4
+- Default to reverse method
+
 ## 0.0.3
 - Much faster rewriting 
-
 
 ## 0.0.2
 - Several fixes and improvement
