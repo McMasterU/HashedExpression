@@ -8,7 +8,7 @@ module Commons where
 import Control.Applicative (liftA2)
 import Control.Monad (foldM, forM)
 import Data.Array
-import Data.Complex
+import Data.Complex (Complex(..))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
@@ -547,3 +547,9 @@ sz = IM.size . exMap
 instance (Ix i, Num a) => Num (Array i a) where
   (+) arr1 arr2 = listArray (bounds arr1) $ zipWith (+) (elems arr1) (elems arr2)
   (*) arr1 arr2 = listArray (bounds arr1) $ zipWith (*) (elems arr1) (elems arr2)
+
+instance (Ix i) => ComplexRealOp (Array i Double) (Array i (Complex Double)) where
+  (+:) arr1 arr2 = listArray (bounds arr1) $ zipWith (+:) (elems arr1) (elems arr2)
+  xRe arr = listArray (bounds arr) $ map xRe (elems arr)
+  xIm arr = listArray (bounds arr) $ map xIm (elems arr)
+  conjugate arr = listArray (bounds arr) $ map conjugate (elems arr)
