@@ -15,7 +15,7 @@ import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import Test.Hspec
-import Test.QuickCheck (property)
+import Test.QuickCheck
 import Var
 import Prelude hiding ((^))
 
@@ -111,6 +111,18 @@ prop_ProjectInjectOneR (Suite exp valMap) = do
   let combine = inject s1 part1 . inject s2 part2 $ zero1
   eval valMap combine `shouldBe` eval valMap exp
 
+-- | Get 2 projection parts, injecting them to 0 correspondingly should equal the original
+--
+prop_ProjectInjectOneRUntyped :: SuiteOneR -> Expectation
+prop_ProjectInjectOneRUntyped (Suite exp valMap) = do
+  between <- generate $ elements [0 .. defaultDim1D - 2]
+  let ds1 = [Range 0 between 1]
+  let ds2 = [Range (between + 1) (defaultDim1D - 1) 1]
+  let part1 = unsafeProject ds1 exp
+  let part2 = unsafeProject ds2 exp
+  let combined = unsafeInject ds1 part1 . unsafeInject ds2 part2 $ zero1
+  eval valMap combined `shouldBe` eval valMap exp
+
 prop_ProjectInjectOneC :: SuiteOneC -> Expectation
 prop_ProjectInjectOneC (Suite exp valMap) = do
   let s = range @2 @3
@@ -193,6 +205,8 @@ spec =
       property prop_RotateTwoR3
     specify "prop_Project_Inject One R" $
       property prop_ProjectInjectOneR
+    specify "prop_Project_Inject One R Untyped" $
+      property prop_ProjectInjectOneRUntyped
     specify "prop_Project_Inject One C" $
       property prop_ProjectInjectOneC
     specify "prop_Project_Inject Two R" $

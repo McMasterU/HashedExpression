@@ -7,7 +7,7 @@ module Commons where
 
 import Control.Applicative (liftA2)
 import Control.Monad (foldM, forM)
-import Data.Array
+import Data.Array hiding (range)
 import Data.Complex (Complex (..))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
@@ -23,8 +23,10 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
+import HashedExpression.Internal
 import HashedExpression.Interp
 import HashedExpression.Operation
+import HashedExpression.Internal.OperationSpec
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Value
@@ -104,6 +106,28 @@ shouldApprox x y = assertBool msg (x ~= y)
 
 infix 1 `shouldApprox`
 
+
+
+-- | 
+unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
+unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
+
+unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
+unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
+
+
+genDimSelector :: Int -> Gen DimSelector
+genDimSelector size = do 
+  let id = elements [0..size - 1]
+  let step = elements [1..size]
+  oneof [Range <$> id <*> id <*> step, At <$> id]
+  
+genAtSelector :: Int -> Gen DimSelector
+genAtSelector size = do 
+  let id = elements [0..size - 1]
+  oneof [At <$> id]
+
+
 liftE1 ::
   (Expression d1 et1 -> Expression d2 et2) ->
   (Expression d1 et1, VarsAndParams) ->
@@ -145,7 +169,7 @@ primitive1DR = do
     ]
 
 primitive1DC :: Gen (Expression Default1D C, VarsAndParams)
-primitive1DC = liftE2 (+:) <$> primitive1DR <*> primitive1DR 
+primitive1DC = liftE2 (+:) <$> primitive1DR <*> primitive1DR
 
 -------------------------------------------------------------------------------
 primitive2DR :: Gen (Expression '(Default2D1, Default2D2) R, VarsAndParams)
@@ -160,7 +184,7 @@ primitive2DR = do
     ]
 
 primitive2DC :: Gen (Expression '(Default2D1, Default2D2) C, VarsAndParams)
-primitive2DC = liftE2 (+:) <$> primitive2DR  <*> primitive2DR 
+primitive2DC = liftE2 (+:) <$> primitive2DR <*> primitive2DR
 
 -------------------------------------------------------------------------------
 genScalarR :: Int -> Gen (Expression Scalar R, VarsAndParams)
@@ -181,6 +205,10 @@ genScalarR size
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjection = do 
+          (exp, vars) <- sub1D
+          ds <- genAtSelector defaultDim1D
+          return (unsafeProject [ds] exp, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -194,7 +222,7 @@ genScalarR size
             liftE1 xIm <$> subC,
             liftE2 (<.>) <$> sub1D <*> sub1D,
             liftE2 (<.>) <$> sub2D <*> sub2D,
-            oneof [liftE1 (project (at @3)) <$> sub1D]
+            fromProjection
           ]
 
 -------------------------------------------------------------------------------
@@ -216,6 +244,10 @@ genScalarC size
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjection = do 
+          (exp, vars) <- sub1D
+          ds <- genAtSelector defaultDim1D
+          return (unsafeProject [ds] exp, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -227,12 +259,12 @@ genScalarC size
             unary (^ 2),
             liftE2 (+:) <$> subR <*> subR,
             liftE2 (<.>) <$> sub1D <*> sub1D,
-            liftE2 (<.>) <$> sub2D <*> sub2D
+            liftE2 (<.>) <$> sub2D <*> sub2D,
+            fromProjection
           ]
 
 -------------------------------------------------------------------------------
-gen1DR :: Int ->
-  Gen (Expression Default1D R, VarsAndParams)
+gen1DR :: Int -> Gen (Expression Default1D R, VarsAndParams)
 gen1DR size
   | size == 0 = primitive1DR
   | otherwise =
@@ -252,6 +284,12 @@ gen1DR size
           liftE1 (rotate amount) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjectInject = do
+          (exp1, vars1) <- sub
+          (exp2, vars2) <- sub
+          ds <- genDimSelector defaultDim1D
+          let vars = mergeVarsAndParams [vars1, vars2]
+          return (unsafeInject [ds] (unsafeProject [ds] exp1) exp2, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -262,7 +300,8 @@ gen1DR size
             liftE1 xRe <$> subC,
             liftE1 xIm <$> subC,
             liftE2 (*.) <$> subScalar <*> sub,
-            fromRotate
+            fromRotate,
+            fromProjectInject
           ]
 
 -------------------------------------------------------------------------------
@@ -286,6 +325,12 @@ gen1DC size
           liftE1 (rotate amount) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjectInject = do
+          (exp1, vars1) <- sub
+          (exp2, vars2) <- sub
+          ds <- genDimSelector defaultDim1D
+          let vars = mergeVarsAndParams [vars1, vars2]
+          return (unsafeInject [ds] (unsafeProject [ds] exp1) exp2, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -297,7 +342,8 @@ gen1DC size
             liftE2 (*.) <$> subScalar <*> sub,
             unary ft,
             unary ift,
-            fromRotate
+            fromRotate,
+            fromProjectInject
           ]
 
 -------------------------------------------------------------------------------
@@ -322,6 +368,13 @@ gen2DR size
           liftE1 (rotate (amount1, amount2)) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjectInject = do
+          (exp1, vars1) <- sub
+          (exp2, vars2) <- sub
+          ds1 <- genDimSelector default1stDim2D
+          ds2 <- genDimSelector default2ndDim2D
+          let vars = mergeVarsAndParams [vars1, vars2]
+          return (unsafeInject [ds1, ds2] (unsafeProject [ds1, ds2] exp1) exp2, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -332,7 +385,8 @@ gen2DR size
             liftE1 xRe <$> subC,
             liftE1 xIm <$> subC,
             liftE2 (*.) <$> subScalar <*> sub,
-            fromRotate
+            fromRotate,
+            fromProjectInject
           ]
 
 -------------------------------------------------------------------------------
@@ -357,6 +411,13 @@ gen2DC size
           liftE1 (rotate (amount1, amount2)) <$> sub
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
+        fromProjectInject = do
+          (exp1, vars1) <- sub
+          (exp2, vars2) <- sub
+          ds1 <- genDimSelector default1stDim2D
+          ds2 <- genDimSelector default2ndDim2D
+          let vars = mergeVarsAndParams [vars1, vars2]
+          return (unsafeInject [ds1, ds2] (unsafeProject [ds1, ds2] exp1) exp2, vars)
      in oneof
           [ fromPiecewise,
             binary (+),
@@ -368,7 +429,8 @@ gen2DC size
             liftE2 (*.) <$> subScalar <*> sub,
             unary ft,
             unary ift,
-            fromRotate
+            fromRotate,
+            fromProjectInject
           ]
 
 -------------------------------------------------------------------------------
@@ -377,55 +439,53 @@ data Suite d et
   deriving (Show)
 
 -------------------------------------------------------------------------------
-type TestSuite = Suite 
+type SuiteScalarR = Suite Scalar R
 
-type SuiteScalarR = TestSuite Scalar R
+type SuiteScalarC = Suite Scalar C
 
-type SuiteScalarC = TestSuite Scalar C
+type SuiteOneR = Suite Default1D R
 
-type SuiteOneR = TestSuite Default1D R
+type SuiteOneC = Suite Default1D C
 
-type SuiteOneC = TestSuite Default1D C
+type SuiteTwoR = Suite '(Default2D1, Default2D2) R
 
-type SuiteTwoR = TestSuite '(Default2D1, Default2D2) R
-
-type SuiteTwoC = TestSuite '(Default2D1, Default2D2) C
+type SuiteTwoC = Suite '(Default2D1, Default2D2) C
 
 -------------------------------------------------------------------------------
 instance Arbitrary SuiteScalarR where
   arbitrary = do
-    (exp, vars) <- sized $ genScalarR 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ genScalarR
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 instance Arbitrary SuiteScalarC where
   arbitrary = do
-    (exp, vars) <- sized $ genScalarC 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ genScalarC
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 instance Arbitrary SuiteOneR where
   arbitrary = do
-    (exp, vars) <- sized $ gen1DR 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ gen1DR
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 instance Arbitrary SuiteOneC where
   arbitrary = do
-    (exp, vars) <- sized $ gen1DC 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ gen1DC
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 instance Arbitrary SuiteTwoR where
   arbitrary = do
-    (exp, vars) <- sized $ gen2DR 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ gen2DR
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 instance Arbitrary SuiteTwoC where
   arbitrary = do
-    (exp, vars) <- sized $ gen2DC 
-    valMaps <- genValMap  vars
+    (exp, vars) <- sized $ gen2DC
+    valMaps <- genValMap vars
     return $ Suite exp valMaps
 
 -------------------------------------------------------------------------------
@@ -439,13 +499,13 @@ instance Arbitrary (Expression Default1D R) where
   arbitrary = fst <$> sized gen1DR
 
 instance Arbitrary (Expression Default1D C) where
-  arbitrary = fst <$> sized gen1DC 
+  arbitrary = fst <$> sized gen1DC
 
 instance Arbitrary (Expression '(Default2D1, Default2D2) R) where
-  arbitrary = fst <$> sized gen2DR 
+  arbitrary = fst <$> sized gen2DR
 
 instance Arbitrary (Expression '(Default2D1, Default2D2) C) where
-  arbitrary = fst <$> sized gen2DC 
+  arbitrary = fst <$> sized gen2DC
 
 -------------------------------------------------------------------------------
 data ArbitraryExpresion = forall d et. (Dimension d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
