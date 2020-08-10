@@ -110,6 +110,7 @@ hash (shape, et, node) rehashNum =
         FT arg -> offsetHash 30 . hashString' $ show arg
         IFT arg -> offsetHash 31 . hashString' $ show arg
         Project ss arg -> offsetHash 32 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show arg
+        Inject ss sub base -> offsetHash 33 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
         -------------------------------------------------------------------------------
         Conjugate arg -> offsetHash 37 . hashString' $ show arg
         -- Mark: Covector

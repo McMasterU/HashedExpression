@@ -132,6 +132,7 @@ opArgs node =
     FT arg -> [arg]
     IFT arg -> [arg]
     Project ss arg -> [arg]
+    Inject ss sub base -> [sub, base]
     DZero -> []
     MulD arg1 arg2 -> [arg1, arg2]
     ScaleD arg1 arg2 -> [arg1, arg2]
@@ -176,6 +177,7 @@ mapOp f op =
     FT arg -> FT (f arg)
     IFT arg -> IFT (f arg)
     Project s arg -> Project s (f arg)
+    Inject s sub base -> Inject s (f sub) (f base)
     DZero -> DZero
     MulD arg1 arg2 -> MulD (f arg1) (f arg2)
     ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)

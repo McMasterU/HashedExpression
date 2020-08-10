@@ -218,16 +218,30 @@ specFT = defaultUnary FT [C]
 specIFT :: HasCallStack => UnarySpec
 specIFT = defaultUnary IFT [C]
 
+-------------------------------------------------------------------------------
+processDimSelector :: Shape -> [DimSelector] -> Shape
+processDimSelector [] [] = []
+processDimSelector (size : xs) ((Range start end step) : ss) = (((end - start) `mod` size) `div` step + 1) : processDimSelector xs ss
+processDimSelector (_ : xs) ((At _) : ss) = processDimSelector xs ss -- collapse the corresponding dimension
+
 specProject :: HasCallStack => [DimSelector] -> UnarySpec
 specProject dmSelectors =
   UnarySpec {toOp = Project dmSelectors, decideShape = decideShape, decideET = id}
   where
-    process [] [] = []
-    process (size : xs) ((Range start end step) : ss) = (((end - start) `mod` size) `div` step + 1) : process xs ss
-    process (_ : xs) ((At _) : ss) = process xs ss -- collapse the corresponding dimension
     decideShape shape
-      | length shape == length dmSelectors = process shape dmSelectors
+      | length shape == length dmSelectors = processDimSelector shape dmSelectors
       | otherwise = error "dim selectors and shape must be of same length"
+
+specInject :: HasCallStack => [DimSelector] -> BinarySpec
+specInject dmSelectors =
+  BinarySpec {toOp = Inject dmSelectors, decideShape = decideShape, decideET = decideET}
+  where
+    decideShape subShape baseShape
+      | length baseShape == length dmSelectors,
+        subShape == processDimSelector baseShape dmSelectors =
+        baseShape
+      | otherwise = error "dim selectors, sub shape and base shape not valid"
+    decideET x y = assertSame [x, y] x
 
 -------------------------------------------------------------------------------
 

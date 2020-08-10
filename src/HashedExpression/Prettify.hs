@@ -187,6 +187,15 @@ hiddenPrettify pastable (mp, n) =
                     T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
                     "]"
                   ]
+              Inject ss sub base ->
+                T.concat
+                  [ wrapParentheses $ innerPrettify sub,
+                    " inject into ",
+                    wrapParentheses $ innerPrettify base,
+                    "[",
+                    T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
+                    "]"
+                  ]
               MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
               ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
               DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]

@@ -22,7 +22,7 @@ module HashedExpression.Internal.Expression
     Node,
     NodeID,
     DimSelector(..),
-    ProjectionOp(..),
+    ProjectInjectOp(..),
     ExpressionMap,
     Expression (..),
     Arg,
@@ -186,6 +186,8 @@ data Op
   | IFT Arg
   | -- | Projection
     Project [DimSelector] Arg
+  | -- | Injection
+    Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
   | -- | differentiable operators (only for exterior method)
     DVar String
   | DZero
@@ -211,6 +213,10 @@ type BranchArg = NodeID
 
 -- |
 type CovectorArg = NodeID
+
+type SubArg = NodeID
+
+type BaseArg = NodeID
 
 -- |
 type Position = [Int]
@@ -407,8 +413,9 @@ class FTOp a b | a -> b, b -> a where
 
 -- | 
 --
-class ProjectionOp s a b | s a -> b where
+class ProjectInjectOp s a b | s a -> b where
   project :: s -> a -> b
+  inject :: s -> b -> a -> a
 
 -------------------------------------------------------------------------------
 class MulCovectorOp a b c | a b -> c, c -> a, c -> b where

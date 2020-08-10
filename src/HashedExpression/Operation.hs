@@ -234,14 +234,16 @@ type x < y = (CmpNat x y ~ 'LT)
 
 type Size start end step n = (((n + end - start) `Mod` n) `Div` step + 1)
 
+-------------------------------------------------------------------------------
 instance
   ( KnownNat i,
     KnownNat n,
     i < n
   ) =>
-  ProjectionOp (Proxy i) (Expression n et) (Expression Scalar et)
+  ProjectInjectOp (Proxy i) (Expression n et) (Expression Scalar et)
   where
-  project _ x = applyUnary (specProject [At $ nat @i]) x
+  project _ = applyUnary (specProject [At $ nat @i])
+  inject _ = applyBinary (specInject [At $ nat @i])
 
 instance
   ( (KnownNat start, KnownNat end, KnownNat step),
@@ -249,9 +251,10 @@ instance
     (start < n, end < n, 0 < step),
     res ~ Size start end step n
   ) =>
-  ProjectionOp (Proxy '(start, end, step)) (Expression n et) (Expression res et)
+  ProjectInjectOp (Proxy '(start, end, step)) (Expression n et) (Expression res et)
   where
-  project _ x = applyUnary (specProject [Range (nat @start) (nat @end) (nat @step)]) x
+  project _ = applyUnary (specProject [Range (nat @start) (nat @end) (nat @step)])
+  inject _ = applyBinary (specInject [Range (nat @start) (nat @end) (nat @step)])
 
 instance
   ( KnownNat m,
@@ -259,9 +262,10 @@ instance
     (KnownNat i, i < m),
     (KnownNat j, j < n)
   ) =>
-  ProjectionOp (Proxy i, Proxy j) (Expression '(m, n) et) (Expression Scalar et)
+  ProjectInjectOp (Proxy i, Proxy j) (Expression '(m, n) et) (Expression Scalar et)
   where
-  project _ x = applyUnary (specProject [At (nat @i), At (nat @j)]) x
+  project _ = applyUnary (specProject [At (nat @i), At (nat @j)])
+  inject _ = applyBinary (specInject [At (nat @i), At (nat @j)])
 
 instance
   ( KnownNat m,
@@ -271,9 +275,10 @@ instance
     (startM < m, endM < m, 0 < stepM),
     resM ~ Size startM endM stepM m
   ) =>
-  ProjectionOp (Proxy '(startM, endM, stepM), Proxy j) (Expression '(m, n) et) (Expression resM et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (Expression '(m, n) et) (Expression resM et)
   where
-  project _ x = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)]) x
+  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
+  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
 
 instance
   ( KnownNat m,
@@ -283,9 +288,10 @@ instance
     (startN < n, endN < n, 0 < stepN),
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectionOp (Proxy i, Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression resN et)
+  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression resN et)
   where
-  project _ x = applyUnary (specProject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)]) x
+  project _ = applyUnary (specProject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = applyBinary (specInject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
 
 instance
   ( KnownNat m,
@@ -297,19 +303,12 @@ instance
     resM ~ Size startM endM stepM m,
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectionOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression '(resM, resN) et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression '(resM, resN) et)
   where
-  project _ x =
-    applyUnary
-      ( specProject
-          [ Range (nat @startM) (nat @endM) (nat @stepM),
-            Range (nat @startN) (nat @endN) (nat @stepN)
-          ]
-      )
-      x
+  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
 
 -- TODO: 3D
-
 -------------------------------------------------------------------------------
 
 at :: forall i. (KnownNat i) => Proxy i
