@@ -19,8 +19,7 @@
 -- the above code creates a simple HashedExpression using the
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
-  ( 
-    module HashedExpression.Internal.Expression,
+  ( module HashedExpression.Internal.Expression,
     module HashedExpression.Operation,
     module HashedExpression.Internal.Simplify,
     module HashedExpression.Prettify,
@@ -33,8 +32,8 @@ where
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-import HashedExpression.Problem
-import HashedExpression.Value
 import HashedExpression.Operation
 import HashedExpression.Prettify
+import HashedExpression.Problem
+import HashedExpression.Value
 import Prelude hiding ((^))

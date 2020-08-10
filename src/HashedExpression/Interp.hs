@@ -6,7 +6,7 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module is for approximation and evaluation of the expressions regarding to the precision
+-- Evaluate expressions. Mainly useful for testings.
 module HashedExpression.Interp
   ( Evaluable (..),
     Approximable (..),
@@ -372,6 +372,11 @@ foldrElementwise :: Ix ix => (a -> a -> a) -> [Array ix a] -> Array ix a
 foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
+mkIndices :: DimSelector -> Int -> [Int]
+mkIndices (At i) size = [i]
+mkIndices (Range start end step) size =
+  map (`mod` size) [start, start + step .. if end >= start then end else end + size]
+
 -- | the expression is undefined, here undefined 1D Real expressions are evaluated
 evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
@@ -435,7 +440,7 @@ evaluate1DReal valMap (mp, n)
               ]
       Rotate [amount] arg ->
         rotate1D size amount (evaluate1DReal valMap $ (mp, arg))
-      Project ds arg -> case (retrieveShape arg mp, ds) of
+      Project dss arg -> case (retrieveShape arg mp, dss) of
         ([bSize], [ds]) ->
           let base = evaluate1DReal valMap (mp, arg)
            in listArray (0, size - 1) [base ! i | i <- mkIndices ds bSize]
@@ -446,15 +451,17 @@ evaluate1DReal valMap (mp, n)
           let base = evaluate3DReal valMap (mp, arg)
            in listArray
                 (0, size - 1)
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
-      _ -> error "expression structure One R is wrong"
+      Inject [ds] subArg baseArg ->
+        let base = evaluate1DReal valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroR mp subArg)]
+              [_] -> elems $ evaluate1DReal valMap (mp, subArg)
+            indices = mkIndices ds size
+         in base // zip indices elements
+      haha -> error $ "expression structure One R is wrong " ++ show haha
   | otherwise = error "one r but shape is not [size] ??"
-
-mkIndices :: DimSelector -> Int -> [Int]
-mkIndices (At i) size = [i]
-mkIndices (Range start end step) size =
-  map (`mod` size) [start, start + step .. if end >= start then start else end + size]
 
 instance (KnownNat n) => Evaluable n R (Array Int Double) where
   eval :: ValMaps -> Expression n R -> Array Int Double
@@ -515,8 +522,15 @@ evaluate1DComplex valMap (mp, n)
           let base = evaluate3DComplex valMap (mp, arg)
            in listArray
                 (0, size - 1)
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
+      Inject [ds] subArg baseArg ->
+        let base = evaluate1DComplex valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroC mp subArg)]
+              [_] -> elems $ evaluate1DComplex valMap (mp, subArg)
+            indices = mkIndices ds size
+         in base // zip indices elements
       Rotate [amount] arg ->
         rotate1D size amount (evaluate1DComplex valMap $ (mp, arg))
       FT arg -> fourierTransform1D FT_FORWARD size $ evaluate1DComplex valMap (mp, arg)
@@ -608,8 +622,16 @@ evaluate2DReal valMap (mp, n)
           let base = evaluate3DReal valMap (mp, arg)
            in listArray
                 ((0, 0), (size1 - 1, size2 - 1))
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
+      Inject [ds1, ds2] subArg baseArg ->
+        let base = evaluate2DReal valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroR mp subArg)]
+              [_] -> elems $ evaluate1DReal valMap (mp, subArg)
+              [_, _] -> elems $ evaluate2DReal valMap (mp, subArg)
+            indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
+         in base // zip indices elements
       _ -> error "expression structure Two R is wrong"
   | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -686,8 +708,16 @@ evaluate2DComplex valMap (mp, n)
           let base = evaluate3DComplex valMap (mp, arg)
            in listArray
                 ((0, 0), (size1 - 1, size2 - 1))
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
+      Inject [ds1, ds2] subArg baseArg ->
+        let base = evaluate2DComplex valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroC mp subArg)]
+              [_] -> elems $ evaluate1DComplex valMap (mp, subArg)
+              [_, _] -> elems $ evaluate2DComplex valMap (mp, subArg)
+            indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
+         in base // zip indices elements
       _ -> error "expression structure Two C is wrong"
   | otherwise = error "Two C but shape is not [size1, size2] ??"
 
@@ -771,8 +801,17 @@ evaluate3DReal valMap (mp, n)
           let base = evaluate3DReal valMap (mp, arg)
            in listArray
                 ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
+      Inject [ds1, ds2, ds3] subArg baseArg ->
+        let base = evaluate3DReal valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroR mp subArg)]
+              [_] -> elems $ evaluate1DReal valMap (mp, subArg)
+              [_, _] -> elems $ evaluate2DReal valMap (mp, subArg)
+              [_, _, _] -> elems $ evaluate3DReal valMap (mp, subArg)
+            indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
+         in base // zip indices elements
       _ -> error "expression structure Three R is wrong"
   | otherwise = error "Three r but shape is not [size1, size2, size3] ??"
 
@@ -839,8 +878,17 @@ evaluate3DComplex valMap (mp, n)
           let base = evaluate3DComplex valMap (mp, arg)
            in listArray
                 ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
-                [ base ! (i, j, j) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
+                [ base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3
                 ]
+      Inject [ds1, ds2, ds3] subArg baseArg ->
+        let base = evaluate3DComplex valMap (mp, baseArg)
+            elements = case retrieveShape subArg mp of
+              [] -> [eval valMap (expZeroC mp subArg)]
+              [_] -> elems $ evaluate1DComplex valMap (mp, subArg)
+              [_, _] -> elems $ evaluate2DComplex valMap (mp, subArg)
+              [_, _, _] -> elems $ evaluate3DComplex valMap (mp, subArg)
+            indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
+         in base // zip indices elements
       _ -> error "expression structure Three C is wrong"
   | otherwise = error "Three C but shape is not [size1, size2, size3] ??"
 

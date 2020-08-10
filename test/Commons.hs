@@ -8,7 +8,7 @@ module Commons where
 import Control.Applicative (liftA2)
 import Control.Monad (foldM, forM)
 import Data.Array
-import Data.Complex (Complex(..))
+import Data.Complex (Complex (..))
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)

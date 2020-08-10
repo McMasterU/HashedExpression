@@ -32,7 +32,7 @@ main = do
     describe "SimplifySpec" SimplifySpec.spec
     describe "CollisionSpec" CollisionSpec.spec
     describe "ProblemSpec" ProblemSpec.spec
-    describe "HashedInterpSpec" InterpSpec.spec
+    describe "InterpSpec" InterpSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do

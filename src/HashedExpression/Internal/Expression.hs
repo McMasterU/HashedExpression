@@ -21,8 +21,8 @@ module HashedExpression.Internal.Expression
     Op (..),
     Node,
     NodeID,
-    DimSelector(..),
-    ProjectInjectOp(..),
+    DimSelector (..),
+    ProjectInjectOp (..),
     ExpressionMap,
     Expression (..),
     Arg,
@@ -410,9 +410,7 @@ class FTOp a b | a -> b, b -> a where
   ft :: a -> b
   ift :: b -> a
 
-
--- | 
---
+-- |
 class ProjectInjectOp s a b | s a -> b where
   project :: s -> a -> b
   inject :: s -> b -> a -> a

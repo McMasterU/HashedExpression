@@ -151,7 +151,6 @@ instance (MonadExpression m) => FTOp (m NodeID) (m NodeID) where
     x <- operand
     perform (Unary specIFT) [x]
 
-
 instance (MonadExpression m) => ProjectInjectOp [DimSelector] (m NodeID) (m NodeID) where
   project ss operand = do
     x <- operand
