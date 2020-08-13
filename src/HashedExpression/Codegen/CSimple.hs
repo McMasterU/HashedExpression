@@ -350,7 +350,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                 ([ds], [size]) ->
                   let toIndex i = [I.i|#{i} % #{size}|]
                    in scoped $
-                        "int nxt = 0, i;" :
+                        "int nxt = 0;" :
                         ( forRange i (toRange ds size) $
                             if et == R
                               then
@@ -366,7 +366,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                 ([ds1, ds2], [size1, size2]) ->
                   let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
                    in scoped $
-                        "int nxt = 0, i;" :
+                        "int nxt = 0;" :
                         ( forRange i (toRange ds1 size1) $
                             forRange j (toRange ds2 size2) $
                               if et == R
@@ -383,7 +383,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                 ([ds1, ds2, ds3], [size1, size2, size3]) ->
                   let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
                    in scoped $
-                        "int nxt = 0, i;" :
+                        "int nxt = 0;" :
                         ( forRange i (toRange ds1 size1) $
                             forRange j (toRange ds2 size2) $
                               forRange k (toRange ds3 size3) $
@@ -412,7 +412,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                       ([ds], [size]) ->
                         let toIndex i = [I.i|#{i} % #{size}|]
                          in scoped $
-                              "int nxt = 0, i;" :
+                              "int nxt = 0;" :
                               ( forRange i (toRange ds size) $
                                   if et == R
                                     then
@@ -428,7 +428,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                       ([ds1, ds2], [size1, size2]) ->
                         let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
                          in scoped $
-                              "int nxt = 0, i;" :
+                              "int nxt = 0;" :
                               ( forRange i (toRange ds1 size1) $
                                   forRange j (toRange ds2 size2) $
                                     if et == R
@@ -445,7 +445,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                       ([ds1, ds2, ds3], [size1, size2, size3]) ->
                         let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
                          in scoped $
-                              "int nxt = 0, i;" :
+                              "int nxt = 0;" :
                               ( forRange i (toRange ds1 size1) $
                                   forRange j (toRange ds2 size2) $
                                     forRange k (toRange ds3 size3) $

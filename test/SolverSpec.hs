@@ -143,5 +143,16 @@ spec =
           let xExpect = xRe (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
           let yExpect = xIm (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
           xGot `shouldApprox` xExpect
-    specify "Banana function" $ do
+    specify "Rosenbrock, 2 variables different parameters" $ do
       property prop_Rosenbrock
+    specify "Rosenbrock multidimensional" $ do
+      let x = variable1D @20 "x"
+      let evenX = project (ranges @0 @18 @2) x
+      let oddX = project (ranges @1 @19 @2) x
+      let obj = 100 * norm2square (evenX ^ 2 - oddX) + norm2square (evenX - 1)
+      case constructProblem obj (Constraint []) of
+        ProblemValid p -> do
+          res <- solveProblem p Map.empty
+          let xGot = getValue1D "x" 20 res
+          let xExpect = listArray (0, 19) $ replicate 20 1
+          xGot `shouldApprox` xExpect
