@@ -112,7 +112,6 @@ prop_ProjectInjectOneR (Suite exp valMap) = do
   eval valMap combine `shouldBe` eval valMap exp
 
 -- | Get 2 projection parts, injecting them to 0 correspondingly should equal the original
---
 prop_ProjectInjectOneRUntyped :: SuiteOneR -> Expectation
 prop_ProjectInjectOneRUntyped (Suite exp valMap) = do
   between <- generate $ elements [0 .. defaultDim1D - 2]

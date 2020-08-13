@@ -21,12 +21,12 @@ import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils
 import HashedExpression.Internal
+import HashedExpression.Internal.Expression
+import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
-import HashedExpression.Internal.OperationSpec
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Value
@@ -106,27 +106,23 @@ shouldApprox x y = assertBool msg (x ~= y)
 
 infix 1 `shouldApprox`
 
-
-
--- | 
+-- |
 unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
 unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
 
 unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
 unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
 
-
 genDimSelector :: Int -> Gen DimSelector
-genDimSelector size = do 
-  let id = elements [0..size - 1]
-  let step = elements [1..size]
+genDimSelector size = do
+  let id = elements [0 .. size - 1]
+  let step = elements [1 .. size]
   oneof [Range <$> id <*> id <*> step, At <$> id]
-  
-genAtSelector :: Int -> Gen DimSelector
-genAtSelector size = do 
-  let id = elements [0..size - 1]
-  oneof [At <$> id]
 
+genAtSelector :: Int -> Gen DimSelector
+genAtSelector size = do
+  let id = elements [0 .. size - 1]
+  oneof [At <$> id]
 
 liftE1 ::
   (Expression d1 et1 -> Expression d2 et2) ->
@@ -205,7 +201,7 @@ genScalarR size
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
-        fromProjection = do 
+        fromProjection = do
           (exp, vars) <- sub1D
           ds <- genAtSelector defaultDim1D
           return (unsafeProject [ds] exp, vars)
@@ -244,7 +240,7 @@ genScalarC size
           return (exp, vars)
         binary op = liftE2 op <$> sub <*> sub
         unary op = liftE1 op <$> sub
-        fromProjection = do 
+        fromProjection = do
           (exp, vars) <- sub1D
           ds <- genAtSelector defaultDim1D
           return (unsafeProject [ds] exp, vars)

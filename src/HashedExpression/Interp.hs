@@ -372,11 +372,6 @@ foldrElementwise :: Ix ix => (a -> a -> a) -> [Array ix a] -> Array ix a
 foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
-mkIndices :: DimSelector -> Int -> [Int]
-mkIndices (At i) size = [i]
-mkIndices (Range start end step) size =
-  map (`mod` size) [start, start + step .. if end >= start then end else end + size]
-
 -- | the expression is undefined, here undefined 1D Real expressions are evaluated
 evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
