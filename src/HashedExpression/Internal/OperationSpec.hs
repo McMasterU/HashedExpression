@@ -240,7 +240,7 @@ specInject dmSelectors =
       | length baseShape == length dmSelectors,
         subShape == processDimSelector baseShape dmSelectors =
         baseShape
-      | otherwise = error "dim selectors, sub shape and base shape not valid"
+      | otherwise = error $ "dim selectors, sub shape and base shape not valid" ++ show dmSelectors ++ " " ++ show subShape ++ " " ++ show baseShape
     decideET x y = assertSame [x, y] x
 
 -------------------------------------------------------------------------------

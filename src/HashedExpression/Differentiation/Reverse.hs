@@ -191,7 +191,6 @@ partialDerivativesMap (Expression rootID mp) =
                 dBranch <- from dN * conjugate (from associate)
                 addDerivative branch dBranch
           Rotate amount x -> do
-            dX <- perform (Unary (specRotate (map negate amount))) [dN]
             dX <- rotate (map negate amount) $ from dN
             addDerivative x dX
           FT x -> do
@@ -202,5 +201,25 @@ partialDerivativesMap (Expression rootID mp) =
             let sz = fromIntegral $ product shape
             dX <- sNum (1.0 / sz) *. ft (from dN)
             addDerivative x dX
+          Project dss x -> do
+            let zeroX = introduceNode (retrieveShape x curMp, R, Const 0)
+            case et of
+              R -> do
+                dX <- inject dss (from dN) zeroX
+                addDerivative x dX
+              C -> do
+                dX <- inject dss (from dN) (zeroX +: zeroX)
+                addDerivative x dX
+          Inject dss x y -> do
+            let zeroX = introduceNode (retrieveShape x curMp, R, Const 0)
+            dX <- project dss (from dN)
+            addDerivative x dX
+            case et of
+              R -> do
+                dY <- inject dss zeroX (from dN)
+                addDerivative y dY
+              C -> do
+                dY <- inject dss (zeroX +: zeroX) (from dN)
+                addDerivative y dY
       (_, res) = runState go init
    in (contextMap res, partialDerivativeMap res)

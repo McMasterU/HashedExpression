@@ -78,10 +78,12 @@ nodeTypeWeight node =
     FT {} -> 30
     IFT {} -> 31
     Project {} -> 32
+    Inject {} -> 33
+    -------------------------------------------------
     Scale {} -> 36 -- Right after RealImag
     RealImag {} -> 37 -- At the end right after sum
     Sum {} -> 38 -- Sum at the end
-    ------------------------
+    -------------------------------------------------
     DVar {} -> 101
     DZero {} -> 102
     MulD {} -> 103

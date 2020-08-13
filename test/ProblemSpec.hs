@@ -234,17 +234,17 @@ spec =
     --            `shouldBe` [ [debugPrintExp (constant 1), debugPrintExp (constant 2), debugPrintExp zero2],
     --                         [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp a2]
     --                       ]
-    specify "test hand-written problems" $
-      forM_ problemsRepo $ \(problemResult, expected) -> do
-        case (problemResult, expected) of
-          (ProblemValid p, True) -> do
-            return ()
-          (ProblemInvalid _, False) ->
-            return ()
-          _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
+--    specify "test hand-written problems" $
+--      forM_ problemsRepo $ \(problemResult, expected) -> do
+--        case (problemResult, expected) of
+--          (ProblemValid p, True) -> do
+--            return ()
+--          (ProblemInvalid _, False) ->
+--            return ()
+--          _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
     specify "valid problem should be constructed successfully" $
       property prop_constructProblemNoConstraint
-    specify "valid box constrained problem should be constructed successfully" $
-      property prop_constructProblemBoxConstraint
-    specify "valid scalar constraints problem should be successfully successfully" $
-      property prop_constructProblemScalarConstraints
+--    specify "valid box constrained problem should be constructed successfully" $
+--      property prop_constructProblemBoxConstraint
+--    specify "valid scalar constraints problem should be successfully successfully" $
+--      property prop_constructProblemScalarConstraints
