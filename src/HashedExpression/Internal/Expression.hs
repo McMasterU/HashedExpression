@@ -21,6 +21,8 @@ module HashedExpression.Internal.Expression
     Op (..),
     Node,
     NodeID,
+    DimSelector (..),
+    ProjectInjectOp (..),
     ExpressionMap,
     Expression (..),
     Arg,
@@ -182,6 +184,10 @@ data Op
     Rotate RotateAmount Arg
   | FT Arg
   | IFT Arg
+  | -- | Projection
+    Project [DimSelector] Arg
+  | -- | Injection
+    Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
   | -- | differentiable operators (only for exterior method)
     DVar String
   | DZero
@@ -205,7 +211,24 @@ type ConditionArg = NodeID
 --   of a 'ConditionArg' expression
 type BranchArg = NodeID
 
+-- |
 type CovectorArg = NodeID
+
+type SubArg = NodeID
+
+type BaseArg = NodeID
+
+-- |
+type Position = [Int]
+
+-- | DimSelector for projection
+data DimSelector
+  = At Int -- Will collapse the corresponding dimension
+  | Range -- (inclusion)
+      Int -- start
+      Int -- end
+      Int -- step
+  deriving (Show, Eq, Ord)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -387,6 +410,12 @@ class FTOp a b | a -> b, b -> a where
   ft :: a -> b
   ift :: b -> a
 
+-- |
+class ProjectInjectOp s a b | s a -> b where
+  project :: s -> a -> b
+  inject :: s -> b -> a -> a
+
+-------------------------------------------------------------------------------
 class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
   (|*|) :: a -> b -> c
 

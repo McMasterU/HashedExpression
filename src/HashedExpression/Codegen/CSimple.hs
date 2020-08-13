@@ -84,6 +84,14 @@ for iter bound codes =
     ]
       ++ scoped codes
 
+forRange :: Text -> (Int, Int, Int) -> Code -> Code
+forRange iter (start, end, step) codes =
+  scoped $
+    [ [i|int #{iter};|],
+      [i|for (#{iter} = #{start}; #{iter} <= #{end}; #{iter} += #{step})|]
+    ]
+      ++ scoped codes
+
 if_ :: Text -> Code -> Code
 if_ condition codes = [[i|if (#{condition})|]] ++ scoped codes
 
@@ -337,6 +345,122 @@ evaluating CSimpleCodegen {..} rootIDs =
               case shape of
                 [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
                 [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
+            Project dss arg ->
+              case (dss, retrieveShape arg cExpressionMap) of
+                ([ds], [size]) ->
+                  let toIndex i = [I.i|#{i} % #{size}|]
+                   in scoped $
+                        "int nxt = 0;" :
+                        ( forRange i (toRange ds size) $
+                            if et == R
+                              then
+                                [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i)};|],
+                                  "nxt++;"
+                                ]
+                              else
+                                [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i)};|],
+                                  [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i)};|],
+                                  "nxt++;"
+                                ]
+                        )
+                ([ds1, ds2], [size1, size2]) ->
+                  let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
+                   in scoped $
+                        "int nxt = 0;" :
+                        ( forRange i (toRange ds1 size1) $
+                            forRange j (toRange ds2 size2) $
+                              if et == R
+                                then
+                                  [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i j)};|],
+                                    "nxt++;"
+                                  ]
+                                else
+                                  [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i j)};|],
+                                    [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i j)};|],
+                                    "nxt++;"
+                                  ]
+                        )
+                ([ds1, ds2, ds3], [size1, size2, size3]) ->
+                  let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
+                   in scoped $
+                        "int nxt = 0;" :
+                        ( forRange i (toRange ds1 size1) $
+                            forRange j (toRange ds2 size2) $
+                              forRange k (toRange ds3 size3) $
+                                if et == R
+                                  then
+                                    [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i j k)};|],
+                                      "nxt++;"
+                                    ]
+                                  else
+                                    [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i j k)};|],
+                                      [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i j k)};|],
+                                      "nxt++;"
+                                    ]
+                        )
+            Inject dss sub base ->
+              let copyBase =
+                    if et == R
+                      then for i (len n) [[I.i|#{n !! i} = #{base !! i};|]]
+                      else
+                        for i (len n) $
+                          [ [I.i|#{n `reAt` i} = #{base `reAt` i};|],
+                            [I.i|#{n `imAt` i} = #{base `imAt` i};|]
+                          ]
+                  injectSub =
+                    case (dss, retrieveShape n cExpressionMap) of
+                      ([ds], [size]) ->
+                        let toIndex i = [I.i|#{i} % #{size}|]
+                         in scoped $
+                              "int nxt = 0;" :
+                              ( forRange i (toRange ds size) $
+                                  if et == R
+                                    then
+                                      [ [I.i|#{n !! (toIndex i)} = #{sub !! "nxt"};|],
+                                        "nxt++;"
+                                      ]
+                                    else
+                                      [ [I.i|#{n `reAt` (toIndex i)} = #{sub `reAt` "nxt"};|],
+                                        [I.i|#{n `imAt` (toIndex i)} = #{sub `imAt` "nxt"};|],
+                                        "nxt++;"
+                                      ]
+                              )
+                      ([ds1, ds2], [size1, size2]) ->
+                        let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
+                         in scoped $
+                              "int nxt = 0;" :
+                              ( forRange i (toRange ds1 size1) $
+                                  forRange j (toRange ds2 size2) $
+                                    if et == R
+                                      then
+                                        [ [I.i|#{n !! (toIndex i j)} = #{sub !! "nxt"};|],
+                                          "nxt++;"
+                                        ]
+                                      else
+                                        [ [I.i|#{n `reAt` (toIndex i j)} = #{sub `reAt` "nxt"};|],
+                                          [I.i|#{n `imAt` (toIndex i j)} = #{sub `imAt` "nxt"};|],
+                                          "nxt++;"
+                                        ]
+                              )
+                      ([ds1, ds2, ds3], [size1, size2, size3]) ->
+                        let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
+                         in scoped $
+                              "int nxt = 0;" :
+                              ( forRange i (toRange ds1 size1) $
+                                  forRange j (toRange ds2 size2) $
+                                    forRange k (toRange ds3 size3) $
+                                      if et == R
+                                        then
+                                          [ [I.i|#{n !! (toIndex i j k)} = #{sub !! "nxt"};|],
+                                            "nxt++;"
+                                          ]
+                                        else
+                                          [ [I.i|#{n `reAt` (toIndex i j k)} = #{sub `reAt` "nxt"};|],
+                                            [I.i|#{n `imAt` (toIndex i j k)} = #{sub `imAt` "nxt"};|],
+                                            "nxt++;"
+                                          ]
+                              )
+               in scoped $ copyBase ++ injectSub
             node -> error $ "Not implemented " ++ show node
 
 -------------------------------------------------------------------------------

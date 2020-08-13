@@ -1,8 +1,8 @@
 module HashedExpression.Internal.Utils where
 
 import Data.Array
+import Data.Complex (Complex (..))
 import qualified Data.Complex as Complex
-import Data.Complex (Complex(..))
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
 import Data.List.Split (splitOn)
@@ -166,6 +166,15 @@ containsFTNode mp = any isFT $ IM.elems mp
         IFT _ -> True
         _ -> False
 
+toRange :: DimSelector -> Int -> (Int, Int, Int)
+toRange (At i) size = (i, i, 1)
+toRange (Range start end step) size = (start, if end >= start then end else end + size, step)
+
+mkIndices :: DimSelector -> Int -> [Int]
+mkIndices (At i) size = [i]
+mkIndices (Range start end step) size =
+  map (`mod` size) [start, start + step .. if end >= start then end else end + size]
+
 -------------------------------------------------------------------------------
 zipMp :: forall a b c. Ord a => Map a b -> Map a c -> Map a (b, c)
 zipMp mp1 mp2 = foldl' f Map.empty $ Map.keys mp1
@@ -185,9 +194,8 @@ zipMp3 mp1 mp2 mp3 = foldl' f Map.empty $ Map.keys mp1
 instance PowerOp Double Int where
   (^) x y = x Prelude.^ y
 
-instance ComplexRealOp Double (Complex Double) where 
+instance ComplexRealOp Double (Complex Double) where
   (+:) = (:+)
   xRe = Complex.realPart
   xIm = Complex.imagPart
   conjugate = Complex.conjugate
-  

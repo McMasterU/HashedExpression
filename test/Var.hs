@@ -5,7 +5,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import Prelude hiding (const)
 
-type Default1D = 4
+type Default1D = 10
 
 defaultDim1D = nat @Default1D
 

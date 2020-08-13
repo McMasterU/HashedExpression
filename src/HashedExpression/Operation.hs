@@ -1,3 +1,6 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE TypeOperators #-}
+
 -- |
 -- Module      :  HashedExpression.Operation
 -- Copyright   :  (c) OCA 2020
@@ -17,7 +20,7 @@ import Data.List (sort)
 import Data.Proxy
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import GHC.TypeLits (KnownNat, natVal)
+import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -222,12 +225,100 @@ instance (ElementType et, KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expres
   rotate :: (Int, Int) -> Expression '(m, n) et -> Expression '(m, n) et
   rotate (x, y) = applyUnary (specRotate [x, y])
 
-instance
-  (ElementType et, KnownNat m, KnownNat n, KnownNat p) =>
-  RotateOp (Int, Int, Int) (Expression '(m, n, p) et)
-  where
+instance (ElementType et, KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (Expression '(m, n, p) et) where
   rotate :: (Int, Int, Int) -> Expression '(m, n, p) et -> Expression '(m, n, p) et
   rotate (x, y, z) = applyUnary (specRotate [x, y, z])
+
+-------------------------------------------------------------------------------
+type x < y = (CmpNat x y ~ 'LT)
+
+type Size start end step n = (((n + end - start) `Mod` n) `Div` step + 1)
+
+-------------------------------------------------------------------------------
+instance
+  ( KnownNat i,
+    KnownNat n,
+    i < n
+  ) =>
+  ProjectInjectOp (Proxy i) (Expression n et) (Expression Scalar et)
+  where
+  project _ = applyUnary (specProject [At $ nat @i])
+  inject _ = applyBinary (specInject [At $ nat @i])
+
+instance
+  ( (KnownNat start, KnownNat end, KnownNat step),
+    KnownNat n,
+    (start < n, end < n, 0 < step),
+    res ~ Size start end step n
+  ) =>
+  ProjectInjectOp (Proxy '(start, end, step)) (Expression n et) (Expression res et)
+  where
+  project _ = applyUnary (specProject [Range (nat @start) (nat @end) (nat @step)])
+  inject _ = applyBinary (specInject [Range (nat @start) (nat @end) (nat @step)])
+
+instance
+  ( KnownNat m,
+    KnownNat n,
+    (KnownNat i, i < m),
+    (KnownNat j, j < n)
+  ) =>
+  ProjectInjectOp (Proxy i, Proxy j) (Expression '(m, n) et) (Expression Scalar et)
+  where
+  project _ = applyUnary (specProject [At (nat @i), At (nat @j)])
+  inject _ = applyBinary (specInject [At (nat @i), At (nat @j)])
+
+instance
+  ( KnownNat m,
+    KnownNat n,
+    (KnownNat j, j < n),
+    (KnownNat startM, KnownNat endM, KnownNat stepM),
+    (startM < m, endM < m, 0 < stepM),
+    resM ~ Size startM endM stepM m
+  ) =>
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (Expression '(m, n) et) (Expression resM et)
+  where
+  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
+  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
+
+instance
+  ( KnownNat m,
+    KnownNat n,
+    (KnownNat i, i < m),
+    (KnownNat startN, KnownNat endN, KnownNat stepN),
+    (startN < n, endN < n, 0 < stepN),
+    resN ~ Size startN endN stepN n
+  ) =>
+  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression resN et)
+  where
+  project _ = applyUnary (specProject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = applyBinary (specInject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
+
+instance
+  ( KnownNat m,
+    KnownNat n,
+    (KnownNat startM, KnownNat endM, KnownNat stepM),
+    (startM < m, endM < m, 0 < stepM),
+    (KnownNat startN, KnownNat endN, KnownNat stepN),
+    (startN < n, endN < n, 0 < stepN),
+    resM ~ Size startM endM stepM m,
+    resN ~ Size startN endN stepN n
+  ) =>
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (Expression '(m, n) et) (Expression '(resM, resN) et)
+  where
+  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
+
+-- TODO: 3D
+-------------------------------------------------------------------------------
+
+at :: forall i. (KnownNat i) => Proxy i
+at = Proxy
+
+range :: forall start end. (KnownNat start, KnownNat end) => Proxy '(start, end, 1)
+range = Proxy
+
+ranges :: forall start end step. (KnownNat start, KnownNat end, KnownNat step) => Proxy '(start, end, step)
+ranges = Proxy
 
 -- | Create primitive expressions
 variable :: String -> Expression Scalar R

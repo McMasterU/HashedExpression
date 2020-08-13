@@ -57,6 +57,10 @@ offsetHash offset hash =
 separator :: String
 separator = "a"
 
+toStringHash :: DimSelector -> String
+toStringHash (At i) = "at" ++ show i
+toStringHash (Range b e st) = "range" ++ show b ++ separator ++ show e ++ separator ++ show st
+
 -- | Compute a hash value for a given 'Node' and number of rehash
 hash :: Node -> Int -> Int
 hash (shape, et, node) rehashNum =
@@ -105,6 +109,8 @@ hash (shape, et, node) rehashNum =
         Rotate amount arg -> offsetHash 29 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
         FT arg -> offsetHash 30 . hashString' $ show arg
         IFT arg -> offsetHash 31 . hashString' $ show arg
+        Project ss arg -> offsetHash 32 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show arg
+        Inject ss sub base -> offsetHash 33 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
         -------------------------------------------------------------------------------
         Conjugate arg -> offsetHash 37 . hashString' $ show arg
         -- Mark: Covector

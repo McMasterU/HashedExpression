@@ -19,43 +19,21 @@
 -- the above code creates a simple HashedExpression using the
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
-  ( -- * Expression Constructors
-    Expression,
-    R,
-    C,
-    Covector,
-    Scalar,
-    PowerOp (..),
-    PiecewiseOp (..),
-    VectorSpaceOp (..),
-    FTOp (..),
-    NodeID,
-    ComplexRealOp (..),
-    RotateOp (..),
-    InnerProductSpaceOp (..),
-
-    -- * Combinators
-    constant,
-    constant1D,
-    constant2D,
-    constant3D,
-    variable,
-    variable1D,
-    variable2D,
-    variable3D,
-    param,
-    param1D,
-    param2D,
-    param3D,
-
-    -- * Evaluation
-    Evaluable (..),
-    prettify,
+  ( module HashedExpression.Internal.Expression,
+    module HashedExpression.Operation,
+    module HashedExpression.Internal.Simplify,
+    module HashedExpression.Prettify,
+    module HashedExpression.Interp,
+    module HashedExpression.Problem,
+    module HashedExpression.Value,
   )
 where
 
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Prettify
+import HashedExpression.Problem
+import HashedExpression.Value
 import Prelude hiding ((^))

@@ -77,10 +77,13 @@ nodeTypeWeight node =
     Rotate {} -> 29
     FT {} -> 30
     IFT {} -> 31
+    Project {} -> 32
+    Inject {} -> 33
+    -------------------------------------------------
     Scale {} -> 36 -- Right after RealImag
     RealImag {} -> 37 -- At the end right after sum
     Sum {} -> 38 -- Sum at the end
-    ------------------------
+    -------------------------------------------------
     DVar {} -> 101
     DZero {} -> 102
     MulD {} -> 103
@@ -130,6 +133,8 @@ opArgs node =
     Rotate _ arg -> [arg]
     FT arg -> [arg]
     IFT arg -> [arg]
+    Project ss arg -> [arg]
+    Inject ss sub base -> [sub, base]
     DZero -> []
     MulD arg1 arg2 -> [arg1, arg2]
     ScaleD arg1 arg2 -> [arg1, arg2]
@@ -173,6 +178,8 @@ mapOp f op =
     Rotate am arg -> Rotate am (f arg)
     FT arg -> FT (f arg)
     IFT arg -> IFT (f arg)
+    Project s arg -> Project s (f arg)
+    Inject s sub base -> Inject s (f sub) (f base)
     DZero -> DZero
     MulD arg1 arg2 -> MulD (f arg1) (f arg2)
     ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)
