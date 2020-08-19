@@ -90,7 +90,7 @@ prop_RotateTwoR3 (Suite exp valMaps) amount1 amount2 =
 --    a +: b = a + bi
 prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
 prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
-  (eval valMap exp1 +: eval valMap) exp2 `shouldApprox` eval valMap (exp1 +: exp2)
+  (eval valMap exp1 +: eval valMap exp2) `shouldApprox` eval valMap (exp1 +: exp2)
   where 
     valMap = valMap1 `union` valMap2
 
