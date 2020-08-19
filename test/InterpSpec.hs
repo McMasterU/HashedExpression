@@ -86,6 +86,13 @@ prop_RotateTwoR3 (Suite exp valMaps) amount1 amount2 =
   where
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
+    
+--    a +: b = a + bi
+prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
+prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
+  (eval valMap exp1 +: eval valMap) exp2 `shouldApprox` eval valMap (exp1 +: exp2)
+  where 
+    valMap = valMap1 `union` valMap2
 
 --- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
 prop_ProjectInjectOneR :: SuiteOneR -> Expectation
@@ -182,33 +189,41 @@ prop_ProjectInjectTwoC (Suite exp valMap) = do
           . inject (range @3 @4, range @0 @(Default2D2 - 1)) part2
           $ zero2 +: zero2
   eval valMap combine `shouldBe` eval valMap exp
+  
+-- ideas:
+--    dot product (<.>) vs scaling (*.)
+--    exponential and log
+--    conjugate of complex number
+--    power and square root
+--    advance: piecewise function
 
 spec :: Spec
 spec =
   describe "Interp spec" $ do
-    specify "prop_Add Scalar R" $ property prop_AddScalarR
-    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
-    specify "prop_Add Scalar C" $ property prop_AddScalarC
-    specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
-    specify "prop_Rotate One R rotate 0 should stay the same" $
-      property prop_RotateOneR1
-    specify "prop_Rotate One R rotate a and -a should stay the same" $
-      property prop_RotateOneR2
-    specify "prop_Rotate One R rotate a then rotate b should equal rotate (a + b)" $
-      property prop_RotateOneR3
-    specify "prop_Rotate Two R rotate (0, 0) should stay the same" $
-      property prop_RotateTwoR1
-    specify "prop_Rotate Two R rotate a and -a should stay the same" $
-      property prop_RotateTwoR2
-    specify "prop_Rotate Two R rotate a then rotate b should equal rotate (a + b)" $
-      property prop_RotateTwoR3
-    specify "prop_Project_Inject One R" $
-      property prop_ProjectInjectOneR
-    specify "prop_Project_Inject One R Untyped" $
-      property prop_ProjectInjectOneRUntyped
-    specify "prop_Project_Inject One C" $
-      property prop_ProjectInjectOneC
-    specify "prop_Project_Inject Two R" $
-      property prop_ProjectInjectTwoR
-    specify "prop_Project_Inject Two C" $
-      property prop_ProjectInjectTwoC
+    specify "prop_realImag" $ property prop_realImag
+--    specify "prop_Add Scalar R" $ property prop_AddScalarR
+--    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
+--    specify "prop_Add Scalar C" $ property prop_AddScalarC
+--    specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
+--    specify "prop_Rotate One R rotate 0 should stay the same" $
+--      property prop_RotateOneR1
+--    specify "prop_Rotate One R rotate a and -a should stay the same" $
+--      property prop_RotateOneR2
+--    specify "prop_Rotate One R rotate a then rotate b should equal rotate (a + b)" $
+--      property prop_RotateOneR3
+--    specify "prop_Rotate Two R rotate (0, 0) should stay the same" $
+--      property prop_RotateTwoR1
+--    specify "prop_Rotate Two R rotate a and -a should stay the same" $
+--      property prop_RotateTwoR2
+--    specify "prop_Rotate Two R rotate a then rotate b should equal rotate (a + b)" $
+--      property prop_RotateTwoR3
+--    specify "prop_Project_Inject One R" $
+--      property prop_ProjectInjectOneR
+--    specify "prop_Project_Inject One R Untyped" $
+--      property prop_ProjectInjectOneRUntyped
+--    specify "prop_Project_Inject One C" $
+--      property prop_ProjectInjectOneC
+--    specify "prop_Project_Inject Two R" $
+--      property prop_ProjectInjectTwoR
+--    specify "prop_Project_Inject Two C" $
+--      property prop_ProjectInjectTwoC
