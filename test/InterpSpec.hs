@@ -4,7 +4,7 @@ module InterpSpec where
 
 import Commons
 import Data.Complex (Complex (..))
-import Data.Map.Strict (union)
+import Data.Map.Strict (union, fromList)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
@@ -88,11 +88,11 @@ prop_RotateTwoR3 (Suite exp valMaps) amount1 amount2 =
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
     
 --    a +: b = a + bi
-prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
-prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
-  (eval valMap exp1 +: eval valMap) exp2 `shouldApprox` eval valMap (exp1 +: exp2)
-  where 
-    valMap = valMap1 `union` valMap2
+-- prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
+-- prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
+--   (eval valMap exp1 +: eval valMap) exp2 `shouldApprox` eval valMap (exp1 +: exp2)
+--   where 
+--     valMap = valMap1 `union` valMap2
 
 --- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
 prop_ProjectInjectOneR :: SuiteOneR -> Expectation
@@ -197,10 +197,102 @@ prop_ProjectInjectTwoC (Suite exp valMap) = do
 --    power and square root
 --    advance: piecewise function
 
+
+-- properties of dot product
+-- u . v = |u||v| cos t
+-- u . v = v . u
+-- u . v = 0 when u and v are orthogonal 
+-- 0 . 0 = 0 
+-- |v|^2 = v . v
+-- a (u . v) = (a u) . v
+-- (au + bv) . w = (au) . w + (bv) . w
+
+-- [Scalar] 0 . 0 = 0 
+-- prop_dotProductScalar_1 ::  Bool 
+-- prop_dotProductScalar_1 =
+--   let
+--     n = variable "n"
+--     valMap = fromList [("n", VNum 0)]
+--   in  
+--     n <.> n == n
+
+
+-- [1D] u . v = v . u 
+prop_dotProduct1D_1 :: SuiteOneR -> SuiteOneR -> Bool 
+prop_dotProduct1D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) = 
+  eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
+  where
+    valMaps = valMaps1 `union` valMaps2
+
+
+-- [2D] u . v = v . u 
+prop_dotProduct2D_1 :: SuiteTwoR -> SuiteTwoR -> Bool 
+prop_dotProduct2D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
+  eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
+  where
+    valMaps = valMaps1 `union` valMaps2 
+
+--[1D] |v|^2 = v . v 
+-- prop_dotProduct1D_2 :: SuiteOneR -> Bool 
+-- prop_dotProduct1D_2 (Suite exp1 valMaps1) =
+--     eval valMaps1 ((norm2 exp1)^2) == eval valMaps1 (exp1 <.> exp1)
+
+-- [1D] a (u . v) = (a u) . v
+-- prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Bool 
+-- prop_dotProduct1D_3 (Suite n valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) =
+--   eval valMaps (a * (exp1 <.> exp2)) == eval valMaps ((HashedExpression.Operation.scale a exp1) <.> exp2)
+--   where
+--     valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+
+
+-- properties of exponents
+-- 1) x^a * x^b = x ^ (a+b)
+-- 2) (xy)^a = x^a * y^a
+-- 3) (x^a) / (x^b) = x ^ (a-b), x != 0
+-- 4) a^(-m) = 1 / a^m, a != 0
+-- 5) (a/b)^m = a^m / b^m, b != 0 
+
+prop_ExpScalar_1 :: SuiteScalarR -> Int -> Int -> Bool 
+prop_ExpScalar_1 (Suite exp1 valMaps1) a b = 
+  eval valMaps1 ((exp1^a) * (exp1^b)) == eval valMaps1 (exp1^(a+b))
+
+prop_ExpScalar_2 :: SuiteScalarR -> SuiteScalarR -> Int -> Bool
+prop_ExpScalar_2 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
+  eval valMaps ((exp1 * exp2) ^ a) == eval valMaps ((exp1 ^ a) * (exp2 ^ a)) 
+  where
+    valMaps = valMaps1 `union` valMaps2
+
+prop_ExpScalar_3 :: SuiteScalarR -> Int -> Int -> Property 
+prop_ExpScalar_3 (Suite exp1 valMaps1) a b =
+  ((eval valMaps1 exp1) /= 0) ==> 
+  (eval valMaps1 ((exp1 ^ a) / (exp1 ^ b)) == eval valMaps1 (exp1 ^ (a - b)))
+
+prop_ExpScalar_4 :: SuiteScalarR -> Int -> Property 
+prop_ExpScalar_4 (Suite exp1 valMaps1) a = 
+  ((eval valMaps1 exp1) /= 0) ==> 
+  (eval valMaps1 (exp1 ^ (-a)) == eval valMaps1 (1 / (exp1 ^ a)))
+
+prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> Int -> Property 
+prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
+  ((eval valMaps2 exp2) /= 0) ==>
+    ((eval valMaps (exp1 / exp1) ^ a) == (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
+    where
+      valMaps = valMaps1 `union` valMaps2
+
 spec :: Spec
 spec =
   describe "Interp spec" $ do
-    specify "prop_realImag" $ property prop_realImag
+    -- specify "prop_dotProductScalar_1" $ property prop_dotProductScalar_1
+    specify "prop_dotProduct1D_1" $ property prop_dotProduct1D_1
+    specify "prop_dotProduct2D_1" $ property prop_dotProduct2D_1
+    
+    specify "prop_ExpScalar_1" $ property prop_ExpScalar_1
+    specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
+    specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
+    specify "prop_ExpScalar_4" $ property prop_ExpScalar_4
+    specify "prop_ExpScalar_5" $ property prop_ExpScalar_5
+
+
 --    specify "prop_Add Scalar R" $ property prop_AddScalarR
 --    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
 --    specify "prop_Add Scalar C" $ property prop_AddScalarC
