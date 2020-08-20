@@ -217,15 +217,13 @@ prop_ProjectInjectTwoC (Suite exp valMap) = do
 --     n <.> n == n
 
 
--- [1D] u . v = v . u 
+-- u . v = v . u 
 prop_dotProduct1D_1 :: SuiteOneR -> SuiteOneR -> Bool 
 prop_dotProduct1D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) = 
   eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
   where
     valMaps = valMaps1 `union` valMaps2
 
-
--- [2D] u . v = v . u 
 prop_dotProduct2D_1 :: SuiteTwoR -> SuiteTwoR -> Bool 
 prop_dotProduct2D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
   eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
@@ -235,14 +233,29 @@ prop_dotProduct2D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
 --[1D] |v|^2 = v . v 
 -- prop_dotProduct1D_2 :: SuiteOneR -> Bool 
 -- prop_dotProduct1D_2 (Suite exp1 valMaps1) =
---     eval valMaps1 ((norm2 exp1)^2) == eval valMaps1 (exp1 <.> exp1)
+--     eval valMaps1 ((??? exp1)^2) == eval valMaps1 (exp1 <.> exp1)
 
--- [1D] a (u . v) = (a u) . v
--- prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Bool 
--- prop_dotProduct1D_3 (Suite n valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) =
---   eval valMaps (a * (exp1 <.> exp2)) == eval valMaps ((HashedExpression.Operation.scale a exp1) <.> exp2)
---   where
---     valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+--TODO: test failed (for both 1D and 2D)
+--  a (u . v) = (a u) . v
+prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Bool 
+prop_dotProduct1D_3 (Suite n valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) =
+  eval valMaps (a * (exp1 <.> exp2)) == eval valMaps ((a *. exp1) <.> exp2)
+  where
+    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+
+prop_dotProduct2D_3 :: SuiteScalarR -> SuiteTwoR -> SuiteTwoR -> Bool 
+prop_dotProduct2D_3 (Suite n valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) = 
+  eval valMaps (a * (exp1 <.> exp2)) == eval valMaps ((a *. exp1) <.> exp2)
+  where
+    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+
+--TODO: test failed 
+-- (au + bv) . w = (au) . w + (bv) . w
+prop_dotProduct1D_4 :: SuiteScalarR -> SuiteScalarR -> SuiteOneR -> SuiteOneR -> SuiteOneR -> Bool
+prop_dotProduct1D_4 (Suite a valMaps1) (Suite b valMaps2) (Suite exp1 valMaps3) (Suite exp2 valMaps4) (Suite exp3 valMaps5) =
+  eval valMaps (((a *. exp1) + (b *. exp2)) <.> exp3) == eval valMaps (((a *. exp1) <.> exp3) + ((b *. exp2) <.> exp3))
+  where
+    valMaps = valMaps1 `union` valMaps2 `union` valMaps3 `union` valMaps4 `union` valMaps5
 
 
 -- [ arithmetic properties ] 
@@ -335,7 +348,10 @@ spec =
     -- specify "prop_dotProductScalar_1" $ property prop_dotProductScalar_1
     specify "prop_dotProduct1D_1" $ property prop_dotProduct1D_1
     specify "prop_dotProduct2D_1" $ property prop_dotProduct2D_1
-    
+    specify "prop_dotProduct1D_3" $ property prop_dotProduct1D_3
+    specify "prop_dotProduct2D_3" $ property prop_dotProduct2D_3
+    specify "prop_dotProduct1D_4" $ property prop_dotProduct1D_4
+
     --arithmetic properties
     specify "prop_Commutative_Addition" $ property prop_Commutative_Addition
     specify "prop_Commutative_Multiplication" $ property prop_Commutative_Multiplication
