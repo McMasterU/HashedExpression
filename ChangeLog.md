@@ -1,5 +1,8 @@
 # Changelog for HashedExpression & Symphony
 
+## 0.0.5
+- New operation: Injection and Projection
+
 ## 0.0.4
 - Default to reverse method
 

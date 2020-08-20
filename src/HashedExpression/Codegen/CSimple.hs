@@ -19,8 +19,6 @@ import Data.List.HT (viewR)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
-import Data.String.Interpolate
-import qualified Data.String.Interpolate as I
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -44,14 +42,6 @@ data CSimpleConfig = CSimpleConfig
   { output :: DataOutput
   }
   deriving (Eq, Show)
-
-for1 :: Text -> Int -> Code -> Code
-for1 iter bound codes =
-  scoped $
-    [ [i|int #{iter};|],
-      [i|for (#{iter} = 0; #{iter} < #{bound}; #{iter}++)|]
-    ]
-      ++ scoped codes
 
 -- | Offset w.r.t "ptr"
 type Address = Int
@@ -77,6 +67,7 @@ data CCode
   | Control Text [CCode]
   | Empty
   | Scoped [CCode]
+  | Printf [Text]
 
 fromCCode :: CCode -> Code
 fromCCode c = case c of
@@ -85,6 +76,8 @@ fromCCode c = case c of
   Control control codes -> [control] ++ scoped (concatMap fromCCode codes)
   Empty -> []
   Scoped codes -> scoped (concatMap fromCCode codes)
+  Printf [] -> []
+  Printf (x : xs) -> ["printf(" <> T.intercalate ", " (("\"" <> x <> "\"") : xs) <> ");"]
 
 -- | Helpers for code generation
 scoped :: Code -> Code
@@ -167,7 +160,7 @@ initCodegen config mp consecutiveIDs =
             | offsetVal == "" = ""
             | offsetVal == "0" = ""
             | otherwise = " + " <> offsetVal
-       in [i|ptr[#{addressMap nID}#{offset}]|]
+       in "ptr[" <> showT (addressMap nID) <> offset <> "]"
     -- Accessor for complex
     reAt nID offsetVal = access nID offsetVal
     imAt nID offsetVal = access nID $ offsetVal <> " + " <> showT (product (retrieveShape nID mp))
@@ -622,43 +615,40 @@ instance Codegen CSimpleConfig where
       readValCodeEach (name, nId)
         | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
-          scoped
-            [ [i|printf("Init value for #{name} is not provided, generating random for #{name} ... \\n");|],
-              "int i;",
-              [i|for (i = 0; i < #{product shape}; i++){|],
-              [i|  ptr[#{offset} + i] = ((double) rand() / RAND_MAX);|],
-              "}"
+          Scoped
+            [ Printf ["Init value for " <> T.pack name <> "is not provided, generate random init for " <> T.pack "name" <> " ...\\n"],
+              for "i" (product shape) $
+                [Assign ("ptr[" <> showT offset <> "+ i]") ("(double) rand() / RAND_MAX")]
             ]
         where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      writeResultCodeEach :: Variable -> Code
+      writeResultCodeEach :: Variable -> CCode
       writeResultCodeEach variable
         | output == OutputHDF5 =
-          scoped
-            [ [i|printf("Writing #{name} to #{name}_out.h5...\\n");|],
-              "hid_t file, space, dset;",
-              [i|hsize_t dims[#{length shape}] = {#{intercalate ", " . map show $ shape}};|],
-              [i|file = H5Fcreate("#{name}_out.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);|],
-              [i|space = H5Screate_simple (#{length shape}, dims, NULL);|],
-              [i|dset = H5Dcreate (file, "#{name}", H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);|],
-              [i|H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + #{offset});|],
-              "H5Dclose(dset);",
-              "H5Sclose(space);",
-              "H5Fclose(file);"
+          Scoped
+            [ Printf ["Writing " <> T.pack name <> " to " <> T.pack name <> "_out.h5...\\n"],
+              Statement "hid_t file, space, dset",
+              Assign ("hsize_t dims[" <> showT (length shape) <> "]") ("{" <> T.intercalate ", " (map showT shape) <> "}"),
+              Assign "file" (fun "H5Fcreate" ["\"" <> T.pack name <> "_out.h5\"", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Assign "space" (fun "H5Screate_simple" [showT $ length shape, "dims", "NULL"]),
+              Assign "dset" (fun "H5Dcreate" ["file", T.pack name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> showT offset]),
+              Statement "H5Dclose(dset)",
+              Statement "H5Sclose(space)",
+              Statement "H5Fclose(file"
             ]
         | output == OutputText =
-          scoped $
-            [ [i|printf("Writing #{name} to #{name}_out.txt...\\n");|],
-              "FILE *file;",
-              [i|file = fopen("#{name}_out.txt", "w");|]
+          Scoped $
+            [ Printf ["Writing " <> T.pack name <> " to " <> T.pack name <> "_out.txt...\\n"],
+              Statement "FILE *file",
+              Assign "file" (fun "fopen" ["\"" <> T.pack name <> "_out.txt\"", "\"w\""]),
+              for "i" (product shape) $
+                [ Statement (fun "fprintf" ["file", "\"%f \"", "ptr[" <> showT offset <> " + i]"])
+                ],
+              Statement "fclose(file)"
             ]
-              ++ ( for1 "i" (product shape) $
-                     [ [i|fprintf(file, "%f ", ptr[#{offset} + i]);|]
-                     ]
-                 )
-              ++ ["fclose(file);"]
         where
           nId = nodeId variable
           name = varName variable
@@ -705,15 +695,17 @@ instance Codegen CSimpleConfig where
             varWithPos = zip vars varPosition
             getPos name = snd . fromMaybe (error "get starting position variable") . find ((== name) . fst) $ varWithPos
             readUpperBoundCode name val =
-              generateReadValuesCode
-                ((name ++ "_ub"), product $ variableShape name)
-                ("upper_bound + " ++ show (getPos name))
-                val
+              fromCCode $
+                generateReadValuesCode
+                  ((name ++ "_ub"), product $ variableShape name)
+                  ("upper_bound + " ++ show (getPos name))
+                  val
             readLowerBoundCode name val =
-              generateReadValuesCode
-                ((name ++ "_lb"), (product $ variableShape name))
-                ("lower_bound + " ++ show (getPos name))
-                val
+              fromCCode $
+                generateReadValuesCode
+                  ((name ++ "_lb"), (product $ variableShape name))
+                  ("lower_bound + " ++ show (getPos name))
+                  val
             readBounds =
               let readBoundCodeEach cnt =
                     case cnt of
@@ -762,12 +754,12 @@ instance Codegen CSimpleConfig where
       readValsCodes =
         ["void read_values() {"]
           ++ ["  srand(time(NULL));"] --
-          ++ scoped (concatMap readValCodeEach varsAndParams)
+          ++ scoped (concatMap (fromCCode . readValCodeEach) varsAndParams)
           ++ ["}"] --
           -------------------------------------------------------------------------------
       writeResultCodes =
         ["void write_result()"]
-          ++ scoped (concatMap writeResultCodeEach variables)
+          ++ scoped (concatMap (fromCCode . writeResultCodeEach) variables)
       -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
@@ -801,40 +793,36 @@ toShapeString shape
 
 -------------------------------------------------------------------------------
 
-generateReadValuesCode :: (String, Int) -> String -> Val -> Code
+generateReadValuesCode :: (String, Int) -> String -> Val -> CCode
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> scoped ["*(" <> T.pack address <> ") = " <> showT value <> ";"]
+    VScalar value -> Scoped [Assign ("*(" <> T.pack address <> ")") (showT value)]
     V1D _ -> readFileText (T.pack name <> ".txt")
     V2D _ -> readFileText (T.pack name <> ".txt")
     V3D _ -> readFileText (T.pack name <> ".txt")
     VFile (TXT filePath) -> readFileText $ T.pack filePath
     VFile (HDF5 filePath dataset) -> readFileHD5 (T.pack filePath) (T.pack dataset)
     VNum value ->
-      scoped
-        [ "int i;",
-          [i|for (i = 0; i < #{size}; i++){|],
-          [i|  *(#{address} + i) = #{value};|],
-          "}"
+      for "i" size $
+        [ Assign ("*(" <> T.pack address <> " + i)") (showT value)
         ]
   where
     readFileText filePath =
-      scoped
-        [ [i|printf("Reading #{name} from text file #{filePath} ... \\n");|],
-          [i|FILE *fp = fopen("#{filePath}", "r");|],
-          "int i;",
-          [i|for (i = 0; i < #{size}; i++){|],
-          [i|  fscanf(fp, "%lf", #{address} + i);|],
-          "}",
-          "fclose(fp);"
+      Scoped
+        [ Printf ["Reading " <> T.pack name <> " from text file " <> filePath <> " ...\\n"],
+          Assign "FILE *fp" ("fopen(\"" <> filePath <> "\", \"r\")"),
+          for "i" size $
+            [ Statement (fun "fscanf" ["fp", "\"%lf\"", T.pack address <> " + i"])
+            ],
+          Statement (fun "fclose" ["fp"])
         ]
     readFileHD5 filePath dataset =
-      scoped
-        [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} from #{filePath} ... \\n");|],
-          "hid_t file, dset;",
-          [i|file = H5Fopen("#{filePath}", H5F_ACC_RDONLY, H5P_DEFAULT);|],
-          [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);|],
-          [i|H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, #{address});|],
-          "H5Fclose (file);",
-          "H5Dclose (dset);"
+      Scoped
+        [ Printf ["Reading " <> T.pack name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
+          Statement "hid_t file, dset",
+          Assign "file" (fun "H5Fopen" [filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
+          Assign "dset" (fun "H5Dopen" ["file", dataset, "H5P_DEFAULT"]),
+          Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", T.pack address]),
+          Statement "H5Fclose (file)",
+          Statement "H5Dclose (dset)"
         ]

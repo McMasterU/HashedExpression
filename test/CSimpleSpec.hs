@@ -45,6 +45,14 @@ localOffset shape indices
     sum . zipWith (*) indices . map product . tail . tails $ shape
   | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
 
+for1 :: T.Text -> Int -> Code -> Code
+for1 iter bound codes =
+  scoped $
+    [ [I.i|int #{iter};|],
+      [I.i|for (#{iter} = 0; #{iter} < #{bound}; #{iter}++)|]
+    ]
+      ++ scoped codes
+
 -- | Generate a fully working C program that compute the expression and
 -- print out the result, mostly used for testing
 singleExpressionCProgram ::

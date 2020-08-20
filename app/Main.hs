@@ -23,7 +23,6 @@ import HashedExpression.Problem
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Value
-import Data.String.Interpolate
 import Prelude hiding ((^))
 import Control.Monad (forM_)
 import Data.Data
