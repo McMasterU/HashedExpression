@@ -256,6 +256,7 @@ genScalarC size
             liftE2 (+:) <$> subR <*> subR,
             liftE2 (<.>) <$> sub1D <*> sub1D,
             liftE2 (<.>) <$> sub2D <*> sub2D,
+            unary conjugate,
             fromProjection
           ]
 
@@ -338,6 +339,7 @@ gen1DC size
             liftE2 (*.) <$> subScalar <*> sub,
             unary ft,
             unary ift,
+            unary conjugate,
             fromRotate,
             fromProjectInject
           ]
@@ -425,6 +427,7 @@ gen2DC size
             liftE2 (*.) <$> subScalar <*> sub,
             unary ft,
             unary ift,
+            unary conjugate,
             fromRotate,
             fromProjectInject
           ]

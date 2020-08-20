@@ -274,7 +274,7 @@ evaluating CSimpleCodegen {..} rootIDs =
             Conjugate arg ->
               for i (len n) $
                 [ Assign (n `reAt` i) (arg `reAt` i),
-                  Assign (n `reAt` i) ("-" <> (arg `imAt` i))
+                  Assign (n `imAt` i) ("-" <> (arg `imAt` i))
                 ]
             InnerProd arg1 arg2
               | et == R && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> (arg2 !! nooffset))
@@ -633,11 +633,11 @@ instance Codegen CSimpleConfig where
               Assign ("hsize_t dims[" <> showT (length shape) <> "]") ("{" <> T.intercalate ", " (map showT shape) <> "}"),
               Assign "file" (fun "H5Fcreate" ["\"" <> T.pack name <> "_out.h5\"", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
               Assign "space" (fun "H5Screate_simple" [showT $ length shape, "dims", "NULL"]),
-              Assign "dset" (fun "H5Dcreate" ["file", T.pack name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Assign "dset" (fun "H5Dcreate" ["file", "\"" <> T.pack name <> "\"", "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
               Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> showT offset]),
               Statement "H5Dclose(dset)",
               Statement "H5Sclose(space)",
-              Statement "H5Fclose(file"
+              Statement "H5Fclose(file)"
             ]
         | output == OutputText =
           Scoped $
@@ -820,8 +820,8 @@ generateReadValuesCode (name, size) address val =
       Scoped
         [ Printf ["Reading " <> T.pack name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
           Statement "hid_t file, dset",
-          Assign "file" (fun "H5Fopen" [filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
-          Assign "dset" (fun "H5Dopen" ["file", dataset, "H5P_DEFAULT"]),
+          Assign "file" (fun "H5Fopen" ["\"" <> filePath <> "\"", "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
+          Assign "dset" (fun "H5Dopen" ["file", "\"" <> dataset <> "\"", "H5P_DEFAULT"]),
           Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", T.pack address]),
           Statement "H5Fclose (file)",
           Statement "H5Dclose (dset)"
