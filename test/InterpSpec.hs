@@ -88,11 +88,12 @@ prop_RotateTwoR3 (Suite exp valMaps) amount1 amount2 =
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
     
 --    a +: b = a + bi
--- prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
--- prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
---   (eval valMap exp1 +: eval valMap) exp2 `shouldApprox` eval valMap (exp1 +: exp2)
---   where 
---     valMap = valMap1 `union` valMap2
+
+prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
+prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
+  (eval valMap exp1 +: eval valMap exp2) `shouldApprox` eval valMap (exp1 +: exp2)
+  where 
+    valMap = valMap1 `union` valMap2
 
 --- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
 prop_ProjectInjectOneR :: SuiteOneR -> Expectation
