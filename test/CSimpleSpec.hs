@@ -73,11 +73,11 @@ singleExpressionCProgram valMaps expr =
     codes = evaluating codeGen [n]
     -- print the value of expression
     printValue
-      | et == R = for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+      | et == R = for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
       | et == C =
-        for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+        for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
           ++ [[I.i|printf("\\n");|]]
-          ++ for i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
+          ++ for1 i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
     releaseMemory = ["free(ptr);"]
     -------------------------------------------------------------------------------
     assigningValues :: CSimpleCodegen -> ValMaps -> Code
