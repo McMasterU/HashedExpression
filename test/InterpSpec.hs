@@ -245,7 +245,55 @@ prop_dotProduct2D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
 --     valMaps = valMaps1 `union` valMaps2 `union` valMaps3
 
 
--- properties of exponents
+-- [ arithmetic properties ] 
+-- 1) commutative properties:  a + b = b + a
+--                             a * b = b * a
+-- 2) associative properties:  a + (b + c) = (a + b) + c
+--                             (a * b) * c = a * (b * c)
+-- 3) Distributive properties: a * (b + c) = a * b + a * c
+-- 4) Identity element: a + 0 = a
+--                      a * 1 = a 
+-- 5) Inverse Element:  a + (-a) = 0
+--                      a * (1 / a) = 1
+
+prop_Commutative_Addition :: SuiteScalarR -> SuiteScalarR -> Bool
+prop_Commutative_Addition (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
+  eval valMaps (exp1 + exp2) == eval valMaps (exp2 + exp1)
+  where
+    valMaps = valMaps1 `union` valMaps2
+
+prop_Commutative_Multiplication :: SuiteScalarR -> SuiteScalarR -> Bool 
+prop_Commutative_Multiplication (Suite exp1 valMaps1) (Suite exp2 valMaps2) = 
+  eval valMaps (exp1 * exp2) == eval valMaps (exp2 * exp1)
+  where
+    valMaps = valMaps1 `union` valMaps2
+
+-- TODO: test failed
+prop_Distributive :: SuiteScalarR -> SuiteScalarR -> SuiteScalarR -> Bool
+prop_Distributive (Suite exp1 valMaps1) (Suite exp2 valMaps2) (Suite exp3 valMaps3) = 
+  eval valMaps (exp1 * (exp2 + exp3)) == eval valMaps ((exp1 * exp2) + (exp1 * exp3))
+  where
+    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+
+prop_Identity_Addition :: SuiteScalarR -> Bool
+prop_Identity_Addition (Suite exp1 valMaps1) = 
+  eval valMaps1 (exp1 + 0) == eval valMaps1 exp1
+
+prop_Identity_Multiplication :: SuiteScalarR -> Bool 
+prop_Identity_Multiplication (Suite exp1 valMaps1) =
+  eval valMaps1 (exp1 * 1) == eval valMaps1 exp1
+
+prop_Inverse_Addition :: SuiteScalarR -> Bool
+prop_Inverse_Addition (Suite exp1 valMaps1) = 
+  eval valMaps1 (exp1 + (negate exp1)) == 0 
+
+--TODO: test failed
+prop_Inverse_Multiplication :: SuiteScalarR -> Bool
+prop_Inverse_Multiplication (Suite exp1 valMaps1) = 
+  eval valMaps1 (exp1 * (1 / exp1)) == 1
+
+-- TODO: test failed for every exponential properties
+-- [ exponential properties ]
 -- 1) x^a * x^b = x ^ (a+b)
 -- 2) (xy)^a = x^a * y^a
 -- 3) (x^a) / (x^b) = x ^ (a-b), x != 0
@@ -279,6 +327,8 @@ prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
     where
       valMaps = valMaps1 `union` valMaps2
 
+
+
 spec :: Spec
 spec =
   describe "Interp spec" $ do
@@ -286,6 +336,16 @@ spec =
     specify "prop_dotProduct1D_1" $ property prop_dotProduct1D_1
     specify "prop_dotProduct2D_1" $ property prop_dotProduct2D_1
     
+    --arithmetic properties
+    specify "prop_Commutative_Addition" $ property prop_Commutative_Addition
+    specify "prop_Commutative_Multiplication" $ property prop_Commutative_Multiplication
+    specify "prop_Distributive" $ property prop_Distributive
+    specify "prop_Identity_Addition" $ property prop_Identity_Addition
+    specify "prop_Identity_Multiplication" $ property prop_Identity_Multiplication
+    specify "prop_Inverse_Addition" $ property prop_Inverse_Addition
+    specify "prop_Inverse_Multiplication" $ property prop_Inverse_Multiplication
+
+    --exponential properties
     specify "prop_ExpScalar_1" $ property prop_ExpScalar_1
     specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
     specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
