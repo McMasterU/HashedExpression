@@ -211,9 +211,9 @@ instance ToText Double where
 
 instance ToText Int where
   tt s = T.pack $ show s
-  
+
 instance ToText String where
   tt = T.pack
 
-instance ToText T.Text where 
+instance ToText T.Text where
   tt = id
