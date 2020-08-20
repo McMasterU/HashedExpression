@@ -18,7 +18,6 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
   - base 
-  - QuickCheck
   - utility-ht
   - containers
   - text
@@ -31,7 +30,6 @@ dependencies:
   - split
   - extra
   - easyplot
-  - string-interpolate
   - mtl
   - filepath
   - file-embed
@@ -118,3 +116,5 @@ tests:
       - hspec
       - process
       - HUnit
+      - string-interpolate
+      - QuickCheck
