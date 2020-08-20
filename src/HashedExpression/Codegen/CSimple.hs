@@ -517,10 +517,8 @@ instance Codegen CSimpleConfig where
               _ -> error "not a variable but you're getting it's shape"
          in retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      variableShapes :: [Shape]
-      variableShapes = map (variableShape . varName) variables
       variableSizes :: [Int]
-      variableSizes = map product variableShapes
+      variableSizes = map (product . variableShape . varName) variables
       -------------------------------------------------------------------------------
       checkError :: Maybe String
       checkError

@@ -22,6 +22,7 @@ import HashedExpression.Operation
 import HashedExpression.Problem
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
+import HashedExpression.Value
 import Data.String.Interpolate
 import Prelude hiding ((^))
 import Control.Monad (forM_)
@@ -31,12 +32,12 @@ main :: IO ()
 main = do
   let x = variable2D @10 @10 "x"
   let y = variable2D @10 @10 "y"
-  let kaka = variable1D @20 "x"
-  let k = project (at @2) kaka
-  let f = norm2square (ift (ft (x +: 0)) - 5) + k
+  let z = param "z"
+  let f = x <.> y + z
+  let valMap = Map.fromList [("z", VScalar 1.2)]
   case constructProblem f (Constraint []) of
     ProblemValid problem ->
-      case generateProblemCode (CSimpleConfig { output = OutputText }) problem Map.empty of
+      case generateProblemCode (CSimpleConfig { output = OutputText }) problem valMap of
         Success proceed -> proceed "algorithms/lbfgs-b"
         _ -> return ()
     _ -> return ()
