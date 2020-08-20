@@ -199,3 +199,21 @@ instance ComplexRealOp Double (Complex Double) where
   xRe = Complex.realPart
   xIm = Complex.imagPart
   conjugate = Complex.conjugate
+
+-------------------------------------------------------------------------------
+class ToText a where
+  tt :: a -> T.Text
+  ttq :: a -> T.Text
+  ttq s = "\"" <> tt s <> "\""
+
+instance ToText Double where
+  tt s = T.pack $ show s
+
+instance ToText Int where
+  tt s = T.pack $ show s
+  
+instance ToText String where
+  tt = T.pack
+
+instance ToText T.Text where 
+  tt = id

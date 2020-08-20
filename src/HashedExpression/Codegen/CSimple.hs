@@ -77,7 +77,7 @@ fromCCode c = case c of
   Empty -> []
   Scoped codes -> scoped (concatMap fromCCode codes)
   Printf [] -> []
-  Printf (x : xs) -> ["printf(" <> T.intercalate ", " (("\"" <> x <> "\"") : xs) <> ");"]
+  Printf (x : xs) -> ["printf(" <> T.intercalate ", " (ttq x : xs) <> ");"]
 
 -- | Helpers for code generation
 scoped :: Code -> Code
@@ -89,7 +89,7 @@ d2s :: Double -> Text
 d2s val
   | val == ninf = "-INFINITY"
   | val == inf = "INFINITY"
-  | otherwise = showT val
+  | otherwise = tt val
 
 fun :: Text -> [Text] -> Text
 fun f args = f <> "(" <> T.intercalate ", " args <> ")"
@@ -102,7 +102,7 @@ for iter bound codes =
       Control
         ( "for ("
             <> (iter <> " = 0; ")
-            <> (iter <> " < " <> showT bound <> "; ")
+            <> (iter <> " < " <> tt bound <> "; ")
             <> (iter <> "++")
             <> ")"
         )
@@ -124,9 +124,9 @@ forRange iter (start, end, step) codes =
     [ Statement $ "int " <> iter,
       Control
         ( "for ("
-            <> (iter <> " = " <> showT start <> ";")
-            <> (iter <> " <= " <> showT end <> "; ")
-            <> (iter <> " += " <> showT step)
+            <> (iter <> " = " <> tt start <> ";")
+            <> (iter <> " <= " <> tt end <> "; ")
+            <> (iter <> " += " <> tt step)
             <> ")"
         )
         codes
@@ -160,10 +160,10 @@ initCodegen config mp consecutiveIDs =
             | offsetVal == "" = ""
             | offsetVal == "0" = ""
             | otherwise = " + " <> offsetVal
-       in "ptr[" <> showT (addressMap nID) <> offset <> "]"
+       in "ptr[" <> tt (addressMap nID) <> offset <> "]"
     -- Accessor for complex
     reAt nID offsetVal = access nID offsetVal
-    imAt nID offsetVal = access nID $ offsetVal <> " + " <> showT (product (retrieveShape nID mp))
+    imAt nID offsetVal = access nID $ offsetVal <> " + " <> tt (product (retrieveShape nID mp))
 
 -------------------------------------------------------------------------------
 evaluating :: CSimpleCodegen -> [NodeID] -> Code
@@ -173,7 +173,7 @@ evaluating CSimpleCodegen {..} rootIDs =
     shapeOf nID = retrieveShape nID cExpressionMap
     elementTypeOf nID = retrieveElementType nID cExpressionMap
     addressOf :: NodeID -> Text
-    addressOf nID = "(ptr + " <> showT (cAddress nID) <> ")"
+    addressOf nID = "(ptr + " <> tt (cAddress nID) <> ")"
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     len nID = product (retrieveShape nID cExpressionMap)
     complexAt arg i = "(" <> (arg `reAt` i) <> " + " <> (arg `imAt` i) <> " * I)"
@@ -183,7 +183,7 @@ evaluating CSimpleCodegen {..} rootIDs =
        in case op of
             Var _ -> Empty
             Param _ -> Empty
-            Const val -> for i (len n) [Assign (n !! i) (showT val)]
+            Const val -> for i (len n) [Assign (n !! i) (tt val)]
             Sum args
               | et == R ->
                 let sumAt i = T.intercalate " + " $ map (!! i) args
@@ -209,11 +209,11 @@ evaluating CSimpleCodegen {..} rootIDs =
             Power x arg
               | et == R ->
                 for i (len n) $
-                  [ Assign (n !! i) (fun "pow" [arg !! i, showT x])
+                  [ Assign (n !! i) (fun "pow" [arg !! i, tt x])
                   ]
               | et == C ->
                 for i (len n) $
-                  [ Assign "double complex res" (fun "cpow" [arg `complexAt` i, showT x]),
+                  [ Assign "double complex res" (fun "cpow" [arg `complexAt` i, tt x]),
                     Assign (n `reAt` i) "creal(res)",
                     Assign (n `imAt` i) "cimag(res)"
                   ]
@@ -303,7 +303,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                   Just (b : bs, lst) = viewR branches
                   elseifEach (m, b) =
                     elseif_
-                      ((condition !! i) <> " <= " <> showT m)
+                      ((condition !! i) <> " <= " <> tt m)
                       ( if et == R
                           then [Assign (n !! i) (b !! i)]
                           else
@@ -313,7 +313,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                       )
                in for i (len n) $
                     [ if_
-                        ((condition !! i) <> " <= " <> showT m)
+                        ((condition !! i) <> " <= " <> tt m)
                         ( if et == R
                             then [Assign (n !! i) (b !! i)]
                             else
@@ -335,7 +335,7 @@ evaluating CSimpleCodegen {..} rootIDs =
             Rotate [amount] arg ->
               let [size] = shape
                in for i size $
-                    [ Assign "int origin" ("(i - " <> showT amount <> " + " <> showT size <> ") % " <> showT size)
+                    [ Assign "int origin" ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size)
                     ]
                       ++ ( if et == R
                              then [Assign (n !! i) (arg !! "origin")]
@@ -348,10 +348,10 @@ evaluating CSimpleCodegen {..} rootIDs =
               let [size1, size2] = shape
                in for i size1 $
                     [ for j size2 $
-                        [ Assign "int ai" ("(i - " <> showT amount1 <> " + " <> showT size1 <> ") % " <> showT size1),
-                          Assign "int aj" ("(j - " <> showT amount2 <> " + " <> showT size2 <> ") % " <> showT size2),
-                          Assign "int cur" ("i * " <> showT size2 <> " + j"),
-                          Assign "int origin" ("ai * " <> showT size2 <> " + aj")
+                        [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                          Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                          Assign "int cur" ("i * " <> tt size2 <> " + j"),
+                          Assign "int origin" ("ai * " <> tt size2 <> " + aj")
                         ]
                           ++ ( if et == R
                                  then [Assign (n !! "cur") (arg !! "origin")]
@@ -366,11 +366,11 @@ evaluating CSimpleCodegen {..} rootIDs =
                in for i size1 $
                     [ for j size2 $
                         [ for k size3 $
-                            [ Assign "int ai" ("(i - " <> showT amount1 <> " + " <> showT size1 <> ") % " <> showT size1),
-                              Assign "int aj" ("(j - " <> showT amount2 <> " + " <> showT size2 <> ") % " <> showT size2),
-                              Assign "int ak" ("(j - " <> showT amount3 <> " + " <> showT size3 <> ") % " <> showT size3),
-                              Assign "int cur" ("i * " <> showT size2 <> "*" <> showT size3 <> " + j * " <> showT size3 <> " + k"),
-                              Assign "int origin" ("ai * " <> showT size2 <> "*" <> showT size3 <> " + aj * " <> showT size3 <> " + ak")
+                            [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                              Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                              Assign "int ak" ("(j - " <> tt amount3 <> " + " <> tt size3 <> ") % " <> tt size3),
+                              Assign "int cur" ("i * " <> tt size2 <> "*" <> tt size3 <> " + j * " <> tt size3 <> " + k"),
+                              Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak")
                             ]
                               ++ ( if et == R
                                      then [Assign (n !! "cur") (arg !! "offset")]
@@ -383,12 +383,12 @@ evaluating CSimpleCodegen {..} rootIDs =
                     ]
             FT arg ->
               case shape of
-                [size] -> Statement (fun "dft_1d" [showT size, addressOf arg, addressOf n, "FFTW_FORWARD"])
-                [size1, size2] -> Statement (fun "dft_2d" [showT size1, showT size2, addressOf arg, addressOf n, "FFTW_FORWARD"])
+                [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_FORWARD"])
+                [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_FORWARD"])
             IFT arg ->
               case shape of
-                [size] -> Statement (fun "dft_1d" [showT size, addressOf arg, addressOf n, "FFTW_BACKWARD"])
-                [size1, size2] -> Statement (fun "dft_2d" [showT size1, showT size2, addressOf arg, addressOf n, "FFTW_BACKWARD"])
+                [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_BACKWARD"])
+                [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_BACKWARD"])
             Project dss arg ->
               case (dss, retrieveShape arg cExpressionMap) of
                 ([ds], [size]) ->
@@ -397,12 +397,12 @@ evaluating CSimpleCodegen {..} rootIDs =
                       forRange i (toRange ds size) $
                         if et == R
                           then
-                            [ Assign "int origin" ("i % " <> showT size),
+                            [ Assign "int origin" ("i % " <> tt size),
                               Assign (n !! "nxt") (arg !! "origin"),
                               Assign "nxt" "nxt + 1"
                             ]
                           else
-                            [ Assign "int origin" ("i % " <> showT size),
+                            [ Assign "int origin" ("i % " <> tt size),
                               Assign (n `reAt` "nxt") (arg `reAt` "origin"),
                               Assign (n `imAt` "nxt") (arg `imAt` "origin"),
                               Assign "nxt" "nxt + 1"
@@ -415,16 +415,16 @@ evaluating CSimpleCodegen {..} rootIDs =
                         [ forRange j (toRange ds2 size2) $
                             if et == R
                               then
-                                [ Assign "int ai" ("i % " <> showT size1),
-                                  Assign "int aj" ("j % " <> showT size2),
-                                  Assign "int origin" ("ai * " <> showT size2 <> " + aj"),
+                                [ Assign "int ai" ("i % " <> tt size1),
+                                  Assign "int aj" ("j % " <> tt size2),
+                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
                                   Assign (n !! "nxt") (arg !! "origin"),
                                   Assign "nxt" "nxt + 1"
                                 ]
                               else
-                                [ Assign "int ai" ("i % " <> showT size1),
-                                  Assign "int aj" ("j % " <> showT size2),
-                                  Assign "int origin" ("ai * " <> showT size2 <> " + aj"),
+                                [ Assign "int ai" ("i % " <> tt size1),
+                                  Assign "int aj" ("j % " <> tt size2),
+                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
                                   Assign (n `reAt` "nxt") (arg `reAt` "origin"),
                                   Assign (n `imAt` "nxt") (arg `imAt` "origin"),
                                   Assign "nxt" "nxt + 1"
@@ -439,18 +439,18 @@ evaluating CSimpleCodegen {..} rootIDs =
                             [ forRange k (toRange ds3 size3) $
                                 if et == R
                                   then
-                                    [ Assign "int ai" ("i % " <> showT size1),
-                                      Assign "int aj" ("j % " <> showT size2),
-                                      Assign "int ak" ("k % " <> showT size3),
-                                      Assign "int origin" ("ai * " <> showT size2 <> "*" <> showT size3 <> " + aj * " <> showT size3 <> " + ak"),
+                                    [ Assign "int ai" ("i % " <> tt size1),
+                                      Assign "int aj" ("j % " <> tt size2),
+                                      Assign "int ak" ("k % " <> tt size3),
+                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
                                       Assign (n !! "nxt") (arg !! "origin"),
                                       Assign "nxt" "nxt + 1"
                                     ]
                                   else
-                                    [ Assign "int ai" ("i % " <> showT size1),
-                                      Assign "int aj" ("j % " <> showT size2),
-                                      Assign "int ak" ("k % " <> showT size3),
-                                      Assign "int origin" ("ai * " <> showT size2 <> "*" <> showT size3 <> " + aj * " <> showT size3 <> " + ak"),
+                                    [ Assign "int ai" ("i % " <> tt size1),
+                                      Assign "int aj" ("j % " <> tt size2),
+                                      Assign "int ak" ("k % " <> tt size3),
+                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
                                       Assign (n `reAt` "nxt") (arg `reAt` "origin"),
                                       Assign (n `imAt` "nxt") (arg `imAt` "origin"),
                                       Assign "nxt" "nxt + 1"
@@ -475,12 +475,12 @@ evaluating CSimpleCodegen {..} rootIDs =
                             forRange i (toRange ds size) $
                               if et == R
                                 then
-                                  [ Assign "int origin" ("i % " <> showT size),
+                                  [ Assign "int origin" ("i % " <> tt size),
                                     Assign (n !! "origin") (sub !! "nxt"),
                                     Assign "nxt" "nxt + 1"
                                   ]
                                 else
-                                  [ Assign "int origin" ("i % " <> showT size),
+                                  [ Assign "int origin" ("i % " <> tt size),
                                     Assign (n `reAt` "origin") (sub `reAt` "nxt"),
                                     Assign (n `imAt` "origin") (sub `imAt` "nxt"),
                                     Assign "nxt" "nxt + 1"
@@ -493,16 +493,16 @@ evaluating CSimpleCodegen {..} rootIDs =
                               [ forRange j (toRange ds2 size2) $
                                   if et == R
                                     then
-                                      [ Assign "int ai" ("i % " <> showT size1),
-                                        Assign "int aj" ("j % " <> showT size2),
-                                        Assign "int origin" ("ai * " <> showT size2 <> " + aj"),
+                                      [ Assign "int ai" ("i % " <> tt size1),
+                                        Assign "int aj" ("j % " <> tt size2),
+                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
                                         Assign (n !! "origin") (sub !! "nxt"),
                                         Assign "nxt" "nxt + 1"
                                       ]
                                     else
-                                      [ Assign "int ai" ("i % " <> showT size1),
-                                        Assign "int aj" ("j % " <> showT size2),
-                                        Assign "int origin" ("ai * " <> showT size2 <> " + aj"),
+                                      [ Assign "int ai" ("i % " <> tt size1),
+                                        Assign "int aj" ("j % " <> tt size2),
+                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
                                         Assign (n `reAt` "origin") (sub `reAt` "nxt"),
                                         Assign (n `imAt` "origin") (sub `imAt` "nxt"),
                                         Assign "nxt" "nxt + 1"
@@ -517,18 +517,18 @@ evaluating CSimpleCodegen {..} rootIDs =
                                   [ forRange k (toRange ds3 size3) $
                                       if et == R
                                         then
-                                          [ Assign "int ai" ("i % " <> showT size1),
-                                            Assign "int aj" ("j % " <> showT size2),
-                                            Assign "int ak" ("k % " <> showT size3),
-                                            Assign "int origin" ("ai * " <> showT size2 <> "*" <> showT size3 <> " + aj * " <> showT size3 <> " + ak"),
+                                          [ Assign "int ai" ("i % " <> tt size1),
+                                            Assign "int aj" ("j % " <> tt size2),
+                                            Assign "int ak" ("k % " <> tt size3),
+                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
                                             Assign (n !! "origin") (sub !! "nxt"),
                                             Assign "nxt" "nxt + 1"
                                           ]
                                         else
-                                          [ Assign "int ai" ("i % " <> showT size1),
-                                            Assign "int aj" ("j % " <> showT size2),
-                                            Assign "int ak" ("k % " <> showT size3),
-                                            Assign "int origin" ("ai * " <> showT size2 <> "*" <> showT size3 <> " + aj * " <> showT size3 <> " + ak"),
+                                          [ Assign "int ai" ("i % " <> tt size1),
+                                            Assign "int aj" ("j % " <> tt size2),
+                                            Assign "int ak" ("k % " <> tt size3),
+                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
                                             Assign (n `reAt` "origin") (sub `reAt` "nxt"),
                                             Assign (n `imAt` "origin") (sub `imAt` "nxt"),
                                             Assign "nxt" "nxt + 1"
@@ -547,11 +547,11 @@ instance Codegen CSimpleConfig where
     | otherwise = Success $ \folder -> do
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
-      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map showT . valElems $ val
+      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
       -- Write values
       forM_ (Map.toList valMaps) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
-          let str = T.unwords . map showT . valElems $ val
+          let str = T.unwords . map tt . valElems $ val
           TIO.writeFile (folder </> var <.> "txt") str
       -- Write box constraints
       forM_ boxConstraints $ \c -> case c of
@@ -616,9 +616,9 @@ instance Codegen CSimpleConfig where
         | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
           Scoped
-            [ Printf ["Init value for " <> T.pack name <> "is not provided, generate random init for " <> T.pack "name" <> " ...\\n"],
+            [ Printf ["Init value for " <> tt name <> "is not provided, generate random init for " <> tt "name" <> " ...\\n"],
               for "i" (product shape) $
-                [Assign ("ptr[" <> showT offset <> "+ i]") ("(double) rand() / RAND_MAX")]
+                [Assign ("ptr[" <> tt offset <> "+ i]") ("(double) rand() / RAND_MAX")]
             ]
         where
           offset = cAddress nId
@@ -628,24 +628,24 @@ instance Codegen CSimpleConfig where
       writeResultCodeEach variable
         | output == OutputHDF5 =
           Scoped
-            [ Printf ["Writing " <> T.pack name <> " to " <> T.pack name <> "_out.h5...\\n"],
+            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.h5...\\n"],
               Statement "hid_t file, space, dset",
-              Assign ("hsize_t dims[" <> showT (length shape) <> "]") ("{" <> T.intercalate ", " (map showT shape) <> "}"),
-              Assign "file" (fun "H5Fcreate" ["\"" <> T.pack name <> "_out.h5\"", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
-              Assign "space" (fun "H5Screate_simple" [showT $ length shape, "dims", "NULL"]),
-              Assign "dset" (fun "H5Dcreate" ["file", "\"" <> T.pack name <> "\"", "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
-              Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> showT offset]),
+              Assign ("hsize_t dims[" <> tt (length shape) <> "]") ("{" <> T.intercalate ", " (map tt shape) <> "}"),
+              Assign "file" (fun "H5Fcreate" [ttq $ name <> "_out.h5", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Assign "space" (fun "H5Screate_simple" [tt $ length shape, "dims", "NULL"]),
+              Assign "dset" (fun "H5Dcreate" ["file", ttq name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> tt offset]),
               Statement "H5Dclose(dset)",
               Statement "H5Sclose(space)",
               Statement "H5Fclose(file)"
             ]
         | output == OutputText =
           Scoped $
-            [ Printf ["Writing " <> T.pack name <> " to " <> T.pack name <> "_out.txt...\\n"],
+            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.txt...\\n"],
               Statement "FILE *file",
-              Assign "file" (fun "fopen" ["\"" <> T.pack name <> "_out.txt\"", "\"w\""]),
+              Assign "file" (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
               for "i" (product shape) $
-                [ Statement (fun "fprintf" ["file", "\"%f \"", "ptr[" <> showT offset <> " + i]"])
+                [ Statement (fun "fprintf" ["file", ttq "%f ", "ptr[" <> tt offset <> " + i]"])
                 ],
               Statement "fclose(file)"
             ]
@@ -663,30 +663,22 @@ instance Codegen CSimpleConfig where
           "#include <time.h>",
           "#include \"hdf5.h\"",
           if containsFTNode expressionMap
-            then T.pack fftUtils
+            then tt fftUtils
             else "",
           "#include <complex.h>",
           "// number of (higher dimensional) variables ",
-          "#define NUM_VARIABLES " <> showT (length variables),
+          "#define NUM_VARIABLES " <> tt (length variables),
           "// number of real variables, because each higher dimensional var is a grid of real variables",
-          "#define NUM_ACTUAL_VARIABLES " <> showT (sum variableSizes),
-          "#define MEM_SIZE " <> showT cMemSize,
+          "#define NUM_ACTUAL_VARIABLES " <> tt (sum variableSizes),
+          "#define MEM_SIZE " <> tt cMemSize,
           "// all the actual double variables are allocated",
           "// one after another, starts from here",
-          "#define VARS_START_OFFSET " <> showT (cAddress (nodeId . head $ variables)),
-          "const char* var_name[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map (showT . varName) $ variables)
-            <> "};",
-          "const int var_size[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ variableSizes)
-            <> "};",
-          "const int var_offset[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ variableOffsets)
-            <> "};",
-          "const int partial_derivative_offset[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ partialDerivativeOffsets)
-            <> "};",
-          "const int objective_offset = " <> showT objectiveOffset <> ";",
+          "#define VARS_START_OFFSET " <> tt (cAddress (nodeId . head $ variables)),
+          "const char* var_name[NUM_VARIABLES] = {" <> (T.intercalate ", " . map (ttq . varName) $ variables) <> "};",
+          "const int var_size[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableSizes) <> "};",
+          "const int var_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableOffsets) <> "};",
+          "const int partial_derivative_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ partialDerivativeOffsets) <> "};",
+          "const int objective_offset = " <> tt objectiveOffset <> ";",
           "double ptr[MEM_SIZE];"
         ]
       -------------------------------------------------------------------------------
@@ -714,29 +706,29 @@ instance Codegen CSimpleConfig where
                       BoxBetween name (val1, val2) -> readLowerBoundCode name val1 ++ readUpperBoundCode name val2
                in concatMap readBoundCodeEach boxConstraints
             scalarConstraintDefineStuffs =
-              [ "#define NUM_SCALAR_CONSTRAINT " <> showT (length scalarConstraints),
+              [ "#define NUM_SCALAR_CONSTRAINT " <> tt (length scalarConstraints),
                 "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];",
                 "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];",
                 "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {"
-                  <> (T.intercalate "," . map (showT . cAddress . constraintValueId) $ scalarConstraints)
+                  <> (T.intercalate "," . map (tt . cAddress . constraintValueId) $ scalarConstraints)
                   <> "};",
                 "",
                 "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {"
                   <> T.intercalate
                     ", "
-                    [ "{" <> T.intercalate "," (map (showT . cAddress) . constraintPartialDerivatives $ sc) <> "}"
+                    [ "{" <> T.intercalate "," (map (tt . cAddress) . constraintPartialDerivatives $ sc) <> "}"
                       | sc <- scalarConstraints
                     ]
                   <> "};"
               ]
             readBoundScalarConstraints =
-              [ "sc_lower_bound[" <> showT i <> "] = " <> d2s val <> ";"
+              [ "sc_lower_bound[" <> tt i <> "] = " <> d2s val <> ";"
                 | (i, val) <- zip [0 ..] $ map constraintLowerBound scalarConstraints
               ]
-                <> [ "sc_upper_bound[" <> showT i <> "] = " <> d2s val <> ";"
+                <> [ "sc_upper_bound[" <> tt i <> "] = " <> d2s val <> ";"
                      | (i, val) <- zip [0 ..] $ map constraintUpperBound scalarConstraints
                    ]
-         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map showT $ varPosition) <> "};",
+         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ varPosition) <> "};",
               "double lower_bound[NUM_ACTUAL_VARIABLES];",
               "double upper_bound[NUM_ACTUAL_VARIABLES];"
             ]
@@ -787,42 +779,42 @@ toShapeString :: Shape -> T.Text
 toShapeString shape
   | length shape < 3 =
     "{"
-      <> (T.intercalate ", " . map showT $ shape <> replicate (3 - length shape) 1)
+      <> (T.intercalate ", " . map tt $ shape <> replicate (3 - length shape) 1)
       <> "}"
-  | otherwise = "{" <> (T.intercalate ", " . map showT $ shape) <> "}"
+  | otherwise = "{" <> (T.intercalate ", " . map tt $ shape) <> "}"
 
 -------------------------------------------------------------------------------
 
 generateReadValuesCode :: (String, Int) -> String -> Val -> CCode
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> Scoped [Assign ("*(" <> T.pack address <> ")") (showT value)]
-    V1D _ -> readFileText (T.pack name <> ".txt")
-    V2D _ -> readFileText (T.pack name <> ".txt")
-    V3D _ -> readFileText (T.pack name <> ".txt")
-    VFile (TXT filePath) -> readFileText $ T.pack filePath
-    VFile (HDF5 filePath dataset) -> readFileHD5 (T.pack filePath) (T.pack dataset)
+    VScalar value -> Scoped [Assign ("*(" <> tt address <> ")") (tt value)]
+    V1D _ -> readFileText (tt name <> ".txt")
+    V2D _ -> readFileText (tt name <> ".txt")
+    V3D _ -> readFileText (tt name <> ".txt")
+    VFile (TXT filePath) -> readFileText $ tt filePath
+    VFile (HDF5 filePath dataset) -> readFileHD5 (tt filePath) (tt dataset)
     VNum value ->
       for "i" size $
-        [ Assign ("*(" <> T.pack address <> " + i)") (showT value)
+        [ Assign ("*(" <> tt address <> " + i)") (tt value)
         ]
   where
     readFileText filePath =
       Scoped
-        [ Printf ["Reading " <> T.pack name <> " from text file " <> filePath <> " ...\\n"],
-          Assign "FILE *fp" ("fopen(\"" <> filePath <> "\", \"r\")"),
+        [ Printf ["Reading " <> tt name <> " from text file " <> filePath <> " ...\\n"],
+          Assign "FILE *fp" (fun "fopen" [ttq filePath, ttq "r"]),
           for "i" size $
-            [ Statement (fun "fscanf" ["fp", "\"%lf\"", T.pack address <> " + i"])
+            [ Statement (fun "fscanf" ["fp", ttq "%lf", tt address <> " + i"])
             ],
           Statement (fun "fclose" ["fp"])
         ]
     readFileHD5 filePath dataset =
       Scoped
-        [ Printf ["Reading " <> T.pack name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
+        [ Printf ["Reading " <> tt name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
           Statement "hid_t file, dset",
-          Assign "file" (fun "H5Fopen" ["\"" <> filePath <> "\"", "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
-          Assign "dset" (fun "H5Dopen" ["file", "\"" <> dataset <> "\"", "H5P_DEFAULT"]),
-          Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", T.pack address]),
+          Assign "file" (fun "H5Fopen" [ttq filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
+          Assign "dset" (fun "H5Dopen" ["file", ttq dataset, "H5P_DEFAULT"]),
+          Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", tt address]),
           Statement "H5Fclose (file)",
           Statement "H5Dclose (dset)"
         ]
