@@ -32,7 +32,7 @@ main = do
   let x = variable2D @10 @10 "x"
   let y = variable2D @10 @10 "y"
   let z = variable "z"
-  let exp = x <.> y + z
+  let exp = z * (1 / z)
   let valMap =
         Map.fromList
           [ ("x", V2D $ Array.listArray ((0, 0), (9, 9)) (replicate 50 1 ++ replicate 50 2)),
