@@ -1,4 +1,9 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 
 module InterpSpec where
 
@@ -7,7 +12,7 @@ import Data.Complex (Complex (..))
 import Data.Map.Strict (union, fromList)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
-import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
+import GHC.TypeLits (Nat, CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
@@ -299,42 +304,51 @@ prop_Inverse_Addition (Suite exp1 valMaps1) =
   eval valMaps1 (exp1 + (negate exp1)) == 0 
 
 --TODO: test failed
-prop_Inverse_Multiplication :: SuiteScalarR -> Bool
-prop_Inverse_Multiplication (Suite exp1 valMaps1) = 
-  eval valMaps1 (exp1 * (1 / exp1)) == 1
+prop_Inverse_Multiplication :: SuiteScalarR -> Property
+prop_Inverse_Multiplication (Suite exp1 valMaps1) =
+  eval valMaps1 exp1 /= 0 ==>
+    (eval valMaps1 (exp1 * (1 / exp1)) `shouldApprox` 1)
 
--- TODO: test failed for every exponential properties
 -- [ exponential properties ]
 -- 1) x^a * x^b = x ^ (a+b)
 -- 2) (xy)^a = x^a * y^a
 -- 3) (x^a) / (x^b) = x ^ (a-b), x != 0
 -- 4) a^(-m) = 1 / a^m, a != 0
--- 5) (a/b)^m = a^m / b^m, b != 0 
+-- 5) (a/b)^m = a^m / b^m, b != 0
 
-prop_ExpScalar_1 :: SuiteScalarR -> Int -> Int -> Bool 
-prop_ExpScalar_1 (Suite exp1 valMaps1) a b = 
-  eval valMaps1 ((exp1^a) * (exp1^b)) == eval valMaps1 (exp1^(a+b))
+newtype IntB n = IntB Int deriving (Show, Eq, Ord)
 
-prop_ExpScalar_2 :: SuiteScalarR -> SuiteScalarR -> Int -> Bool
-prop_ExpScalar_2 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
-  eval valMaps ((exp1 * exp2) ^ a) == eval valMaps ((exp1 ^ a) * (exp2 ^ a)) 
+instance (KnownNat n) => Arbitrary (IntB n) where
+  arbitrary = do
+    let nNat = nat @n
+    x <- arbitrary
+    return $ IntB $ signum x * (x `mod` nNat)
+
+prop_ExpScalar_1 :: SuiteScalarR -> IntB 5 -> IntB 5 -> Expectation
+prop_ExpScalar_1 (Suite exp1 valMaps1) (IntB a) (IntB b) =
+  eval valMaps1 ((exp1^a) * (exp1^b)) `shouldApprox` eval valMaps1 (exp1^(a+b))
+
+prop_ExpScalar_2 :: SuiteScalarR -> SuiteScalarR -> IntB 5 -> Expectation
+prop_ExpScalar_2 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
+  eval valMaps ((exp1 * exp2) ^ a) `shouldApprox` eval valMaps ((exp1 ^ a) * (exp2 ^ a))
   where
     valMaps = valMaps1 `union` valMaps2
 
-prop_ExpScalar_3 :: SuiteScalarR -> Int -> Int -> Property 
-prop_ExpScalar_3 (Suite exp1 valMaps1) a b =
-  ((eval valMaps1 exp1) /= 0) ==> 
-  (eval valMaps1 ((exp1 ^ a) / (exp1 ^ b)) == eval valMaps1 (exp1 ^ (a - b)))
+prop_ExpScalar_3 :: SuiteScalarR -> IntB 10 -> IntB 10 -> Property 
+prop_ExpScalar_3 (Suite exp1 valMaps1) (IntB a) (IntB b) =
+  (eval valMaps1 exp1 /= 0) ==>
+  (eval valMaps1 ((exp1 ^ a) / (exp1 ^ b)) `shouldApprox` eval valMaps1 (exp1 ^ (a - b)))
 
-prop_ExpScalar_4 :: SuiteScalarR -> Int -> Property 
-prop_ExpScalar_4 (Suite exp1 valMaps1) a = 
-  ((eval valMaps1 exp1) /= 0) ==> 
-  (eval valMaps1 (exp1 ^ (-a)) == eval valMaps1 (1 / (exp1 ^ a)))
+prop_ExpScalar_4 :: SuiteScalarR -> IntB 10 -> Property 
+prop_ExpScalar_4 (Suite exp1 valMaps1) (IntB a) = 
+  (eval valMaps1 exp1 /= 0) ==>
+  (eval valMaps1 (exp1 ^ (-a)) `shouldApprox` eval valMaps1 (1 / (exp1 ^ a)))
 
-prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> Int -> Property 
-prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
-  ((eval valMaps2 exp2) /= 0) ==>
-    ((eval valMaps (exp1 / exp1) ^ a) == (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
+-- TODO: test failed for every exponential properties
+prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property 
+prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
+  (eval valMaps exp2 /= 0) ==>
+    (((eval valMaps (exp1 / exp1)) ** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
     where
       valMaps = valMaps1 `union` valMaps2
 
@@ -343,7 +357,7 @@ prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) a =
 spec :: Spec
 spec =
   describe "Interp spec" $ do
-    specify "prop_dotProductScalar_1" $ property prop_dotProductScalar_1
+--    specify "prop_dotProductScalar_1" $ property prop_dotProductScalar_1
     specify "prop_dotProduct1D_1" $ property prop_dotProduct1D_1
     specify "prop_dotProduct2D_1" $ property prop_dotProduct2D_1
     specify "prop_dotProduct1D_3" $ property prop_dotProduct1D_3
@@ -360,10 +374,10 @@ spec =
     specify "prop_Inverse_Multiplication" $ property prop_Inverse_Multiplication
 
     --exponential properties
---    specify "prop_ExpScalar_1" $ property prop_ExpScalar_1
---    specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
---    specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
---    specify "prop_ExpScalar_4" $ property prop_ExpScalar_4
+    specify "prop_ExpScalar_1" $ property prop_ExpScalar_1
+    specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
+    specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
+    specify "prop_ExpScalar_4" $ property prop_ExpScalar_4
 --    specify "prop_ExpScalar_5" $ property prop_ExpScalar_5
 
 

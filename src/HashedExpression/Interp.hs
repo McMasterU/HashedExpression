@@ -198,7 +198,7 @@ instance Evaluable Scalar R Double where
         Scale arg1 arg2 ->
           eval valMap (expZeroR mp arg1)
             * eval valMap (expZeroR mp arg2)
-        Power x arg -> eval valMap (expZeroR mp arg) ^ x --  power operator with 2 inputs, power and base
+        Power x arg -> eval valMap (expZeroR mp arg) ** fromIntegral x --  power operator with 2 inputs, power and base
         Div arg1 arg2 ->
           --  division operator with 2 inputs
           eval valMap (expZeroR mp arg1)
@@ -288,7 +288,7 @@ instance Evaluable Scalar C (Complex Double) where
       case retrieveOp n mp of
         Sum args -> sum . map (eval valMap . expZeroC mp) $ args --  sum of a scalar is of the type C
         Mul args -> product . map (eval valMap . expZeroC mp) $ args --  Multiplication of a scalar is of the type C
-        Power x arg -> eval valMap (expZeroC mp arg) ^ x --  power evaluation of arg to the power of x
+        Power x arg -> eval valMap (expZeroC mp arg) ** fromIntegral x --  power evaluation of arg to the power of x
         Neg arg -> - (eval valMap $ expZeroC mp arg)
         Scale arg1 arg2 ->
           case retrieveElementType arg1 mp of
@@ -394,7 +394,7 @@ evaluate1DReal valMap (mp, n)
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate1DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate1DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate1DReal valMap $ (mp, arg)
       Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
@@ -476,7 +476,7 @@ evaluate1DComplex valMap (mp, n)
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate1DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate1DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate1DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate1DComplex valMap $ (mp, arg)
       Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
@@ -561,7 +561,7 @@ evaluate2DReal valMap (mp, n)
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate2DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate2DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate2DReal valMap $ (mp, arg)
       Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
@@ -651,7 +651,7 @@ evaluate2DComplex valMap (mp, n)
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate2DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate2DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate2DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate2DComplex valMap $ (mp, arg)
       Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
@@ -747,7 +747,7 @@ evaluate3DReal valMap (mp, n)
       Mul args ->
         foldrElementwise (*) . map (evaluate3DReal valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate3DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate3DReal valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate3DReal valMap $ (mp, arg)
       Scale arg1 arg2 ->
         let scalar = eval valMap $ expZeroR mp arg1
@@ -831,7 +831,7 @@ evaluate3DComplex valMap (mp, n)
         --  evaluate the Mul over undefined input arguments
         foldrElementwise (*) . map (evaluate3DComplex valMap . (mp,)) $
           args
-      Power x arg -> fmap (^ x) (evaluate3DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
+      Power x arg -> fmap (** fromIntegral x) (evaluate3DComplex valMap $ (mp, arg)) --  evaluate the power over undefined input arguments
       Neg arg -> fmap negate . evaluate3DComplex valMap $ (mp, arg)
       Scale arg1 arg2 ->
         case retrieveElementType arg1 mp of
