@@ -14,7 +14,6 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.STRef.Strict
 import qualified Data.Set as Set
-import Data.String.Interpolate
 import Graphics.EasyPlot
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
