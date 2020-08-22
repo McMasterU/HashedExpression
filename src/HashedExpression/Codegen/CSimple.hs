@@ -19,8 +19,6 @@ import Data.List.HT (viewR)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
-import Data.String.Interpolate
-import qualified Data.String.Interpolate as I
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -63,43 +61,76 @@ data CSimpleCodegen = CSimpleCodegen
     config :: CSimpleConfig
   }
 
+data CCode
+  = Assign Text Text
+  | Statement Text
+  | Control Text [CCode]
+  | Empty
+  | Scoped [CCode]
+  | Printf [Text]
+
+fromCCode :: CCode -> Code
+fromCCode c = case c of
+  Assign lhs rhs -> [lhs <> " = " <> rhs <> ";"]
+  Statement ss -> [ss <> ";"]
+  Control control codes -> [control] ++ scoped (concatMap fromCCode codes)
+  Empty -> []
+  Scoped codes -> scoped (concatMap fromCCode codes)
+  Printf [] -> []
+  Printf (x : xs) -> ["printf(" <> T.intercalate ", " (ttq x : xs) <> ");"]
+
+-- | Helpers for code generation
+scoped :: Code -> Code
+scoped codes = ["{"] ++ indent 2 codes ++ ["}"]
+
 -------------------------------------------------------------------------------
 
 d2s :: Double -> Text
 d2s val
   | val == ninf = "-INFINITY"
   | val == inf = "INFINITY"
-  | otherwise = showT val
+  | otherwise = tt val
 
--- | Helpers for code generation
-scoped :: Code -> Code
-scoped codes = ["{"] ++ indent 2 codes ++ ["}"]
+fun :: Text -> [Text] -> Text
+fun f args = f <> "(" <> T.intercalate ", " args <> ")"
 
 -- | Helper functions to generate codes
-for :: Text -> Int -> Code -> Code
+for :: Text -> Int -> [CCode] -> CCode
 for iter bound codes =
-  scoped $
-    [ [i|int #{iter};|],
-      [i|for (#{iter} = 0; #{iter} < #{bound}; #{iter}++)|]
+  Scoped
+    [ Statement $ "int " <> iter,
+      Control
+        ( "for ("
+            <> (iter <> " = 0; ")
+            <> (iter <> " < " <> tt bound <> "; ")
+            <> (iter <> "++")
+            <> ")"
+        )
+        codes
     ]
-      ++ scoped codes
 
-forRange :: Text -> (Int, Int, Int) -> Code -> Code
+if_ :: Text -> [CCode] -> CCode
+if_ condition = Control ("if (" <> condition <> ")")
+
+elseif_ :: Text -> [CCode] -> CCode
+elseif_ condition = Control ("else if (" <> condition <> ")")
+
+else_ :: [CCode] -> CCode
+else_ = Control "else"
+
+forRange :: Text -> (Int, Int, Int) -> [CCode] -> CCode
 forRange iter (start, end, step) codes =
-  scoped $
-    [ [i|int #{iter};|],
-      [i|for (#{iter} = #{start}; #{iter} <= #{end}; #{iter} += #{step})|]
+  Scoped
+    [ Statement $ "int " <> iter,
+      Control
+        ( "for ("
+            <> (iter <> " = " <> tt start <> ";")
+            <> (iter <> " <= " <> tt end <> "; ")
+            <> (iter <> " += " <> tt step)
+            <> ")"
+        )
+        codes
     ]
-      ++ scoped codes
-
-if_ :: Text -> Code -> Code
-if_ condition codes = [[i|if (#{condition})|]] ++ scoped codes
-
-elseif :: Text -> Code -> Code
-elseif condition codes = [[i|else if (#{condition})|]] ++ scoped codes
-
-else_ :: Code -> Code
-else_ codes = ["else"] ++ scoped codes
 
 initCodegen :: CSimpleConfig -> ExpressionMap -> [NodeID] -> CSimpleCodegen
 initCodegen config mp consecutiveIDs =
@@ -129,338 +160,383 @@ initCodegen config mp consecutiveIDs =
             | offsetVal == "" = ""
             | offsetVal == "0" = ""
             | otherwise = " + " <> offsetVal
-       in [i|ptr[#{addressMap nID}#{offset}]|]
+       in "ptr[" <> tt (addressMap nID) <> offset <> "]"
     -- Accessor for complex
     reAt nID offsetVal = access nID offsetVal
-    imAt nID offsetVal = access nID $ offsetVal <> " + " <> showT (product (retrieveShape nID mp))
+    imAt nID offsetVal = access nID $ offsetVal <> " + " <> tt (product (retrieveShape nID mp))
 
 -------------------------------------------------------------------------------
 evaluating :: CSimpleCodegen -> [NodeID] -> Code
 evaluating CSimpleCodegen {..} rootIDs =
-  concatMap genCode $ topologicalSortManyRoots (cExpressionMap, rootIDs)
+  concatMap (fromCCode . genCode) $ topologicalSortManyRoots (cExpressionMap, rootIDs)
   where
     shapeOf nID = retrieveShape nID cExpressionMap
     elementTypeOf nID = retrieveElementType nID cExpressionMap
     addressOf :: NodeID -> Text
-    addressOf nID = [I.i|(ptr + #{cAddress nID})|]
+    addressOf nID = "(ptr + " <> tt (cAddress nID) <> ")"
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     len nID = product (retrieveShape nID cExpressionMap)
-    genCode :: NodeID -> Code
+    complexAt arg i = "(" <> (arg `reAt` i) <> " + " <> (arg `imAt` i) <> " * I)"
+    genCode :: NodeID -> CCode
     genCode n =
       let (shape, et, op) = retrieveNode n cExpressionMap
        in case op of
-            Var _ -> []
-            Param _ -> []
-            Const val -> for i (len n) [[I.i|#{n !! i} = #{val};|]]
+            Var _ -> Empty
+            Param _ -> Empty
+            Const val -> for i (len n) [Assign (n !! i) (tt val)]
             Sum args
               | et == R ->
                 let sumAt i = T.intercalate " + " $ map (!! i) args
-                 in for i (len n) [[I.i|#{n !! i} = #{sumAt i};|]]
+                 in for i (len n) [Assign (n !! i) (sumAt i)]
               | et == C ->
                 let sumReAt i = T.intercalate " + " $ map (`reAt` i) args
                     sumImAt i = T.intercalate " + " $ map (`imAt` i) args
                  in for i (len n) $
-                      [ [I.i|#{n `reAt` i} = #{sumReAt i};|],
-                        [I.i|#{n `imAt` i} = #{sumImAt i};|]
+                      [ Assign (n `reAt` i) (sumReAt i),
+                        Assign (n `imAt` i) (sumImAt i)
                       ]
             Mul args
               | et == R ->
                 let prodAt i = T.intercalate " * " $ map (!! i) args
-                 in for i (len n) [[I.i|#{n !! i} = #{prodAt i};|]]
+                 in for i (len n) [Assign (n !! i) (prodAt i)]
               | et == C ->
-                let prodAt i = T.intercalate " * " $ map (\x -> [I.i|((#{x `reAt` i}) + (#{x `imAt` i}) * I)|]) args
+                let prodAt i = T.intercalate " * " $ map (`complexAt` i) args
                  in for i (len n) $
-                      [ [I.i|double complex res = #{prodAt i};|],
-                        [I.i|#{n `reAt` i} = creal(res);|],
-                        [I.i|#{n `imAt` i} = cimag(res);|]
+                      [ Assign "double complex res" (prodAt i),
+                        Assign (n `reAt` i) "creal(res)",
+                        Assign (n `imAt` i) "cimag(res)"
                       ]
             Power x arg
-              | et == R -> for i (len n) [[I.i|#{n !! i} = pow(#{arg !! i}, #{x});|]]
+              | et == R ->
+                for i (len n) $
+                  [ Assign (n !! i) (fun "pow" [arg !! i, tt x])
+                  ]
               | et == C ->
                 for i (len n) $
-                  [ [I.i|double complex res = cpow((#{arg `reAt` i}) + (#{arg `imAt` i}) * I, #{x});|],
-                    [I.i|#{n `reAt` i} = creal(res);|],
-                    [I.i|#{n `imAt` i} = cimag(res);|]
+                  [ Assign "double complex res" (fun "cpow" [arg `complexAt` i, tt x]),
+                    Assign (n `reAt` i) "creal(res)",
+                    Assign (n `imAt` i) "cimag(res)"
                   ]
             Neg arg
-              | et == R -> for i (len n) [[I.i|#{n !! i} = - #{arg !! i};|]]
+              | et == R -> for i (len n) [Assign (n !! i) ("-" <> (arg !! i))]
               | et == C ->
                 for i (len n) $
-                  [ [I.i|#{n `reAt` i} = - #{arg `reAt` i};|],
-                    [I.i|#{n `imAt` i} = - #{arg `imAt` i};|]
+                  [ Assign (n `reAt` i) ("-" <> (arg `reAt` i)),
+                    Assign (n `imAt` i) ("-" <> (arg `imAt` i))
                   ]
             Scale scalar arg
-              | et == R -> for i (len n) [[I.i|#{n !! i} = #{scalar !! nooffset} * #{arg !! i};|]]
+              | et == R -> for i (len n) [Assign (n !! i) ((scalar !! nooffset) <> "*" <> (arg !! i))]
               | et == C,
                 retrieveElementType scalar cExpressionMap == R ->
                 for i (len n) $
-                  [ [I.i|#{n `reAt` i} = #{scalar !! nooffset} * #{arg `reAt` i};|],
-                    [I.i|#{n `imAt` i} = #{scalar !! nooffset} * #{arg `imAt` i};|]
+                  [ Assign (n `reAt` i) ((scalar !! nooffset) <> "*" <> (arg `reAt` i)),
+                    Assign (n `imAt` i) ((scalar !! nooffset) <> "*" <> (arg `imAt` i))
                   ]
               | et == C,
                 retrieveElementType scalar cExpressionMap == C ->
                 for i (len n) $
-                  [ [I.i|double complex s = (#{scalar `reAt` nooffset}) + (#{scalar `imAt` nooffset}) * I;|],
-                    [I.i|double complex res = s * (#{arg `reAt` i} + #{arg `imAt` i} * I);|],
-                    [I.i|#{n `reAt` i} = creal(res);|],
-                    [I.i|#{n `imAt` i} = cimag(res);|]
+                  [ Assign "double complex res" ((scalar `complexAt` nooffset) <> "*" <> (arg `complexAt` i)),
+                    Assign (n `reAt` i) "creal(res)",
+                    Assign (n `imAt` i) "cimag(res)"
                   ]
             Div arg1 arg2
-              | et == R -> for i (len n) [[I.i|#{n !! i} = #{arg1 !! i} / #{arg2 !! i};|]]
+              | et == R ->
+                for i (len n) $
+                  [Assign (n !! i) ((arg1 !! i) <> " / " <> (arg2 !! i))]
               | et == C ->
                 for i (len n) $
-                  [ [I.i|double complex res = ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) / ((#{arg2 `reAt` i}) + (#{arg2 `imAt` i}) * I);|],
-                    [I.i|#{n `reAt` i} = creal(res);|],
-                    [I.i|#{n `imAt` i} = cimag(res);|]
+                  [ Assign "double complex res" ((arg1 `complexAt` i) <> " / " <> (arg2 `complexAt` i)),
+                    Assign (n `reAt` i) "creal(res)",
+                    Assign (n `imAt` i) "cimag(res)"
                   ]
-            Sqrt arg -> for i (len n) [[I.i|#{n !! i} = sqrt(#{arg !! i});|]]
-            Sin arg -> for i (len n) [[I.i|#{n !! i} = sin(#{arg !! i});|]]
-            Cos arg -> for i (len n) [[I.i|#{n !! i} = cos(#{arg !! i});|]]
-            Tan arg -> for i (len n) [[I.i|#{n !! i} = tan(#{arg !! i});|]]
-            Exp arg -> for i (len n) [[I.i|#{n !! i} = exp(#{arg !! i});|]]
-            Log arg -> for i (len n) [[I.i|#{n !! i} = log(#{arg !! i});|]]
-            Sinh arg -> for i (len n) [[I.i|#{n !! i} = sinh(#{arg !! i});|]]
-            Cosh arg -> for i (len n) [[I.i|#{n !! i} = cosh(#{arg !! i});|]]
-            Tanh arg -> for i (len n) [[I.i|#{n !! i} = tanh(#{arg !! i});|]]
-            Asin arg -> for i (len n) [[I.i|#{n !! i} = asin(#{arg !! i});|]]
-            Acos arg -> for i (len n) [[I.i|#{n !! i} = acos(#{arg !! i});|]]
-            Atan arg -> for i (len n) [[I.i|#{n !! i} = atan(#{arg !! i});|]]
-            Asinh arg -> for i (len n) [[I.i|#{n !! i} = asinh(#{arg !! i});|]]
-            Acosh arg -> for i (len n) [[I.i|#{n !! i} = acosh(#{arg !! i});|]]
-            Atanh arg -> for i (len n) [[I.i|#{n !! i} = atanh(#{arg !! i});|]]
+            Sqrt arg -> for i (len n) [Assign (n !! i) (fun "sqrt" [arg !! i])]
+            Sin arg -> for i (len n) [Assign (n !! i) (fun "sin" [arg !! i])]
+            Cos arg -> for i (len n) [Assign (n !! i) (fun "cos" [arg !! i])]
+            Tan arg -> for i (len n) [Assign (n !! i) (fun "tan" [arg !! i])]
+            Exp arg -> for i (len n) [Assign (n !! i) (fun "exp" [arg !! i])]
+            Log arg -> for i (len n) [Assign (n !! i) (fun "log" [arg !! i])]
+            Sinh arg -> for i (len n) [Assign (n !! i) (fun "sinh" [arg !! i])]
+            Cosh arg -> for i (len n) [Assign (n !! i) (fun "cosh" [arg !! i])]
+            Tanh arg -> for i (len n) [Assign (n !! i) (fun "tanh" [arg !! i])]
+            Asin arg -> for i (len n) [Assign (n !! i) (fun "asin" [arg !! i])]
+            Acos arg -> for i (len n) [Assign (n !! i) (fun "acos" [arg !! i])]
+            Atan arg -> for i (len n) [Assign (n !! i) (fun "atan" [arg !! i])]
+            Asinh arg -> for i (len n) [Assign (n !! i) (fun "asinh" [arg !! i])]
+            Acosh arg -> for i (len n) [Assign (n !! i) (fun "acosh" [arg !! i])]
+            Atanh arg -> for i (len n) [Assign (n !! i) (fun "atanh" [arg !! i])]
             RealImag arg1 arg2 ->
               for i (len n) $
-                [ [I.i|#{n `reAt` i} = #{arg1 !! i};|],
-                  [I.i|#{n `imAt` i} = #{arg2 !! i};|]
+                [ Assign (n `reAt` i) (arg1 !! i),
+                  Assign (n `imAt` i) (arg2 !! i)
                 ]
-            RealPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `reAt` i};|]]
-            ImagPart arg -> for i (len n) [[I.i|#{n !! i} = #{arg `imAt` i};|]]
+            RealPart arg -> for i (len n) [Assign (n !! i) (arg `reAt` i)]
+            ImagPart arg -> for i (len n) [Assign (n !! i) (arg `imAt` i)]
             Conjugate arg ->
               for i (len n) $
-                [ [I.i|#{n `reAt` i} = #{arg `reAt` i};|],
-                  [I.i|#{n `imAt` i} = -#{arg `imAt` i};|]
+                [ Assign (n `reAt` i) (arg `reAt` i),
+                  Assign (n `imAt` i) ("-" <> (arg `imAt` i))
                 ]
             InnerProd arg1 arg2
-              | et == R && null (shapeOf arg1) -> [[I.i|#{n !! nooffset} = #{arg1 !! nooffset} * #{arg2 !! nooffset};|]]
+              | et == R && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> (arg2 !! nooffset))
               | et == R ->
-                let initCodes = [[I.i|double acc = 0;|]]
-                    codes = for i (len arg1) [[I.i|acc += #{arg1 !! i} * #{arg2 !! i};|]]
-                    afterCodes = [[I.i|#{n !! nooffset} = acc;|]]
-                 in scoped $ initCodes ++ codes ++ afterCodes
+                Scoped
+                  [ Assign "double acc" "0",
+                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 !! i) <> "*" <> (arg2 !! i)))],
+                    Assign (n !! nooffset) "acc"
+                  ]
               -- Conjugate the second operand
               | et == C && null (shapeOf arg1) ->
-                scoped
-                  [ [I.i|double complex res = ((#{arg1 `reAt` nooffset}) + (#{arg1 `imAt` nooffset}) * I) * ((#{arg2 `reAt` nooffset}) - (#{arg2 `imAt` nooffset}) * I);|],
-                    [I.i|#{n `reAt` nooffset} = creal(res);|],
-                    [I.i|#{n `imAt` nooffset} = cimag(res);|]
+                Scoped
+                  [ Assign "double complex res" ((arg1 `complexAt` nooffset) <> " * " <> fun "conj" [arg2 `complexAt` nooffset]),
+                    Assign (n `reAt` nooffset) "creal(res)",
+                    Assign (n `imAt` nooffset) "cimag(res)"
                   ]
               | et == C ->
-                let initCodes = [[I.i|double complex acc = 0 + 0 * I;|]]
-                    codes = for i (len arg1) [[I.i|acc += ((#{arg1 `reAt` i}) + (#{arg1 `imAt` i}) * I) * ((#{arg2 `reAt` i}) - (#{arg2 `imAt` i}) * I);|]]
-                    afterCodes =
-                      [ [I.i|#{n `reAt` nooffset} = creal(acc);|],
-                        [I.i|#{n `imAt` nooffset} = cimag(acc);|]
-                      ]
-                 in scoped $ initCodes ++ codes ++ afterCodes
+                Scoped
+                  [ Assign "double complex acc" "0 + 0 * I",
+                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 `complexAt` i) <> " * " <> fun "conj" [arg2 `complexAt` i]))],
+                    Assign (n `reAt` nooffset) "creal(acc)",
+                    Assign (n `imAt` nooffset) "cimag(acc)"
+                  ]
             Piecewise marks condition branches ->
-              let m : ms = map showT marks
+              let m : ms = marks
                   Just (b : bs, lst) = viewR branches
                   elseifEach (m, b) =
-                    elseif
-                      [I.i|#{condition !! i} <= #{m}|]
+                    elseif_
+                      ((condition !! i) <> " <= " <> tt m)
                       ( if et == R
-                          then [[I.i|#{n !! i} = #{b !! i};|]]
+                          then [Assign (n !! i) (b !! i)]
                           else
-                            [ [I.i|#{n `reAt` i} = #{b `reAt` i};|],
-                              [I.i|#{n `imAt` i} = #{b `imAt` i};|]
+                            [ Assign (n `reAt` i) (b `reAt` i),
+                              Assign (n `imAt` i) (b `imAt` i)
                             ]
                       )
                in for i (len n) $
-                    if_
-                      [I.i|#{condition !! i} <= #{m}|]
-                      ( if et == R
-                          then [[I.i|#{n !! i} = #{b !! i};|]]
-                          else
-                            [ [I.i|#{n `reAt` i} = #{b `reAt` i};|],
-                              [I.i|#{n `imAt` i} = #{b `imAt` i};|]
-                            ]
-                      )
-                      ++ concatMap elseifEach (zip ms bs)
-                      ++ else_
+                    [ if_
+                        ((condition !! i) <> " <= " <> tt m)
                         ( if et == R
-                            then [[I.i|#{n !! i} = #{lst !! i};|]]
+                            then [Assign (n !! i) (b !! i)]
                             else
-                              [ [I.i|#{n `reAt` i} = #{lst `reAt` i};|],
-                                [I.i|#{n `imAt` i} = #{lst `imAt` i};|]
+                              [ Assign (n `reAt` i) (b `reAt` i),
+                                Assign (n `imAt` i) (b `imAt` i)
                               ]
                         )
+                    ]
+                      ++ map elseifEach (zip ms bs)
+                      ++ [ else_
+                             ( if et == R
+                                 then [Assign (n !! i) (lst !! i)]
+                                 else
+                                   [ Assign (n `reAt` i) (lst `reAt` i),
+                                     Assign (n `imAt` i) (lst `imAt` i)
+                                   ]
+                             )
+                         ]
             Rotate [amount] arg ->
               let [size] = shape
                in for i size $
-                    [[I.i|int ai = (#{i} - #{amount} + #{size}) % #{size};|]]
+                    [ Assign "int origin" ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size)
+                    ]
                       ++ ( if et == R
-                             then [[I.i|#{n !! i} = #{arg !! "ai"};|]]
+                             then [Assign (n !! i) (arg !! "origin")]
                              else
-                               [ [I.i|#{n `reAt` i} = #{arg `reAt` "ai"};|],
-                                 [I.i|#{n `imAt` i} = #{arg `imAt` "ai"};|]
+                               [ Assign (n `reAt` i) (arg `reAt` "origin"),
+                                 Assign (n `imAt` i) (arg `imAt` "origin")
                                ]
                          )
             Rotate [amount1, amount2] arg ->
               let [size1, size2] = shape
-                  toIndex i j = [I.i|#{i} * #{size2} + #{j}|]
                in for i size1 $
-                    for j size2 $
-                      [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
-                        [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|]
-                      ]
-                        ++ ( if et == R
-                               then [[I.i|#{n !! (toIndex i j)} = #{arg !! (toIndex "ai" "aj")};|]]
-                               else
-                                 [ [I.i|#{n `reAt` (toIndex i j)} = #{arg `reAt` (toIndex "ai" "aj")};|],
-                                   [I.i|#{n `imAt` (toIndex i j)} = #{arg `imAt` (toIndex "ai" "aj")};|]
-                                 ]
-                           )
-            Rotate [amount1, amount2, amount3] arg ->
-              let [size1, size2, size3] = shape
-                  toIndex i j k = [I.i|#{i} * #{size2} * #{size3} + #{j} * #{size3} + #{k}|]
-               in for i size1 $
-                    for j size2 $
-                      for k size3 $
-                        [ [I.i|int ai = (#{i} - #{amount1} + #{size1}) % #{size1};|],
-                          [I.i|int aj = (#{j} - #{amount2} + #{size2}) % #{size2};|],
-                          [I.i|int ak = (#{k} - #{amount3} + #{size3}) % #{size3}'|]
+                    [ for j size2 $
+                        [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                          Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                          Assign "int cur" ("i * " <> tt size2 <> " + j"),
+                          Assign "int origin" ("ai * " <> tt size2 <> " + aj")
                         ]
                           ++ ( if et == R
-                                 then [[I.i|#{n !! (toIndex i j k)} = #{arg !! (toIndex "ai" "aj" "ak")};|]]
+                                 then [Assign (n !! "cur") (arg !! "origin")]
                                  else
-                                   [ [I.i|#{n `reAt` (toIndex i j k)} = #{arg `reAt` (toIndex "ai" "aj" "ak")};|],
-                                     [I.i|#{n `imAt` (toIndex i j k)} = #{arg `imAt` (toIndex "ai" "aj" "ak")};|]
+                                   [ Assign (n `reAt` "cur") (arg `reAt` "origin"),
+                                     Assign (n `imAt` "cur") (arg `imAt` "origin")
                                    ]
                              )
+                    ]
+            Rotate [amount1, amount2, amount3] arg ->
+              let [size1, size2, size3] = shape
+               in for i size1 $
+                    [ for j size2 $
+                        [ for k size3 $
+                            [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                              Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                              Assign "int ak" ("(j - " <> tt amount3 <> " + " <> tt size3 <> ") % " <> tt size3),
+                              Assign "int cur" ("i * " <> tt size2 <> "*" <> tt size3 <> " + j * " <> tt size3 <> " + k"),
+                              Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak")
+                            ]
+                              ++ ( if et == R
+                                     then [Assign (n !! "cur") (arg !! "offset")]
+                                     else
+                                       [ Assign (n `reAt` "cur") (arg `reAt` "offset"),
+                                         Assign (n `imAt` "cur") (arg `imAt` "offset")
+                                       ]
+                                 )
+                        ]
+                    ]
             FT arg ->
               case shape of
-                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, FFTW_FORWARD);|]]
-                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, FFTW_FORWARD);|]]
+                [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_FORWARD"])
+                [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_FORWARD"])
             IFT arg ->
               case shape of
-                [size] -> [[I.i|dft_1d(#{size}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
-                [size1, size2] -> [[I.i|dft_2d(#{size1}, #{size2}, #{addressOf arg}, #{addressOf n}, FFTW_BACKWARD);|]]
+                [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_BACKWARD"])
+                [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_BACKWARD"])
             Project dss arg ->
               case (dss, retrieveShape arg cExpressionMap) of
                 ([ds], [size]) ->
-                  let toIndex i = [I.i|#{i} % #{size}|]
-                   in scoped $
-                        "int nxt = 0;" :
-                        ( forRange i (toRange ds size) $
+                  Scoped $
+                    [ Assign "int nxt" "0",
+                      forRange i (toRange ds size) $
+                        if et == R
+                          then
+                            [ Assign "int origin" ("i % " <> tt size),
+                              Assign (n !! "nxt") (arg !! "origin"),
+                              Assign "nxt" "nxt + 1"
+                            ]
+                          else
+                            [ Assign "int origin" ("i % " <> tt size),
+                              Assign (n `reAt` "nxt") (arg `reAt` "origin"),
+                              Assign (n `imAt` "nxt") (arg `imAt` "origin"),
+                              Assign "nxt" "nxt + 1"
+                            ]
+                    ]
+                ([ds1, ds2], [size1, size2]) ->
+                  Scoped $
+                    [ Assign "int nxt" "0",
+                      forRange i (toRange ds1 size1) $
+                        [ forRange j (toRange ds2 size2) $
                             if et == R
                               then
-                                [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i)};|],
-                                  "nxt++;"
+                                [ Assign "int ai" ("i % " <> tt size1),
+                                  Assign "int aj" ("j % " <> tt size2),
+                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                                  Assign (n !! "nxt") (arg !! "origin"),
+                                  Assign "nxt" "nxt + 1"
                                 ]
                               else
-                                [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i)};|],
-                                  [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i)};|],
-                                  "nxt++;"
+                                [ Assign "int ai" ("i % " <> tt size1),
+                                  Assign "int aj" ("j % " <> tt size2),
+                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                                  Assign (n `reAt` "nxt") (arg `reAt` "origin"),
+                                  Assign (n `imAt` "nxt") (arg `imAt` "origin"),
+                                  Assign "nxt" "nxt + 1"
                                 ]
-                        )
-                ([ds1, ds2], [size1, size2]) ->
-                  let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
-                   in scoped $
-                        "int nxt = 0;" :
-                        ( forRange i (toRange ds1 size1) $
-                            forRange j (toRange ds2 size2) $
-                              if et == R
-                                then
-                                  [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i j)};|],
-                                    "nxt++;"
-                                  ]
-                                else
-                                  [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i j)};|],
-                                    [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i j)};|],
-                                    "nxt++;"
-                                  ]
-                        )
+                        ]
+                    ]
                 ([ds1, ds2, ds3], [size1, size2, size3]) ->
-                  let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
-                   in scoped $
-                        "int nxt = 0;" :
-                        ( forRange i (toRange ds1 size1) $
-                            forRange j (toRange ds2 size2) $
-                              forRange k (toRange ds3 size3) $
+                  Scoped $
+                    [ Assign "int nxt" "0",
+                      forRange i (toRange ds1 size1) $
+                        [ forRange j (toRange ds2 size2) $
+                            [ forRange k (toRange ds3 size3) $
                                 if et == R
                                   then
-                                    [ [I.i|#{n !! "nxt"} = #{arg !! (toIndex i j k)};|],
-                                      "nxt++;"
+                                    [ Assign "int ai" ("i % " <> tt size1),
+                                      Assign "int aj" ("j % " <> tt size2),
+                                      Assign "int ak" ("k % " <> tt size3),
+                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                      Assign (n !! "nxt") (arg !! "origin"),
+                                      Assign "nxt" "nxt + 1"
                                     ]
                                   else
-                                    [ [I.i|#{n `reAt` "nxt"} = #{arg `reAt` (toIndex i j k)};|],
-                                      [I.i|#{n `imAt` "nxt"} = #{arg `imAt` (toIndex i j k)};|],
-                                      "nxt++;"
+                                    [ Assign "int ai" ("i % " <> tt size1),
+                                      Assign "int aj" ("j % " <> tt size2),
+                                      Assign "int ak" ("k % " <> tt size3),
+                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                      Assign (n `reAt` "nxt") (arg `reAt` "origin"),
+                                      Assign (n `imAt` "nxt") (arg `imAt` "origin"),
+                                      Assign "nxt" "nxt + 1"
                                     ]
-                        )
+                            ]
+                        ]
+                    ]
             Inject dss sub base ->
               let copyBase =
-                    if et == R
-                      then for i (len n) [[I.i|#{n !! i} = #{base !! i};|]]
-                      else
-                        for i (len n) $
-                          [ [I.i|#{n `reAt` i} = #{base `reAt` i};|],
-                            [I.i|#{n `imAt` i} = #{base `imAt` i};|]
+                    for i (len n) $
+                      if et == R
+                        then [Assign (n !! i) (base !! i)]
+                        else
+                          [ Assign (n `reAt` i) (base `reAt` i),
+                            Assign (n `imAt` i) (base `imAt` i)
                           ]
                   injectSub =
                     case (dss, retrieveShape n cExpressionMap) of
                       ([ds], [size]) ->
-                        let toIndex i = [I.i|#{i} % #{size}|]
-                         in scoped $
-                              "int nxt = 0;" :
-                              ( forRange i (toRange ds size) $
+                        Scoped $
+                          [ Assign "int nxt" "0",
+                            forRange i (toRange ds size) $
+                              if et == R
+                                then
+                                  [ Assign "int origin" ("i % " <> tt size),
+                                    Assign (n !! "origin") (sub !! "nxt"),
+                                    Assign "nxt" "nxt + 1"
+                                  ]
+                                else
+                                  [ Assign "int origin" ("i % " <> tt size),
+                                    Assign (n `reAt` "origin") (sub `reAt` "nxt"),
+                                    Assign (n `imAt` "origin") (sub `imAt` "nxt"),
+                                    Assign "nxt" "nxt + 1"
+                                  ]
+                          ]
+                      ([ds1, ds2], [size1, size2]) ->
+                        Scoped $
+                          [ Assign "int nxt" "0",
+                            forRange i (toRange ds1 size1) $
+                              [ forRange j (toRange ds2 size2) $
                                   if et == R
                                     then
-                                      [ [I.i|#{n !! (toIndex i)} = #{sub !! "nxt"};|],
-                                        "nxt++;"
+                                      [ Assign "int ai" ("i % " <> tt size1),
+                                        Assign "int aj" ("j % " <> tt size2),
+                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                                        Assign (n !! "origin") (sub !! "nxt"),
+                                        Assign "nxt" "nxt + 1"
                                       ]
                                     else
-                                      [ [I.i|#{n `reAt` (toIndex i)} = #{sub `reAt` "nxt"};|],
-                                        [I.i|#{n `imAt` (toIndex i)} = #{sub `imAt` "nxt"};|],
-                                        "nxt++;"
+                                      [ Assign "int ai" ("i % " <> tt size1),
+                                        Assign "int aj" ("j % " <> tt size2),
+                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                                        Assign (n `reAt` "origin") (sub `reAt` "nxt"),
+                                        Assign (n `imAt` "origin") (sub `imAt` "nxt"),
+                                        Assign "nxt" "nxt + 1"
                                       ]
-                              )
-                      ([ds1, ds2], [size1, size2]) ->
-                        let toIndex i j = [I.i|(#{i} % #{size1}) * #{size2} + (#{j} % #{size2})|]
-                         in scoped $
-                              "int nxt = 0;" :
-                              ( forRange i (toRange ds1 size1) $
-                                  forRange j (toRange ds2 size2) $
-                                    if et == R
-                                      then
-                                        [ [I.i|#{n !! (toIndex i j)} = #{sub !! "nxt"};|],
-                                          "nxt++;"
-                                        ]
-                                      else
-                                        [ [I.i|#{n `reAt` (toIndex i j)} = #{sub `reAt` "nxt"};|],
-                                          [I.i|#{n `imAt` (toIndex i j)} = #{sub `imAt` "nxt"};|],
-                                          "nxt++;"
-                                        ]
-                              )
+                              ]
+                          ]
                       ([ds1, ds2, ds3], [size1, size2, size3]) ->
-                        let toIndex i j k = [I.i|(#{i} % #{size1}) * #{size2} * #{size3} + (#{j} % #{size2}) * #{size3} + (#{k} % #{size3})|]
-                         in scoped $
-                              "int nxt = 0;" :
-                              ( forRange i (toRange ds1 size1) $
-                                  forRange j (toRange ds2 size2) $
-                                    forRange k (toRange ds3 size3) $
+                        Scoped $
+                          [ Assign "int nxt" "0",
+                            forRange i (toRange ds1 size1) $
+                              [ forRange j (toRange ds2 size2) $
+                                  [ forRange k (toRange ds3 size3) $
                                       if et == R
                                         then
-                                          [ [I.i|#{n !! (toIndex i j k)} = #{sub !! "nxt"};|],
-                                            "nxt++;"
+                                          [ Assign "int ai" ("i % " <> tt size1),
+                                            Assign "int aj" ("j % " <> tt size2),
+                                            Assign "int ak" ("k % " <> tt size3),
+                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                            Assign (n !! "origin") (sub !! "nxt"),
+                                            Assign "nxt" "nxt + 1"
                                           ]
                                         else
-                                          [ [I.i|#{n `reAt` (toIndex i j k)} = #{sub `reAt` "nxt"};|],
-                                            [I.i|#{n `imAt` (toIndex i j k)} = #{sub `imAt` "nxt"};|],
-                                            "nxt++;"
+                                          [ Assign "int ai" ("i % " <> tt size1),
+                                            Assign "int aj" ("j % " <> tt size2),
+                                            Assign "int ak" ("k % " <> tt size3),
+                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                            Assign (n `reAt` "origin") (sub `reAt` "nxt"),
+                                            Assign (n `imAt` "origin") (sub `imAt` "nxt"),
+                                            Assign "nxt" "nxt + 1"
                                           ]
-                              )
-               in scoped $ copyBase ++ injectSub
+                                  ]
+                              ]
+                          ]
+               in Scoped [copyBase, injectSub]
             node -> error $ "Not implemented " ++ show node
 
 -------------------------------------------------------------------------------
@@ -471,11 +547,11 @@ instance Codegen CSimpleConfig where
     | otherwise = Success $ \folder -> do
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
-      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map showT . valElems $ val
+      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
       -- Write values
       forM_ (Map.toList valMaps) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
-          let str = T.unwords . map showT . valElems $ val
+          let str = T.unwords . map tt . valElems $ val
           TIO.writeFile (folder </> var <.> "txt") str
       -- Write box constraints
       forM_ boxConstraints $ \c -> case c of
@@ -517,10 +593,8 @@ instance Codegen CSimpleConfig where
               _ -> error "not a variable but you're getting it's shape"
          in retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      variableShapes :: [Shape]
-      variableShapes = map (variableShape . varName) variables
       variableSizes :: [Int]
-      variableSizes = map product variableShapes
+      variableSizes = map (product . variableShape . varName) variables
       -------------------------------------------------------------------------------
       checkError :: Maybe String
       checkError
@@ -541,43 +615,40 @@ instance Codegen CSimpleConfig where
       readValCodeEach (name, nId)
         | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
-          scoped
-            [ [i|printf("Init value for #{name} is not provided, generating random for #{name} ... \\n");|],
-              "int i;",
-              [i|for (i = 0; i < #{product shape}; i++){|],
-              [i|  ptr[#{offset} + i] = ((double) rand() / RAND_MAX);|],
-              "}"
+          Scoped
+            [ Printf ["Init value for " <> tt name <> "is not provided, generate random init for " <> tt "name" <> " ...\\n"],
+              for "i" (product shape) $
+                [Assign ("ptr[" <> tt offset <> "+ i]") ("(double) rand() / RAND_MAX")]
             ]
         where
           offset = cAddress nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
-      writeResultCodeEach :: Variable -> Code
+      writeResultCodeEach :: Variable -> CCode
       writeResultCodeEach variable
         | output == OutputHDF5 =
-          scoped
-            [ [i|printf("Writing #{name} to #{name}_out.h5...\\n");|],
-              "hid_t file, space, dset;",
-              [i|hsize_t dims[#{length shape}] = {#{intercalate ", " . map show $ shape}};|],
-              [i|file = H5Fcreate("#{name}_out.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);|],
-              [i|space = H5Screate_simple (#{length shape}, dims, NULL);|],
-              [i|dset = H5Dcreate (file, "#{name}", H5T_IEEE_F64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);|],
-              [i|H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr + #{offset});|],
-              "H5Dclose(dset);",
-              "H5Sclose(space);",
-              "H5Fclose(file);"
+          Scoped
+            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.h5...\\n"],
+              Statement "hid_t file, space, dset",
+              Assign ("hsize_t dims[" <> tt (length shape) <> "]") ("{" <> T.intercalate ", " (map tt shape) <> "}"),
+              Assign "file" (fun "H5Fcreate" [ttq $ name <> "_out.h5", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Assign "space" (fun "H5Screate_simple" [tt $ length shape, "dims", "NULL"]),
+              Assign "dset" (fun "H5Dcreate" ["file", ttq name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> tt offset]),
+              Statement "H5Dclose(dset)",
+              Statement "H5Sclose(space)",
+              Statement "H5Fclose(file)"
             ]
         | output == OutputText =
-          scoped $
-            [ [i|printf("Writing #{name} to #{name}_out.txt...\\n");|],
-              "FILE *file;",
-              [i|file = fopen("#{name}_out.txt", "w");|]
+          Scoped $
+            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.txt...\\n"],
+              Statement "FILE *file",
+              Assign "file" (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
+              for "i" (product shape) $
+                [ Statement (fun "fprintf" ["file", ttq "%f ", "ptr[" <> tt offset <> " + i]"])
+                ],
+              Statement "fclose(file)"
             ]
-              ++ ( for "i" (product shape) $
-                     [ [i|fprintf(file, "%f ", ptr[#{offset} + i]);|]
-                     ]
-                 )
-              ++ ["fclose(file);"]
         where
           nId = nodeId variable
           name = varName variable
@@ -592,30 +663,22 @@ instance Codegen CSimpleConfig where
           "#include <time.h>",
           "#include \"hdf5.h\"",
           if containsFTNode expressionMap
-            then T.pack fftUtils
+            then tt fftUtils
             else "",
           "#include <complex.h>",
           "// number of (higher dimensional) variables ",
-          "#define NUM_VARIABLES " <> showT (length variables),
+          "#define NUM_VARIABLES " <> tt (length variables),
           "// number of real variables, because each higher dimensional var is a grid of real variables",
-          "#define NUM_ACTUAL_VARIABLES " <> showT (sum variableSizes),
-          "#define MEM_SIZE " <> showT cMemSize,
+          "#define NUM_ACTUAL_VARIABLES " <> tt (sum variableSizes),
+          "#define MEM_SIZE " <> tt cMemSize,
           "// all the actual double variables are allocated",
           "// one after another, starts from here",
-          "#define VARS_START_OFFSET " <> showT (cAddress (nodeId . head $ variables)),
-          "const char* var_name[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map (showT . varName) $ variables)
-            <> "};",
-          "const int var_size[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ variableSizes)
-            <> "};",
-          "const int var_offset[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ variableOffsets)
-            <> "};",
-          "const int partial_derivative_offset[NUM_VARIABLES] = {"
-            <> (T.intercalate ", " . map showT $ partialDerivativeOffsets)
-            <> "};",
-          "const int objective_offset = " <> showT objectiveOffset <> ";",
+          "#define VARS_START_OFFSET " <> tt (cAddress (nodeId . head $ variables)),
+          "const char* var_name[NUM_VARIABLES] = {" <> (T.intercalate ", " . map (ttq . varName) $ variables) <> "};",
+          "const int var_size[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableSizes) <> "};",
+          "const int var_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableOffsets) <> "};",
+          "const int partial_derivative_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ partialDerivativeOffsets) <> "};",
+          "const int objective_offset = " <> tt objectiveOffset <> ";",
           "double ptr[MEM_SIZE];"
         ]
       -------------------------------------------------------------------------------
@@ -624,15 +687,17 @@ instance Codegen CSimpleConfig where
             varWithPos = zip vars varPosition
             getPos name = snd . fromMaybe (error "get starting position variable") . find ((== name) . fst) $ varWithPos
             readUpperBoundCode name val =
-              generateReadValuesCode
-                ((name ++ "_ub"), product $ variableShape name)
-                ("upper_bound + " ++ show (getPos name))
-                val
+              fromCCode $
+                generateReadValuesCode
+                  ((name ++ "_ub"), product $ variableShape name)
+                  ("upper_bound + " ++ show (getPos name))
+                  val
             readLowerBoundCode name val =
-              generateReadValuesCode
-                ((name ++ "_lb"), (product $ variableShape name))
-                ("lower_bound + " ++ show (getPos name))
-                val
+              fromCCode $
+                generateReadValuesCode
+                  ((name ++ "_lb"), (product $ variableShape name))
+                  ("lower_bound + " ++ show (getPos name))
+                  val
             readBounds =
               let readBoundCodeEach cnt =
                     case cnt of
@@ -641,29 +706,29 @@ instance Codegen CSimpleConfig where
                       BoxBetween name (val1, val2) -> readLowerBoundCode name val1 ++ readUpperBoundCode name val2
                in concatMap readBoundCodeEach boxConstraints
             scalarConstraintDefineStuffs =
-              [ "#define NUM_SCALAR_CONSTRAINT " <> showT (length scalarConstraints),
+              [ "#define NUM_SCALAR_CONSTRAINT " <> tt (length scalarConstraints),
                 "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];",
                 "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];",
                 "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {"
-                  <> (T.intercalate "," . map (showT . cAddress . constraintValueId) $ scalarConstraints)
+                  <> (T.intercalate "," . map (tt . cAddress . constraintValueId) $ scalarConstraints)
                   <> "};",
                 "",
                 "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {"
                   <> T.intercalate
                     ", "
-                    [ "{" <> T.intercalate "," (map (showT . cAddress) . constraintPartialDerivatives $ sc) <> "}"
+                    [ "{" <> T.intercalate "," (map (tt . cAddress) . constraintPartialDerivatives $ sc) <> "}"
                       | sc <- scalarConstraints
                     ]
                   <> "};"
               ]
             readBoundScalarConstraints =
-              [ "sc_lower_bound[" <> showT i <> "] = " <> d2s val <> ";"
+              [ "sc_lower_bound[" <> tt i <> "] = " <> d2s val <> ";"
                 | (i, val) <- zip [0 ..] $ map constraintLowerBound scalarConstraints
               ]
-                <> [ "sc_upper_bound[" <> showT i <> "] = " <> d2s val <> ";"
+                <> [ "sc_upper_bound[" <> tt i <> "] = " <> d2s val <> ";"
                      | (i, val) <- zip [0 ..] $ map constraintUpperBound scalarConstraints
                    ]
-         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map showT $ varPosition) <> "};",
+         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ varPosition) <> "};",
               "double lower_bound[NUM_ACTUAL_VARIABLES];",
               "double upper_bound[NUM_ACTUAL_VARIABLES];"
             ]
@@ -681,12 +746,12 @@ instance Codegen CSimpleConfig where
       readValsCodes =
         ["void read_values() {"]
           ++ ["  srand(time(NULL));"] --
-          ++ scoped (concatMap readValCodeEach varsAndParams)
+          ++ scoped (concatMap (fromCCode . readValCodeEach) varsAndParams)
           ++ ["}"] --
           -------------------------------------------------------------------------------
       writeResultCodes =
         ["void write_result()"]
-          ++ scoped (concatMap writeResultCodeEach variables)
+          ++ scoped (concatMap (fromCCode . writeResultCodeEach) variables)
       -------------------------------------------------------------------------------
       evaluatingCodes =
         ["void evaluate_partial_derivatives_and_objective()"]
@@ -714,46 +779,42 @@ toShapeString :: Shape -> T.Text
 toShapeString shape
   | length shape < 3 =
     "{"
-      <> (T.intercalate ", " . map showT $ shape <> replicate (3 - length shape) 1)
+      <> (T.intercalate ", " . map tt $ shape <> replicate (3 - length shape) 1)
       <> "}"
-  | otherwise = "{" <> (T.intercalate ", " . map showT $ shape) <> "}"
+  | otherwise = "{" <> (T.intercalate ", " . map tt $ shape) <> "}"
 
 -------------------------------------------------------------------------------
 
-generateReadValuesCode :: (String, Int) -> String -> Val -> Code
+generateReadValuesCode :: (String, Int) -> String -> Val -> CCode
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> scoped ["*(" <> T.pack address <> ") = " <> showT value <> ";"]
-    V1D _ -> readFileText (T.pack name <> ".txt")
-    V2D _ -> readFileText (T.pack name <> ".txt")
-    V3D _ -> readFileText (T.pack name <> ".txt")
-    VFile (TXT filePath) -> readFileText $ T.pack filePath
-    VFile (HDF5 filePath dataset) -> readFileHD5 (T.pack filePath) (T.pack dataset)
+    VScalar value -> Scoped [Assign ("*(" <> tt address <> ")") (tt value)]
+    V1D _ -> readFileText (tt name <> ".txt")
+    V2D _ -> readFileText (tt name <> ".txt")
+    V3D _ -> readFileText (tt name <> ".txt")
+    VFile (TXT filePath) -> readFileText $ tt filePath
+    VFile (HDF5 filePath dataset) -> readFileHD5 (tt filePath) (tt dataset)
     VNum value ->
-      scoped
-        [ "int i;",
-          [i|for (i = 0; i < #{size}; i++){|],
-          [i|  *(#{address} + i) = #{value};|],
-          "}"
+      for "i" size $
+        [ Assign ("*(" <> tt address <> " + i)") (tt value)
         ]
   where
     readFileText filePath =
-      scoped
-        [ [i|printf("Reading #{name} from text file #{filePath} ... \\n");|],
-          [i|FILE *fp = fopen("#{filePath}", "r");|],
-          "int i;",
-          [i|for (i = 0; i < #{size}; i++){|],
-          [i|  fscanf(fp, "%lf", #{address} + i);|],
-          "}",
-          "fclose(fp);"
+      Scoped
+        [ Printf ["Reading " <> tt name <> " from text file " <> filePath <> " ...\\n"],
+          Assign "FILE *fp" (fun "fopen" [ttq filePath, ttq "r"]),
+          for "i" size $
+            [ Statement (fun "fscanf" ["fp", ttq "%lf", tt address <> " + i"])
+            ],
+          Statement (fun "fclose" ["fp"])
         ]
     readFileHD5 filePath dataset =
-      scoped
-        [ [i|printf("Reading #{name} from HDF5 file in dataset #{dataset} from #{filePath} ... \\n");|],
-          "hid_t file, dset;",
-          [i|file = H5Fopen("#{filePath}", H5F_ACC_RDONLY, H5P_DEFAULT);|],
-          [i|dset = H5Dopen(file, "#{dataset}", H5P_DEFAULT);|],
-          [i|H5Dread (dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, #{address});|],
-          "H5Fclose (file);",
-          "H5Dclose (dset);"
+      Scoped
+        [ Printf ["Reading " <> tt name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
+          Statement "hid_t file, dset",
+          Assign "file" (fun "H5Fopen" [ttq filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
+          Assign "dset" (fun "H5Dopen" ["file", ttq dataset, "H5P_DEFAULT"]),
+          Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", tt address]),
+          Statement "H5Fclose (file)",
+          Statement "H5Dclose (dset)"
         ]

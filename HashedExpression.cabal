@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ccdd8f30c909335af4225e2c1937026d63c6afed9faedab621e948b42136dff5
+-- hash: a2357a407d3ac7200d87b65bb90d3b9a49e5d0ed909899edeff283631b64b98f
 
 name:           HashedExpression
 version:        0.0.5
@@ -70,8 +70,7 @@ library
       alex
     , happy
   build-depends:
-      QuickCheck
-    , array
+      array
     , base
     , binary
     , bytestring
@@ -84,7 +83,6 @@ library
     , mtl
     , process
     , split
-    , string-interpolate
     , text
     , time
     , utility-ht
@@ -103,7 +101,6 @@ executable HashedExpression-exe
     , happy
   build-depends:
       HashedExpression
-    , QuickCheck
     , array
     , base
     , binary
@@ -118,7 +115,6 @@ executable HashedExpression-exe
     , mtl
     , process
     , split
-    , string-interpolate
     , text
     , time
     , utility-ht
@@ -152,7 +148,6 @@ executable symphony
   build-depends:
       HashedExpression
     , JuicyPixels
-    , QuickCheck
     , array
     , base
     , binary
@@ -168,7 +163,6 @@ executable symphony
     , process
     , regex-posix
     , split
-    , string-interpolate
     , text
     , time
     , utility-ht

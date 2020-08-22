@@ -24,7 +24,6 @@ import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
-import HashedExpression.Problem
 import HashedExpression.Value
 import Prelude hiding ((^))
 

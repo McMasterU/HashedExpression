@@ -45,6 +45,14 @@ localOffset shape indices
     sum . zipWith (*) indices . map product . tail . tails $ shape
   | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
 
+for1 :: T.Text -> Int -> Code -> Code
+for1 iter bound codes =
+  scoped $
+    [ [I.i|int #{iter};|],
+      [I.i|for (#{iter} = 0; #{iter} < #{bound}; #{iter}++)|]
+    ]
+      ++ scoped codes
+
 -- | Generate a fully working C program that compute the expression and
 -- print out the result, mostly used for testing
 singleExpressionCProgram ::
@@ -73,11 +81,11 @@ singleExpressionCProgram valMaps expr =
     codes = evaluating codeGen [n]
     -- print the value of expression
     printValue
-      | et == R = for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+      | et == R = for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
       | et == C =
-        for i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+        for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
           ++ [[I.i|printf("\\n");|]]
-          ++ for i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
+          ++ for1 i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
     releaseMemory = ["free(ptr);"]
     -------------------------------------------------------------------------------
     assigningValues :: CSimpleCodegen -> ValMaps -> Code
