@@ -88,10 +88,10 @@ inspect exp = traceShow (debugPrint exp) exp
 separateDVarAlone :: Transformation
 separateDVarAlone =
   multipleTimes 1000 . toRecursiveTransformation . chainModifications . map fromSubstitution $
-    [ x |<.>| (y |*| dz) |.~~~~~~> (x * y) |<.>| dz,
-      s |*| (x |<.>| dy) |.~~~~~~> (s *. x) |<.>| dy,
-      s |*| (x |*| dy) |.~~~~~~> (s * x) |*| dy,
-      x |<.>| rotate amount dy |.~~~~~~> (rotate (negate amount) x |<.>| dy)
+    [ x |<.>| (y |*| dz) |.~~> (x * y) |<.>| dz,
+      s |*| (x |<.>| dy) |.~~> (s *. x) |<.>| dy,
+      s |*| (x |*| dy) |.~~> (s * x) |*| dy,
+      x |<.>| rotate amount dy |.~~> (rotate (negate amount) x |<.>| dy)
     ]
 
 -- | Group a sum to many sums, each sum is corresponding to a DVar, preparing for aggregateByDVar
@@ -130,8 +130,8 @@ groupByDVar exp@(mp, n) =
 aggregateByDVar :: Transformation
 aggregateByDVar =
   toRecursiveTransformation . chainModifications . map fromSubstitution $
-    [ sumP (mapL (|*| y) xs) |. isDVar y ~~~~~~> sumP xs |*| y,
-      sumP (mapL (|<.>| y) xs) |. isDVar y ~~~~~~> sumP xs |<.>| y
+    [ sumP (mapL (|*| y) xs) |. isDVar y ~~> sumP xs |*| y,
+      sumP (mapL (|<.>| y) xs) |. isDVar y ~~> sumP xs |<.>| y
     ]
 
 -- | Normalize each partial derivative

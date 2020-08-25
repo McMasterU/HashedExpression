@@ -22,7 +22,7 @@
 --   * Create a Substitution
 --
 --  @
---   substitution = x * one |.~~~~~~> x
+--   substitution = x * one |.~~> x
 --  @
 --
 --   * Create a Transformation
@@ -35,8 +35,8 @@ module HashedExpression.Internal.Pattern
   ( -- * Substitution
     Substitution,
     fromSubstitution,
-    (~~~~~~>),
-    (|.~~~~~~>),
+    (~~>),
+    (|.~~>),
     (|.),
 
     -- * Patterns
@@ -118,28 +118,28 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
 
 -- | Create a 'Substitution' that matches a 'Pattern' (automatically converting into a 'GuardedPattern' that's always true) and
 --   replaces it with another 'Pattern'
-(|.~~~~~~>) ::
+(|.~~>) ::
   -- | find match
   Pattern ->
   -- | replacement
   Pattern ->
   -- | combined result
   Substitution
-(|.~~~~~~>) pattern replacement =
+(|.~~>) pattern replacement =
   (GP pattern $ Prelude.const (Prelude.const True), replacement)
 
 -- | Create a 'Substitution' that matches a 'GuardedPattern' (a 'Pattern' that only matches upon fulfilling a condition) and
 --   replaces it with another 'Pattern'
-(~~~~~~>) ::
+(~~>) ::
   -- | find a match
   GuardedPattern ->
   -- | replacement
   Pattern ->
   -- | combined result
   Substitution
-(~~~~~~>) gPattern replacement = (gPattern, replacement)
+(~~>) gPattern replacement = (gPattern, replacement)
 
-infix 0 |.~~~~~~>, ~~~~~~>
+infix 0 |.~~>, ~~>
 
 -- | Turn a 'Pattern' into a 'GuardedPattern' (so it only matches upon fulfilling a condition)
 (|.) ::

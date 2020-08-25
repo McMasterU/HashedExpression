@@ -40,8 +40,8 @@ import HashedExpression.Internal.Expression
 -- | For ordering things inside 'Sum' or 'Product' so we can write rules like
 --
 -- @
---   restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~*
---   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v))
+--   restOfProduct ~* (x +: y) ~* (z +: w) |.~~> restOfProduct ~*
+--   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~> restOfSum ~+ ((x + u) +: (y + v))
 --   ...
 -- @
 nodeTypeWeight :: HasCallStack => Op -> Int
