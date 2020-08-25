@@ -8,7 +8,7 @@ module Commons where
 import Control.Applicative (liftA2)
 import Control.Monad (foldM, forM)
 import Data.Array hiding (range)
-import Data.Complex (Complex (..))
+import Data.Complex (Complex (..), imagPart, realPart)
 import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
@@ -33,6 +33,7 @@ import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
+import Text.Printf
 import Var
 import Prelude hiding ((^))
 
@@ -556,3 +557,114 @@ instance (Ix i) => ComplexRealOp (Array i Double) (Array i (Complex Double)) whe
   xRe arr = listArray (bounds arr) $ map xRe (elems arr)
   xIm arr = listArray (bounds arr) $ map xIm (elems arr)
   conjugate arr = listArray (bounds arr) $ map conjugate (elems arr)
+
+-- | Approximable class
+class Show a => Approximable a where
+  -- | (~=) checks if the two values are within acceptable numerical error
+  (~=) :: a -> a -> Bool
+
+  -- | Prettyprint a string produced by show
+  prettifyShow :: a -> String
+
+infix 4 ~=
+
+{-
+   Calculating the reletive error for two double-precision input arguments.
+   It returns the error calculating by |a-b|/ max(|a|.|b|), where a and b are double-precision numbers, so it returns the relative
+   error as double.
+-}
+relativeError :: Double -> Double -> Double
+relativeError a b = abs (a - b) / max (abs a) (abs b)
+
+{-
+Instance which belongs to approximable class for Double precision inputs.
+It takes 2 double precision inputs and return whether are within acceptable numerical error.
+Returns true if the error is less than the condition value
+-}
+instance Approximable Double where
+  (~=) :: Double -> Double -> Bool
+  a ~= b
+    | abs (a - b) < 1.0e-5 = True
+    | a == b = True
+    | otherwise = relativeError a b < 0.01
+  prettifyShow a
+    | abs a < 1e-10 = "0" --  in prettify, inputs less than a small condition value consider as zero,
+    | otherwise = printf "%.2f" a --  otherwise, it shows the exact input.
+
+{-
+Instance which belongs to approximable class for Complex Double precision inputs.
+It takes 2 Complex double precision inputs and apply ~= operation on them.
+calculating the error in real and imaginary parts of the complex input seperately.
+Returns true if the error is less than the condition value.
+-}
+instance Approximable (Complex Double) where
+  (~=) :: Complex Double -> Complex Double -> Bool -- Using approximable operation ~= for two Complex Double input and returns Bool
+  a ~= b = (realPart a ~= realPart b) && (imagPart a ~= imagPart b) --  check for real and imaginary parts seperately
+  prettifyShow a =
+    prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i" --  Prettyprint a string produced by show
+
+{-
+Instance which belongs to approximable class for 1D array with Double-precision elements as an input.
+Returns true if the dimentions are the same and the input arrays be elementwisely within acceptable numerical error.
+-}
+instance Approximable (Array Int Double) where
+  (~=) :: Array Int Double -> Array Int Double -> Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
+
+{-
+Instance which belongs to approximable class for 1D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
+-}
+instance Approximable (Array Int (Complex Double)) where
+  (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
+
+{-
+Instance which belongs to approximable class for 2D array with double-precision elements as an input.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
+-}
+instance Approximable (Array (Int, Int) Double) where
+  (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
+
+{-
+Instance which belongs to approximable class for 2D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
+-}
+instance Approximable (Array (Int, Int) (Complex Double)) where
+  (~=) ::
+    Array (Int, Int) (Complex Double) ->
+    Array (Int, Int) (Complex Double) ->
+    Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
+
+{-
+Instance which belongs to approximable class for 3D array with double-precision elements as an input.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
+-}
+instance Approximable (Array (Int, Int, Int) Double) where
+  (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
+
+{-
+Instance which belongs to approximable class for 3D array with complex double-precision elements as an input.
+Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
+-}
+instance Approximable (Array (Int, Int, Int) (Complex Double)) where
+  (~=) ::
+    Array (Int, Int, Int) (Complex Double) ->
+    Array (Int, Int, Int) (Complex Double) ->
+    Bool
+  a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
+  prettifyShow a =
+    "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
