@@ -98,8 +98,8 @@ one = PConst 1.0
 
 toMultiplyIfPossible :: [Substitution]
 toMultiplyIfPossible =
-  [ x *. y |. isReal y &&. isScalar y &&. isNotConst x ~~~~~~> x * y,
-    x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y
+  [ x *. y |. isReal y &&. isScalar y &&. isNotConst x ~~> x * y,
+    x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~> x * y
   ]
 
 -- | Rules with zero and one
@@ -107,21 +107,21 @@ toMultiplyIfPossible =
 --   This includes basic rules such as identity and zero of multiplication and identity of addition.
 zeroOneRules :: [Substitution]
 zeroOneRules =
-  [ one *. x |.~~~~~~> x,
-    one * x |.~~~~~~> x,
-    x * one |.~~~~~~> x,
-    x ^ 0 |.~~~~~~> one,
-    x ^ 1 |.~~~~~~> x,
-    zero * x |.~~~~~~> zero,
-    x * zero |.~~~~~~> zero,
-    zero *. x |. isReal x ~~~~~~> zero,
-    zero *. x |. isComplex x ~~~~~~> zero +: zero,
-    x *. zero |.~~~~~~> zero,
-    one *. x |.~~~~~~> x,
-    x + zero |.~~~~~~> x,
-    zero + x |.~~~~~~> x,
-    x <.> zero |.~~~~~~> zero,
-    zero <.> x |.~~~~~~> zero
+  [ one *. x |.~~> x,
+    one * x |.~~> x,
+    x * one |.~~> x,
+    x ^ 0 |.~~> one,
+    x ^ 1 |.~~> x,
+    zero * x |.~~> zero,
+    x * zero |.~~> zero,
+    zero *. x |. isReal x ~~> zero,
+    zero *. x |. isComplex x ~~> zero +: zero,
+    x *. zero |.~~> zero,
+    one *. x |.~~> x,
+    x + zero |.~~> x,
+    zero + x |.~~> x,
+    x <.> zero |.~~> zero,
+    zero <.> x |.~~> zero
   ]
 
 -- | Rules related to the scaling operation
@@ -129,10 +129,10 @@ zeroOneRules =
 --   This include rules such as associativity of scaling and moving a negation inside a scaling.
 scaleRules :: [Substitution]
 scaleRules =
-  [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z,
-    xRe (s *. x) |. isReal s ~~~~~~> s *. xRe x,
-    xIm (s *. x) |. isReal s ~~~~~~> s *. xIm x,
-    restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x)
+  [ x *. (y *. z) |. sameElementType [x, y] ~~> (x * y) *. z,
+    xRe (s *. x) |. isReal s ~~> s *. xRe x,
+    xIm (s *. x) |. isReal s ~~> s *. xIm x,
+    restOfProduct ~* (s *. x) |.~~> s *. (restOfProduct ~* x)
   ]
 
 -- | Rules for operations on complex numbers
@@ -141,9 +141,9 @@ scaleRules =
 --   simplifying complex numbers with no complex component into real numbers.
 complexNumRules :: [Substitution]
 complexNumRules =
-  [ xRe (x +: y) |.~~~~~~> x,
-    xIm (x +: y) |.~~~~~~> y,
-    (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero
+  [ xRe (x +: y) |.~~> x,
+    xIm (x +: y) |.~~> y,
+    (x +: y) * (zero +: zero) |.~~> zero +: zero
   ]
 
 -- | Rules for dot product and scale
@@ -152,9 +152,9 @@ complexNumRules =
 --   operations to put the real value in front of the expression.
 dotProductRules :: [Substitution]
 dotProductRules =
-  [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y), --
-    x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y),
-    x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y) -- Conjugate if the scalar is complex
+  [ (s *. x) <.> y |.~~> s *. (x <.> y), --
+    x <.> (s *. y) |. isReal s ~~> s *. (x <.> y),
+    x <.> ((z +: t) *. y) |.~~> (z +: negate t) *. (x <.> y) -- Conjugate if the scalar is complex
   ]
 
 -- | Rules for piecewise functions
@@ -163,7 +163,7 @@ dotProductRules =
 --   function have the same domain.
 piecewiseRules :: [Substitution]
 piecewiseRules =
-  [ piecewise_ condition branches |. allTheSame branches ~~~~~~> headL branches
+  [ piecewise_ condition branches |. allTheSame branches ~~> headL branches
   ]
 
 -- | Rules for exponentiation and log
@@ -172,16 +172,16 @@ piecewiseRules =
 --   to one.
 exponentRules :: [Substitution]
 exponentRules =
-  [ exp (log x) |.~~~~~~> x, --
-    log (exp x) |.~~~~~~> x, --
-    exp zero |.~~~~~~> one
+  [ exp (log x) |.~~> x, --
+    log (exp x) |.~~> x, --
+    exp zero |.~~> one
   ]
 
 -- | Miscellaneous rules
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |.~~~~~~> (-1 :: Pattern) *. x,
-    (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
+  [ negate x |.~~> (-1 :: Pattern) *. x,
+    (x ^ alpha) ^ beta |.~~> x ^ (alpha * beta)
   ]
 
 -- | Rules related to rotations
@@ -189,11 +189,11 @@ otherRules =
 --   This includes the linearity of rotations and combining two composed rotations together into one rotation.
 rotateRules :: [Substitution]
 rotateRules =
-  [ rotate amount (s *. x) |.~~~~~~> s *. rotate amount x,
-    rotate amount1 (rotate amount2 x) |.~~~~~~> rotate (amount1 + amount2) x,
-    rotate amount x |. zeroAmount amount ~~~~~~> x,
-    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y),
-    rotate amount zero |.~~~~~~> zero
+  [ rotate amount (s *. x) |.~~> s *. rotate amount x,
+    rotate amount1 (rotate amount2 x) |.~~> rotate (amount1 + amount2) x,
+    rotate amount x |. zeroAmount amount ~~> x,
+    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~> (x <.> y),
+    rotate amount zero |.~~> zero
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.

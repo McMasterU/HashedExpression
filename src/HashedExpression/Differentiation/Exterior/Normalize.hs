@@ -145,12 +145,12 @@ rulesFromPattern =
 
 toMultiplyIfPossible :: [Substitution]
 toMultiplyIfPossible =
-  [ x *. y |. isReal y &&. isScalar y &&. isNotConst x ~~~~~~> x * y,
-    x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~~~~~> x * y,
-    x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~~~~~> x * y,
-    x |*.| dy |. isScalar dy ~~~~~~> x |*| dy,
-    dy |.*| x |. isScalar x ~~~~~~> x |*| dy,
-    x |<.>| dy |. isScalar x &&. isScalar dy ~~~~~~> x |*| dy
+  [ x *. y |. isReal y &&. isScalar y &&. isNotConst x ~~> x * y,
+    x <.> y |. isReal y &&. isScalar y &&. isScalar x ~~> x * y,
+    x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~> x * y,
+    x |*.| dy |. isScalar dy ~~> x |*| dy,
+    dy |.*| x |. isScalar x ~~> x |*| dy,
+    x |<.>| dy |. isScalar x &&. isScalar dy ~~> x |*| dy
   ]
 
 -- | Rules with zero and one
@@ -158,31 +158,31 @@ toMultiplyIfPossible =
 --   This includes basic rules such as identity and zero of multiplication and identity of addition.
 zeroOneRules :: [Substitution]
 zeroOneRules =
-  [ one *. x |.~~~~~~> x,
-    one * x |.~~~~~~> x,
-    x * one |.~~~~~~> x,
-    x ^ powerZero |.~~~~~~> one,
-    x ^ powerOne |.~~~~~~> x,
-    zero * x |.~~~~~~> zero,
-    x * zero |.~~~~~~> zero,
-    zero *. x |. isReal x ~~~~~~> zero,
-    zero *. x |. isComplex x ~~~~~~> zero +: zero,
-    x *. zero |.~~~~~~> zero,
-    one *. x |.~~~~~~> x,
-    x + zero |.~~~~~~> x,
-    zero + x |.~~~~~~> x,
-    x <.> zero |.~~~~~~> zero,
-    zero <.> x |.~~~~~~> zero,
+  [ one *. x |.~~> x,
+    one * x |.~~> x,
+    x * one |.~~> x,
+    x ^ powerZero |.~~> one,
+    x ^ powerOne |.~~> x,
+    zero * x |.~~> zero,
+    x * zero |.~~> zero,
+    zero *. x |. isReal x ~~> zero,
+    zero *. x |. isComplex x ~~> zero +: zero,
+    x *. zero |.~~> zero,
+    one *. x |.~~> x,
+    x + zero |.~~> x,
+    zero + x |.~~> x,
+    x <.> zero |.~~> zero,
+    zero <.> x |.~~> zero,
     -- Covector
-    zero |*| dx |.~~~~~~> dZero,
-    x |*| dZero |.~~~~~~> dZero,
-    one |*| dx |.~~~~~~> dx,
-    zero |*.| dx |.~~~~~~> dZero,
-    x |*.| dZero |.~~~~~~> dZero,
-    one |*.| dx |.~~~~~~> dx,
-    dZero |.*| x |.~~~~~~> dZero,
-    zero |<.>| dx |.~~~~~~> dZero,
-    x |<.>| dZero |.~~~~~~> dZero
+    zero |*| dx |.~~> dZero,
+    x |*| dZero |.~~> dZero,
+    one |*| dx |.~~> dx,
+    zero |*.| dx |.~~> dZero,
+    x |*.| dZero |.~~> dZero,
+    one |*.| dx |.~~> dx,
+    dZero |.*| x |.~~> dZero,
+    zero |<.>| dx |.~~> dZero,
+    x |<.>| dZero |.~~> dZero
   ]
 
 -- | Rules related to the scaling operation
@@ -190,16 +190,16 @@ zeroOneRules =
 --   This include rules such as associativity of scaling and moving a negation inside a scaling.
 scaleRules :: [Substitution]
 scaleRules =
-  [ x *. (y *. z) |. sameElementType [x, y] ~~~~~~> (x * y) *. z,
-    negate (s *. x) |.~~~~~~> s *. negate x,
-    xRe (s *. x) |. isReal s ~~~~~~> s *. xRe x,
-    xIm (s *. x) |. isReal s ~~~~~~> s *. xIm x,
-    restOfProduct ~* (s *. x) |.~~~~~~> s *. (restOfProduct ~* x),
+  [ x *. (y *. z) |. sameElementType [x, y] ~~> (x * y) *. z,
+    negate (s *. x) |.~~> s *. negate x,
+    xRe (s *. x) |. isReal s ~~> s *. xRe x,
+    xIm (s *. x) |. isReal s ~~> s *. xIm x,
+    restOfProduct ~* (s *. x) |.~~> s *. (restOfProduct ~* x),
     -- Covector
-    x |*.| (y |*.| dz) |.~~~~~~> (x * y) |*.| dz,
-    negate (s |*.| dx) |.~~~~~~> negate s |*.| dx,
-    x |*| (s |*.| dy) |.~~~~~~> (s *. x) |*| dy,
-    x |*| (dy |.*| z) |.~~~~~~> dy |.*| (x * z)
+    x |*.| (y |*.| dz) |.~~> (x * y) |*.| dz,
+    negate (s |*.| dx) |.~~> negate s |*.| dx,
+    x |*| (s |*.| dy) |.~~> (s *. x) |*| dy,
+    x |*| (dy |.*| z) |.~~> dy |.*| (x * z)
   ]
 
 -- | Rules for operations on complex numbers
@@ -208,17 +208,17 @@ scaleRules =
 --   simplifying complex numbers with no complex component into real numbers.
 complexNumRules :: [Substitution]
 complexNumRules =
-  [ xRe (x +: y) |.~~~~~~> x,
-    xIm (x +: y) |.~~~~~~> y,
-    (x +: y) + (u +: v) |.~~~~~~> (x + u) +: (y + v),
-    s *. (x +: y) |. isReal s ~~~~~~> (s *. x) +: (s *. y),
-    (x +: y) * (z +: w) |.~~~~~~> (x * z - y * w) +: (x * w + y * z),
-    negate (x +: y) |.~~~~~~> negate x +: negate y,
-    (x +: y) * (zero +: zero) |.~~~~~~> zero +: zero,
-    restOfProduct ~* (x +: y) ~* (z +: w) |.~~~~~~> restOfProduct ~* ((x * z - y * w) +: (x * w + y * z)),
-    restOfSum ~+ (x +: y) ~+ (u +: v) |.~~~~~~> restOfSum ~+ ((x + u) +: (y + v)),
-    (x +: y) *. (z +: w) |.~~~~~~> (x *. z - y *. w) +: (x *. w + y *. z),
-    (x +: y) <.> (z +: w) |.~~~~~~> (x <.> z + y <.> w) +: (y <.> z - x <.> w)
+  [ xRe (x +: y) |.~~> x,
+    xIm (x +: y) |.~~> y,
+    (x +: y) + (u +: v) |.~~> (x + u) +: (y + v),
+    s *. (x +: y) |. isReal s ~~> (s *. x) +: (s *. y),
+    (x +: y) * (z +: w) |.~~> (x * z - y * w) +: (x * w + y * z),
+    negate (x +: y) |.~~> negate x +: negate y,
+    (x +: y) * (zero +: zero) |.~~> zero +: zero,
+    restOfProduct ~* (x +: y) ~* (z +: w) |.~~> restOfProduct ~* ((x * z - y * w) +: (x * w + y * z)),
+    restOfSum ~+ (x +: y) ~+ (u +: v) |.~~> restOfSum ~+ ((x + u) +: (y + v)),
+    (x +: y) *. (z +: w) |.~~> (x *. z - y *. w) +: (x *. w + y *. z),
+    (x +: y) <.> (z +: w) |.~~> (x <.> z + y <.> w) +: (y <.> z - x <.> w)
   ]
 
 -- | Rules for dot product and scale
@@ -227,14 +227,14 @@ complexNumRules =
 --   operations to put the real value in front of the expression.
 dotProductRules :: [Substitution]
 dotProductRules =
-  [ (s *. x) <.> y |.~~~~~~> s *. (x <.> y), --
-    x <.> (s *. y) |. isReal s ~~~~~~> s *. (x <.> y),
-    x <.> ((z +: t) *. y) |.~~~~~~> (z +: negate t) *. (x <.> y), -- Conjugate if the scalar is complex
-    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~~~~~> (x * y),
+  [ (s *. x) <.> y |.~~> s *. (x <.> y), --
+    x <.> (s *. y) |. isReal s ~~> s *. (x <.> y),
+    x <.> ((z +: t) *. y) |.~~> (z +: negate t) *. (x <.> y), -- Conjugate if the scalar is complex
+    x <.> y |. (isScalar x &&. isScalar y) &&. (isReal x &&. isReal y) ~~> (x * y),
     -- Covector
-    (s *. x) |<.>| dy |.~~~~~~> s |*.| (x |<.>| dy),
-    x |<.>| (s |*.| dy) |.~~~~~~> s |*.| (x |<.>| dy),
-    x |<.>| (dy |.*| z) |.~~~~~~> dy |.*| (x <.> z)
+    (s *. x) |<.>| dy |.~~> s |*.| (x |<.>| dy),
+    x |<.>| (s |*.| dy) |.~~> s |*.| (x |<.>| dy),
+    x |<.>| (dy |.*| z) |.~~> dy |.*| (x <.> z)
   ]
 
 -- | Rules for distributivity of scale, multiplication and dot product over sumP
@@ -243,27 +243,27 @@ dotProductRules =
 distributiveRules :: [Substitution]
 distributiveRules =
   [ -- Multiplication
-    x * sumP ys |.~~~~~~> sumP (mapL (x *) ys),
-    sumP ys * x |.~~~~~~> sumP (mapL (* x) ys),
-    restOfProduct ~* sumP ys |.~~~~~~> sumP (mapL (restOfProduct ~*) ys),
+    x * sumP ys |.~~> sumP (mapL (x *) ys),
+    sumP ys * x |.~~> sumP (mapL (* x) ys),
+    restOfProduct ~* sumP ys |.~~> sumP (mapL (restOfProduct ~*) ys),
     -- Dot product
-    x <.> sumP ys |.~~~~~~> sumP (mapL (x <.>) ys),
-    sumP ys <.> x |.~~~~~~> sumP (mapL (<.> x) ys),
+    x <.> sumP ys |.~~> sumP (mapL (x <.>) ys),
+    sumP ys <.> x |.~~> sumP (mapL (<.> x) ys),
     -- Scaling
-    x *. sumP ys |.~~~~~~> sumP (mapL (x *.) ys),
-    sumP ys *. x |.~~~~~~> sumP (mapL (*. x) ys),
-    negate (sumP ys) |.~~~~~~> sumP (mapL negate ys),
+    x *. sumP ys |.~~> sumP (mapL (x *.) ys),
+    sumP ys *. x |.~~> sumP (mapL (*. x) ys),
+    negate (sumP ys) |.~~> sumP (mapL negate ys),
     -- Covector
-    sumP ys |*| dx |.~~~~~~> sumP (mapL (|*| dx) ys),
-    x |*| sumP dys |.~~~~~~> sumP (mapL (x |*|) dys),
+    sumP ys |*| dx |.~~> sumP (mapL (|*| dx) ys),
+    x |*| sumP dys |.~~> sumP (mapL (x |*|) dys),
     --
-    sumP ys |<.>| dx |.~~~~~~> sumP (mapL (|<.>| dx) ys),
-    x |<.>| sumP dys |.~~~~~~> sumP (mapL (x |<.>|) dys),
+    sumP ys |<.>| dx |.~~> sumP (mapL (|<.>| dx) ys),
+    x |<.>| sumP dys |.~~> sumP (mapL (x |<.>|) dys),
     --
-    sumP ys |*.| dx |.~~~~~~> sumP (mapL (|*.| dx) ys),
-    x |*.| sumP dys |.~~~~~~> sumP (mapL (x |*.|) dys),
+    sumP ys |*.| dx |.~~> sumP (mapL (|*.| dx) ys),
+    x |*.| sumP dys |.~~> sumP (mapL (x |*.|) dys),
     --
-    dx |.*| sumP ys |.~~~~~~> sumP (mapL (dx |.*|) ys)
+    dx |.*| sumP ys |.~~> sumP (mapL (dx |.*|) ys)
   ]
 
 -- | Rules for piecewise functions
@@ -272,7 +272,7 @@ distributiveRules =
 --   function have the same domain.
 piecewiseRules :: [Substitution]
 piecewiseRules =
-  [ piecewise_ condition branches |. allTheSame branches ~~~~~~> headL branches
+  [ piecewise_ condition branches |. allTheSame branches ~~> headL branches
   ]
 
 -- | Rules for exponentiation and log
@@ -281,17 +281,17 @@ piecewiseRules =
 --   to one.
 exponentRules :: [Substitution]
 exponentRules =
-  [ exp (log x) |.~~~~~~> x, --
-    log (exp x) |.~~~~~~> x, --
-    exp zero |.~~~~~~> one
+  [ exp (log x) |.~~> x, --
+    log (exp x) |.~~> x, --
+    exp zero |.~~> one
   ]
 
 -- | Miscellaneous rules
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |. isReal x ||. isComplex x ~~~~~~> (-1 :: Pattern) *. x,
-    negate dx |. isCovector dx ~~~~~~> (-1 :: Pattern) |*.| x,
-    (x ^ alpha) ^ beta |.~~~~~~> x ^ (alpha * beta)
+  [ negate x |. isReal x ||. isComplex x ~~> (-1 :: Pattern) *. x,
+    negate dx |. isCovector dx ~~> (-1 :: Pattern) |*.| x,
+    (x ^ alpha) ^ beta |.~~> x ^ (alpha * beta)
   ]
 
 -- | Rules related to rotations
@@ -299,18 +299,18 @@ otherRules =
 --   This includes the linearity of rotations and combining two composed rotations together into one rotation.
 rotateRules :: [Substitution]
 rotateRules =
-  [ rotate amount (s *. x) |.~~~~~~> s *. rotate amount x,
-    rotate amount1 (rotate amount2 x) |.~~~~~~> rotate (amount1 + amount2) x,
-    rotate amount x |. zeroAmount amount ~~~~~~> x,
-    rotate amount (sumP xs) |.~~~~~~> sumP (mapL (rotate amount) xs),
-    rotate amount (productP xs) |.~~~~~~> productP (mapL (rotate amount) xs),
-    rotate amount (x +: y) |.~~~~~~> rotate amount x +: rotate amount y,
-    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x <.> y),
-    rotate amount zero |.~~~~~~> zero,
+  [ rotate amount (s *. x) |.~~> s *. rotate amount x,
+    rotate amount1 (rotate amount2 x) |.~~> rotate (amount1 + amount2) x,
+    rotate amount x |. zeroAmount amount ~~> x,
+    rotate amount (sumP xs) |.~~> sumP (mapL (rotate amount) xs),
+    rotate amount (productP xs) |.~~> productP (mapL (rotate amount) xs),
+    rotate amount (x +: y) |.~~> rotate amount x +: rotate amount y,
+    rotate amount1 x <.> rotate amount2 y |. sameAmount amount1 amount2 ~~> (x <.> y),
+    rotate amount zero |.~~> zero,
     -- Covector
-    rotate amount (s |*.| dx) |.~~~~~~> s |*.| rotate amount dx,
-    rotate amount1 x |<.>| rotate amount2 y |. sameAmount amount1 amount2 ~~~~~~> (x |<.>| y),
-    rotate amount dZero |.~~~~~~> dZero
+    rotate amount (s |*.| dx) |.~~> s |*.| rotate amount dx,
+    rotate amount1 x |<.>| rotate amount2 y |. sameAmount amount1 amount2 ~~> (x |<.>| y),
+    rotate amount dZero |.~~> dZero
   ]
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
