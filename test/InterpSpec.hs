@@ -303,7 +303,6 @@ prop_Inverse_Addition :: SuiteScalarR -> Bool
 prop_Inverse_Addition (Suite exp1 valMaps1) = 
   eval valMaps1 (exp1 + (negate exp1)) == 0 
 
---TODO: test failed
 prop_Inverse_Multiplication :: SuiteScalarR -> Property
 prop_Inverse_Multiplication (Suite exp1 valMaps1) =
   eval valMaps1 exp1 /= 0 ==>
@@ -344,11 +343,10 @@ prop_ExpScalar_4 (Suite exp1 valMaps1) (IntB a) =
   (eval valMaps1 exp1 /= 0) ==>
   (eval valMaps1 (exp1 ^ (-a)) `shouldApprox` eval valMaps1 (1 / (exp1 ^ a)))
 
--- TODO: test failed for every exponential properties
-prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property 
+prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property
 prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
   (eval valMaps exp2 /= 0) ==>
-    (((eval valMaps (exp1 / exp1)) ** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
+    (((eval valMaps (exp1 / exp2)) ** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
     where
       valMaps = valMaps1 `union` valMaps2
 
@@ -378,32 +376,31 @@ spec =
     specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
     specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
     specify "prop_ExpScalar_4" $ property prop_ExpScalar_4
---    specify "prop_ExpScalar_5" $ property prop_ExpScalar_5
+    specify "prop_ExpScalar_5" $ property prop_ExpScalar_5
 
-
---    specify "prop_Add Scalar R" $ property prop_AddScalarR
---    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
---    specify "prop_Add Scalar C" $ property prop_AddScalarC
---    specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
---    specify "prop_Rotate One R rotate 0 should stay the same" $
---      property prop_RotateOneR1
---    specify "prop_Rotate One R rotate a and -a should stay the same" $
---      property prop_RotateOneR2
---    specify "prop_Rotate One R rotate a then rotate b should equal rotate (a + b)" $
---      property prop_RotateOneR3
---    specify "prop_Rotate Two R rotate (0, 0) should stay the same" $
---      property prop_RotateTwoR1
---    specify "prop_Rotate Two R rotate a and -a should stay the same" $
---      property prop_RotateTwoR2
---    specify "prop_Rotate Two R rotate a then rotate b should equal rotate (a + b)" $
---      property prop_RotateTwoR3
---    specify "prop_Project_Inject One R" $
---      property prop_ProjectInjectOneR
---    specify "prop_Project_Inject One R Untyped" $
---      property prop_ProjectInjectOneRUntyped
---    specify "prop_Project_Inject One C" $
---      property prop_ProjectInjectOneC
---    specify "prop_Project_Inject Two R" $
---      property prop_ProjectInjectTwoR
---    specify "prop_Project_Inject Two C" $
---      property prop_ProjectInjectTwoC
+    specify "prop_Add Scalar R" $ property prop_AddScalarR
+    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
+    specify "prop_Add Scalar C" $ property prop_AddScalarC
+    specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
+    specify "prop_Rotate One R rotate 0 should stay the same" $
+      property prop_RotateOneR1
+    specify "prop_Rotate One R rotate a and -a should stay the same" $
+      property prop_RotateOneR2
+    specify "prop_Rotate One R rotate a then rotate b should equal rotate (a + b)" $
+      property prop_RotateOneR3
+    specify "prop_Rotate Two R rotate (0, 0) should stay the same" $
+      property prop_RotateTwoR1
+    specify "prop_Rotate Two R rotate a and -a should stay the same" $
+      property prop_RotateTwoR2
+    specify "prop_Rotate Two R rotate a then rotate b should equal rotate (a + b)" $
+      property prop_RotateTwoR3
+    specify "prop_Project_Inject One R" $
+      property prop_ProjectInjectOneR
+    specify "prop_Project_Inject One R Untyped" $
+      property prop_ProjectInjectOneRUntyped
+    specify "prop_Project_Inject One C" $
+      property prop_ProjectInjectOneC
+    specify "prop_Project_Inject Two R" $
+      property prop_ProjectInjectTwoR
+    specify "prop_Project_Inject Two C" $
+      property prop_ProjectInjectTwoC

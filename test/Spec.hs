@@ -29,12 +29,12 @@ import Prelude hiding ((^))
 main :: IO ()
 main = do
   hspecWith defaultConfig {configQuickCheckMaxDiscardRatio = Just 100, configQuickCheckMaxSuccess = Just 100} $ do
---    describe "SimplifySpec" SimplifySpec.spec
---    describe "CollisionSpec" CollisionSpec.spec
---    describe "ProblemSpec" ProblemSpec.spec
+    describe "SimplifySpec" SimplifySpec.spec
+    describe "CollisionSpec" CollisionSpec.spec
+    describe "ProblemSpec" ProblemSpec.spec
     describe "InterpSpec" InterpSpec.spec
---    describe "StructureSpec" StructureSpec.spec
---    describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
+    describe "StructureSpec" StructureSpec.spec
+    describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
 --  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
 --    describe "SolverSpec" SolverSpec.spec
 --  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
