@@ -508,7 +508,7 @@ instance Arbitrary (Expression (D2 Default2D1 Default2D2) C) where
   arbitrary = fst <$> sized gen2DC
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (Dimension d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
+data ArbitraryExpresion = forall d et. (Dimension d) => ArbitraryExpresion (Expression d et)
 
 instance Show ArbitraryExpresion where
   show (ArbitraryExpresion exp) = show exp

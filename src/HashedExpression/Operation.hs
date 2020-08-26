@@ -29,7 +29,7 @@ import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
-instance (Dimension d, NumType et) => PowerOp (Expression d et) Int where
+instance (Dimension d) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
   (^) e1 x = applyUnary (specPower x) e1
 
@@ -116,6 +116,7 @@ instance Dimension d => Fractional (Expression d C) where
 instance ScaleOp (Expression Scalar R) (Expression d et) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et
   scale = applyBinary specScale
+
 --
 --instance ScaleOp (Expression Scalar R) (Expression d C) where
 --  scale :: Expression Scalar s -> Expression d et -> Expression d et
@@ -189,7 +190,7 @@ sumElements expr = expr <.> 1
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance (Dimension d, ElementType et) => PiecewiseOp (Expression d R) (Expression d et) where
+instance (Dimension d) => PiecewiseOp (Expression d R) (Expression d et) where
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
   piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
 
@@ -202,15 +203,15 @@ instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
   ift = applyUnary specIFT
 
 -- |
-instance (ElementType et, KnownNat n) => RotateOp Int (Expression (D1 n) et) where
+instance (KnownNat n) => RotateOp Int (Expression (D1 n) et) where
   rotate :: Int -> Expression (D1 n) et -> Expression (D1 n) et
   rotate x = applyUnary (specRotate [x])
 
-instance (ElementType et, KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expression (D2 m n) et) where
+instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expression (D2 m n) et) where
   rotate :: (Int, Int) -> Expression (D2 m n) et -> Expression (D2 m n) et
   rotate (x, y) = applyUnary (specRotate [x, y])
 
-instance (ElementType et, KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (Expression (D3 m n p) et) where
+instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (Expression (D3 m n p) et) where
   rotate :: (Int, Int, Int) -> Expression (D3 m n p) et -> Expression (D3 m n p) et
   rotate (x, y, z) = applyUnary (specRotate [x, y, z])
 
@@ -321,7 +322,6 @@ variable1D ::
   String ->
   Expression (D1 n) R
 variable1D name = fromNode ([nat @n], R, Var name)
-
 
 -- | Create a variable for two-dimensional nat values
 -- @

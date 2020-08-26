@@ -32,15 +32,17 @@ import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Internal.Expression
   ( C,
+    D1,
+    D2,
+    D3,
     DimSelector (..),
-    ET (..),
+    ElementType (..),
     Expression (..),
     ExpressionMap,
     NodeID,
     Op (..),
     R,
     Scalar,
-    D1, D2, D3
   )
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils

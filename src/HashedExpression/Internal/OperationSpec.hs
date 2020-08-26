@@ -20,25 +20,25 @@ import HashedExpression.Internal.Utils
 data UnarySpec = UnarySpec
   { toOp :: Arg -> Op,
     decideShape :: Shape -> Shape,
-    decideET :: ET -> ET
+    decideET :: ElementType -> ElementType
   }
 
 data BinarySpec = BinarySpec
   { toOp :: Arg -> Arg -> Op,
     decideShape :: Shape -> Shape -> Shape,
-    decideET :: ET -> ET -> ET
+    decideET :: ElementType -> ElementType -> ElementType
   }
 
 data NarySpec = NarySpec
   { toOp :: [Arg] -> Op,
     decideShape :: [Shape] -> Shape,
-    decideET :: [ET] -> ET
+    decideET :: [ElementType] -> ElementType
   }
 
 data ConditionarySpec = ConditionarySpec
   { toOp :: Arg -> [Arg] -> Op,
     decideShape :: Shape -> [Shape] -> Shape,
-    decideET :: ET -> [ET] -> ET
+    decideET :: ElementType -> [ElementType] -> ElementType
   }
 
 data OperationSpec
@@ -56,7 +56,7 @@ assertSame xs y
 -------------------------------------------------------------------------------
 
 -- |
-defaultUnary :: HasCallStack => (Arg -> Op) -> [ET] -> UnarySpec
+defaultUnary :: HasCallStack => (Arg -> Op) -> [ElementType] -> UnarySpec
 defaultUnary f allowedETs = UnarySpec {toOp = f, decideShape = id, decideET = decideET}
   where
     decideET et
@@ -64,7 +64,7 @@ defaultUnary f allowedETs = UnarySpec {toOp = f, decideShape = id, decideET = de
       | otherwise = error "Element type is not allowed"
 
 -- |
-defaultBinary :: HasCallStack => (Arg -> Arg -> Op) -> [ET] -> BinarySpec
+defaultBinary :: HasCallStack => (Arg -> Arg -> Op) -> [ElementType] -> BinarySpec
 defaultBinary f allowedETs = BinarySpec {toOp = f, decideShape = req, decideET = decideET}
   where
     req x y = assertSame [x, y] x
@@ -107,7 +107,7 @@ specScale =
     decideShape x y
       | null x = y
       | otherwise = error "First operand must be scalar"
-    decideET :: ET -> ET -> ET
+    decideET :: ElementType -> ElementType -> ElementType
     decideET R R = R
     decideET R C = C
     decideET C C = C

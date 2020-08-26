@@ -188,7 +188,7 @@ retrieveNode n mp =
 
 -- | Retrieve the ElementType (i.e 'R','C') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveElementType #-}
-retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
+retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ElementType
 retrieveElementType n mp =
   case IM.lookup n mp of
     Just (_, et, _) -> et
@@ -204,7 +204,7 @@ retrieveShape n mp =
 
 -- | Retrieve the 'ElementType' (i.e 'R','C') of a 'Expression'
 {-# INLINE expressionElementType #-}
-expressionElementType :: HasCallStack => Expression d et -> ET
+expressionElementType :: HasCallStack => Expression d et -> ElementType
 expressionElementType (Expression n mp) =
   case IM.lookup n mp of
     Just (_, et, _) -> et
@@ -247,7 +247,7 @@ retrievesOp :: HasCallStack => NodeID -> [ExpressionMap] -> Op
 retrievesOp n mps = thd3 $ retrievesNode n mps
 
 -- | Retrieve a 'ElementType' structure from the list of Expression map, must exists
-retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ET
+retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ElementType
 retrievesElementType n mps = snd3 $ retrievesNode n mps
 
 ---- | Retrieve a 'Shape' structure from the list of Expression map, must exists

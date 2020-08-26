@@ -125,25 +125,6 @@ applyConditionAry spec e branches =
   wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
 
 -------------------------------------------------------------------------------
-
--- | Placeholder for any dimension type, useful for performing symbolic computation on an 'Expression'
---   that requires a fixed type in the dimension type parameter but the actual dimension is irrelavent
---   (such as exterior derivatives)
-data D_ deriving (Typeable)
-
--- | 'D_' is a placeholder type with no real Shape (i.e dimension/size). The method
---   'toShape' should never actually be evaluated on this instance
-instance Dimension D_ where
-  toShape =
-    error "D_ is a place holder, init variable for D_ is not applicable"
-
--- | Placeholder for any element type, useful for performing symbolic computation on an 'Expression'
---   that requires a fixed type in the element type parameter but the actual element type is irrelavent
-data ET_
-  deriving (Typeable, ElementType)
-
--------------------------------------------------------------------------------
-
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Transformations
@@ -236,7 +217,7 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
         return order
 
 -- | Retrieves all 'Var' nodes in an 'Expression'
-expressionVarNodes :: (Dimension d, ElementType et) => Expression d et -> [(String, NodeID)]
+expressionVarNodes :: (Dimension d) => Expression d et -> [(String, NodeID)]
 expressionVarNodes (Expression n mp) = mapMaybe collect ns
   where
     ns = topologicalSort (mp, n)
