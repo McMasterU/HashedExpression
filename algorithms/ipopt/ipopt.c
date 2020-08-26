@@ -9,12 +9,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include "problem.c"
 
 /* problem.c Declarations */
 extern const char* var_name[NUM_VARIABLES];
 extern const int var_num_dim[NUM_VARIABLES];
-extern const int var_shape[NUM_VARIABLES][3];
+/* extern const int var_shape[NUM_VARIABLES][3]; */
 extern const int var_size[NUM_VARIABLES];
 extern const int var_offset[NUM_VARIABLES];
 extern const int partial_derivative_offset[NUM_VARIABLES];
@@ -347,7 +348,7 @@ Bool eval_jac_g(
      for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
        for (j = 0; j < NUM_VARIABLES; j++) {
          int sc_off = sc_partial_derivative_offset[i][j];
-         int var_sz = var_shape[j][0] * var_shape[j][1] * var_shape[j][2];
+         int var_sz = var_size[j]; // var_shape[j][0] * var_shape[j][1] * var_shape[j][2];
          Number *p = sdata->data;
          memcpy(&values[acc],&p[sc_off],sizeof(Number)*var_sz);
          acc += var_sz;
