@@ -40,6 +40,7 @@ import HashedExpression.Internal.Expression
     Op (..),
     R,
     Scalar,
+    D1, D2, D3
   )
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils
@@ -345,8 +346,8 @@ evaluate1DReal valMap (mp, n)
       haha -> error $ "expression structure One R is wrong " ++ show haha
   | otherwise = error "one r but shape is not [size] ??"
 
-instance (KnownNat n) => Evaluable n R (Array Int Double) where
-  eval :: ValMaps -> Expression n R -> Array Int Double
+instance (KnownNat n) => Evaluable (D1 n) R (Array Int Double) where
+  eval :: ValMaps -> Expression (D1 n) R -> Array Int Double
   eval valMap (Expression n mp) = evaluate1DReal valMap (mp, n)
 
 -- | evaluate undefined 1D complex expression
@@ -420,8 +421,8 @@ evaluate1DComplex valMap (mp, n)
       _ -> error "expression structure One C is wrong"
   | otherwise = error "one C but shape is not [size] ??"
 
-instance (KnownNat n) => Evaluable n C (Array Int (Complex Double)) where
-  eval :: ValMaps -> Expression n C -> Array Int (Complex Double)
+instance (KnownNat n) => Evaluable (D1 n) C (Array Int (Complex Double)) where
+  eval :: ValMaps -> Expression (D1 n) C -> Array Int (Complex Double)
   eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
 
 -- | Evaluate 2D undefined input expressions
@@ -519,9 +520,9 @@ evaluate2DReal valMap (mp, n)
 
 instance
   (KnownNat m, KnownNat n) =>
-  Evaluable '(m, n) R (Array (Int, Int) Double)
+  Evaluable (D2 m n) R (Array (Int, Int) Double)
   where
-  eval :: ValMaps -> Expression '(m, n) R -> Array (Int, Int) Double
+  eval :: ValMaps -> Expression (D2 m n) R -> Array (Int, Int) Double
   eval valMap (Expression n mp) = evaluate2DReal valMap (mp, n)
 
 -- | Evaluate 2D undefined complex expression
@@ -605,10 +606,10 @@ evaluate2DComplex valMap (mp, n)
 
 instance
   (KnownNat m, KnownNat n) =>
-  Evaluable '(m, n) C (Array (Int, Int) (Complex Double))
+  Evaluable (D2 m n) C (Array (Int, Int) (Complex Double))
   where
   eval ::
-    ValMaps -> Expression '(m, n) C -> Array (Int, Int) (Complex Double)
+    ValMaps -> Expression (D2 m n) C -> Array (Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate2DComplex valMap (mp, n)
 
 -- | Evaluate 3D undefined complex expression
@@ -699,9 +700,9 @@ evaluate3DReal valMap (mp, n)
 
 instance
   (KnownNat m, KnownNat n, KnownNat p) =>
-  Evaluable '(m, n, p) R (Array (Int, Int, Int) Double)
+  Evaluable (D3 m n p) R (Array (Int, Int, Int) Double)
   where
-  eval :: ValMaps -> Expression '(m, n, p) R -> Array (Int, Int, Int) Double
+  eval :: ValMaps -> Expression (D3 m n p) R -> Array (Int, Int, Int) Double
   eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
 
 -- | Evaluate the 3D undefined expression
@@ -776,11 +777,11 @@ evaluate3DComplex valMap (mp, n)
 
 instance
   (KnownNat m, KnownNat n, KnownNat p) =>
-  Evaluable '(m, n, p) C (Array (Int, Int, Int) (Complex Double))
+  Evaluable (D3 m n p) C (Array (Int, Int, Int) (Complex Double))
   where
   eval ::
     ValMaps ->
-    Expression '(m, n, p) C ->
+    Expression (D3 m n p) C ->
     Array (Int, Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate3DComplex valMap (mp, n)
 

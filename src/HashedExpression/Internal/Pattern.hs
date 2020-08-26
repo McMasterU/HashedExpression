@@ -297,7 +297,7 @@ instance Fractional Pattern where
   (/) = PDiv
   fromRational = PConst . fromRational
 
-instance VectorSpaceOp Pattern Pattern where
+instance ScaleOp Pattern Pattern where
   scale = PScale
 
 instance Floating Pattern where

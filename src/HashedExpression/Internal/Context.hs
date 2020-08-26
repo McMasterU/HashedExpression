@@ -104,7 +104,7 @@ instance (MonadExpression m) => PowerOp (m NodeID) Int where
     x <- operand
     perform (Unary (specPower alpha)) [x]
 
-instance (MonadExpression m) => VectorSpaceOp (m NodeID) (m NodeID) where
+instance (MonadExpression m) => ScaleOp (m NodeID) (m NodeID) where
   scale operand1 operand2 = do
     x <- operand1
     y <- operand2
