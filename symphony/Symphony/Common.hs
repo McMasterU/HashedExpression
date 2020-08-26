@@ -38,14 +38,14 @@ data Context = Context
 getShape :: (ExpressionMap, NodeID) -> HE.Shape
 getShape (mp, n) = HN.retrieveShape n mp
 
-getNT :: (ExpressionMap, NodeID) -> HE.ET
+getNT :: (ExpressionMap, NodeID) -> HE.ElementType
 getNT (mp, n) = HN.retrieveElementType n mp
 
 toReadable :: HE.Shape -> String
 toReadable [] = "scalar"
 toReadable xs = intercalate "x" . map show $ xs
 
-toReadableNT :: HE.ET -> String
+toReadableNT :: HE.ElementType -> String
 toReadableNT HE.R = "real"
 toReadableNT HE.C = "complex"
 

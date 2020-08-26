@@ -154,7 +154,7 @@ primitiveScalarC :: Gen (Expression Scalar C, VarsAndParams)
 primitiveScalarC = liftE2 (+:) <$> primitiveScalarR <*> primitiveScalarR
 
 -------------------------------------------------------------------------------
-primitive1DR :: Gen (Expression Default1D R, VarsAndParams)
+primitive1DR :: Gen (Expression (D1 Default1D) R, VarsAndParams)
 primitive1DR = do
   varName <- elements . map (: "1") $ ['a' .. 'z']
   paramName <- elements . map (: "p1") $ ['a' .. 'z']
@@ -165,11 +165,11 @@ primitive1DR = do
       (constant1D @Default1D dbl, [[], [], [], []])
     ]
 
-primitive1DC :: Gen (Expression Default1D C, VarsAndParams)
+primitive1DC :: Gen (Expression (D1 Default1D) C, VarsAndParams)
 primitive1DC = liftE2 (+:) <$> primitive1DR <*> primitive1DR
 
 -------------------------------------------------------------------------------
-primitive2DR :: Gen (Expression '(Default2D1, Default2D2) R, VarsAndParams)
+primitive2DR :: Gen (Expression (D2 Default2D1 Default2D2) R, VarsAndParams)
 primitive2DR = do
   varName <- elements . map (: "2") $ ['a' .. 'z']
   paramName <- elements . map (: "p2") $ ['a' .. 'z']
@@ -180,7 +180,7 @@ primitive2DR = do
       (constant2D @Default2D1 @Default2D2 dbl, [[], [], [], []])
     ]
 
-primitive2DC :: Gen (Expression '(Default2D1, Default2D2) C, VarsAndParams)
+primitive2DC :: Gen (Expression (D2 Default2D1 Default2D2) C, VarsAndParams)
 primitive2DC = liftE2 (+:) <$> primitive2DR <*> primitive2DR
 
 -------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ genScalarC size
           ]
 
 -------------------------------------------------------------------------------
-gen1DR :: Int -> Gen (Expression Default1D R, VarsAndParams)
+gen1DR :: Int -> Gen (Expression (D1 Default1D) R, VarsAndParams)
 gen1DR size
   | size == 0 = primitive1DR
   | otherwise =
@@ -303,7 +303,7 @@ gen1DR size
           ]
 
 -------------------------------------------------------------------------------
-gen1DC :: Int -> Gen (Expression Default1D C, VarsAndParams)
+gen1DC :: Int -> Gen (Expression (D1 Default1D) C, VarsAndParams)
 gen1DC size
   | size == 0 = primitive1DC
   | otherwise =
@@ -346,7 +346,7 @@ gen1DC size
           ]
 
 -------------------------------------------------------------------------------
-gen2DR :: Int -> Gen (Expression '(Default2D1, Default2D2) R, VarsAndParams)
+gen2DR :: Int -> Gen (Expression (D2 Default2D1 Default2D2) R, VarsAndParams)
 gen2DR size
   | size == 0 = primitive2DR
   | otherwise =
@@ -389,7 +389,7 @@ gen2DR size
           ]
 
 -------------------------------------------------------------------------------
-gen2DC :: Int -> Gen (Expression '(Default2D1, Default2D2) C, VarsAndParams)
+gen2DC :: Int -> Gen (Expression (D2 Default2D1 Default2D2) C, VarsAndParams)
 gen2DC size
   | size == 0 = primitive2DC
   | otherwise =
@@ -443,13 +443,13 @@ type SuiteScalarR = Suite Scalar R
 
 type SuiteScalarC = Suite Scalar C
 
-type SuiteOneR = Suite Default1D R
+type SuiteOneR = Suite (D1 Default1D) R
 
-type SuiteOneC = Suite Default1D C
+type SuiteOneC = Suite (D1 Default1D) C
 
-type SuiteTwoR = Suite '(Default2D1, Default2D2) R
+type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
 
-type SuiteTwoC = Suite '(Default2D1, Default2D2) C
+type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
 
 -------------------------------------------------------------------------------
 instance Arbitrary SuiteScalarR where
@@ -495,20 +495,20 @@ instance Arbitrary (Expression Scalar R) where
 instance Arbitrary (Expression Scalar C) where
   arbitrary = fst <$> sized genScalarC
 
-instance Arbitrary (Expression Default1D R) where
+instance Arbitrary (Expression (D1 Default1D) R) where
   arbitrary = fst <$> sized gen1DR
 
-instance Arbitrary (Expression Default1D C) where
+instance Arbitrary (Expression (D1 Default1D) C) where
   arbitrary = fst <$> sized gen1DC
 
-instance Arbitrary (Expression '(Default2D1, Default2D2) R) where
+instance Arbitrary (Expression (D2 Default2D1 Default2D2) R) where
   arbitrary = fst <$> sized gen2DR
 
-instance Arbitrary (Expression '(Default2D1, Default2D2) C) where
+instance Arbitrary (Expression (D2 Default2D1 Default2D2) C) where
   arbitrary = fst <$> sized gen2DC
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (Dimension d, ElementType et, Typeable et, Typeable d) => ArbitraryExpresion (Expression d et)
+data ArbitraryExpresion = forall d et. (Dimension d) => ArbitraryExpresion (Expression d et)
 
 instance Show ArbitraryExpresion where
   show (ArbitraryExpresion exp) = show exp
@@ -522,19 +522,19 @@ instance Arbitrary ArbitraryExpresion where
         option3 =
           fmap
             ArbitraryExpresion
-            (arbitrary :: Gen (Expression Default1D R))
+            (arbitrary :: Gen (Expression (D1 Default1D) R))
         option4 =
           fmap
             ArbitraryExpresion
-            (arbitrary :: Gen (Expression Default1D C))
+            (arbitrary :: Gen (Expression (D1 Default1D) C))
         option5 =
           fmap
             ArbitraryExpresion
-            (arbitrary :: Gen (Expression '(Default2D1, Default2D2) R))
+            (arbitrary :: Gen (Expression (D2 Default2D1 Default2D2) R))
         option6 =
           fmap
             ArbitraryExpresion
-            (arbitrary :: Gen (Expression '(Default2D1, Default2D2) C))
+            (arbitrary :: Gen (Expression (D2 Default2D1 Default2D2) C))
      in oneof [option1, option2, option3, option4, option5, option6]
 
 -- |

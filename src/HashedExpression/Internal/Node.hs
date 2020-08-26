@@ -83,13 +83,6 @@ nodeTypeWeight node =
     Scale {} -> 36 -- Right after RealImag
     RealImag {} -> 37 -- At the end right after sum
     Sum {} -> 38 -- Sum at the end
-    -------------------------------------------------
-    DVar {} -> 101
-    DZero {} -> 102
-    MulD {} -> 103
-    ScaleD {} -> 104
-    DScale {} -> 105
-    InnerProdD {} -> 106
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool
@@ -101,7 +94,6 @@ opArgs node =
   case node of
     Var _ -> []
     Param _ -> []
-    DVar _ -> []
     Const _ -> []
     Sum args -> args
     Mul args -> args
@@ -135,17 +127,11 @@ opArgs node =
     IFT arg -> [arg]
     Project ss arg -> [arg]
     Inject ss sub base -> [sub, base]
-    DZero -> []
-    MulD arg1 arg2 -> [arg1, arg2]
-    ScaleD arg1 arg2 -> [arg1, arg2]
-    DScale arg1 arg2 -> [arg1, arg2]
-    InnerProdD arg1 arg2 -> [arg1, arg2]
 
 mapOp :: (NodeID -> NodeID) -> Op -> Op
 mapOp f op =
   case op of
     Var x -> Var x
-    DVar x -> DVar x
     Param x -> Param x
     Const val -> Const val
     Sum args -> Sum $ map f args
@@ -180,11 +166,6 @@ mapOp f op =
     IFT arg -> IFT (f arg)
     Project s arg -> Project s (f arg)
     Inject s sub base -> Inject s (f sub) (f base)
-    DZero -> DZero
-    MulD arg1 arg2 -> MulD (f arg1) (f arg2)
-    ScaleD arg1 arg2 -> ScaleD (f arg1) (f arg2)
-    DScale arg1 arg2 -> DScale (f arg1) (f arg2)
-    InnerProdD arg1 arg2 -> InnerProdD (f arg1) (f arg2)
 
 mapNode :: (NodeID -> NodeID) -> Node -> Node
 mapNode f (shape, et, op) = (shape, et, mapOp f op)
@@ -205,9 +186,9 @@ retrieveNode n mp =
     Just internal -> internal
     _ -> error "node not in map"
 
--- | Retrieve the ElementType (i.e 'R','C','Covector') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
+-- | Retrieve the ElementType (i.e 'R','C') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveElementType #-}
-retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
+retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ElementType
 retrieveElementType n mp =
   case IM.lookup n mp of
     Just (_, et, _) -> et
@@ -221,9 +202,9 @@ retrieveShape n mp =
     Just (shape, _, _) -> shape
     _ -> error "expression not in map"
 
--- | Retrieve the 'ElementType' (i.e 'R','C','Covector') of a 'Expression'
+-- | Retrieve the 'ElementType' (i.e 'R','C') of a 'Expression'
 {-# INLINE expressionElementType #-}
-expressionElementType :: HasCallStack => Expression d et -> ET
+expressionElementType :: HasCallStack => Expression d et -> ElementType
 expressionElementType (Expression n mp) =
   case IM.lookup n mp of
     Just (_, et, _) -> et
@@ -266,7 +247,7 @@ retrievesOp :: HasCallStack => NodeID -> [ExpressionMap] -> Op
 retrievesOp n mps = thd3 $ retrievesNode n mps
 
 -- | Retrieve a 'ElementType' structure from the list of Expression map, must exists
-retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ET
+retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ElementType
 retrievesElementType n mps = snd3 $ retrievesNode n mps
 
 ---- | Retrieve a 'Shape' structure from the list of Expression map, must exists

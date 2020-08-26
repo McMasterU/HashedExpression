@@ -21,7 +21,7 @@ import Prelude hiding ((^))
 infix 1 `shouldSimplifyTo`
 
 shouldSimplifyTo ::
-  (HasCallStack, Dimension d, ElementType et, Typeable et, Typeable d) =>
+  (HasCallStack, Dimension d) =>
   Expression d et ->
   Expression d et ->
   IO ()

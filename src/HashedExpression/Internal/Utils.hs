@@ -48,9 +48,6 @@ allEqual (x : y : xs) = x == y && allEqual (y : xs)
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-constWithShape :: Shape -> Double -> Expression d R
-constWithShape shape val = fromNode (shape, R, Const val)
-
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
 
@@ -78,10 +75,6 @@ isZero mp nId
     Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
-
--- |
-isDZero :: ExpressionMap -> NodeID -> Bool
-isDZero mp nId = retrieveOp nId mp == DZero
 
 -- |
 isOne :: ExpressionMap -> NodeID -> Bool
@@ -114,10 +107,6 @@ pullProdOperands mp nId
 -- |
 aConst :: Shape -> Double -> (ExpressionMap, NodeID)
 aConst shape val = fromNodeUnwrapped (shape, R, Const val)
-
--- |
-dVarWithShape :: Shape -> String -> (ExpressionMap, NodeID)
-dVarWithShape shape name = fromNodeUnwrapped (shape, Covector, DVar name)
 
 showT :: Show a => a -> T.Text
 showT = T.pack . show

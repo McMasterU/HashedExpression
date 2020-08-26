@@ -10,9 +10,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (group, sort)
 import Data.Maybe (fromJust)
 import HashedExpression.Internal
-  ( D_,
-    ET_,
-    safeMerges,
+  ( safeMerges,
     topologicalSort,
     topologicalSortManyRoots,
     unwrap,

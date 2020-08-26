@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- |
 -- Module      :  HashedExpression.Internal.Expression
@@ -10,66 +11,7 @@
 --
 -- The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
 -- constructing the Expression type.
-module HashedExpression.Internal.Expression
-  ( -- * Expression Type
-
-    -- | The Expression data structure is collection of 'Node', where
-    --   each 'Node' is either an atomic value like variables and constants or
-    --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
-    --   assuring reuse of common subexpressions
-    nat,
-    Op (..),
-    Node,
-    NodeID,
-    DimSelector (..),
-    ProjectInjectOp (..),
-    ExpressionMap,
-    Expression (..),
-    Arg,
-    Args,
-    BranchArg,
-    ConditionArg,
-
-    -- * Expression Element Types
-
-    -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
-    --   can be numeric values (i.e real or complex values), or a covector object
-    --   (used to perform exterior differentiation)
-    ET (..),
-    R,
-    C,
-    ElementType,
-    NumType,
-    Covector,
-
-    -- * Expression Dimensions
-
-    -- | The following types and classes are used to contrain and inquire about
-    --   vector dimensions of Expressions
-    Dimension (..),
-    Scalar,
-    Shape,
-    VectorSpace,
-    InnerProductSpace,
-
-    -- * Generic Combinators
-
-    -- | The following classes define 'Expression' operators that can be overloaded to directly
-    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
-    PowerOp (..),
-    PiecewiseOp (..),
-    VectorSpaceOp (..),
-    FTOp (..),
-    ComplexRealOp (..),
-    RotateOp (..),
-    RotateAmount,
-    InnerProductSpaceOp (..),
-    MulCovectorOp (..),
-    ScaleCovectorOp (..),
-    CovectorScaleOp (..),
-    InnerProductCovectorOp (..),
-  )
-where
+module HashedExpression.Internal.Expression where
 
 import Data.Array
 import qualified Data.Complex as DC
@@ -93,7 +35,7 @@ type ExpressionMap = IntMap Node
 
 -- | The internals of an 'Expression' are a collection of 'Op' with
 --   their dimensions
-type Node = (Shape, ET, Op)
+type Node = (Shape, ElementType, Op)
 
 -- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
 --   Used as the index/key to perform a lookup in 'ExpressionMap'
@@ -108,7 +50,7 @@ type NodeID = Int
 --    variable "x" :: Expression Scalar R
 --    constant1D @10 1 :: Expression 10 R
 -- @
-data Expression d et = Expression
+data Expression (d :: [Nat]) (et :: ElementType) = Expression
   { -- | index to the topological root of ExpressionMap
     exRootID :: Int,
     -- | Map of all 'Node' indexable by 'NodeID'
@@ -134,7 +76,7 @@ data Op
     Power Int Arg
   | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
     Neg Arg
-  | -- | scaling, overloaded via 'VectorSpaceOp'
+  | -- | scaling, overloaded via 'ScaleOp'
     Scale Arg Arg
   | -- | division operator, wrapped by @Expression d R@
     Div Arg Arg
@@ -188,13 +130,6 @@ data Op
     Project [DimSelector] Arg
   | -- | Injection
     Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
-  | -- | differentiable operators (only for exterior method)
-    DVar String
-  | DZero
-  | MulD Arg CovectorArg
-  | ScaleD Arg CovectorArg
-  | DScale CovectorArg Arg
-  | InnerProdD Arg CovectorArg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -230,6 +165,10 @@ data DimSelector
       Int -- step
   deriving (Show, Eq, Ord)
 
+-- | Rotation in each dimension, given respectively in a list.
+--   The length of the list matches the number of dimensions
+type RotateAmount = [Int]
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Element Types
@@ -237,38 +176,17 @@ data DimSelector
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
---   Represents Real, Complex, and Covector values with R, C, Covector respectively
-data ET
+--   Represents Real, Complex
+data ElementType
   = -- | Real Elements
     R
   | -- | Complex Elements
     C
-  | -- | Covector (contains 'DVar' operator) Elements
-    Covector
   deriving (Show, Eq, Ord)
 
--- | Type representation of 'ElementType' for Real values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
-data R
-  deriving (NumType, ElementType, Typeable)
+type R = 'R
 
--- | Type representation of 'ElementType' for Complex values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
-data C
-  deriving (NumType, ElementType, Typeable)
-
--- | Type representation of 'ElementType' for Covector values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
-data Covector
-  deriving (ElementType, Typeable)
-
--- | Class used to constrain 'Expression' operations by the type of element
---   (i.e Real, Complex or Covector). See 'ET' for the corresponding data representation.
-class ElementType et
-
--- | Class used to constrain 'Expression' operations by the type of element.
---   Should be implemented by only numeric 'ElementType' (like 'R' and 'C')
-class ElementType et => NumType et
+type C = 'C
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -276,67 +194,28 @@ class ElementType et => NumType et
 
 -- --------------------------------------------------------------------------------------------------------------------
 
+-------------------------------------------------------------------------------
+type Scalar = '[]
+
+type D1 (n :: Nat) = '[n]
+
+type D2 (m :: Nat) (n :: Nat) = '[m, n]
+
+type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
+
+instance Dimension '[] where
+  toShape _ = []
+
+--
+instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
+  toShape _ = (nat @x) : toShape (Proxy @xs)
+
+--
+
 -- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
 class Dimension d where
   toShape :: Proxy d -> Shape
-
--- | Dummy type (no data) for the zero dimension vectors (i.e not a vector)
---   When specifying vector dimensions for type class instances, in general
---   use either 'Scalar' or an instance of 'KnownNat'
---
---   @
---   variable "x" :: Expression Scalar R
---   @
-data Scalar deriving (Typeable)
-
--- | A @VectorSpace d et s@ is a space of vectors of @Dimension d@ and @ElementType et@,
---   that can be scaled by values of @ElementType s@. Used primarily as a base for 'VectorSpaceOp'
-class VectorSpace d et s
-
--- | A 'VectorSpace' exists for all 'DimensionType' and 'ElementType' if scaled by a 'R' (Real element type)
-instance (Dimension d, NumType et) => VectorSpace d et R
-
--- | A 'VectorSpace' exists for all 'DimensionType' over 'C' (Complex) vectors and scalings
-instance (Dimension d) => VectorSpace d C C
-
--- | Every @VectorSpace@ that can be scaled by the same ElementType has an @InnerProductSpace@.
---   Used primarily as a base for 'InnerProductSpaceOp'
-class VectorSpace d s s => InnerProductSpace d s
-
--- | Every 'VectorSpace' with the same 'ElementType' for vectors and their scalings has a corresponding
---   'InnerProductSpace'
-instance VectorSpace d s s => InnerProductSpace d s
-
--- | A scalar essentially has no dimensions/size, so we provide an empty list
-instance Dimension Scalar where
-  toShape _ = []
-
--- | Dimension encoding for a 1D Vector (use 'KnownNat' to specify size of Vector)
---   @
---   variable1D  "x" :: KnownNat n => Expression n R
---   variable1D @10 "x" :: Expression 10 R
---   @
-instance (KnownNat n) => Dimension n where
-  toShape _ = [nat @n]
-
--- | Dimension encoding for a 2D Vector (use 'KnownNat' to specify size of Vector)
---
---   @
---   variable2D  "x" :: (KnownNat n, KnownNat m) => Expression '(n,m) R
---   variable2D @10 @5 "x" :: Expression '(10,5) R
---   @
-instance (KnownNat m, KnownNat n) => Dimension '(m, n) where
-  toShape _ = [nat @m, nat @n]
-
--- | Dimension encoding for a 3D Vector (use 'KnownNat' to specify size of Vector)
---
---   @
---   variable3D  "x" :: (KnownNat n, KnownNat m, KnownNat p) => Expression '(n,m,p) R
---   variable3D @10 @5 @5 "x" :: Expression '(10,5,5) R
---   @
-instance (KnownNat m, KnownNat n, KnownNat p) => Dimension '(m, n, p) where
-  toShape _ = [nat @m, nat @n, nat @p]
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
 --   from Integer to Int
@@ -352,10 +231,6 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 -- >  [n, m]    => (KnownNat n, KnownNat m) => Dimension '(n,m)
 type Shape = [Int]
 
--- | Rotation in each dimension, given respectively in a list.
---   The length of the list matches the number of dimensions
-type RotateAmount = [Int]
-
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Generic Combinators
@@ -369,7 +244,7 @@ class PowerOp a b | a -> b where
 
 -- | Interface for scaling (i.e vector scaling) combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
-class VectorSpaceOp a b where
+class ScaleOp a b where
   scale :: a -> b -> b
   (*.) :: a -> b -> b
   (*.) = scale
@@ -416,24 +291,8 @@ class ProjectInjectOp s a b | s a -> b where
   inject :: s -> b -> a -> a
 
 -------------------------------------------------------------------------------
-class MulCovectorOp a b c | a b -> c, c -> a, c -> b where
-  (|*|) :: a -> b -> c
-
-class ScaleCovectorOp a b c | a b -> c where
-  (|*.|) :: HasCallStack => a -> b -> c
-
-class CovectorScaleOp a b c | a b -> c where
-  (|.*|) :: a -> b -> c
-
-class InnerProductCovectorOp a b c | a b -> c where
-  (|<.>|) :: a -> b -> c
-
 infixl 6 +:
 
 infixl 8 *., `scale`, <.>
 
 infixl 8 ^
-
-infixl 7 |*|
-
-infixl 8 |<.>|, |*.|
