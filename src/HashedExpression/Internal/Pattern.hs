@@ -69,13 +69,11 @@ module HashedExpression.Internal.Pattern
     isDVar,
     isConst,
     isNotConst,
-    isCovector,
     isReal,
     isComplex,
     sameElementType,
     zeroAmount,
     sameAmount,
-    dZero,
   )
 where
 
@@ -235,11 +233,6 @@ data Pattern
     PPower Pattern PatternPower
   | -- | pattern that has a rotate operator with a 'PatternRotateAmount' applied to it
     PRotate PatternRotateAmount Pattern
-  | PDZero
-  | PMulD Pattern Pattern
-  | PScaleD Pattern Pattern
-  | PDScale Pattern Pattern
-  | PInnerProdD Pattern Pattern
   deriving (Show)
 
 instance Show (Pattern -> Pattern) where
@@ -266,9 +259,6 @@ data PatternRotateAmount
 
 -- | 'Pattern' holes are identified uniquely by a Capture id
 type Capture = Int
-
-dZero :: Pattern
-dZero = PDZero
 
 -- | Predefined hole for capturing the tail of a product (with hardcoded 'Capture' id 239)
 restOfProduct :: Pattern
@@ -352,18 +342,6 @@ instance Num PatternPower where
 instance Num PatternRotateAmount where
   (+) = PRotateAmountSum
   negate = PRotateAmountNegate
-
-instance MulCovectorOp Pattern Pattern Pattern where
-  (|*|) = PMulD
-
-instance ScaleCovectorOp Pattern Pattern Pattern where
-  (|*.|) = PScaleD
-
-instance CovectorScaleOp Pattern Pattern Pattern where
-  (|.*|) = PDScale
-
-instance InnerProductCovectorOp Pattern Pattern Pattern where
-  (|<.>|) = PInnerProdD
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -479,12 +457,6 @@ isComplex :: Pattern -> Condition
 isComplex p exp match =
   let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
    in retrieveElementType pNodeID mp == C
-
--- | Returns True iff the 'Pattern' captured has a 'Covector' 'ElementType'
-isCovector :: Pattern -> Condition
-isCovector p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
-   in retrieveElementType pNodeID mp == Covector
 
 -- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
 sameElementType :: [Pattern] -> Condition
@@ -679,11 +651,6 @@ match (mp, n) outerWH =
                         Map.fromList [(rotateAmountCapture, ra)]
                     } ->
             Just $ unionMatch matchInner matchRotateAmount
-        (DZero, PDZero) -> Just emptyMatch
-        (MulD arg1 arg2, PMulD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (ScaleD arg1 arg2, PScaleD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (DScale arg1 arg2, PDScale sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
-        (InnerProdD arg1 arg2, PInnerProdD sp1 sp2) -> recursiveAndCombine [arg1, arg2] [sp1, sp2]
         _ -> Nothing
 
 -- | Turn a 'Pattern' transformation into a 'Pattern' reference
@@ -790,11 +757,4 @@ buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape ori
         PRotate pra sp ->
           let rotateAmount = buildFromPatternRotateAmount match pra
            in rotate rotateAmount (build inferredShape sp)
-        PDZero -> case inferredShape of
-          Just shape -> introduceNode (shape, Covector, DZero)
-          _ -> error "Can't infer shape of DZero"
-        PMulD sp1 sp2 -> build inferredShape sp1 |*| build inferredShape sp2
-        PScaleD sp1 sp2 -> build (Just []) sp1 |*.| build inferredShape sp2
-        PDScale sp1 sp2 -> build (Just []) sp1 |.*| build inferredShape sp2
-        PInnerProdD sp1 sp2 -> build Nothing sp1 |<.>| build Nothing sp2
         _ -> error "The right hand-side of substitution has something that we don't support yet"

@@ -94,7 +94,7 @@ specPower :: HasCallStack => Int -> UnarySpec
 specPower alpha = defaultUnary (Power alpha) [R, C]
 
 specNeg :: HasCallStack => UnarySpec
-specNeg = defaultUnary Neg [R, C, Covector]
+specNeg = defaultUnary Neg [R, C]
 
 specScale :: HasCallStack => BinarySpec
 specScale =
@@ -210,7 +210,7 @@ specPiecewise marks =
       | otherwise = error "Condition must be real and number of branches must equal number of marks + 1"
 
 specRotate :: HasCallStack => RotateAmount -> UnarySpec
-specRotate ra = defaultUnary (Rotate ra) [R, C, Covector]
+specRotate ra = defaultUnary (Rotate ra) [R, C]
 
 specFT :: HasCallStack => UnarySpec
 specFT = defaultUnary FT [C]
@@ -242,38 +242,3 @@ specInject dmSelectors =
         baseShape
       | otherwise = error $ "dim selectors, sub shape and base shape not valid" ++ show dmSelectors ++ " " ++ show subShape ++ " " ++ show baseShape
     decideET x y = assertSame [x, y] x
-
--------------------------------------------------------------------------------
-
-specMulD :: HasCallStack => BinarySpec
-specMulD =
-  BinarySpec {toOp = MulD, decideShape = \x y -> assertSame [x, y] x, decideET = decideET}
-  where
-    decideET R Covector = Covector
-    decideET _ _ = error "Must be R * Covector"
-
-specScaleD :: HasCallStack => BinarySpec
-specScaleD =
-  BinarySpec {toOp = ScaleD, decideShape = decideShape, decideET = decideET}
-  where
-    decideShape [] x = x
-    decideShape _ _ = error "First operand must be scalar"
-    decideET R Covector = Covector
-    decideET _ _ = error "Must be R *. Covector"
-
-specDScale :: HasCallStack => BinarySpec
-specDScale =
-  BinarySpec {toOp = DScale, decideShape = decideShape, decideET = decideET}
-  where
-    decideShape [] x = x
-    decideShape _ _ = error "First operand must be scalar"
-    decideET Covector R = Covector
-    decideET _ _ = error "Must be Covector .* R"
-
-specInnerProdD :: HasCallStack => BinarySpec
-specInnerProdD =
-  BinarySpec {toOp = InnerProdD, decideShape = decideShape, decideET = decideET}
-  where
-    decideShape x y = assertSame [x, y] []
-    decideET R Covector = Covector
-    decideET _ _ = error "Must be R <.> Covector"

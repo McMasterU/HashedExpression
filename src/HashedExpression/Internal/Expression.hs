@@ -33,14 +33,13 @@ module HashedExpression.Internal.Expression
     -- * Expression Element Types
 
     -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
-    --   can be numeric values (i.e real or complex values), or a covector object
+    --   can be numeric values (i.e real or complex values)
     --   (used to perform exterior differentiation)
     ET (..),
     R,
     C,
     ElementType,
     NumType,
-    Covector,
 
     -- * Expression Dimensions
 
@@ -237,33 +236,27 @@ data DimSelector
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Data representation of 'ElementType'. Used to represent types of elements in an 'Expression'
---   Represents Real, Complex, and Covector values with R, C, Covector respectively
+--   Represents Real, Complex
 data ET
   = -- | Real Elements
     R
   | -- | Complex Elements
     C
-  | -- | Covector (contains 'DVar' operator) Elements
-    Covector
   deriving (Show, Eq, Ord)
 
 -- | Type representation of 'ElementType' for Real values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
+--   HashedExpression values are either 'R' or  'C'
 data R
   deriving (NumType, ElementType, Typeable)
 
 -- | Type representation of 'ElementType' for Complex values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
+--   HashedExpression values are either 'R', or 'C'
 data C
   deriving (NumType, ElementType, Typeable)
 
--- | Type representation of 'ElementType' for Covector values
---   HashedExpression values are either 'R', 'C' or a 'Covector'
-data Covector
-  deriving (ElementType, Typeable)
 
 -- | Class used to constrain 'Expression' operations by the type of element
---   (i.e Real, Complex or Covector). See 'ET' for the corresponding data representation.
+--   (i.e Real, Complex). See 'ET' for the corresponding data representation.
 class ElementType et
 
 -- | Class used to constrain 'Expression' operations by the type of element.

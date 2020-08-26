@@ -205,7 +205,7 @@ retrieveNode n mp =
     Just internal -> internal
     _ -> error "node not in map"
 
--- | Retrieve the ElementType (i.e 'R','C','Covector') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
+-- | Retrieve the ElementType (i.e 'R','C') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveElementType #-}
 retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ET
 retrieveElementType n mp =
@@ -221,7 +221,7 @@ retrieveShape n mp =
     Just (shape, _, _) -> shape
     _ -> error "expression not in map"
 
--- | Retrieve the 'ElementType' (i.e 'R','C','Covector') of a 'Expression'
+-- | Retrieve the 'ElementType' (i.e 'R','C') of a 'Expression'
 {-# INLINE expressionElementType #-}
 expressionElementType :: HasCallStack => Expression d et -> ET
 expressionElementType (Expression n mp) =

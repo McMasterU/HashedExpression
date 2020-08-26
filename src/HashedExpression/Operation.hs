@@ -41,6 +41,9 @@ instance (Dimension d, NumType et) => PowerOp (Expression d et) Int where
 fromDouble :: forall d. Dimension d => Double -> Expression d R
 fromDouble value = fromNode (toShape (Proxy @d), R, Const value)
 
+constWithShape :: Shape -> Double -> Expression d R
+constWithShape shape val = fromNode (shape, R, Const val)
+
 -- | Basic operations on Num class expressions with dimension constraint `d`
 instance Dimension d => Num (Expression d R) where
   e1 + e2 = applyNary specSum [e1, e2]
@@ -113,14 +116,6 @@ instance Dimension d => Fractional (Expression d C) where
   e1 / e2 = e1 * e2 ^ (-1)
   fromRational r = fromDouble (fromRational r) +: 0
 
--- | Basic operations on covector expressions with dimension constraint `d`
-instance Dimension d => Num (Expression d Covector) where
-  e1 + e2 = applyNary specSum [e1, e2]
-  negate = applyUnary specNeg
-  (*) = error "*: Not applicable to 1-form"
-  fromInteger = error "fromInteger: Not applicable to 1-form"
-  abs = error "abs: Not applicable to 1-form"
-  signum = error "signum: Not applicable to 1-form"
 
 -- | Scale in vector space
 instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression d et) where
@@ -203,18 +198,6 @@ instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
 
   ift :: Expression d C -> Expression d C
   ift = applyUnary specIFT
-
-instance (Dimension d) => MulCovectorOp (Expression d R) (Expression d Covector) (Expression d Covector) where
-  x |*| dy = applyBinary specMulD x dy
-
-instance (Dimension d) => ScaleCovectorOp (Expression Scalar R) (Expression d Covector) (Expression d Covector) where
-  x |*.| dy = applyBinary specScaleD x dy
-
-instance (Dimension d) => CovectorScaleOp (Expression Scalar Covector) (Expression d R) (Expression d Covector) where
-  dx |.*| y = applyBinary specDScale dx y
-
-instance (Dimension d) => InnerProductCovectorOp (Expression d R) (Expression d Covector) (Expression Scalar Covector) where
-  x |<.>| dy = applyBinary specInnerProdD x dy
 
 -- |
 instance (ElementType et, KnownNat n) => RotateOp Int (Expression n et) where
