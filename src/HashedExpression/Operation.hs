@@ -49,7 +49,6 @@ instance Dimension d => Num (Expression d R) where
   e1 + e2 = applyNary specSum [e1, e2]
   e1 * e2 = applyNary specMul [e1, e2]
   negate = applyUnary specNeg
-
   fromInteger val = fromDouble $ fromIntegral val
   abs = error "TODO: abs"
   signum = error "Not applicable to tensor"
@@ -306,6 +305,42 @@ ranges = Proxy
 variable :: String -> Expression Scalar R
 variable name = fromNode ([], R, Var name)
 
+variableX :: String -> Expression SCALAR R
+variableX name = fromNode ([], R, Var name)
+
+variable1DX :: forall n. (KnownNat n) => String -> Expression (D1 n) R
+variable1DX name = fromNode ([nat @n], R, Var name)
+
+variable2DX :: forall m n. (KnownNat m, KnownNat n) => String -> Expression (D2 m n) R
+variable2DX name = fromNode ([nat @m, nat @n], R, Var name)
+
+variable3DX :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression (D3 m n p) R
+variable3DX name = fromNode ([nat @m, nat @n, nat @p], R, Var name)
+
+constantX :: Double -> Expression SCALAR R
+constantX val = fromNode ([], R, Const val)
+
+constant1DX :: forall n. (KnownNat n) => Double -> Expression (D1 n) R
+constant1DX val = fromNode ([nat @n], R, Const val)
+
+constant2DX :: forall m n. (KnownNat m, KnownNat n) => Double -> Expression (D2 m n) R
+constant2DX val = fromNode ([nat @m, nat @n], R, Const val)
+
+constant3DX :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> Expression (D3 m n p) R
+constant3DX val = fromNode ([nat @m, nat @n, nat @p], R, Const val)
+
+paramX :: String -> Expression SCALAR R
+paramX name = fromNode ([], R, Param name)
+
+param1DX :: forall n. (KnownNat n) => String -> Expression (D1 n) R
+param1DX name = fromNode ([nat @n], R, Param name)
+
+param2DX :: forall m n. (KnownNat m, KnownNat n) => String -> Expression (D2 m n) R
+param2DX name = fromNode ([nat @m, nat @n], R, Param name)
+
+param3DX :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression (D3 m n p) R
+param3DX name = fromNode ([nat @m, nat @n, nat @p], R, Param name)
+
 -- | Create primitive expressions using Nat kind.
 --
 -- @
@@ -319,16 +354,13 @@ variable1D ::
   Expression n R
 variable1D name = fromNode ([nat @n], R, Var name)
 
+
 -- | Create a variable for two-dimensional nat values
 -- @
 --  exp = variable2D "var"
 --  exp = variable2D \@10 \@20 "var"
 -- @
-variable2D ::
-  forall m n.
-  (KnownNat m, KnownNat n) =>
-  String ->
-  Expression '(m, n) R
+variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> Expression '(m, n) R
 variable2D name = fromNode ([nat @m, nat @n], R, Var name)
 
 -- | Create a variable for three-dimensional nat values
@@ -336,11 +368,7 @@ variable2D name = fromNode ([nat @m, nat @n], R, Var name)
 --  exp = variable3D "var"
 --  exp = variable3D @10 @20 @30 "var"
 -- @
-variable3D ::
-  forall m n p.
-  (KnownNat m, KnownNat n, KnownNat p) =>
-  String ->
-  Expression '(m, n, p) R
+variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression '(m, n, p) R
 variable3D name = fromNode ([nat @m, nat @n, nat @p], R, Var name)
 
 -- | create a scalar (non-vector) constant Expression
@@ -351,33 +379,21 @@ constant = constWithShape []
 -- @
 --  constant2D @1 40
 -- @
-constant1D ::
-  forall n.
-  (KnownNat n) =>
-  Double ->
-  Expression n R
+constant1D :: forall n. (KnownNat n) => Double -> Expression n R
 constant1D = constWithShape [nat @n]
 
 -- | Two-dimensional constant
 -- @
 --  constant2D @1 @2 40
 -- @
-constant2D ::
-  forall m n.
-  (KnownNat m, KnownNat n) =>
-  Double ->
-  Expression '(m, n) R
+constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> Expression '(m, n) R
 constant2D = constWithShape [nat @m, nat @n]
 
 -- | Three-dimensional constant
 -- @
 --  constant2D @1 @2 @3 40
 -- @
-constant3D ::
-  forall m n p.
-  (KnownNat m, KnownNat n, KnownNat p) =>
-  Double ->
-  Expression '(m, n, p) R
+constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> Expression '(m, n, p) R
 constant3D = constWithShape [nat @m, nat @n, nat @p]
 
 -- | Create parameter
@@ -390,11 +406,7 @@ param name = fromNode ([], R, Param name)
 --   let exp = param1D "var"
 --   let exp = param1D \@10 "var"
 -- @
-param1D ::
-  forall n.
-  (KnownNat n) =>
-  String ->
-  Expression n R
+param1D :: forall n. (KnownNat n) => String -> Expression n R
 param1D name = fromNode ([nat @n], R, Param name)
 
 -- | Create a param for two-dimensional nat values
@@ -402,11 +414,7 @@ param1D name = fromNode ([nat @n], R, Param name)
 --  exp = param2D "var"
 --  exp = param2D \@10 \@20 "var"
 -- @
-param2D ::
-  forall m n.
-  (KnownNat m, KnownNat n) =>
-  String ->
-  Expression '(m, n) R
+param2D :: forall m n. (KnownNat m, KnownNat n) => String -> Expression '(m, n) R
 param2D name = fromNode ([nat @m, nat @n], R, Param name)
 
 -- | Create a param for three-dimensional nat values
@@ -414,9 +422,5 @@ param2D name = fromNode ([nat @m, nat @n], R, Param name)
 --  exp = param3D "var"
 --  exp = param3D @10 @20 @30 "var"
 -- @
-param3D ::
-  forall m n p.
-  (KnownNat m, KnownNat n, KnownNat p) =>
-  String ->
-  Expression '(m, n, p) R
+param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression '(m, n, p) R
 param3D name = fromNode ([nat @m, nat @n, nat @p], R, Param name)

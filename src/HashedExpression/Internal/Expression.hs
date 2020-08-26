@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- |
 -- Module      :  HashedExpression.Internal.Expression
@@ -11,63 +12,60 @@
 -- The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
 -- constructing the Expression type.
 module HashedExpression.Internal.Expression
-  ( -- * Expression Type
-
-    -- | The Expression data structure is collection of 'Node', where
-    --   each 'Node' is either an atomic value like variables and constants or
-    --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
-    --   assuring reuse of common subexpressions
-    nat,
-    Op (..),
-    Node,
-    NodeID,
-    DimSelector (..),
-    ProjectInjectOp (..),
-    ExpressionMap,
-    Expression (..),
-    Arg,
-    Args,
-    BranchArg,
-    ConditionArg,
-
-    -- * Expression Element Types
-
-    -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
-    --   can be numeric values (i.e real or complex values)
-    --   (used to perform exterior differentiation)
-    ET (..),
-    R,
-    C,
-    ElementType,
-    NumType,
-
-    -- * Expression Dimensions
-
-    -- | The following types and classes are used to contrain and inquire about
-    --   vector dimensions of Expressions
-    Dimension (..),
-    Scalar,
-    Shape,
-    VectorSpace,
-    InnerProductSpace,
-
-    -- * Generic Combinators
-
-    -- | The following classes define 'Expression' operators that can be overloaded to directly
-    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
-    PowerOp (..),
-    PiecewiseOp (..),
-    VectorSpaceOp (..),
-    FTOp (..),
-    ComplexRealOp (..),
-    RotateOp (..),
-    RotateAmount,
-    InnerProductSpaceOp (..),
-    MulCovectorOp (..),
-    ScaleCovectorOp (..),
-    CovectorScaleOp (..),
-    InnerProductCovectorOp (..),
-  )
+--  ( -- * Expression Type
+--
+--    -- | The Expression data structure is collection of 'Node', where
+--    --   each 'Node' is either an atomic value like variables and constants or
+--    --   an operator. Each 'Node' is given a 'NodeID' via a generated hash value,
+--    --   assuring reuse of common subexpressions
+--    nat,
+--    Op (..),
+--    SHAPE,
+--    
+--    Node,
+--    NodeID,
+--    DimSelector (..),
+--    ProjectInjectOp (..),
+--    ExpressionMap,
+--    Expression (..),
+--    Arg,
+--    Args,
+--    BranchArg,
+--    ConditionArg,
+--
+--    -- * Expression Element Types
+--
+--    -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
+--    --   can be numeric values (i.e real or complex values)
+--    --   (used to perform exterior differentiation)
+--    ET (..),
+--    R,
+--    C,
+--    ElementType,
+--    NumType,
+--
+--    -- * Expression Dimensions
+--
+--    -- | The following types and classes are used to contrain and inquire about
+--    --   vector dimensions of Expressions
+--    Dimension (..),
+--    Scalar,
+--    Shape,
+--    VectorSpace,
+--    InnerProductSpace,
+--
+--    -- * Generic Combinators
+--
+--    -- | The following classes define 'Expression' operators that can be overloaded to directly
+--    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
+--    PowerOp (..),
+--    PiecewiseOp (..),
+--    VectorSpaceOp (..),
+--    FTOp (..),
+--    ComplexRealOp (..),
+--    RotateOp (..),
+--    RotateAmount,
+--  )
 where
 
 import Data.Array
@@ -107,7 +105,7 @@ type NodeID = Int
 --    variable "x" :: Expression Scalar R
 --    constant1D @10 1 :: Expression 10 R
 -- @
-data Expression d et = Expression
+data Expression d (et :: ET) = Expression
   { -- | index to the topological root of ExpressionMap
     exRootID :: Int,
     -- | Map of all 'Node' indexable by 'NodeID'
@@ -237,15 +235,37 @@ data ET
     C
   deriving (Show, Eq, Ord)
 
+newtype Dim = Shape [Nat]
+
+type SHAPE = 'Shape
+type SCALAR = SHAPE '[]
+type D1 (n :: Nat) = SHAPE '[n]
+type D2 (m :: Nat) (n :: Nat) = SHAPE '[m, n]
+type D3 (m :: Nat) (n :: Nat) (p :: Nat) = SHAPE '[m, n, p]
+
+
+instance Dimension (SHAPE '[]) where
+  toShape _ = []
+--
+instance (KnownNat x, Dimension (SHAPE xs)) => Dimension (SHAPE (x ': xs)) where
+  toShape _ = (nat @x) : toShape (Proxy @(SHAPE xs))
+--
+
 -- | Type representation of 'ElementType' for Real values
 --   HashedExpression values are either 'R' or  'C'
-data R
-  deriving (NumType, ElementType, Typeable)
+type R = 'R
+
+instance NumType R
+instance ElementType R
+deriving instance Typeable R
 
 -- | Type representation of 'ElementType' for Complex values
 --   HashedExpression values are either 'R', or 'C'
-data C
-  deriving (NumType, ElementType, Typeable)
+type C = 'C
+
+instance NumType C
+instance ElementType C
+deriving instance Typeable C
 
 -- | Class used to constrain 'Expression' operations by the type of element
 --   (i.e Real, Complex). See 'ET' for the corresponding data representation.

@@ -37,17 +37,17 @@ wrap = uncurry $ flip Expression
 -- | Automatically print a prettified expression (using 'prettify') to stdout.
 --   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
 showExp ::
-  forall d rc.
-  (Typeable d, Typeable rc) =>
-  Expression d rc ->
+  forall d et.
+  (Typeable d, Typeable et) =>
+  Expression d et ->
   IO ()
 showExp = putStrLn . prettify
 
 -- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
 prettify ::
-  forall d rc.
-  (Typeable d, Typeable rc) =>
-  Expression d rc ->
+  forall d et.
+  (Typeable d, Typeable et) =>
+  Expression d et ->
   String
 prettify e@(Expression n mp) =
   let shape = expressionShape e
@@ -55,24 +55,24 @@ prettify e@(Expression n mp) =
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
-      typeName = " :: " ++ dimensionStr ++ (show . typeRep $ (Proxy :: Proxy rc))
+      typeName = " :: " ++ dimensionStr ++ (show . typeRep $ (Proxy :: Proxy et))
    in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
 --   ghci as long as you define corresponding variable identifiers
-showExpDebug :: forall d rc. (Typeable d, Typeable rc) => Expression d rc -> IO ()
+showExpDebug :: forall d et. (Typeable d, Typeable et) => Expression d et -> IO ()
 showExpDebug = putStrLn . prettifyDebug
 
 -- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
 --   ghci as long as you define corresponding variable identifiers
-prettifyDebug :: Expression d rc -> String
+prettifyDebug :: Expression d et -> String
 prettifyDebug e@(Expression n mp) =
   let shape = expressionShape e
       node = expressionOp e
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 -- | All the entries of the expression
-allEntries :: forall d rc. Expression d rc -> [(NodeID, String)]
+allEntries :: forall d et. Expression d et -> [(NodeID, String)]
 allEntries (Expression n mp) =
   zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
     IM.keys mp
@@ -84,7 +84,7 @@ allEntriesDebug (mp, n) =
     IM.keys mp
 
 -- | Print every entry (invididually) of an 'Expression'
-showAllEntries :: forall d rc. Expression d rc -> IO ()
+showAllEntries :: forall d et. Expression d et -> IO ()
 showAllEntries e = do
   putStrLn "--------------------------"
   putStrLn $ intercalate "\n" . map mkString $ allEntries e
