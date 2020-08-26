@@ -113,13 +113,6 @@ hash (shape, et, node) rehashNum =
         Inject ss sub base -> offsetHash 33 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
         -------------------------------------------------------------------------------
         Conjugate arg -> offsetHash 37 . hashString' $ show arg
-        -- Mark: Covector
-        DVar name -> offsetHash 37 . hashString' $ show name
-        DZero -> offsetHash 38 . hashString' $ "dzero"
-        MulD arg1 arg2 -> offsetHash 39 . hashString' $ show arg1 ++ separator ++ show arg2
-        ScaleD arg1 arg2 -> offsetHash 40 . hashString' $ show arg1 ++ separator ++ show arg2
-        DScale arg1 arg2 -> offsetHash 41 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProdD arg1 arg2 -> offsetHash 42 . hashString' $ show arg1 ++ separator ++ show arg2
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

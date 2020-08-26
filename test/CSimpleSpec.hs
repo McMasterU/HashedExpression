@@ -56,7 +56,7 @@ for1 iter bound codes =
 -- | Generate a fully working C program that compute the expression and
 -- print out the result, mostly used for testing
 singleExpressionCProgram ::
-  (Dimension d, NumType et) => ValMaps -> Expression d et -> Code
+  (Dimension d) => ValMaps -> Expression d et -> Code
 singleExpressionCProgram valMaps expr =
   [ "#include <math.h>", --
     "#include <stdio.h>",
@@ -132,7 +132,7 @@ hasFFTW = do
   return $ exitCode == ExitSuccess
 
 -- |
-evaluateCodeC :: (Dimension d, NumType et) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
+evaluateCodeC :: (Dimension d) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
 evaluateCodeC withFT exp valMaps = do
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']

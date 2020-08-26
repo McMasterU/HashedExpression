@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 import Data.Tuple.Extra (thd3)
 import Debug.Trace (traceShow)
 import HashedExpression.Differentiation.Reverse
-import HashedExpression.Internal (D_, ET_, removeUnreachable, unwrap)
+import HashedExpression.Internal (removeUnreachable, unwrap)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Utils

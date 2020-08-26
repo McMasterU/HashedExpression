@@ -73,7 +73,7 @@ simplifyUnwrapped = removeUnreachable . apply
                 ]
             )
 
-simplify :: forall d et. (Dimension d, ElementType et) => Expression d et -> Expression d et
+simplify :: forall d et. (Dimension d) => Expression d et -> Expression d et
 simplify = wrap . simplifyUnwrapped . unwrap
 
 -- | Predefined holes used for pattern matching with 'Pattern'

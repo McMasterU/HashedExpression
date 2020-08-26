@@ -104,7 +104,7 @@ instance (MonadExpression m) => PowerOp (m NodeID) Int where
     x <- operand
     perform (Unary (specPower alpha)) [x]
 
-instance (MonadExpression m) => VectorSpaceOp (m NodeID) (m NodeID) where
+instance (MonadExpression m) => ScaleOp (m NodeID) (m NodeID) where
   scale operand1 operand2 = do
     x <- operand1
     y <- operand2
@@ -159,29 +159,3 @@ instance (MonadExpression m) => ProjectInjectOp [DimSelector] (m NodeID) (m Node
     x <- sub
     y <- base
     perform (Binary (specInject ss)) [x, y]
-
--------------------------------------------------------------------------------
-
-instance (MonadExpression m) => MulCovectorOp (m NodeID) (m NodeID) (m NodeID) where
-  (|*|) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specMulD) [x, y]
-
-instance (MonadExpression m) => ScaleCovectorOp (m NodeID) (m NodeID) (m NodeID) where
-  (|*.|) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specScaleD) [x, y]
-
-instance (MonadExpression m) => CovectorScaleOp (m NodeID) (m NodeID) (m NodeID) where
-  (|.*|) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specDScale) [x, y]
-
-instance (MonadExpression m) => InnerProductCovectorOp (m NodeID) (m NodeID) (m NodeID) where
-  (|<.>|) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specInnerProdD) [x, y]

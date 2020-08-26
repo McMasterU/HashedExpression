@@ -36,55 +36,46 @@ wrap = uncurry $ flip Expression
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout.
 --   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
-showExp ::
-  forall d rc.
-  (Typeable d, Typeable rc) =>
-  Expression d rc ->
-  IO ()
+showExp :: Expression d et -> IO ()
 showExp = putStrLn . prettify
 
 -- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
-prettify ::
-  forall d rc.
-  (Typeable d, Typeable rc) =>
-  Expression d rc ->
-  String
+prettify :: Expression d et -> String
 prettify e@(Expression n mp) =
   let shape = expressionShape e
       node = expressionOp e
+      et = expressionElementType e
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
-      typeName = " :: " ++ dimensionStr ++ (show . typeRep $ (Proxy :: Proxy rc))
+      typeName = " :: " ++ dimensionStr ++ show et
    in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
 --   ghci as long as you define corresponding variable identifiers
-showExpDebug :: forall d rc. (Typeable d, Typeable rc) => Expression d rc -> IO ()
+showExpDebug :: Expression d et -> IO ()
 showExpDebug = putStrLn . prettifyDebug
 
 -- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
 --   ghci as long as you define corresponding variable identifiers
-prettifyDebug :: Expression d rc -> String
+prettifyDebug :: Expression d et -> String
 prettifyDebug e@(Expression n mp) =
   let shape = expressionShape e
       node = expressionOp e
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 -- | All the entries of the expression
-allEntries :: forall d rc. Expression d rc -> [(NodeID, String)]
+allEntries :: Expression d et -> [(NodeID, String)]
 allEntries (Expression n mp) =
-  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
-    IM.keys mp
+  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ IM.keys mp
 
 -- | Print every entry (invididually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
 allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
 allEntriesDebug (mp, n) =
-  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $
-    IM.keys mp
+  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ IM.keys mp
 
 -- | Print every entry (invididually) of an 'Expression'
-showAllEntries :: forall d rc. Expression d rc -> IO ()
+showAllEntries :: forall d et. Expression d et -> IO ()
 showAllEntries e = do
   putStrLn "--------------------------"
   putStrLn $ intercalate "\n" . map mkString $ allEntries e
@@ -137,8 +128,6 @@ hiddenPrettify pastable (mp, n) =
               [x] -> T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
               _ -> T.pack $ show val
           | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
-        DVar name -> T.concat ["d", T.pack name]
-        DZero -> "d0"
         _ ->
           wrapParentheses $
             case node of
@@ -196,7 +185,3 @@ hiddenPrettify pastable (mp, n) =
                     T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
                     "]"
                   ]
-              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
-              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
-              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]
-              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "|<.>|", innerPrettify arg2]
