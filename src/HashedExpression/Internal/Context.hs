@@ -159,4 +159,3 @@ instance (MonadExpression m) => ProjectInjectOp [DimSelector] (m NodeID) (m Node
     x <- sub
     y <- base
     perform (Binary (specInject ss)) [x, y]
-

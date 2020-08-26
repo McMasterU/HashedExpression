@@ -48,7 +48,6 @@ allEqual (x : y : xs) = x == y && allEqual (y : xs)
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-
 varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
 varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
 
@@ -76,10 +75,6 @@ isZero mp nId
     Const 0 <- retrieveOp arg2 mp =
     True
   | otherwise = False
-
--- |
-isDZero :: ExpressionMap -> NodeID -> Bool
-isDZero mp nId = retrieveOp nId mp == DZero
 
 -- |
 isOne :: ExpressionMap -> NodeID -> Bool

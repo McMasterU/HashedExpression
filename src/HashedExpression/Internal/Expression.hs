@@ -187,13 +187,6 @@ data Op
     Project [DimSelector] Arg
   | -- | Injection
     Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
-  | -- | differentiable operators (only for exterior method)
-    DVar String
-  | DZero
-  | MulD Arg CovectorArg
-  | ScaleD Arg CovectorArg
-  | DScale CovectorArg Arg
-  | InnerProdD Arg CovectorArg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -253,7 +246,6 @@ data R
 --   HashedExpression values are either 'R', or 'C'
 data C
   deriving (NumType, ElementType, Typeable)
-
 
 -- | Class used to constrain 'Expression' operations by the type of element
 --   (i.e Real, Complex). See 'ET' for the corresponding data representation.

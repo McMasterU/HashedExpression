@@ -137,8 +137,6 @@ hiddenPrettify pastable (mp, n) =
               [x] -> T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
               _ -> T.pack $ show val
           | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
-        DVar name -> T.concat ["d", T.pack name]
-        DZero -> "d0"
         _ ->
           wrapParentheses $
             case node of
@@ -196,7 +194,3 @@ hiddenPrettify pastable (mp, n) =
                     T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
                     "]"
                   ]
-              MulD arg1 arg2 -> T.concat [innerPrettify arg1, "|*|", innerPrettify arg2]
-              ScaleD arg1 arg2 -> T.concat [innerPrettify arg1, "|*.|", innerPrettify arg2]
-              DScale arg1 arg2 -> T.concat [innerPrettify arg1, "|.*|", innerPrettify arg2]
-              InnerProdD arg1 arg2 -> T.concat [innerPrettify arg1, "|<.>|", innerPrettify arg2]

@@ -116,7 +116,6 @@ instance Dimension d => Fractional (Expression d C) where
   e1 / e2 = e1 * e2 ^ (-1)
   fromRational r = fromDouble (fromRational r) +: 0
 
-
 -- | Scale in vector space
 instance (VectorSpace d et s) => VectorSpaceOp (Expression Scalar s) (Expression d et) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et

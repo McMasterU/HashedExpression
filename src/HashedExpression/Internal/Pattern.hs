@@ -66,10 +66,8 @@ module HashedExpression.Internal.Pattern
     (||.),
     allTheSame,
     isScalar,
-    isDVar,
-    isConst,
-    isNotConst,
     isReal,
+    isNotConst,
     isComplex,
     sameElementType,
     zeroAmount,
@@ -124,7 +122,7 @@ fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   -- | combined result
   Substitution
 (|.~~>) pattern replacement =
-  (GP pattern $ Prelude.const (Prelude.const True), replacement)
+  (GP pattern $ const (const True), replacement)
 
 -- | Create a 'Substitution' that matches a 'GuardedPattern' (a 'Pattern' that only matches upon fulfilling a condition) and
 --   replaces it with another 'Pattern'
@@ -425,14 +423,6 @@ isScalar :: Pattern -> Condition
 isScalar p exp match =
   let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
    in retrieveShape pNodeID mp == []
-
--- | Returns True iff the 'Pattern' capture is a 'DVar'
-isDVar :: Pattern -> Condition
-isDVar p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
-   in case retrieveOp pNodeID mp of
-        DVar _ -> True
-        _ -> False
 
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isConst :: Pattern -> Condition
