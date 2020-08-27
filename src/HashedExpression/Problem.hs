@@ -32,7 +32,7 @@ import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Simplify
 import HashedExpression.Internal.Utils
-import HashedExpression.Prettify (debugPrint)
+import HashedExpression.Prettify
 import HashedExpression.Value
 
 -- TODO: better sections in the Haddock.
@@ -343,11 +343,9 @@ constructProblemHelper obj (Constraint constraints) = do
             ++ map constraintValueId scalarConstraints
             ++ concatMap constraintPartialDerivatives scalarConstraints
         )
-      -- remove DVar nodes
-      relevantNodes = Set.fromList $ map unNodeID $ topologicalSortManyRoots (mergedMap, rootNs)
       -- expression map
       finalMp :: ExpressionMap
-      finalMp = IM.filterWithKey (\nId _ -> Set.member nId relevantNodes) mergedMap
+      finalMp = removeUnreachableManyRoots (mergedMap, rootNs)
   return $
     Problem
       { variables = variables,

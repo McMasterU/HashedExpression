@@ -13,11 +13,9 @@ module HashedExpression.Prettify
     prettifyDebug,
     showExpDebug,
     showExp,
-    debugPrintExp,
-    showAllEntries,
-    allEntriesDebug,
-    allEntries,
+    hiddenPrettify,
     debugPrint,
+    debugPrintExp,
   )
 where
 
@@ -63,28 +61,6 @@ prettifyDebug e@(Expression n mp) =
       node = expressionOp e
    in T.unpack (hiddenPrettify True $ unwrap e)
 
-nodeIDs :: ExpressionMap -> [NodeID]
-nodeIDs = map NodeID . IM.keys
-
--- | All the entries of the expression
-allEntries :: Expression d et -> [(NodeID, String)]
-allEntries (Expression n mp) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
-
--- | Print every entry (invididually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
-allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
-allEntriesDebug (mp, n) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
-
--- | Print every entry (invididually) of an 'Expression'
-showAllEntries :: forall d et. Expression d et -> IO ()
-showAllEntries e = do
-  putStrLn "--------------------------"
-  putStrLn $ intercalate "\n" . map mkString $ allEntries e
-  putStrLn "--------------------------"
-  where
-    mkString (n, str) = show n ++ " --> " ++ str
-
 -- |
 prettifyDimSelector :: DimSelector -> String
 prettifyDimSelector (At i) = show i
@@ -97,6 +73,15 @@ debugPrint = T.unpack . hiddenPrettify False
 
 debugPrintExp :: Expression d et -> String
 debugPrintExp = debugPrint . unwrap
+
+-- | Print every entry (invididually) of an 'Expression'
+-- showAllEntries :: forall d et. Expression d et -> IO ()
+-- showAllEntries e = do
+--  putStrLn "--------------------------"
+--  putStrLn $ intercalate "\n" . map mkString $ allEntries e
+--  putStrLn "--------------------------"
+--  where
+--    mkString (n, str) = show n ++ " --> " ++ str
 
 -- | auxillary function for computing pretty format of an 'Expression'
 hiddenPrettify ::

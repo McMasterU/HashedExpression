@@ -31,6 +31,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.List (sort)
 import Data.Tuple.Extra (fst3, snd3, thd3)
 import GHC.Stack (HasCallStack)
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 
 -- | For ordering things inside 'Sum' or 'Product' so we can write rules like

@@ -92,29 +92,24 @@ singleExpressionCProgram valMaps expr =
     assigningValues CSimpleCodegen {..} valMaps = concatMap assignValue names
       where
         [i, j, k, nooffset] = ["i", "j", "k", "0"]
-        names :: [(NodeID, String)]
-        names =
-          let toVar nId
-                | Var varName <- retrieveOp nId mp = Just (nId, varName)
-                | Param name <- retrieveOp nId mp = Just (nId, name)
-                | otherwise = Nothing
-           in mapMaybe toVar . map NodeID . IM.keys $ mp
-        assignValue :: (NodeID, String) -> Code
-        assignValue (n, name) =
+        names :: [(String, NodeID)]
+        names = varsWithNodeID mp ++ paramsWithNodeID mp
+        assignValue :: (String, NodeID) -> Code
+        assignValue (name, n) =
           case Map.lookup name valMaps of
             Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
             Just (V1D array1d) ->
-              let assignIndex id = [[I.i|#{n !! (showT id)} = #{array1d ! id};|]]
+              let assignIndex id = [[I.i|#{n !! (tt id)} = #{array1d ! id};|]]
                in concatMap assignIndex $ indices array1d
             Just (V2D array2d) ->
               let shape = retrieveShape n mp
                   assignIndex (id1, id2) =
-                    [[I.i|#{n !! showT (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
+                    [[I.i|#{n !! tt (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
                in concatMap assignIndex $ indices array2d
             Just (V3D array3d) ->
               let shape = retrieveShape n mp
                   assignIndex (id1, id2, id3) =
-                    [[I.i|#{n !! showT (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
+                    [[I.i|#{n !! tt (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
                in concatMap assignIndex $ indices array3d
             _ -> []
 
@@ -256,21 +251,15 @@ prop_CEqualInterpTwoC (Suite exp valMaps) =
 spec :: Spec
 spec =
   describe "C simple spec" $ do
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)"
-      $ property prop_CEqualInterpScalarR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)"
-      $ property prop_CEqualInterpScalarC
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression One R)"
-      $ property prop_CEqualInterpOneR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression One C)"
-      $ property prop_CEqualInterpOneC
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Two R)"
-      $ property prop_CEqualInterpTwoR
-    specify
-      "Evaluate hash interp should equal to C code evaluation (Expression Two C)"
-      $ property prop_CEqualInterpTwoC
+    specify "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)" $
+      property prop_CEqualInterpScalarR
+    specify "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)" $
+      property prop_CEqualInterpScalarC
+    specify "Evaluate hash interp should equal to C code evaluation (Expression One R)" $
+      property prop_CEqualInterpOneR
+    specify "Evaluate hash interp should equal to C code evaluation (Expression One C)" $
+      property prop_CEqualInterpOneC
+    specify "Evaluate hash interp should equal to C code evaluation (Expression Two R)" $
+      property prop_CEqualInterpTwoR
+    specify "Evaluate hash interp should equal to C code evaluation (Expression Two C)" $
+      property prop_CEqualInterpTwoC

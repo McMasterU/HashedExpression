@@ -31,8 +31,7 @@ import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Internal.Expression
-  ( C,
-    D1,
+  ( D1,
     D2,
     D3,
     DimSelector (..),
@@ -41,7 +40,6 @@ import HashedExpression.Internal.Expression
     ExpressionMap,
     NodeID,
     Op (..),
-    R,
     Scalar,
   )
 import HashedExpression.Internal.Node

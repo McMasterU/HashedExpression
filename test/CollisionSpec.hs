@@ -13,10 +13,10 @@ import Test.HUnit (assertBool, assertEqual, (@=?))
 import Test.Hspec
 import Test.QuickCheck
 
---makeDumbHash :: [Int] -> IO (CheckHash -> Node -> NodeID)
+--makeDumbHash :: [Int] -> IO (CheckCollision -> Node -> NodeID)
 --makeDumbHash candidates = do
 --  listIDs <- generate $ shuffle candidates
---  let dumbHash :: CheckHash -> Node -> NodeID
+--  let dumbHash :: CheckCollision -> Node -> NodeID
 --      dumbHash checkHash node = case dropWhile (== IsClash) $ map (checkHash node) listIDs of
 --        (IsOk h : _) -> h
 --  return dumbHash

@@ -17,6 +17,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -48,7 +49,7 @@ type ComputeReverseM a = State ComputeDState a
 instance MonadExpression (State ComputeDState) where
   introduceNode node = do
     mp <- gets contextMap
-    let nID = hashNode (checkHashFromMap mp) node
+    let nID = hashNode (checkCollisionMap mp) node
     modifyContextMap $ IM.insert nID node
     return $ NodeID nID
 

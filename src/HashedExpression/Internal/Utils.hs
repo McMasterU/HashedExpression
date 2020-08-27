@@ -48,12 +48,6 @@ allEqual (x : y : xs) = x == y && allEqual (y : xs)
 fromR :: Double -> Complex Double
 fromR x = x :+ 0
 
-varWithShape :: Shape -> String -> (ExpressionMap, NodeID)
-varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
-
-paramWithShape :: Shape -> String -> (ExpressionMap, NodeID)
-paramWithShape shape name = fromNodeUnwrapped (shape, R, Param name)
-
 -- |
 pullConstant :: ExpressionMap -> NodeID -> Maybe (Shape, Double)
 pullConstant mp n
@@ -103,57 +97,6 @@ pullProdOperands :: ExpressionMap -> NodeID -> [NodeID]
 pullProdOperands mp nId
   | Mul operands <- retrieveOp nId mp = operands
   | otherwise = [nId]
-
--- |
-aConst :: Shape -> Double -> (ExpressionMap, NodeID)
-aConst shape val = fromNodeUnwrapped (shape, R, Const val)
-
-showT :: Show a => a -> T.Text
-showT = T.pack . show
-
--- |
-maybeVariable :: Dimension d => Expression d R -> Maybe (String, Shape)
-maybeVariable (Expression nID mp) = case retrieveNode nID mp of
-  (shape, R, Var name) -> Just (name, shape)
-  _ -> Nothing
-
--- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
-varNodesWithId :: ExpressionMap -> [(String, NodeID)]
-varNodesWithId mp = mapMaybe (collect . NodeID) . IM.keys $ mp
-  where
-    collect nId
-      | Var name <- retrieveOp nId mp = Just (name, nId)
-      | otherwise = Nothing
-
-paramNodesWithId :: ExpressionMap -> [(String, NodeID)]
-paramNodesWithId mp = mapMaybe (collect . NodeID) . IM.keys $ mp
-  where
-    collect nId
-      | Param name <- retrieveOp nId mp = Just (name, nId)
-      | otherwise = Nothing
-
-varNodes :: ExpressionMap -> [(String, Shape, NodeID)]
-varNodes mp = mapMaybe collect $ IM.toList mp
-  where
-    collect (nID, (shape, _, Var varName)) = Just (varName, shape, NodeID nID)
-    collect _ = Nothing
-
--- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
-varNodesWithShape :: ExpressionMap -> [(String, Shape)]
-varNodesWithShape mp = mapMaybe collect $ IM.toList mp
-  where
-    collect (nID, (shape, _, Var varName)) = Just (varName, shape)
-    collect _ = Nothing
-
--- | Predicate determining if a 'ExpressionMap' contains a FT operation
-containsFTNode :: ExpressionMap -> Bool
-containsFTNode mp = any isFT $ IM.elems mp
-  where
-    isFT (_, _, op) =
-      case op of
-        FT _ -> True
-        IFT _ -> True
-        _ -> False
 
 toRange :: DimSelector -> Int -> (Int, Int, Int)
 toRange (At i) size = (i, i, 1)

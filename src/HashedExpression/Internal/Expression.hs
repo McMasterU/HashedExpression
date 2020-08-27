@@ -11,7 +11,49 @@
 --
 -- The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
 -- constructing the Expression type.
-module HashedExpression.Internal.Expression where
+module HashedExpression.Internal.Expression
+  ( nat,
+    Op (..),
+    Node,
+    NodeID,
+    DimSelector (..),
+    ProjectInjectOp (..),
+    ExpressionMap,
+    Expression (..),
+    Arg,
+    Args,
+    BranchArg,
+    ConditionArg,
+
+    -- * Expression Element Types
+
+    -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
+    --   can be numeric values (i.e real or complex values), or a covector object
+    --   (used to perform exterior differentiation)
+    ElementType (..),
+
+    -- * Expression Dimensions
+
+    -- | The following types and classes are used to contrain and inquire about
+    --   vector dimensions of Expressions
+    Dimension (..),
+    Scalar,
+    D1,
+    D2,
+    D3,
+    Shape,
+    -- | The following classes define 'Expression' operators that can be overloaded to directly
+    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
+    PowerOp (..),
+    PiecewiseOp (..),
+    ScaleOp (..),
+    FTOp (..),
+    ComplexRealOp (..),
+    RotateOp (..),
+    RotateAmount,
+    InnerProductSpaceOp (..),
+  )
+where
 
 import Data.Array
 import qualified Data.Complex as DC
@@ -20,6 +62,7 @@ import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
+import HashedExpression.Internal.Base
 import Prelude hiding ((^))
 
 -- --------------------------------------------------------------------------------------------------------------------
@@ -35,13 +78,6 @@ type ExpressionMap = IntMap Node
 -- | The internals of an 'Expression' are a collection of 'Op' with
 --   their dimensions
 type Node = (Shape, ElementType, Op)
-
--- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
---   Used as the index/key to perform a lookup in 'ExpressionMap'
-newtype NodeID = NodeID {unNodeID :: Int} deriving (Eq, Ord)
-
-instance Show NodeID where
-  show (NodeID nID) = show nID
 
 -- | HashedExpression stores expressions as a collection of 'Node' indexed by a
 --   hash value (i.e 'NodeID').
@@ -68,66 +104,68 @@ data Op
     Var String
   | -- | parameter with an identifier
     Param String
-  | -- | constants, only wrapped byf @Expression d R@
+  | -- | constants
     Const Double
   | -- | element-wise sum
     Sum Args
-  | -- | multiply, overloaded via 'Dimension'
+  | -- | element-wise multiplication
     Mul Args
-  | -- | power to, overloaded via 'PowerOp'
+  | -- | power
     Power Int Arg
-  | -- | negation, wrapped byf @Expression d R@ or @Expression d C@
+  | -- | negation
     Neg Arg
-  | -- | scaling, overloaded via 'ScaleOp'
+  | -- | scaling
     Scale Arg Arg
-  | -- | division operator, wrapped by @Expression d R@
+  | -- | division
     Div Arg Arg
-  | -- | square root operator, wrapped by @Expression d R@
+  | -- | square root
     Sqrt Arg
-  | -- | sin operator, wrapped by @Expression d R@
+  | -- | sin
     Sin Arg
-  | -- | cos operator, wrapped by @Expression d R@
+  | -- | cos
     Cos Arg
-  | -- | tan operator, wrapped by @Expression d R@
+  | -- | tan
     Tan Arg
-  | -- | exp operator, wrapped by @Expression d R@
+  | -- | exp
     Exp Arg
-  | -- | log operator, wrapped by @Expression d R@
+  | -- | log
     Log Arg
-  | -- | sinh operator, wrapped by @Expression d R@
+  | -- | sinh
     Sinh Arg
-  | -- | cosh operator, wrapped by @Expression d R@
+  | -- | cosh
     Cosh Arg
-  | -- | tanh operator, wrapped by @Expression d R@
+  | -- | tanh
     Tanh Arg
-  | -- | asin operator, wrapped by @Expression d R@
+  | -- | asin
     Asin Arg
-  | -- | acos operator, wrapped by @Expression d R@
+  | -- | acos
     Acos Arg
-  | -- | atan operator, wrapped by @Expression d R@
+  | -- | atan
     Atan Arg
-  | -- | asinh operator, wrapped by @Expression d R@
+  | -- | asinh
     Asinh Arg
-  | -- | acosh operator, wrapped by @Expression d R@
+  | -- | acosh
     Acosh Arg
-  | -- | atanh operator, wrapped by @Expression d R@
+  | -- | atanh
     Atanh Arg
-  | -- | construct a complex value from real and imagine parts, respectively, wrapped by @Expression d C@
+  | -- | complex out of real part and imaginary part: a +: b
     RealImag Arg Arg
-  | -- | extract real from complex (transforms @Expression d C@ to @Expression d R@)
+  | -- | extract real from complex
     RealPart Arg
-  | -- | extract imaginary from complex (transforms @Expression d C@ to @Expression d R@)
+  | -- | extract imaginary from complex
     ImagPart Arg
   | -- | conjugate a complex expression
     Conjugate Arg
-  | -- | inner product operator, overload via 'InnerProductSpace'
+  | -- | inner product operator
     InnerProd Arg Arg
-  | -- | piecewise function, overload via 'PiecewiseOp'. Evaluates 'ConditionArg' to select 'BranchArg'
+  | -- | (element-wise) piecewise function, evaluate condition to select branch
     Piecewise [Double] ConditionArg [BranchArg]
-  | -- | rotate transformation, rotates vector elements by 'RotateAmount'
+  | -- | rotate
     Rotate RotateAmount Arg
-  | FT Arg
-  | IFT Arg
+  | -- | Fourier Transform
+    FT Arg
+  | -- | Inverse Fourier Transform
+    IFT Arg
   | -- | Projection
     Project [DimSelector] Arg
   | -- | Injection
@@ -149,14 +187,9 @@ type ConditionArg = NodeID
 type BranchArg = NodeID
 
 -- |
-type CovectorArg = NodeID
-
 type SubArg = NodeID
 
 type BaseArg = NodeID
-
--- |
-type Position = [Int]
 
 -- | DimSelector for projection
 data DimSelector

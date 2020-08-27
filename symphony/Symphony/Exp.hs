@@ -49,21 +49,21 @@ inferShape context@Context {..} exp =
 -- | Construct a hashed expression given context and inferred shape
 constructExp :: Context -> Maybe HE.Shape -> Exp -> Result (ExpressionMap, NodeID)
 constructExp context shapeInfo exp =
-  let add x y = sumMany [x, y]
-      multiply x y = mulMany [x, y]
+  let add x y = apply (Nary specSum) [x, y]
+      multiply x y = apply (Nary specMul) [x, y]
       reIm x y = apply (Binary specRealImag) [x, y]
       scale x y = apply (Binary specScale) [x, y]
-      subtract x y = sumMany [x, scale (HU.aConst [] (-1)) y]
+      subtract x y = apply (Nary specSum) [x, scale (constWithShape [] (-1)) y]
       dot x y = apply (Binary specInnerProd) [x, y]
       app fun x = apply (Unary fun) [x]
       piecewise marks condition branches =
         apply (ConditionAry (specPiecewise marks)) (condition : branches)
    in case exp of
         ENumDouble (PDouble (pos, valStr))
-          | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
+          | Just shape <- shapeInfo -> return $ constWithShape shape (read valStr)
           | otherwise -> throwError $ ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
         ENumInteger (PInteger (pos, valStr))
-          | Just shape <- shapeInfo -> return $ HU.aConst shape (read valStr)
+          | Just shape <- shapeInfo -> return $ constWithShape shape (read valStr)
           | otherwise -> throwError $ ErrorWithPosition ("Ambiguous shape of literal " ++ valStr) pos
         EIdent (PIdent (idPos, name)) -> retrieveExpFromIdent context (idPos, name)
         EPlus exp1 (TokenPlus (opPos, _)) exp2 -> do
@@ -104,7 +104,7 @@ constructExp context shapeInfo exp =
           operand2 <- constructExp context inferredShape exp2
           checkSameShape operand1 operand2 "Shape mismatched: trying to subtract 2 vectors with different shape" opPos
           checkSameNumType operand1 operand2 "Numtype mismatched: trying to subtract 2 vectors with different numtype" opPos
-          return $ add operand1 (scale (HU.aConst [] (-1)) operand2)
+          return $ add operand1 (scale (constWithShape [] (-1)) operand2)
         EMul exp1 (TokenMul (opPos, _)) exp2 -> do
           let inferredShape = inferShape context exp1 <|> inferShape context exp2 <|> shapeInfo
           operand1 <- constructExp context inferredShape exp1
@@ -189,7 +189,7 @@ constructExp context shapeInfo exp =
           return $ app (specRotate rotateAmount) operand
         ENegate (TokenSub (opPos, _)) exp -> do
           operand <- constructExp context shapeInfo exp
-          return $ scale (HU.aConst [] (-1)) operand
+          return $ scale (constWithShape [] (-1)) operand
         EPiecewise (TokenCase (opPos, _)) exp cases -> do
           condition <- constructExp context shapeInfo exp
           let isLastCase pwcase =
@@ -279,7 +279,7 @@ constructExp context shapeInfo exp =
               return $ app specFT operand
             "sumElements" -> do
               onlyForRealVector operand
-              return $ dot operand (HU.aConst (getShape operand) 1)
+              return $ dot operand (constWithShape (getShape operand) 1)
             "norm2square" -> do
               operand <- constructExp context shapeInfo exp
               if getNT operand == HE.R
@@ -301,8 +301,8 @@ constructExp context shapeInfo exp =
           operand <- constructExp context shapeInfo exp
           let delta = numToDouble num
           let huber delta operand =
-                let one = HU.aConst (getShape operand) 1
-                    const val = HU.aConst [] val
+                let one = constWithShape (getShape operand) 1
+                    const val = constWithShape [] val
                     inner = const 0.5 `scale` (operand `multiply` operand)
                     outerLeft = (const (- delta) `scale` operand) `subtract` (const (delta * delta / 2) `scale` one)
                     outerRight = (const delta `scale` operand) `subtract` (const (delta * delta / 2) `scale` one)
@@ -313,7 +313,7 @@ constructExp context shapeInfo exp =
               return $ huber delta operand
             "normHuber" -> do
               onlyForRealVector operand
-              return $ dot (huber delta operand) (HU.aConst (getShape operand) 1)
+              return $ dot (huber delta operand) (constWithShape (getShape operand) 1)
             _ ->
               throwError $ ErrorWithPosition "Function not found" funPos
 
