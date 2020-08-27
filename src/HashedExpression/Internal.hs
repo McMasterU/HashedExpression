@@ -19,7 +19,6 @@ import Control.Monad.ST.Strict
 import Data.Array.MArray
 import Data.Array.ST
 import qualified Data.Array.Unboxed as UA
-import Data.Data (Typeable)
 import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS

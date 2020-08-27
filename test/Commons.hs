@@ -17,7 +17,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Set (Set, fromList, toList)
 import Data.Time (diffUTCTime, getCurrentTime)
-import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat)
@@ -59,7 +58,7 @@ format = intercalate "\n" . map oneLine
     oneLine (f, s) = f ++ ": " ++ s
 
 -- |
-inspect :: (Typeable d, Typeable rc) => Expression d rc -> Expression d rc
+inspect :: Expression d rc -> Expression d rc
 inspect x =
   unsafePerformIO $ do
     showExp x

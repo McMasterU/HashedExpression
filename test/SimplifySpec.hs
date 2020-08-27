@@ -4,7 +4,6 @@ import Commons
 import Data.Complex (Complex (..))
 import Data.Map.Strict (union)
 import Data.Maybe (fromJust)
-import Data.Typeable (Typeable)
 import Debug.Trace (traceShowId)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Simplify

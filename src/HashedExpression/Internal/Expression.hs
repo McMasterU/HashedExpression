@@ -18,7 +18,6 @@ import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy (..))
-import Data.Typeable (Typeable, typeRep)
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import Prelude hiding ((^))
@@ -56,7 +55,7 @@ data Expression (d :: [Nat]) (et :: ElementType) = Expression
     -- | Map of all 'Node' indexable by 'NodeID'
     exMap :: ExpressionMap
   }
-  deriving (Show, Eq, Ord, Typeable)
+  deriving (Show, Eq, Ord)
 
 type role Expression nominal nominal
 

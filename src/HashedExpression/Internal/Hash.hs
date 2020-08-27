@@ -66,7 +66,12 @@ hash :: Node -> Int -> Int
 hash (shape, et, node) rehashNum =
   let hashString' s =
         hashString $
-          (intercalate separator . map show $ shape) ++ separator ++ show et ++ separator ++ s ++ concat (replicate rehashNum "x")
+          (intercalate separator . map show $ shape)
+            ++ separator
+            ++ show et
+            ++ separator
+            ++ s
+            ++ concat (replicate rehashNum "x")
    in case node of
         Var name -> offsetHash 0 . hashString' $ name
         Param name -> offsetHash 1 . hashString' $ name
@@ -76,7 +81,6 @@ hash (shape, et, node) rehashNum =
         Power x arg -> offsetHash 5 . hashString' $ show x ++ "of" ++ show arg
         Neg arg -> offsetHash 6 . hashString' $ show arg
         Scale arg1 arg2 -> offsetHash 7 . hashString' $ show arg1 ++ separator ++ show arg2
-        -- MARK: only apply to R
         Div arg1 arg2 -> offsetHash 8 . hashString' $ show arg1 ++ separator ++ show arg2
         Sqrt arg -> offsetHash 9 . hashString' $ show arg
         Sin arg -> offsetHash 10 . hashString' $ show arg
@@ -93,11 +97,9 @@ hash (shape, et, node) rehashNum =
         Asinh arg -> offsetHash 21 . hashString' $ show arg
         Acosh arg -> offsetHash 22 . hashString' $ show arg
         Atanh arg -> offsetHash 23 . hashString' $ show arg
-        -- MARK: Complex related
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
-        --
         InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
         Piecewise marks arg branches ->
           offsetHash 28 . hashString' $
