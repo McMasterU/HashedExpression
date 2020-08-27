@@ -644,7 +644,7 @@ match (mp, n) outerWH =
         _ -> Nothing
 
 -- | Turn a 'Pattern' transformation into a 'Pattern' reference
-turnToPattern :: (Pattern -> Pattern) -> Int -> Pattern
+turnToPattern :: (Pattern -> Pattern) -> NodeID -> Pattern
 turnToPattern fs nId = fs $ PRef nId
 
 -- | Find a 'PowerValue' corresponding to a 'PatternPower' that was already

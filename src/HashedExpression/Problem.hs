@@ -344,7 +344,7 @@ constructProblemHelper obj (Constraint constraints) = do
             ++ concatMap constraintPartialDerivatives scalarConstraints
         )
       -- remove DVar nodes
-      relevantNodes = Set.fromList $ topologicalSortManyRoots (mergedMap, rootNs)
+      relevantNodes = Set.fromList $ map unNodeID $ topologicalSortManyRoots (mergedMap, rootNs)
       -- expression map
       finalMp :: ExpressionMap
       finalMp = IM.filterWithKey (\nId _ -> Set.member nId relevantNodes) mergedMap

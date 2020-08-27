@@ -92,14 +92,14 @@ singleExpressionCProgram valMaps expr =
     assigningValues CSimpleCodegen {..} valMaps = concatMap assignValue names
       where
         [i, j, k, nooffset] = ["i", "j", "k", "0"]
-        names :: [(Int, String)]
+        names :: [(NodeID, String)]
         names =
           let toVar nId
                 | Var varName <- retrieveOp nId mp = Just (nId, varName)
                 | Param name <- retrieveOp nId mp = Just (nId, name)
                 | otherwise = Nothing
-           in mapMaybe toVar . IM.keys $ mp
-        assignValue :: (Int, String) -> Code
+           in mapMaybe toVar . map NodeID . IM.keys $ mp
+        assignValue :: (NodeID, String) -> Code
         assignValue (n, name) =
           case Map.lookup name valMaps of
             Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]

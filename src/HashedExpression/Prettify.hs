@@ -64,7 +64,7 @@ prettifyDebug e@(Expression n mp) =
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 nodeIDs :: ExpressionMap -> [NodeID]
-nodeIDs = map NodeID . IM.keys 
+nodeIDs = map NodeID . IM.keys
 
 -- | All the entries of the expression
 allEntries :: Expression d et -> [(NodeID, String)]

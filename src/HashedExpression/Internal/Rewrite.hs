@@ -12,6 +12,8 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (find, foldl', groupBy, sort, sortBy, sortOn)
 import Data.List.Extra (firstJust)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
@@ -47,13 +49,13 @@ toRecursiveTransformation ::
   Modification ->
   -- | resulting rule applied to every 'Node'
   Transformation
-toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup headN finalSub)
+toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ Map.lookup headN finalSub)
   where
     -------------------------------------------------------------------------------
     topoOrder :: [NodeID]
     topoOrder = topologicalSort exp
     -------------------------------------------------------------------------------
-    f :: IM.IntMap NodeID -> NodeID -> State ExpressionMap (IM.IntMap NodeID)
+    f :: Map NodeID NodeID -> NodeID -> State ExpressionMap (Map NodeID NodeID)
     f sub nID = do
       curMp <- get
       let oldNode = retrieveNode nID curMp
@@ -61,15 +63,15 @@ toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ IM.lookup 
       cID <- if newNode == oldNode then pure nID else introduceNode newNode
       updatedMp <- get
       appliedRuleNodeID <- smp (updatedMp, cID)
-      return $ IM.insert nID appliedRuleNodeID sub
-    (finalSub, finalMap) = runState (foldM f IM.empty topoOrder) mp
+      return $ Map.insert nID appliedRuleNodeID sub
+    (finalSub, finalMap) = runState (foldM f Map.empty topoOrder) mp
 
 instance (Monad m) => MonadExpression (StateT ExpressionMap m) where
   introduceNode node = do
     mp <- get
     let nID = hashNode (checkHashFromMap mp) node
     modify' $ IM.insert nID node
-    return nID
+    return (NodeID nID)
 
   getContextMap = get
 

@@ -30,7 +30,7 @@ partialDerivativesMap ::
   (ExpressionMap, Map String NodeID)
 partialDerivativesMap (Expression rootID mp) =
   let reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
-      init = ComputeDState mp IM.empty Map.empty
+      init = ComputeDState mp Map.empty Map.empty
       -- Chain rule
       go :: ComputeReverseM ()
       go = forM_ reverseTopoOrder $ \nID -> do
@@ -39,7 +39,7 @@ partialDerivativesMap (Expression rootID mp) =
           if nID == rootID
             then sNum 1
             else do
-              derivativeParts <- IM.lookup nID <$> gets cumulativeDerivatives
+              derivativeParts <- Map.lookup nID <$> gets cumulativeDerivatives
               -- Sum all the derivative parts incurred by its parents
               case derivativeParts of
                 Just [d] -> from d

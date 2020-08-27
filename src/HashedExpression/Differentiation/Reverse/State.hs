@@ -26,7 +26,7 @@ import Prelude hiding ((^))
 
 data ComputeDState = ComputeDState
   { contextMap :: ExpressionMap,
-    cumulativeDerivatives :: IM.IntMap [NodeID], -- cumulative derivatives incurred by parents
+    cumulativeDerivatives :: Map NodeID [NodeID], -- cumulative derivatives incurred by parents
     partialDerivativeMap :: Map String NodeID
   }
 
@@ -36,7 +36,7 @@ modifyContextMap f = modify' $ \s -> s {contextMap = f (contextMap s)}
 
 -- |
 addDerivative :: NodeID -> NodeID -> ComputeReverseM ()
-addDerivative x dx = modify' $ \s -> s {cumulativeDerivatives = IM.insertWith (++) x [dx] (cumulativeDerivatives s)}
+addDerivative x dx = modify' $ \s -> s {cumulativeDerivatives = Map.insertWith (++) x [dx] (cumulativeDerivatives s)}
 
 -- |
 modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
@@ -50,7 +50,7 @@ instance MonadExpression (State ComputeDState) where
     mp <- gets contextMap
     let nID = hashNode (checkHashFromMap mp) node
     modifyContextMap $ IM.insert nID node
-    return nID
+    return $ NodeID nID
 
   getContextMap = gets contextMap
 

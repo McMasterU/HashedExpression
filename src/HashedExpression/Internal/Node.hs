@@ -229,4 +229,3 @@ expressionOp (Expression (NodeID n) mp) =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "expression not in map"
-

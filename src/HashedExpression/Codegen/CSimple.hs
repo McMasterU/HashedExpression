@@ -25,7 +25,7 @@ import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
 import HashedExpression.Embed (fftUtils)
 import HashedExpression.Internal (topologicalSortManyRoots, unwrap)
-import HashedExpression.Internal.Expression (ElementType (..), Expression, ExpressionMap, Op (..), Shape, exMap)
+import HashedExpression.Internal.Expression (ElementType (..), Expression, ExpressionMap, NodeID (..), Op (..), Shape, exMap)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
 import HashedExpression.Internal.Utils
 import HashedExpression.Problem
@@ -45,8 +45,6 @@ data CSimpleConfig = CSimpleConfig
 
 -- | Offset w.r.t "ptr"
 type Address = Int
-
-type NodeID = Int
 
 -- | e.g: i, j, k
 type Index = Text
@@ -144,17 +142,17 @@ initCodegen config mp consecutiveIDs =
       config = config
     }
   where
-    (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) (IM.keys mp)
+    (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) $ map NodeID $ (IM.keys mp)
     f (addressMap, curSize) nID =
       let (shape, et, node) = retrieveNode nID mp
        in case et of
-            R -> (IM.insert nID curSize addressMap, curSize + product shape)
-            C -> (IM.insert nID curSize addressMap, curSize + 2 * product shape)
-    (memMap, totalSize) = foldl' f (IM.empty, 0) $ cs ++ rest
+            R -> (Map.insert nID curSize addressMap, curSize + product shape)
+            C -> (Map.insert nID curSize addressMap, curSize + 2 * product shape)
+    (memMap, totalSize) = foldl' f (Map.empty, 0) $ cs ++ rest
     addressMap nID
-      | Just offset <- IM.lookup nID memMap = offset
+      | Just offset <- Map.lookup nID memMap = offset
       | otherwise = error "Node ID doesn't exist in address map"
-    access :: Int -> Text -> Text
+    access :: NodeID -> Text -> Text
     access nID offsetVal =
       let offset
             | offsetVal == "" = ""
@@ -583,7 +581,7 @@ instance Codegen CSimpleConfig where
       params :: [String]
       params = map fst $ paramNodesWithId expressionMap
       -- value nodes
-      varsAndParams :: [(String, Int)]
+      varsAndParams :: [(String, NodeID)]
       varsAndParams = sortOn fst $ varNodesWithId expressionMap ++ paramNodesWithId expressionMap
       -- get shape of a variable
       variableShape :: String -> Shape

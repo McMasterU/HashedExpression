@@ -38,9 +38,9 @@ type Node = (Shape, ElementType, Op)
 
 -- | A hash value used to identify a 'Node' (in order to provide automatic subexpression reuse).
 --   Used as the index/key to perform a lookup in 'ExpressionMap'
-newtype NodeID = NodeID { unNodeID :: Int } deriving (Eq, Ord)
+newtype NodeID = NodeID {unNodeID :: Int} deriving (Eq, Ord)
 
-instance Show NodeID where 
+instance Show NodeID where
   show (NodeID nID) = show nID
 
 -- | HashedExpression stores expressions as a collection of 'Node' indexed by a

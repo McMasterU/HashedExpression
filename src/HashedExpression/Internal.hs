@@ -16,8 +16,6 @@ module HashedExpression.Internal where
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Array.MArray
 import Data.Array.ST
 import qualified Data.Array.Unboxed as UA
@@ -25,6 +23,8 @@ import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl', groupBy, sort, sortBy, sortOn)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
