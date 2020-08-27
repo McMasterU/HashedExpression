@@ -110,13 +110,6 @@ Bool intermediate_cb(
    UserDataPtr user_data
 );
 
-/** Structure that can be cast over UserDataPtr
-      SharedData->data should point to ptr in problem.c and holds all variables and auxiliary data
- */
-struct _SharedData {Number* data; int data_size; };
-typedef struct _SharedData* SharedData;
-
-
 /** Main Program */
 /* [MAIN] */
 int main()
@@ -138,16 +131,10 @@ int main()
   Number* mult_x_U = NULL;             /* upper bound multipliers at the solution */
   Number obj;                          /* objective value */
   Index i;                             /* generic counter */
-  SharedData sdata;
   // TODO remove unnecessary declerations above
 
   /* set number of variables and constraints */
    n = NUM_ACTUAL_VARIABLES; m = NUM_SCALAR_CONSTRAINT;
-
-   /* set sdata to ptr */
-   sdata = (SharedData)malloc(sizeof(struct _SharedData));
-   sdata->data = ptr;
-   sdata->data_size = MEM_SIZE;
 
    /* initializes bounds for variables and constraints
       (lower_bound,upper_bound,sc_lower_bound,sc_upper_bound) */
@@ -177,11 +164,11 @@ int main()
    AddIpoptStrOption(nlp, "mu_strategy", "adaptive"); // TODO does this help?
    AddIpoptStrOption(nlp, "hessian_approximation","limited-memory"); // TODO add option to turn off/on?
 
-   /* Initialize objective variables */
+   /* Initialize variables and parameters */
    read_values();
 
-   /* variables are allocated sequentially in ptr memory */
-   x = sdata->data + VARS_START_OFFSET;
+   /* starting point */
+   x = ptr + VARS_START_OFFSET;
 
    /* allocate space to store the bound multipliers at the solution */
    mult_g = (Number*) malloc(sizeof(Number) * NUM_SCALAR_CONSTRAINT);
@@ -196,7 +183,7 @@ int main()
    /* SetIntermediateCallback(nlp, intermediate_cb); */
 
    /* solve the problem */
-   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, &sdata);
+   status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, NULL);
 
    /* check IpoptSolve results and print solutions upon success
     * TODO write solution to file
@@ -248,13 +235,12 @@ Bool eval_f(
    Number*     x,
    Bool        new_x,
    Number*     obj_value,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_objective();
-  *obj_value = sdata->data[objective_offset];
+  *obj_value = ptr[objective_offset];
 
   return TRUE;
 }
@@ -264,22 +250,19 @@ Bool eval_grad_f(
    Number*     x,
    Bool        new_x,
    Number*     grad_f,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_partial_derivatives();
 
   /* copy partial derivatives from shared memory into grad_f
    * NOTE: unfortunately because of hashing, we cannot guarentee partials will be stored
    *       sequentially in memory
    */
-  int i;
-  int acc = 0;
+  int acc = 0; int i;
   for (i = 0; i < NUM_VARIABLES; i++) {
-    int pOff = partial_derivative_offset[i]; 
-    memcpy(&grad_f[acc],&(sdata->data[pOff]),sizeof(Number)*var_size[i]);
+    memcpy(grad_f + acc, ptr + partial_derivative_offset[i], sizeof(Number) * var_size[i]);
     acc += var_size[i];
   }
 
@@ -292,19 +275,17 @@ Bool eval_g(
    Bool        new_x,
    Index       m,
    Number*     g,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
-  SharedData sdata = (SharedData)user_data;
-
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
   evaluate_scalar_constraints();
 
   // TODO scalar constraints are always ... scalars right?
   //      like each constraint always evaluates to a single double?
   int i;
   for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
-    int scOff = sc_offset[i];
-    g[i] = sdata->data[scOff];
+    g[i] = ptr[sc_offset[i]];
   }
   return TRUE;
 }
@@ -318,11 +299,9 @@ Bool eval_jac_g(
    Index*      iRow,
    Index*      jCol,
    Number*     values,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
-   SharedData sdata = (SharedData)user_data;
-
    if( values == NULL )
    {
       /* return the structure of the jacobian OF THE CONSTRAINTS (not objective) */
@@ -339,19 +318,16 @@ Bool eval_jac_g(
    else
    {
      /* evaluate jacobian of the constraints */
+     memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
      evaluate_scalar_constraints_jacobian();
 
      /* return the values of the jacobian of the constraints */
      /* FIXME does accumulation ever cause a bad access? */
-     int i,j,acc;
-     acc = 0;
+     int i, j, acc = 0;
      for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
        for (j = 0; j < NUM_VARIABLES; j++) {
-         int sc_off = sc_partial_derivative_offset[i][j];
-         int var_sz = var_size[j]; // var_shape[j][0] * var_shape[j][1] * var_shape[j][2];
-         Number *p = sdata->data;
-         memcpy(&values[acc],&p[sc_off],sizeof(Number)*var_sz);
-         acc += var_sz;
+         memcpy(values + acc, ptr + sc_partial_derivative_offset[i][j], sizeof(Number) * var_size[j]);
+         acc += var_size[j];
        }
      }
    }
@@ -371,7 +347,7 @@ Bool eval_h(
    Index*      iRow,
    Index*      jCol,
    Number*     values,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
   /* no work is performed because hessian_approximation (lbfgs) option is on */
@@ -391,7 +367,7 @@ Bool intermediate_cb(
    Number      alpha_du,
    Number      alpha_pr,
    Index       ls_trials,
-   UserDataPtr user_data
+   UserDataPtr _
 )
 {
    printf("Testing intermediate callback in iteration %d\n", iter_count);
