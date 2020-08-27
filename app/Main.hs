@@ -24,18 +24,14 @@ import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Value
+import HashedExpression.Problem
 import Prelude hiding ((^))
 
 main :: IO ()
 main = do
   let x = variable2D @10 @10 "x"
-  let y = variable2D @10 @10 "y"
-  let z = variable "z"
-  let exp = z * (1 / z)
-  let valMap =
-        Map.fromList
-          [ ("x", V2D $ Array.listArray ((0, 0), (9, 9)) (replicate 50 1 ++ replicate 50 2)),
-            ("y", V2D $ Array.listArray ((0, 0), (9, 9)) (replicate 100 2)),
-            ("z", VScalar 2)
-          ]
-  print $ eval valMap exp
+  let obj = x <.> log x
+  case constructProblem obj (Constraint []) of 
+    ProblemValid p -> 
+      case generateProblemCode CSimpleConfig {output = OutputText} p Map.empty of 
+        Success proceed -> proceed "algorithms/ipopt"
