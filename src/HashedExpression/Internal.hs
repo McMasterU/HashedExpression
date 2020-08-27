@@ -16,6 +16,8 @@ module HashedExpression.Internal where
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Array.MArray
 import Data.Array.ST
 import qualified Data.Array.Unboxed as UA
@@ -69,7 +71,7 @@ apply ::
   [(ExpressionMap, NodeID)] ->
   -- | the resulting (unwrapped) 'Expression'
   (ExpressionMap, NodeID)
-apply option exps = (IM.insert resID resNode mergedMap, resID)
+apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
   where
     (mergedMap, nIDs) = safeMerges exps
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
@@ -137,7 +139,7 @@ type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
 removeUnreachable (mp, n) =
-  let reachableNodes = IS.fromList . topologicalSort $ (mp, n)
+  let reachableNodes = IS.fromList . map unNodeID . topologicalSort $ (mp, n)
       reducedMap =
         IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
    in (reducedMap, n)
@@ -179,7 +181,7 @@ topologicalSortManyRoots ::
   (ExpressionMap, [NodeID]) ->
   -- | list in topological order (independent to dependent)
   [NodeID]
-topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
+topologicalSortManyRoots (mp, ns) = map NodeID $ filter (/= -1) . UA.elems $ topoOrder
   where
     len :: Int
     len = IM.size mp
@@ -188,7 +190,7 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
     n2Pos = IM.fromList $ zip (IM.keys mp) [0 ..]
     -------------------------------------------------------------------------------
     toPos :: NodeID -> Int
-    toPos nId = fromJust $ IM.lookup nId n2Pos
+    toPos (NodeID nId) = fromJust $ IM.lookup nId n2Pos
     -------------------------------------------------------------------------------
     adj :: NodeID -> [NodeID]
     adj nId = opArgs $ retrieveOp nId mp
@@ -208,7 +210,7 @@ topologicalSortManyRoots (mp, ns) = filter (/= -1) . UA.elems $ topoOrder
                 isMarked <- readArray marked (toPos v)
                 unless isMarked $ dfs v
               cntVal <- readSTRef cnt
-              writeArray order cntVal u
+              writeArray order cntVal (unNodeID u)
               writeSTRef cnt (cntVal + 1)
         forM_ ns $ \n -> do
           isMarked <- readArray marked (toPos n)
@@ -224,8 +226,8 @@ expressionVarNodes (Expression n mp) = mapMaybe collect ns
       | Var varName <- retrieveOp nId mp = Just (varName, nId)
       | otherwise = Nothing
 
-toTotal :: IM.IntMap NodeID -> (NodeID -> NodeID)
-toTotal mp nID = case IM.lookup nID mp of
+toTotal :: Map NodeID NodeID -> (NodeID -> NodeID)
+toTotal mp nID = case Map.lookup nID mp of
   Just other -> other
   _ -> nID
 
@@ -233,19 +235,19 @@ safeMergeManyRoots :: ExpressionMap -> (ExpressionMap, [NodeID]) -> (ExpressionM
 safeMergeManyRoots accMp (mp, ns) =
   -- Merge the subexpression to main expression map
   -- produce `sub` as the map from old hash to new hash if there is any hash-collision
-  let f :: (ExpressionMap, IM.IntMap NodeID) -> NodeID -> (ExpressionMap, IM.IntMap NodeID)
+  let f :: (ExpressionMap, Map NodeID NodeID) -> NodeID -> (ExpressionMap, Map NodeID NodeID)
       f (acc, sub) nodeID =
         let -- the node needed to be added to accMp
             node = mapNode (toTotal sub) (retrieveNode nodeID mp)
             -- get the new hash that is collision-free to both acc and contextMp
-            newNodeID = hashNode (checkHashFromMap accMp) node
-         in ( IM.insert newNodeID node acc,
+            newNodeID@(NodeID h) = NodeID $ hashNode (checkHashFromMap accMp) node
+         in ( IM.insert h node acc,
               if newNodeID == nodeID
                 then sub
-                else IM.insert nodeID newNodeID sub
+                else Map.insert nodeID newNodeID sub
             )
       -- Fold over all sub-expressions by topological order
-      (mergedMap, finalSub) = foldl' f (accMp, IM.empty) $ topologicalSortManyRoots (mp, ns)
+      (mergedMap, finalSub) = foldl' f (accMp, Map.empty) $ topologicalSortManyRoots (mp, ns)
    in (mergedMap, map (toTotal finalSub) ns)
 
 -- | Merge the second map into the first map, resolve hash collision if occur

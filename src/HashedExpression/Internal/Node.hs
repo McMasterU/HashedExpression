@@ -18,10 +18,6 @@ module HashedExpression.Internal.Node
     retrieveNode,
     retrieveOp,
     retrieveShape,
-    retrievesNode,
-    retrievesOp,
-    retrievesElementType,
-    retrievesShape,
     expressionElementType,
     expressionNode,
     expressionOp,
@@ -173,7 +169,7 @@ mapNode f (shape, et, op) = (shape, et, mapOp f op)
 -- | Retrieve a 'Op' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveOp #-}
 retrieveOp :: HasCallStack => NodeID -> ExpressionMap -> Op
-retrieveOp n mp =
+retrieveOp (NodeID n) mp =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "node not in map"
@@ -181,7 +177,7 @@ retrieveOp n mp =
 -- | Retrieve a 'Node' structure (i.e a 'Node' with it's 'Shape') from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveNode #-}
 retrieveNode :: HasCallStack => NodeID -> ExpressionMap -> Node
-retrieveNode n mp =
+retrieveNode (NodeID n) mp =
   case IM.lookup n mp of
     Just internal -> internal
     _ -> error "node not in map"
@@ -189,7 +185,7 @@ retrieveNode n mp =
 -- | Retrieve the ElementType (i.e 'R','C') of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveElementType #-}
 retrieveElementType :: HasCallStack => NodeID -> ExpressionMap -> ElementType
-retrieveElementType n mp =
+retrieveElementType (NodeID n) mp =
   case IM.lookup n mp of
     Just (_, et, _) -> et
     _ -> error "expression not in map"
@@ -197,7 +193,7 @@ retrieveElementType n mp =
 -- | Retrieve the 'Shape' of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveShape #-}
 retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
-retrieveShape n mp =
+retrieveShape (NodeID n) mp =
   case IM.lookup n mp of
     Just (shape, _, _) -> shape
     _ -> error "expression not in map"
@@ -205,7 +201,7 @@ retrieveShape n mp =
 -- | Retrieve the 'ElementType' (i.e 'R','C') of a 'Expression'
 {-# INLINE expressionElementType #-}
 expressionElementType :: HasCallStack => Expression d et -> ElementType
-expressionElementType (Expression n mp) =
+expressionElementType (Expression (NodeID n) mp) =
   case IM.lookup n mp of
     Just (_, et, _) -> et
     _ -> error "expression not in map"
@@ -213,7 +209,7 @@ expressionElementType (Expression n mp) =
 -- | Retrieve the 'Shape' of an 'Expression'
 {-# INLINE expressionShape #-}
 expressionShape :: HasCallStack => Expression d et -> Shape
-expressionShape (Expression n mp) =
+expressionShape (Expression (NodeID n) mp) =
   case IM.lookup n mp of
     Just (dim, _, _) -> dim
     _ -> error "expression not in map"
@@ -221,7 +217,7 @@ expressionShape (Expression n mp) =
 -- | Retrieve the 'Node' of an 'Expression'
 {-# INLINE expressionNode #-}
 expressionNode :: HasCallStack => Expression d et -> Node
-expressionNode (Expression n mp) =
+expressionNode (Expression (NodeID n) mp) =
   case IM.lookup n mp of
     Just internal -> internal
     _ -> error "expression not in map"
@@ -229,27 +225,8 @@ expressionNode (Expression n mp) =
 -- | Retrieve the Op of an expression
 {-# INLINE expressionOp #-}
 expressionOp :: HasCallStack => Expression d et -> Op
-expressionOp (Expression n mp) =
+expressionOp (Expression (NodeID n) mp) =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "expression not in map"
 
--- | Retrieve a 'Node' structure from the list of Expression map, must exists
-retrievesNode :: HasCallStack => NodeID -> [ExpressionMap] -> Node
-retrievesNode n [] = error "node not in any map"
-retrievesNode n (mp : mps) =
-  case IM.lookup n mp of
-    Just internal -> internal
-    _ -> retrievesNode n mps
-
--- | Retrieve a 'Op' structure from the list of Expression map, must exists
-retrievesOp :: HasCallStack => NodeID -> [ExpressionMap] -> Op
-retrievesOp n mps = thd3 $ retrievesNode n mps
-
--- | Retrieve a 'ElementType' structure from the list of Expression map, must exists
-retrievesElementType :: HasCallStack => NodeID -> [ExpressionMap] -> ElementType
-retrievesElementType n mps = snd3 $ retrievesNode n mps
-
----- | Retrieve a 'Shape' structure from the list of Expression map, must exists
-retrievesShape :: HasCallStack => NodeID -> [ExpressionMap] -> Shape
-retrievesShape n mps = fst3 $ retrievesNode n mps

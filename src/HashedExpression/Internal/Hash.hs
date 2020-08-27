@@ -121,10 +121,10 @@ data HashOutcome
   = -- | clashes with an old hash
     IsClash
   | -- | new hash value
-    IsOk NodeID
+    IsOk Int
   deriving (Eq, Show, Ord)
 
-type CheckHash = Node -> NodeID -> HashOutcome
+type CheckHash = Node -> Int -> HashOutcome
 
 -- |
 -- | IsOk if doesn't collide with the provided expression map
@@ -145,7 +145,7 @@ checkHashFromMaps (mp : mps) node nID = case checkHashFromMap mp node nID of
   IsOk _ -> checkHashFromMaps mps node nID
 
 -- |
-hashNode :: CheckHash -> Node -> NodeID
+hashNode :: CheckHash -> Node -> Int
 hashNode checkHash e =
   case dropWhile (== IsClash) . map (checkHash e . hash e) $ [0 .. 1000] of
     (IsOk h : _) -> h
@@ -156,7 +156,7 @@ addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
 addNode mp e =
   let checkHash = checkHashFromMap mp
       h = hashNode checkHash e
-   in (IM.insert h e mp, h)
+   in (IM.insert h e mp, NodeID h)
 
 -- | Create an Expression from a standalone 'Node'
 fromNode :: Node -> Expression d et

@@ -63,15 +63,18 @@ prettifyDebug e@(Expression n mp) =
       node = expressionOp e
    in T.unpack (hiddenPrettify True $ unwrap e)
 
+nodeIDs :: ExpressionMap -> [NodeID]
+nodeIDs = map NodeID . IM.keys 
+
 -- | All the entries of the expression
 allEntries :: Expression d et -> [(NodeID, String)]
 allEntries (Expression n mp) =
-  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ IM.keys mp
+  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
 
 -- | Print every entry (invididually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
 allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
 allEntriesDebug (mp, n) =
-  zip (IM.keys mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ IM.keys mp
+  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
 
 -- | Print every entry (invididually) of an 'Expression'
 showAllEntries :: forall d et. Expression d et -> IO ()

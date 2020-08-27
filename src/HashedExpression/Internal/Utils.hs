@@ -119,14 +119,14 @@ maybeVariable (Expression nID mp) = case retrieveNode nID mp of
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
 varNodesWithId :: ExpressionMap -> [(String, NodeID)]
-varNodesWithId mp = mapMaybe collect . IM.keys $ mp
+varNodesWithId mp = mapMaybe (collect . NodeID) . IM.keys $ mp
   where
     collect nId
       | Var name <- retrieveOp nId mp = Just (name, nId)
       | otherwise = Nothing
 
 paramNodesWithId :: ExpressionMap -> [(String, NodeID)]
-paramNodesWithId mp = mapMaybe collect . IM.keys $ mp
+paramNodesWithId mp = mapMaybe (collect . NodeID) . IM.keys $ mp
   where
     collect nId
       | Param name <- retrieveOp nId mp = Just (name, nId)
@@ -135,7 +135,7 @@ paramNodesWithId mp = mapMaybe collect . IM.keys $ mp
 varNodes :: ExpressionMap -> [(String, Shape, NodeID)]
 varNodes mp = mapMaybe collect $ IM.toList mp
   where
-    collect (nID, (shape, _, Var varName)) = Just (varName, shape, nID)
+    collect (nID, (shape, _, Var varName)) = Just (varName, shape, NodeID nID)
     collect _ = Nothing
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
