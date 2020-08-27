@@ -13,13 +13,10 @@
 --  https://cp-algorithms.com/string/string-hashing.html
 module HashedExpression.Internal.Hash
   ( hash,
-    addNode,
-    fromNode,
-    fromNodeUnwrapped,
     hashNode,
-    checkHashFromMap,
-    checkHashFromMaps,
-    CheckHash,
+    checkCollisionMap,
+    checkCollisionMaps,
+    CheckCollision,
     HashOutcome (..),
   )
 where
@@ -124,13 +121,13 @@ data HashOutcome
     IsOk Int
   deriving (Eq, Show, Ord)
 
-type CheckHash = Node -> Int -> HashOutcome
+type CheckCollision = Node -> Int -> HashOutcome
 
 -- |
 -- | IsOk if doesn't collide with the provided expression map
 --   IsClash otherwise
-checkHashFromMap :: ExpressionMap -> CheckHash
-checkHashFromMap mp node nID =
+checkCollisionMap :: ExpressionMap -> CheckCollision
+checkCollisionMap mp node nID =
   case IM.lookup nID mp of
     Nothing -> IsOk nID
     Just existingNode | existingNode == node -> IsOk nID
@@ -138,32 +135,15 @@ checkHashFromMap mp node nID =
 
 -- | IsOk if doesn't collide with any of provided expression map
 --   IsClash otherwise
-checkHashFromMaps :: [ExpressionMap] -> CheckHash
-checkHashFromMaps [] node nID = IsOk nID
-checkHashFromMaps (mp : mps) node nID = case checkHashFromMap mp node nID of
+checkCollisionMaps :: [ExpressionMap] -> CheckCollision
+checkCollisionMaps [] node nID = IsOk nID
+checkCollisionMaps (mp : mps) node nID = case checkCollisionMap mp node nID of
   IsClash -> IsClash
-  IsOk _ -> checkHashFromMaps mps node nID
+  IsOk _ -> checkCollisionMaps mps node nID
 
 -- |
-hashNode :: CheckHash -> Node -> Int
-hashNode checkHash e =
-  case dropWhile (== IsClash) . map (checkHash e . hash e) $ [0 .. 1000] of
+hashNode :: CheckCollision -> Node -> Int
+hashNode checkCollision node =
+  case dropWhile (== IsClash) . map (checkCollision node . hash node) $ [0 .. 1000] of
     (IsOk h : _) -> h
     _ -> error "hashNode everything clashed!"
-
--- | Compute a 'NodeID' using a hash mapping (computed with 'hash')
-addNode :: ExpressionMap -> Node -> (ExpressionMap, NodeID)
-addNode mp e =
-  let checkHash = checkHashFromMap mp
-      h = hashNode checkHash e
-   in (IM.insert h e mp, NodeID h)
-
--- | Create an Expression from a standalone 'Node'
-fromNode :: Node -> Expression d et
-fromNode e = Expression nID mp
-  where
-    (mp, nID) = addNode IM.empty e
-
--- | Create an unwrapped Expresion from a standalone 'Node'
-fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
-fromNodeUnwrapped = addNode IM.empty

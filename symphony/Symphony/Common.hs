@@ -8,7 +8,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression (ExpressionMap, NodeID, Op (..))
+import HashedExpression.Internal.Expression (ElementType (..), ExpressionMap, NodeID, Op (..))
 import qualified HashedExpression.Internal.Expression as HE
 import qualified HashedExpression.Internal.Node as HN
 import qualified HashedExpression.Operation as HO
@@ -117,3 +117,12 @@ retrieveExpFromIdent context@Context {..} (pos, name)
 -- |  TODO: Check if val is valid w.r.t shape
 checkVal :: HE.Shape -> Val -> Result ()
 checkVal shape val = return ()
+
+varWithShape :: HE.Shape -> String -> (ExpressionMap, NodeID)
+varWithShape shape name = fromNodeUnwrapped (shape, R, Var name)
+
+paramWithShape :: HE.Shape -> String -> (ExpressionMap, NodeID)
+paramWithShape shape name = fromNodeUnwrapped (shape, R, Param name)
+
+constWithShape :: HE.Shape -> Double -> (ExpressionMap, NodeID)
+constWithShape shape val = fromNodeUnwrapped (shape, R, Const val)

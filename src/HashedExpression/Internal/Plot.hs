@@ -10,9 +10,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Graphics.EasyPlot
 import HashedExpression.Internal.Expression
-  ( Expression,
+  ( ElementType (..),
+    Expression,
     Op (..),
-    R,
     Scalar,
     exMap,
   )

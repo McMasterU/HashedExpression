@@ -27,7 +27,7 @@ perform :: (MonadExpression m) => OperationSpec -> [NodeID] -> m NodeID
 perform spec operandIDs = do
   mp <- getContextMap
   let operands = map (\nID -> (nID, retrieveNode nID mp)) operandIDs
-  let node = createEntry spec operands
+  let node = createNode spec operands
   introduceNode node
 
 instance (MonadExpression m) => Num (m NodeID) where

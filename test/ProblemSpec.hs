@@ -82,13 +82,15 @@ makeValidBoxConstraint (name, shape) =
 --                generate (vectorOf (size1 * size2 * size3) arbitrary)
 --            generate $
 --                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+varNodesWithShape :: ExpressionMap -> [(String, Shape)]
+varNodesWithShape mp = map (\(name, shape, _) -> (name, shape)) $ varNodes mp
 
 -- |
 prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
 prop_constructProblemBoxConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
-  let varsWithShape = varNodesWithShape (exMap exp)
-  bcs <- mapM makeValidBoxConstraint varsWithShape
+  let vs = varNodesWithShape (exMap exp)
+  bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
   let constraints = Constraint sampled
   let constructResult = constructProblem exp constraints
@@ -117,10 +119,10 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
   --  showExp $ exp
   let names = Map.keys valMap
   --  print names
-  let varsWithShape = varNodesWithShape (exMap exp)
-  --  print $ varsWithShape
+  let vs = varNodesWithShape (exMap exp)
+  --  print $ vs
   -- box constraints
-  bcs <- mapM makeValidBoxConstraint varsWithShape
+  bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
   -- scalar constraints
   numScalarConstraint <- generate $ elements [2 .. 4]

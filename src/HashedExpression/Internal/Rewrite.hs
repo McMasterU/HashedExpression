@@ -22,6 +22,7 @@ import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
@@ -69,7 +70,7 @@ toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ Map.lookup
 instance (Monad m) => MonadExpression (StateT ExpressionMap m) where
   introduceNode node = do
     mp <- get
-    let nID = hashNode (checkHashFromMap mp) node
+    let nID = hashNode (checkCollisionMap mp) node
     modify' $ IM.insert nID node
     return (NodeID nID)
 

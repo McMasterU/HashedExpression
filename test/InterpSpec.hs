@@ -318,7 +318,7 @@ instance (KnownNat n) => Arbitrary (IntB n) where
   arbitrary = do
     let nNat = nat @n
     x <- arbitrary
-    return $ IntB $ signum x * (x `mod` nNat)
+    return $ IntB $ abs (x `mod` nNat)
 
 prop_ExpScalar_1 :: SuiteScalarR -> IntB 5 -> IntB 5 -> Expectation
 prop_ExpScalar_1 (Suite exp1 valMaps1) (IntB a) (IntB b) =

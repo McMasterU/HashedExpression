@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
 -- |
@@ -29,14 +30,17 @@ import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
 import Data.STRef.Strict
 import Data.Set (Set, empty, insert, member)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
+import HashedExpression.Prettify
 import Prelude hiding ((^))
 
 -- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
@@ -46,18 +50,6 @@ unwrap (Expression n mp) = (mp, n)
 -- | Wrap a 'ExpressionMap' and root 'NodeID' into an "Expression" type
 wrap :: (ExpressionMap, NodeID) -> Expression d et
 wrap = uncurry $ flip Expression
-
--------------------------------------------------------------------------------
-
--- | Generic N-Ary multiplication operator, constructed using 'apply'
---   with 'ElementDefault' to default to the 'ElementType' of it's arguments
-mulMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-mulMany = apply (Nary specMul)
-
--- | Generic N-Ary addition operator, constructed using 'apply'
---   with 'ElementDefault' to default to the 'ElementType' of it's arguments
-sumMany :: [(ExpressionMap, NodeID)] -> (ExpressionMap, NodeID)
-sumMany = apply (Nary specSum)
 
 -------------------------------------------------------------------------------
 
@@ -75,8 +67,8 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
   where
     (mergedMap, nIDs) = safeMerges exps
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
-    resNode = createEntry option operands
-    resID = hashNode (checkHashFromMap mergedMap) resNode
+    resNode = createNode option operands
+    resID = hashNode (checkCollisionMap mergedMap) resNode
 
 applyUnary ::
   HasCallStack =>
@@ -143,6 +135,11 @@ removeUnreachable (mp, n) =
       reducedMap =
         IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
    in (reducedMap, n)
+
+removeUnreachableManyRoots :: (ExpressionMap, [NodeID]) -> ExpressionMap
+removeUnreachableManyRoots (mp, nodeIDs) =
+  let reachableNodes = IS.fromList . map unNodeID . topologicalSortManyRoots $ (mp, nodeIDs)
+   in IM.filterWithKey (\nId _ -> IS.member nId reachableNodes) mp -- Only keep those in reachable nodes
 
 -- | Apply a 'Transformation' maximum k times, or stop if the expression doesn't change
 multipleTimes ::
@@ -240,7 +237,7 @@ safeMergeManyRoots accMp (mp, ns) =
         let -- the node needed to be added to accMp
             node = mapNode (toTotal sub) (retrieveNode nodeID mp)
             -- get the new hash that is collision-free to both acc and contextMp
-            newNodeID@(NodeID h) = NodeID $ hashNode (checkHashFromMap accMp) node
+            newNodeID@(NodeID h) = NodeID $ hashNode (checkCollisionMap accMp) node
          in ( IM.insert h node acc,
               if newNodeID == nodeID
                 then sub
@@ -268,14 +265,14 @@ safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
 -- |
 -- Create an node out of operation spec and its operands.
 -- Operands must follow the spec in terms of input and output's element types & shape
-createEntry ::
+createNode ::
   -- | Operation specification
   OperationSpec ->
   -- | Operands
   [(NodeID, Node)] ->
   -- | Result Node
   Node
-createEntry spec args =
+createNode spec args =
   let shapeOf (nID, (shape, et, _)) = shape
       etOf (nID, (shape, et, _)) = et
       idOf (nID, (shape, et, _)) = nID
@@ -301,3 +298,61 @@ createEntry spec args =
             toOp (idOf condition) (map idOf branches)
           )
         _ -> error "Unfaithful with operation spec"
+
+-------------------------------------------------------------------------------
+
+-- | Create an Expression from a standalone 'Node'
+fromNode :: Node -> Expression d et
+fromNode node = Expression (NodeID h) (IM.insert h node IM.empty)
+  where
+    checkCollision = checkCollisionMap IM.empty
+    h = hashNode checkCollision node
+
+-- | Create an unwrapped Expresion from a standalone 'Node'
+fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
+fromNodeUnwrapped = unwrap . fromNode
+
+extract :: ExpressionMap -> ((Int, Node) -> Maybe a) -> [a]
+extract mp collect = mapMaybe collect $ IM.toList mp
+
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
+varsWithNodeID :: ExpressionMap -> [(String, NodeID)]
+varsWithNodeID mp = extract
+  mp
+  \case
+    (nId, (_, _, Var name)) -> Just (name, NodeID nId)
+    _ -> Nothing
+
+paramsWithNodeID :: ExpressionMap -> [(String, NodeID)]
+paramsWithNodeID mp = extract mp $
+  \case
+    (nId, (_, _, Param name)) -> Just (name, NodeID nId)
+    _ -> Nothing
+
+varNodes :: ExpressionMap -> [(String, Shape, NodeID)]
+varNodes mp = extract mp $
+  \case
+    (nID, (shape, _, Var varName)) -> Just (varName, shape, NodeID nID)
+    _ -> Nothing
+
+-- | Predicate determining if a 'ExpressionMap' contains a FT operation
+containsFTNode :: ExpressionMap -> Bool
+containsFTNode mp = any isFT $ IM.elems mp
+  where
+    isFT (_, _, FT _) = True
+    isFT (_, _, IFT _) = True
+    isFT _ = False
+
+nodeIDs :: ExpressionMap -> [NodeID]
+nodeIDs = map NodeID . IM.keys
+
+-------------------------------------------------------------------------------
+-- | All the entries of the expression
+allEntries :: Expression d et -> [(NodeID, String)]
+allEntries (Expression n mp) =
+  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
+
+-- | Print every entry (individually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
+allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
+allEntriesDebug (mp, n) =
+  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp

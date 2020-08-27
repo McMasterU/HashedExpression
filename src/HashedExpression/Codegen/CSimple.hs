@@ -24,7 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen
 import HashedExpression.Embed (fftUtils)
-import HashedExpression.Internal (topologicalSortManyRoots, unwrap)
+import HashedExpression.Internal
 import HashedExpression.Internal.Expression (ElementType (..), Expression, ExpressionMap, NodeID (..), Op (..), Shape, exMap)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
 import HashedExpression.Internal.Utils
@@ -142,7 +142,7 @@ initCodegen config mp consecutiveIDs =
       config = config
     }
   where
-    (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) $ map NodeID $ (IM.keys mp)
+    (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) $ nodeIDs mp
     f (addressMap, curSize) nID =
       let (shape, et, node) = retrieveNode nID mp
        in case et of
@@ -579,10 +579,10 @@ instance Codegen CSimpleConfig where
       vars = map varName variables
       -- params
       params :: [String]
-      params = map fst $ paramNodesWithId expressionMap
+      params = map fst $ paramsWithNodeID expressionMap
       -- value nodes
       varsAndParams :: [(String, NodeID)]
-      varsAndParams = sortOn fst $ varNodesWithId expressionMap ++ paramNodesWithId expressionMap
+      varsAndParams = sortOn fst $ varsWithNodeID expressionMap ++ paramsWithNodeID expressionMap
       -- get shape of a variable
       variableShape :: String -> Shape
       variableShape name =
