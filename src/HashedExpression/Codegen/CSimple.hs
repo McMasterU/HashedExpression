@@ -614,7 +614,7 @@ instance Codegen CSimpleConfig where
         | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
           Scoped
-            [ Printf ["Init value for " <> tt name <> "is not provided, generate random init for " <> tt "name" <> " ...\\n"],
+            [ Printf ["Init value for " <> tt name <> " is not provided, generate random init for " <> tt name <> " ...\\n"],
               for "i" (product shape) $
                 [Assign ("ptr[" <> tt offset <> "+ i]") ("(double) rand() / RAND_MAX")]
             ]
@@ -721,10 +721,10 @@ instance Codegen CSimpleConfig where
               ]
             readBoundScalarConstraints =
               [ "sc_lower_bound[" <> tt i <> "] = " <> d2s val <> ";"
-                | (i, val) <- zip [0 ..] $ map constraintLowerBound scalarConstraints
+                | (i, val) <- zip [0 :: Int ..] $ map constraintLowerBound scalarConstraints
               ]
                 <> [ "sc_upper_bound[" <> tt i <> "] = " <> d2s val <> ";"
-                     | (i, val) <- zip [0 ..] $ map constraintUpperBound scalarConstraints
+                     | (i, val) <- zip [0 :: Int ..] $ map constraintUpperBound scalarConstraints
                    ]
          in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ varPosition) <> "};",
               "double lower_bound[NUM_ACTUAL_VARIABLES];",
