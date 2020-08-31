@@ -9,8 +9,11 @@
 -- Portability :  unportable
 module HashedExpression.Internal.Context where
 
+import Control.Monad.State.Strict
+import qualified Data.IntMap.Strict as IM
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
@@ -21,6 +24,24 @@ import HashedExpression.Internal.Utils
 class (Monad m) => MonadExpression m where
   introduceNode :: Node -> m NodeID
   getContextMap :: m ExpressionMap
+
+sum_ :: (MonadExpression m) => [m NodeID] -> m NodeID
+sum_ ops = sequence ops >>= perform (Nary specSum)
+
+product_ :: (MonadExpression m) => [m NodeID] -> m NodeID
+product_ ops = sequence ops >>= perform (Nary specMul)
+
+const_ :: (MonadExpression m) => Shape -> Double -> m NodeID
+const_ shape val = introduceNode (shape, R, Const val)
+
+instance (Monad m) => MonadExpression (StateT ExpressionMap m) where
+  introduceNode node = do
+    mp <- get
+    let nID = hashNode (checkCollisionMap mp) node
+    modify' $ IM.insert nID node
+    return (NodeID nID)
+
+  getContextMap = get
 
 -- |
 perform :: (MonadExpression m) => OperationSpec -> [NodeID] -> m NodeID
