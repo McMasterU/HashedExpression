@@ -97,21 +97,22 @@ hash (shape, et, node) rehashNum =
         RealPart arg -> offsetHash 24 . hashString' $ show arg
         ImagPart arg -> offsetHash 25 . hashString' $ show arg
         RealImag arg1 arg2 -> offsetHash 26 . hashString' $ show arg1 ++ separator ++ show arg2
-        InnerProd arg1 arg2 -> offsetHash 27 . hashString' $ show arg1 ++ separator ++ show arg2
+        Conjugate arg -> offsetHash 27 . hashString' $ show arg
+        InnerProd arg1 arg2 -> offsetHash 28 . hashString' $ show arg1 ++ separator ++ show arg2
         Piecewise marks arg branches ->
-          offsetHash 28 . hashString' $
+          offsetHash 29 . hashString' $
             (intercalate separator . map show $ marks)
               ++ separator
               ++ show arg
               ++ separator
               ++ (intercalate separator . map show $ branches)
-        Rotate amount arg -> offsetHash 29 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
-        FT arg -> offsetHash 30 . hashString' $ show arg
-        IFT arg -> offsetHash 31 . hashString' $ show arg
-        Project ss arg -> offsetHash 32 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show arg
-        Inject ss sub base -> offsetHash 33 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
-        -------------------------------------------------------------------------------
-        Conjugate arg -> offsetHash 37 . hashString' $ show arg
+        Rotate amount arg -> offsetHash 30 . hashString' $ (intercalate separator . map show $ amount) ++ separator ++ show arg
+        FT arg -> offsetHash 31 . hashString' $ show arg
+        IFT arg -> offsetHash 32 . hashString' $ show arg
+        Project ss arg -> offsetHash 33 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show arg
+        Inject ss sub base -> offsetHash 34 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
+        MatMul arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
+        Transpose arg -> offsetHash 36 . hashString' $ show arg
 
 -- | Check the outcome of a generated hash value
 data HashOutcome

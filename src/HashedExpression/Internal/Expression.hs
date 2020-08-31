@@ -52,6 +52,8 @@ module HashedExpression.Internal.Expression
     RotateOp (..),
     RotateAmount,
     InnerProductSpaceOp (..),
+    MatrixMulOp (..),
+    TransposeOp(..)
   )
 where
 
@@ -63,7 +65,7 @@ import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import HashedExpression.Internal.Base
-import Prelude hiding ((^))
+import Prelude hiding ((^), (**))
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -170,6 +172,10 @@ data Op
     Project [DimSelector] Arg
   | -- | Injection
     Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
+  | -- | Matrix multiplication
+    MatMul Arg Arg 
+  | -- | Transpose 
+    Transpose Arg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -268,10 +274,6 @@ type Shape = [Int]
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- * Generic Combinators
-
--- --------------------------------------------------------------------------------------------------------------------
-
 -- | Interface for power (i.e power to) combinator for constructing 'Expression' types. Can be overloaded
 --   to support different functionality performed on 'Expresion' (such as evaluation, pattern matching, code generation)
 class PowerOp a b | a -> b where
@@ -325,9 +327,18 @@ class ProjectInjectOp s a b | s a -> b where
   project :: s -> a -> b
   inject :: s -> b -> a -> a
 
+
+class MatrixMulOp a b c | a b -> c where 
+  (**) :: a -> b -> c
+  matmul :: a -> b -> c 
+  matmul = (**)
+  
+class TransposeOp a b | a -> b where 
+  transpose :: a -> b
+
 -------------------------------------------------------------------------------
 infixl 6 +:
 
-infixl 8 *., `scale`, <.>
+infixl 8 *., `scale`, <.>, **
 
 infixl 8 ^

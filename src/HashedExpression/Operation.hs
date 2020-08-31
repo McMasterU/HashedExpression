@@ -27,7 +27,7 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
-import Prelude hiding ((^))
+import Prelude hiding ((^), (**))
 
 instance (Dimension d) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
@@ -295,6 +295,25 @@ instance
   inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
 
 -- TODO: 3D
+
+
+-------------------------------------------------------------------------------
+
+instance (KnownNat m, KnownNat n, KnownNat p) =>
+  MatrixMulOp (Expression (D2 m n) et) (Expression (D2 n p) et) (Expression (D2 m p) et) where
+  (**) = applyBinary specMatMul
+
+instance (KnownNat m, KnownNat n) =>
+  MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et) where
+  (**) = applyBinary specMatMul
+
+instance (KnownNat m, KnownNat n) => 
+  TransposeOp (Expression (D2 m n) et) (Expression (D2 n m) et) where 
+  transpose = applyUnary specTranspose
+
+instance (KnownNat m) => 
+  TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et) where 
+  transpose = applyUnary specTranspose
 -------------------------------------------------------------------------------
 
 at :: forall i. (KnownNat i) => Proxy i

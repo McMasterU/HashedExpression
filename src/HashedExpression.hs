@@ -36,4 +36,4 @@ import HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
-import Prelude hiding ((^))
+import Prelude hiding ((^), (**))
