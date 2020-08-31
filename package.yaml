@@ -59,10 +59,10 @@ default-extensions:
   - ExtendedDefaultRules
   - MultiParamTypeClasses
   - TemplateHaskell
-  - DeriveAnyClass
   - QuasiQuotes
   - ScopedTypeVariables
   - TupleSections
+  - GeneralisedNewtypeDeriving
   - DataKinds
   - InstanceSigs
   - RecordWildCards

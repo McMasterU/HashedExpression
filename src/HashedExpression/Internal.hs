@@ -347,6 +347,7 @@ nodeIDs :: ExpressionMap -> [NodeID]
 nodeIDs = map NodeID . IM.keys
 
 -------------------------------------------------------------------------------
+
 -- | All the entries of the expression
 allEntries :: Expression d et -> [(NodeID, String)]
 allEntries (Expression n mp) =

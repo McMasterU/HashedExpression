@@ -58,7 +58,3 @@ instance MonadExpression (State ComputeDState) where
 -- |
 from :: NodeID -> ComputeReverseM NodeID
 from = return
-
--- |
-sNum :: Double -> ComputeReverseM NodeID
-sNum val = introduceNode ([], R, Const val)

@@ -280,7 +280,7 @@ combineTermsRules exp@(mp, n)
       | Neg negateeN <- retrieveOp nId mp = (negateeN, -1)
       | otherwise = (nId, 1)
     combine xs = (fst $ head xs, sum $ map snd xs)
-    build :: (NodeID, Double) -> State ExpressionMap NodeID
+    build :: (NodeID, Double) -> Rewrite NodeID
     build (nId, val)
       | val == 1 = just nId
       | otherwise = num_ val *. just nId

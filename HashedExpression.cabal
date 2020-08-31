@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8af364451196f4acc4614026b71be1d6b8db581cd0438c6581efc548cdbd914f
+-- hash: 3b62afee40d33a5bf4184f4164638b7f372c80936cd69b71cd8f0f53e1396011
 
 name:           HashedExpression
 version:        0.0.5
@@ -62,7 +62,7 @@ library
       Paths_HashedExpression
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   build-tools:
       alex
     , happy
@@ -91,7 +91,7 @@ executable HashedExpression-exe
       Paths_HashedExpression
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -137,7 +137,7 @@ executable symphony
       Paths_HashedExpression
   hs-source-dirs:
       symphony
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -182,7 +182,7 @@ test-suite HashedExpression-test
       Paths_HashedExpression
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell DeriveAnyClass QuasiQuotes ScopedTypeVariables TupleSections DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex

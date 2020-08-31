@@ -31,13 +31,15 @@ partialDerivativesMap ::
 partialDerivativesMap (Expression rootID mp) =
   let reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
       init = ComputeDState mp Map.empty Map.empty
+      num_ :: Double -> ComputeReverseM NodeID
+      num_ = const_ []
       -- Chain rule
       go :: ComputeReverseM ()
       go = forM_ reverseTopoOrder $ \nID -> do
         --- NodeID of derivative w.r.t to current node: d(f) / d(nID)
         dN <-
           if nID == rootID
-            then sNum 1
+            then num_ 1
             else do
               derivativeParts <- Map.lookup nID <$> gets cumulativeDerivatives
               -- Sum all the derivative parts incurred by its parents
@@ -68,10 +70,10 @@ partialDerivativesMap (Expression rootID mp) =
                   addDerivative x dX
           Power alpha x -> case et of
             R -> do
-              dX <- sNum (fromIntegral alpha) *. (from dN * (from x ^ (alpha -1)))
+              dX <- num_ (fromIntegral alpha) *. (from dN * (from x ^ (alpha -1)))
               addDerivative x dX
             C -> do
-              dX <- sNum (fromIntegral alpha) *. (from dN * conjugate (from x ^ (alpha - 1)))
+              dX <- num_ (fromIntegral alpha) *. (from dN * conjugate (from x ^ (alpha - 1)))
               addDerivative x dX
           Neg x -> do
             dX <- negate $ from dN
@@ -105,7 +107,7 @@ partialDerivativesMap (Expression rootID mp) =
             dY <- from dN * from x * (from y ^ (-2))
             addDerivative y dY
           Sqrt x -> do
-            dX <- sNum 0.5 *. (from dN / sqrt (from x))
+            dX <- num_ 0.5 *. (from dN / sqrt (from x))
             addDerivative x dX
           Sin x -> do
             dX <- from dN * cos (from x)
@@ -195,11 +197,11 @@ partialDerivativesMap (Expression rootID mp) =
             addDerivative x dX
           FT x -> do
             let sz = fromIntegral $ product shape
-            dX <- sNum sz *. ift (from dN)
+            dX <- num_ sz *. ift (from dN)
             addDerivative x dX
           IFT x -> do
             let sz = fromIntegral $ product shape
-            dX <- sNum (1.0 / sz) *. ft (from dN)
+            dX <- num_ (1.0 / sz) *. ft (from dN)
             addDerivative x dX
           Project dss x -> do
             let zeroX = introduceNode (retrieveShape x curMp, R, Const 0)

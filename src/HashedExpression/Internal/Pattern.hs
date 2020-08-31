@@ -105,7 +105,7 @@ import qualified Prelude
 --   (provided via 'Pattern')
 type Substitution = (GuardedPattern, Pattern)
 
-fromSubstitution :: Substitution -> ((ExpressionMap, NodeID) -> State ExpressionMap NodeID)
+fromSubstitution :: Substitution -> ((ExpressionMap, NodeID) -> Rewrite NodeID)
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   | Just match <- match exp pattern,
     condition exp match =
@@ -421,13 +421,13 @@ allTheSame pl@(PListHole _ listCapture) exp match
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isScalar :: Pattern -> Condition
 isScalar p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
    in retrieveShape pNodeID mp == []
 
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isConst :: Pattern -> Condition
 isConst p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
    in case retrieveOp pNodeID mp of
         Const _ -> True
         _ -> False
@@ -439,13 +439,13 @@ isNotConst p exp match = not $ isConst p exp match
 -- | Returns True iff the 'Pattern' captured has a Real (i.e 'R') 'ElementType'
 isReal :: Pattern -> Condition
 isReal p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
    in retrieveElementType pNodeID mp == R
 
 -- | Returns True iff the 'Pattern' captured has a Complex (i.e 'C') 'ElementType'
 isComplex :: Pattern -> Condition
 isComplex p exp match =
-  let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
    in retrieveElementType pNodeID mp == C
 
 -- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
@@ -453,7 +453,7 @@ sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
     getET p =
-      let (pNodeID, mp) = runState (buildFromPattern exp match p) (fst exp)
+      let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
        in retrieveElementType pNodeID mp
 
 -- | Returns True iff the 'PatternRotateAmount' captured has a value of 0
@@ -681,17 +681,17 @@ buildFromPatternRotateAmount match pra =
       map negate (buildFromPatternRotateAmount match pra)
 
 buildFromPatternList ::
-  (ExpressionMap, NodeID) -> Match -> PatternList -> [State ExpressionMap NodeID]
+  (ExpressionMap, NodeID) -> Match -> PatternList -> [Rewrite NodeID]
 buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
     error "Capture not in the Map Capture [Int] which should never happens"
 
-buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> State ExpressionMap NodeID
+buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> Rewrite NodeID
 buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape originalN originalMp)
   where
-    build :: Maybe Shape -> Pattern -> State ExpressionMap NodeID
+    build :: Maybe Shape -> Pattern -> Rewrite NodeID
     build inferredShape pattern =
       case pattern of
         PRef nId -> just nId
@@ -711,10 +711,8 @@ buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape ori
         PSum sps -> sum_ . map (build inferredShape) $ sps
         PMul sps -> product_ . map (build inferredShape) $ sps
         PNeg sp -> - build inferredShape sp
-        PScale sp1 sp2 ->
-          build (Just []) sp1 *. build inferredShape sp2
-        PDiv sp1 sp2 ->
-          build inferredShape sp1 / build inferredShape sp2
+        PScale sp1 sp2 -> build (Just []) sp1 *. build inferredShape sp2
+        PDiv sp1 sp2 -> build inferredShape sp1 / build inferredShape sp2
         PSqrt sp -> sqrt (build inferredShape sp)
         PSin sp -> sin (build inferredShape sp)
         PCos sp -> cos (build inferredShape sp)
@@ -733,8 +731,7 @@ buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape ori
         PRealImag sp1 sp2 -> build inferredShape sp1 +: build inferredShape sp2
         PRealPart sp -> xRe (build inferredShape sp)
         PImagPart sp -> xIm (build inferredShape sp)
-        PInnerProd sp1 sp2 ->
-          build Nothing sp1 <.> build Nothing sp2
+        PInnerProd sp1 sp2 -> build Nothing sp1 <.> build Nothing sp2
         PMulRest restCapture sps
           | Just ns <- Map.lookup restCapture (listCapturesMap match) ->
             product_ $ (map just ns) ++ map (build inferredShape) sps
