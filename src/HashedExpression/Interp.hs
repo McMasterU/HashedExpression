@@ -343,6 +343,16 @@ evaluate1DReal valMap (mp, n)
               [_] -> elems $ evaluate1DReal valMap (mp, subArg)
             indices = mkIndices ds size
          in base // zip indices elements
+      MatMul arg1 arg2 -> case (retrieveShape arg1 mp, retrieveShape arg2 mp) of
+        ([m, _], [n]) ->
+          -- mxn ** (n) --> m
+          let x = evaluate2DReal valMap (mp, arg1)
+              y = evaluate1DReal valMap (mp, arg2)
+           in listArray
+                (0, m - 1)
+                [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                  | i <- [0 .. m - 1]
+                ]
       haha -> error $ "expression structure One R is wrong " ++ show haha
   | otherwise = error "one r but shape is not [size] ??"
 
@@ -418,6 +428,16 @@ evaluate1DComplex valMap (mp, n)
         rotate1D size amount (evaluate1DComplex valMap $ (mp, arg))
       FT arg -> fourierTransform1D FT_FORWARD size $ evaluate1DComplex valMap (mp, arg)
       IFT arg -> fourierTransform1D FT_BACKWARD size $ evaluate1DComplex valMap (mp, arg)
+      MatMul arg1 arg2 -> case (retrieveShape arg1 mp, retrieveShape arg2 mp) of
+        ([m, _], [n]) ->
+          -- mxn ** (n) --> m
+          let x = evaluate2DComplex valMap (mp, arg1)
+              y = evaluate1DComplex valMap (mp, arg2)
+           in listArray
+                (0, m - 1)
+                [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                  | i <- [0 .. m - 1]
+                ]
       _ -> error "expression structure One C is wrong"
   | otherwise = error "one C but shape is not [size] ??"
 
@@ -515,6 +535,25 @@ evaluate2DReal valMap (mp, n)
               [_, _] -> elems $ evaluate2DReal valMap (mp, subArg)
             indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
          in base // zip indices elements
+      MatMul arg1 arg2 -> case (retrieveShape arg1 mp, retrieveShape arg2 mp) of
+        ([m, _], [n, p]) ->
+          let x = evaluate2DReal valMap (mp, arg1)
+              y = evaluate2DReal valMap (mp, arg2)
+           in listArray
+                ((0, 0), (m - 1, p - 1))
+                [ sum [(x ! (i, k)) * (y ! (k, j)) | k <- [0 .. n - 1]]
+                  | i <- [0 .. m - 1],
+                    j <- [0 .. p - 1]
+                ]
+      Transpose arg -> case retrieveShape arg mp of
+        [m] ->
+          let x = evaluate1DReal valMap (mp, arg)
+           in listArray ((0, 0), (1, m - 1)) $ elems x
+        [m, n] ->
+          let x = evaluate2DReal valMap (mp, arg)
+           in listArray
+                ((0, 0), (n - 1, m - 1))
+                [x ! (j, i) | i <- [0 .. m - 1], j <- [0 .. n - 1]]
       _ -> error "expression structure Two R is wrong"
   | otherwise = error "Two r but shape is not [size1, size2] ??"
 
@@ -601,6 +640,26 @@ evaluate2DComplex valMap (mp, n)
               [_, _] -> elems $ evaluate2DComplex valMap (mp, subArg)
             indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
          in base // zip indices elements
+      MatMul arg1 arg2 -> case (retrieveShape arg1 mp, retrieveShape arg2 mp) of
+        ([m, _], [n, p]) ->
+          let x = evaluate2DComplex valMap (mp, arg1)
+              y = evaluate2DComplex valMap (mp, arg2)
+           in listArray
+                ((0, 0), (m - 1, p - 1))
+                [ sum [(x ! (i, k)) * (y ! (k, j)) | k <- [0 .. n - 1]]
+                  | i <- [0 .. m - 1],
+                    j <- [0 .. p - 1]
+                ]
+      Transpose arg -> case retrieveShape arg mp of
+        [m] ->
+          let x = evaluate1DComplex valMap (mp, arg)
+           in listArray ((0, 0), (1, m - 1)) $ elems x
+        [m, n] ->
+          let x = evaluate2DComplex valMap (mp, arg)
+           in listArray
+                ((0, 0), (n - 1, m - 1))
+                [x ! (j, i) | i <- [0 .. m - 1], j <- [0 .. n - 1]]
+
       _ -> error "expression structure Two C is wrong"
   | otherwise = error "Two C but shape is not [size1, size2] ??"
 
