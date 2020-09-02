@@ -76,10 +76,12 @@ nodeTypeWeight node =
     IFT {} -> 31
     Project {} -> 32
     Inject {} -> 33
+    MatMul {} -> 33
+    Transpose {} -> 34
     -------------------------------------------------
-    Scale {} -> 36 -- Right after RealImag
-    RealImag {} -> 37 -- At the end right after sum
-    Sum {} -> 38 -- Sum at the end
+    Scale {} -> 100
+    RealImag {} -> 101
+    Sum {} -> 102
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool
@@ -124,6 +126,8 @@ opArgs node =
     IFT arg -> [arg]
     Project ss arg -> [arg]
     Inject ss sub base -> [sub, base]
+    MatMul arg1 arg2 -> [arg1, arg2]
+    Transpose arg -> [arg]
 
 mapOp :: (NodeID -> NodeID) -> Op -> Op
 mapOp f op =
@@ -163,6 +167,8 @@ mapOp f op =
     IFT arg -> IFT (f arg)
     Project s arg -> Project s (f arg)
     Inject s sub base -> Inject s (f sub) (f base)
+    MatMul arg1 arg2 -> MatMul (f arg1) (f arg2)
+    Transpose arg -> Transpose (f arg)
 
 mapNode :: (NodeID -> NodeID) -> Node -> Node
 mapNode f (shape, et, op) = (shape, et, mapOp f op)

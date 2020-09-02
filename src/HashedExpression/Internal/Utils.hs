@@ -3,6 +3,7 @@ module HashedExpression.Internal.Utils where
 import Data.Array
 import Data.Complex (Complex (..))
 import qualified Data.Complex as Complex
+import Data.Function ((&))
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
 import Data.List.Split (splitOn)
@@ -23,7 +24,7 @@ import qualified Prelude
 
 -- | Forward pipe operator in Elm
 (|>) :: a -> (a -> b) -> b
-(|>) = flip ($)
+(|>) = (&)
 
 infixl 1 |>
 

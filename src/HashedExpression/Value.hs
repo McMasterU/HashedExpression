@@ -49,7 +49,7 @@ data Val
   deriving (Eq, Show, Ord)
 
 -- | A mapping from variable name to value
-type ValMaps = Map String Val
+type ValMap = Map String Val
 
 -- | Extract the value elements from the value
 valElems :: Val -> [Double]

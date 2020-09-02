@@ -172,3 +172,5 @@ hiddenPrettify pastable (mp, n) =
                     T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
                     "]"
                   ]
+              MatMul arg1 arg2 -> T.concat [innerPrettify arg1, "**", innerPrettify arg2]
+              Transpose arg -> T.concat ["transpose", wrapParentheses $ innerPrettify arg]

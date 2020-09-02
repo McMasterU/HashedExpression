@@ -56,8 +56,8 @@ for1 iter bound codes =
 -- | Generate a fully working C program that compute the expression and
 -- print out the result, mostly used for testing
 singleExpressionCProgram ::
-  (Dimension d) => ValMaps -> Expression d et -> Code
-singleExpressionCProgram valMaps expr =
+  (Dimension d) => ValMap -> Expression d et -> Code
+singleExpressionCProgram valMap expr =
   [ "#include <math.h>", --
     "#include <stdio.h>",
     "#include <stdlib.h>",
@@ -76,7 +76,7 @@ singleExpressionCProgram valMaps expr =
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]]
     -- assign value to variables
-    assignVals = assigningValues codeGen valMaps
+    assignVals = assigningValues codeGen valMap
     -- codes to compute
     codes = evaluating codeGen [n]
     -- print the value of expression
@@ -88,15 +88,15 @@ singleExpressionCProgram valMaps expr =
           ++ for1 i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
     releaseMemory = ["free(ptr);"]
     -------------------------------------------------------------------------------
-    assigningValues :: CSimpleCodegen -> ValMaps -> Code
-    assigningValues CSimpleCodegen {..} valMaps = concatMap assignValue names
+    assigningValues :: CSimpleCodegen -> ValMap -> Code
+    assigningValues CSimpleCodegen {..} valMap = concatMap assignValue names
       where
         [i, j, k, nooffset] = ["i", "j", "k", "0"]
         names :: [(String, NodeID)]
         names = varsWithNodeID mp ++ paramsWithNodeID mp
         assignValue :: (String, NodeID) -> Code
         assignValue (name, n) =
-          case Map.lookup name valMaps of
+          case Map.lookup name valMap of
             Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
             Just (V1D array1d) ->
               let assignIndex id = [[I.i|#{n !! (tt id)} = #{array1d ! id};|]]
@@ -127,13 +127,13 @@ hasFFTW = do
   return $ exitCode == ExitSuccess
 
 -- |
-evaluateCodeC :: (Dimension d) => Bool -> Expression d et -> ValMaps -> IO (ExitCode, String)
-evaluateCodeC withFT exp valMaps = do
+evaluateCodeC :: (Dimension d) => Bool -> Expression d et -> ValMap -> IO (ExitCode, String)
+evaluateCodeC withFT exp valMap = do
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
   let cFilePath = "C" </> fileName <.> "c"
       executablePath = "C" </> fileName
-      program = singleExpressionCProgram valMaps exp
+      program = singleExpressionCProgram valMap exp
       libs
         | withFT = ["-lm", "-lfftw3"]
         | otherwise = ["-lm"]
@@ -156,7 +156,7 @@ readC str = (readR rePart, readR imPart)
 
 -- |
 prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
-prop_CEqualInterpScalarR (Suite exp valMaps) =
+prop_CEqualInterpScalarR (Suite exp valMap) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -164,14 +164,14 @@ prop_CEqualInterpScalarR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = read . head . splitOn " " $ outputSimple
-      let resultInterpNormalize = eval valMaps exp
+      let VR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (Suite exp valMaps) = do
+prop_CEqualInterpScalarC (Suite exp valMap) = do
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -179,15 +179,15 @@ prop_CEqualInterpScalarC (Suite exp valMaps) = do
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let ([im], [re]) = readC outputCodeC
       let resultNormalize = im :+ re
-      let resultInterpNormalize = eval valMaps exp
+      let VC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 prop_CEqualInterpOneR :: SuiteOneR -> Expectation
-prop_CEqualInterpOneR (Suite exp valMaps) =
+prop_CEqualInterpOneR (Suite exp valMap) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -195,14 +195,14 @@ prop_CEqualInterpOneR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = listArray (0, defaultDim1D - 1) $ readR outputSimple
-      let resultInterpNormalize = eval valMaps exp
+      let V1DR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 prop_CEqualInterpOneC :: SuiteOneC -> Expectation
-prop_CEqualInterpOneC (Suite exp valMaps) =
+prop_CEqualInterpOneC (Suite exp valMap) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -210,15 +210,15 @@ prop_CEqualInterpOneC (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let (re, im) = readC outputCodeC
           resultNormalize = listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
-          resultInterpNormalize = eval valMaps exp
+          V1DC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
-prop_CEqualInterpTwoR (Suite exp valMaps) =
+prop_CEqualInterpTwoR (Suite exp valMap) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -226,14 +226,14 @@ prop_CEqualInterpTwoR (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ readR outputSimple
-      let resultInterpNormalize = eval valMaps exp
+      let V2DR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
 prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
-prop_CEqualInterpTwoC (Suite exp valMaps) =
+prop_CEqualInterpTwoC (Suite exp valMap) =
   if containsFTNode $ exMap exp
     then do
       hasFTLib <- hasFFTW
@@ -241,10 +241,10 @@ prop_CEqualInterpTwoC (Suite exp valMaps) =
     else proceed False
   where
     proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMaps
+      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let (re, im) = readC outputCodeC
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ zipWith (:+) re im
-      let resultInterpNormalize = eval valMaps exp
+      let V2DC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec

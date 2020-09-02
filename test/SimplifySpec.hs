@@ -30,28 +30,28 @@ shouldSimplifyTo exp1 exp2 = do
 
 -- |
 prop_sameValueInterpScalarR :: SuiteScalarR -> Expectation
-prop_sameValueInterpScalarR (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpScalarR (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 prop_sameValueInterpScalarC :: SuiteScalarC -> Expectation
-prop_sameValueInterpScalarC (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpScalarC (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 prop_sameValueInterpOneR :: SuiteOneR -> Expectation
-prop_sameValueInterpOneR (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpOneR (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 prop_sameValueInterpOneC :: SuiteOneC -> Expectation
-prop_sameValueInterpOneC (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpOneC (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 prop_sameValueInterpTwoR :: SuiteTwoR -> Expectation
-prop_sameValueInterpTwoR (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpTwoR (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 prop_sameValueInterpTwoC :: SuiteTwoC -> Expectation
-prop_sameValueInterpTwoC (Suite exp valMaps) =
-  eval valMaps exp `shouldApprox` eval valMaps (simplify exp)
+prop_sameValueInterpTwoC (Suite exp valMap) =
+  eval valMap exp `shouldApprox` eval valMap (simplify exp)
 
 spec :: Spec
 spec =

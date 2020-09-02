@@ -39,7 +39,7 @@ import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding ((^))
+import Prelude hiding ((**), (^))
 import qualified Prelude
 
 simplifyUnwrapped :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
@@ -315,7 +315,7 @@ evaluateIfPossibleRules exp@(mp, n) =
     (R, Neg _, Just [val])
       | val /= 0 -> res (- val)
       | otherwise -> res 0
-    (R, Power x _, Just [val]) -> res $ val ** fromIntegral x
+    (R, Power x _, Just [val]) -> res $ val Prelude.** fromIntegral x
     (R, InnerProd arg1 arg2, Just [val1, val2]) ->
       res $ val1 * val2 * (fromIntegral . product $ retrieveShape arg1 mp)
     (R, Rotate _ _, Just [val]) -> res val

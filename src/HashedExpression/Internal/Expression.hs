@@ -19,6 +19,7 @@ module HashedExpression.Internal.Expression
     DimSelector (..),
     ProjectInjectOp (..),
     ExpressionMap,
+    IsElementType (..),
     Expression (..),
     Arg,
     Args,
@@ -52,6 +53,8 @@ module HashedExpression.Internal.Expression
     RotateOp (..),
     RotateAmount,
     InnerProductSpaceOp (..),
+    MatrixMulOp (..),
+    TransposeOp (..),
   )
 where
 
@@ -60,10 +63,11 @@ import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy (..))
+import Data.Typeable
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import HashedExpression.Internal.Base
-import Prelude hiding ((^))
+import Prelude hiding ((**), (^))
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -170,6 +174,10 @@ data Op
     Project [DimSelector] Arg
   | -- | Injection
     Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
+  | -- | Matrix multiplication
+    MatMul Arg Arg
+  | -- | Transpose
+    Transpose Arg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')
@@ -217,11 +225,20 @@ data ElementType
     R
   | -- | Complex Elements
     C
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Typeable)
 
 type R = 'R
 
 type C = 'C
+
+class IsElementType (d :: ElementType) where
+  toElementType :: ElementType
+
+instance IsElementType R where
+  toElementType = R
+
+instance IsElementType C where
+  toElementType = C
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -239,18 +256,18 @@ type D2 (m :: Nat) (n :: Nat) = '[m, n]
 type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
 
 instance Dimension '[] where
-  toShape _ = []
+  toShape = []
 
 --
 instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
-  toShape _ = (nat @x) : toShape (Proxy @xs)
+  toShape = (nat @x) : toShape @xs
 
 --
 
 -- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class Dimension d where
-  toShape :: Proxy d -> Shape
+class Dimension (d :: [Nat]) where
+  toShape :: Shape
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
 --   from Integer to Int
@@ -265,10 +282,6 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 -- >  [n]       => KnownNat n => Dimension n
 -- >  [n, m]    => (KnownNat n, KnownNat m) => Dimension '(n,m)
 type Shape = [Int]
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Generic Combinators
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -325,9 +338,17 @@ class ProjectInjectOp s a b | s a -> b where
   project :: s -> a -> b
   inject :: s -> b -> a -> a
 
+class MatrixMulOp a b c | a b -> c where
+  (**) :: a -> b -> c
+  matmul :: a -> b -> c
+  matmul = (**)
+
+class TransposeOp a b | a -> b where
+  transpose :: a -> b
+
 -------------------------------------------------------------------------------
 infixl 6 +:
 
-infixl 8 *., `scale`, <.>
+infixl 8 *., `scale`, <.>, **
 
 infixl 8 ^

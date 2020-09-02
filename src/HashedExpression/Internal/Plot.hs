@@ -25,7 +25,7 @@ type FileName = String
 
 data Function = Function
   { expr :: Expression Scalar R,
-    predefinedValues :: ValMaps
+    predefinedValues :: ValMap
   }
 
 scalarVariables :: Function -> [String]
@@ -42,7 +42,7 @@ scalarVariables (Function exp values) = mapMaybe toScalarVariable entries
 plot1VariableFunction :: Function -> FileName -> IO ()
 plot1VariableFunction fn@(Function exp values) imageName
   | [var] <- scalarVariables fn = do
-    let f x = eval (Map.insert var (VScalar x) values) exp
+    let f x = let VR res = eval (Map.insert var (VScalar x) values) exp in res
     plot (PDF $ "plots/" ++ imageName ++ ".pdf") $
       Function2D [Title "Function"] [] f
     readProcessWithExitCode "rm" ["plot1.dat"] ""
