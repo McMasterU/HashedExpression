@@ -451,15 +451,17 @@ instance Approximable InterpValue where
   V3DC x ~= V3DC y = x ~= y
   _ ~= _ = False
 
-  prettifyShow a = case a of
-    VR x -> prettifyShow x
-    V1DR x -> prettifyShow x
-    V2DR x -> prettifyShow x
-    V3DR x -> prettifyShow x
-    VC x -> prettifyShow x
-    V1DC x -> prettifyShow x
-    V2DC x -> prettifyShow x
-    V3DC x -> prettifyShow x
+  prettifyShow a = show a
+
+--    case a of
+--    VR x -> prettifyShow x
+--    V1DR x -> prettifyShow x
+--    V2DR x -> prettifyShow x
+--    V3DR x -> prettifyShow x
+--    VC x -> prettifyShow x
+--    V1DC x -> prettifyShow x
+--    V2DC x -> prettifyShow x
+--    V3DC x -> prettifyShow x
 
 -------------------------------------------------------------------------------
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation

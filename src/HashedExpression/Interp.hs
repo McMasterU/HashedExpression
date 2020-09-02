@@ -83,27 +83,31 @@ eval valMap (Expression nID mp) =
       unaryC op arg = arg |> eval' |> extractC |> map op |> constructC
       binaryR op arg1 arg2 = zipWith op (extractR $ eval' arg1) (extractR $ eval' arg2) |> constructR
       binaryC op arg1 arg2 = zipWith op (extractC $ eval' arg1) (extractC $ eval' arg2) |> constructC
-   in case (et, op) of
-        (R, Var name) -> case (shape, Map.lookup name valMap) of
+   in case op of
+        Var name -> case (shape, Map.lookup name valMap) of
           ([], Just (VScalar val)) -> VR val
           ([_], Just (V1D arr)) -> V1DR arr
           ([_, _], Just (V2D arr)) -> V2DR arr
           ([_, _, _], Just (V3D arr)) -> V3DR arr
-        (R, Param name) -> case (shape, Map.lookup name valMap) of
+        Param name -> case (shape, Map.lookup name valMap) of
           ([], Just (VScalar val)) -> VR val
           ([_], Just (V1D arr)) -> V1DR arr
           ([_, _], Just (V2D arr)) -> V2DR arr
           ([_, _, _], Just (V3D arr)) -> V3DR arr
-        (R, Const v) -> constructR $ replicate (product shape) v
-        (R, Sum args) -> args |> map eval' |> map extractR |> foldl1 (zipWith (+)) |> constructR
-        (C, Sum args) -> args |> map eval' |> map extractC |> foldl1 (zipWith (+)) |> constructC
-        (R, Mul args) -> args |> map eval' |> map extractR |> foldl1 (zipWith (*)) |> constructR
-        (C, Mul args) -> args |> map eval' |> map extractC |> foldl1 (zipWith (*)) |> constructC
-        (R, Power x arg) -> unaryR (** fromIntegral x) arg
-        (C, Power x arg) -> unaryC (** fromIntegral x) arg
-        (R, Neg arg) -> unaryR negate arg
-        (C, Neg arg) -> unaryC negate arg
-        (_, Scale arg1 arg2) -> case (retrieveElementType arg1 mp, retrieveElementType arg2 mp) of
+        Const v -> constructR $ replicate (product shape) v
+        Sum args
+          | et == R -> args |> map eval' |> map extractR |> foldl1 (zipWith (+)) |> constructR
+          | et == C -> args |> map eval' |> map extractC |> foldl1 (zipWith (+)) |> constructC
+        Mul args
+          | et == R -> args |> map eval' |> map extractR |> foldl1 (zipWith (*)) |> constructR
+          | et == C -> args |> map eval' |> map extractC |> foldl1 (zipWith (*)) |> constructC
+        Power x arg
+          | et == R -> unaryR (** fromIntegral x) arg
+          | et == C -> unaryC (** fromIntegral x) arg
+        Neg arg
+          | et == R -> unaryR negate arg
+          | et == C -> unaryC negate arg
+        Scale arg1 arg2 -> case (retrieveElementType arg1 mp, retrieveElementType arg2 mp) of
           (R, R) ->
             let VR v = eval' arg1
              in unaryR (v *) arg2
@@ -113,70 +117,74 @@ eval valMap (Expression nID mp) =
           (C, C) ->
             let VC v = eval' arg1
              in unaryC (v *) arg2
-        (R, Div arg1 arg2) -> binaryR (/) arg1 arg2
-        (C, Div arg1 arg2) -> binaryC (/) arg1 arg2
+        Div arg1 arg2
+          | et == R -> binaryR (/) arg1 arg2
+          | et == C -> binaryC (/) arg1 arg2
         -------------------------------------------------------------------------------
-        (R, Sqrt arg) -> unaryR sqrt arg
-        (R, Sin arg) -> unaryR sin arg
-        (R, Cos arg) -> unaryR cos arg
-        (R, Tan arg) -> unaryR tan arg
-        (R, Exp arg) -> unaryR exp arg
-        (R, Log arg) -> unaryR log arg
-        (R, Sinh arg) -> unaryR sinh arg
-        (R, Cosh arg) -> unaryR cosh arg
-        (R, Tanh arg) -> unaryR tanh arg
-        (R, Asin arg) -> unaryR asin arg
-        (R, Acos arg) -> unaryR acos arg
-        (R, Atan arg) -> unaryR atan arg
-        (R, Asinh arg) -> unaryR asinh arg
-        (R, Acosh arg) -> unaryR acosh arg
-        (R, Atanh arg) -> unaryR atanh arg
+        Sqrt arg -> unaryR sqrt arg
+        Sin arg -> unaryR sin arg
+        Cos arg -> unaryR cos arg
+        Tan arg -> unaryR tan arg
+        Exp arg -> unaryR exp arg
+        Log arg -> unaryR log arg
+        Sinh arg -> unaryR sinh arg
+        Cosh arg -> unaryR cosh arg
+        Tanh arg -> unaryR tanh arg
+        Asin arg -> unaryR asin arg
+        Acos arg -> unaryR acos arg
+        Atan arg -> unaryR atan arg
+        Asinh arg -> unaryR asinh arg
+        Acosh arg -> unaryR acosh arg
+        Atanh arg -> unaryR atanh arg
         -------------------------------------------------------------------------------
-        (C, RealImag arg1 arg2) ->
+        RealImag arg1 arg2 ->
           let re = extractR (eval' arg1)
               im = extractR (eval' arg2)
            in constructC $ zipWith (:+) re im
-        (R, RealPart arg) -> extractC (eval' arg) |> map realPart |> constructR
-        (R, ImagPart arg) -> extractC (eval' arg) |> map imagPart |> constructR
-        (R, Conjugate arg) -> unaryC conjugate arg
+        RealPart arg -> extractC (eval' arg) |> map realPart |> constructR
+        ImagPart arg -> extractC (eval' arg) |> map imagPart |> constructR
+        Conjugate arg -> unaryC conjugate arg
         -------------------------------------------------------------------------------
-        (R, InnerProd arg1 arg2) ->
-          let x = extractR (eval' arg1)
-              y = extractR (eval' arg2)
-           in VR $ sum $ zipWith (*) x y
-        (C, InnerProd arg1 arg2) ->
-          let x = extractC (eval' arg1)
-              y = extractC (eval' arg2)
-           in VC $ sum $ zipWith (*) x (map conjugate y)
-        (R, Piecewise marks conditionArg branchArgs) ->
-          let condition = extractR (eval' conditionArg)
-              branches = map (extractR . eval') branchArgs
-           in constructR $ zipWith (chooseBranch marks) condition (List.transpose branches)
-        (C, Piecewise marks conditionArg branchArgs) ->
-          let condition = extractR (eval' conditionArg)
-              branches = map (extractC . eval') branchArgs
-           in constructC $ zipWith (chooseBranch marks) condition (List.transpose branches)
-        (R, Rotate rotateAmount arg) -> case (rotateAmount, shape) of
-          ([amount], [size]) ->
-            let V1DR arr = eval' arg
-             in V1DR $ rotate1D size amount arr
-          ([amount1, amount2], [size1, size2]) ->
-            let V2DR arr = eval' arg
-             in V2DR $ rotate2D (size1, size2) (amount1, amount2) arr
-          ([amount1, amount2, amount3], [size1, size2, size3]) ->
-            let V3DR arr = eval' arg
-             in V3DR $ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr
-        (C, Rotate rotateAmount arg) -> case (rotateAmount, shape) of
-          ([amount], [size]) ->
-            let V1DC arr = eval' arg
-             in V1DC $ rotate1D size amount arr
-          ([amount1, amount2], [size1, size2]) ->
-            let V2DC arr = eval' arg
-             in V2DC $ rotate2D (size1, size2) (amount1, amount2) arr
-          ([amount1, amount2, amount3], [size1, size2, size3]) ->
-            let V3DC arr = eval' arg
-             in V3DC $ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr
-        (C, FT arg) -> case shape of
+        InnerProd arg1 arg2
+          | et == R ->
+            let x = extractR (eval' arg1)
+                y = extractR (eval' arg2)
+             in VR $ sum $ zipWith (*) x y
+          | et == C ->
+            let x = extractC (eval' arg1)
+                y = extractC (eval' arg2)
+             in VC $ sum $ zipWith (*) x (map conjugate y)
+        Piecewise marks conditionArg branchArgs
+          | et == R ->
+            let condition = extractR (eval' conditionArg)
+                branches = map (extractR . eval') branchArgs
+             in constructR $ zipWith (chooseBranch marks) condition (List.transpose branches)
+          | et == C ->
+            let condition = extractR (eval' conditionArg)
+                branches = map (extractC . eval') branchArgs
+             in constructC $ zipWith (chooseBranch marks) condition (List.transpose branches)
+        Rotate rotateAmount arg
+          | et == R -> case (rotateAmount, shape) of
+            ([amount], [size]) ->
+              let V1DR arr = eval' arg
+               in V1DR $ rotate1D size amount arr
+            ([amount1, amount2], [size1, size2]) ->
+              let V2DR arr = eval' arg
+               in V2DR $ rotate2D (size1, size2) (amount1, amount2) arr
+            ([amount1, amount2, amount3], [size1, size2, size3]) ->
+              let V3DR arr = eval' arg
+               in V3DR $ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr
+          | et == C -> case (rotateAmount, shape) of
+            ([amount], [size]) ->
+              let V1DC arr = eval' arg
+               in V1DC $ rotate1D size amount arr
+            ([amount1, amount2], [size1, size2]) ->
+              let V2DC arr = eval' arg
+               in V2DC $ rotate2D (size1, size2) (amount1, amount2) arr
+            ([amount1, amount2, amount3], [size1, size2, size3]) ->
+              let V3DC arr = eval' arg
+               in V3DC $ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr
+        FT arg -> case shape of
           [size] ->
             let V1DC arr = eval' arg
              in V1DC $ fourierTransform1D FT_FORWARD size arr
@@ -186,7 +194,7 @@ eval valMap (Expression nID mp) =
           [size1, size2, size3] ->
             let V3DC arr = eval' arg
              in V3DC $ fourierTransform3D FT_FORWARD (size1, size2, size3) arr
-        (C, IFT arg) -> case shape of
+        IFT arg -> case shape of
           [size] ->
             let V1DC arr = eval' arg
              in V1DC $ fourierTransform1D FT_BACKWARD size arr
@@ -196,7 +204,7 @@ eval valMap (Expression nID mp) =
           [size1, size2, size3] ->
             let V3DC arr = eval' arg
              in V3DC $ fourierTransform3D FT_BACKWARD (size1, size2, size3) arr
-        (_, Project dss arg) -> case shape of
+        Project dss arg -> case shape of
           [] -> case (retrieveShape arg mp, dss) of
             ([size], [At i]) -> case eval' arg of
               V1DR base -> VR $ base ! i
@@ -264,33 +272,92 @@ eval valMap (Expression nID mp) =
                   listArray
                     ((0, 0, 0), (size1 - 1, size2 - 1, size3 - 1))
                     [base ! (i, j, k) | i <- mkIndices ds1 bSize1, j <- mkIndices ds2 bSize2, k <- mkIndices ds3 bSize3]
-        (R, Inject dss subArg baseArg) ->
-          let injectingElements = extractR $ eval' subArg
-           in case (eval' baseArg, dss, shape) of
-                (V1DR base, [ds], [size]) ->
-                  let indices = mkIndices ds size
-                   in V1DR $ base // zip indices injectingElements
-                (V2DR base, [ds1, ds2], [size1, size2]) ->
-                  let indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
-                   in V2DR $ base // zip indices injectingElements
-                (V3DR base, [ds1, ds2, ds3], [size1, size2, size3]) ->
-                  let indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
-                   in V3DR $ base // zip indices injectingElements
-        (C, Inject dss subArg baseArg) ->
-          let injectingElements = extractC $ eval' subArg
-           in case (eval' baseArg, dss, shape) of
-                (V1DC base, [ds], [size]) ->
-                  let indices = mkIndices ds size
-                   in V1DC $ base // zip indices injectingElements
-                (V2DC base, [ds1, ds2], [size1, size2]) ->
-                  let indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
-                   in V2DC $ base // zip indices injectingElements
-                (V3DC base, [ds1, ds2, ds3], [size1, size2, size3]) ->
-                  let indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
-                   in V3DC $ base // zip indices injectingElements
-        (R, MatMul arg1 arg2) -> undefined
-        (R, Transpose arg) -> undefined
-        haha -> error $ show haha
+        Inject dss subArg baseArg
+          | et == R ->
+            let injectingElements = extractR $ eval' subArg
+             in case (eval' baseArg, dss, shape) of
+                  (V1DR base, [ds], [size]) ->
+                    let indices = mkIndices ds size
+                     in V1DR $ base // zip indices injectingElements
+                  (V2DR base, [ds1, ds2], [size1, size2]) ->
+                    let indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
+                     in V2DR $ base // zip indices injectingElements
+                  (V3DR base, [ds1, ds2, ds3], [size1, size2, size3]) ->
+                    let indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
+                     in V3DR $ base // zip indices injectingElements
+          | et == C ->
+            let injectingElements = extractC $ eval' subArg
+             in case (eval' baseArg, dss, shape) of
+                  (V1DC base, [ds], [size]) ->
+                    let indices = mkIndices ds size
+                     in V1DC $ base // zip indices injectingElements
+                  (V2DC base, [ds1, ds2], [size1, size2]) ->
+                    let indices = [(i, j) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2]
+                     in V2DC $ base // zip indices injectingElements
+                  (V3DC base, [ds1, ds2, ds3], [size1, size2, size3]) ->
+                    let indices = [(i, j, k) | i <- mkIndices ds1 size1, j <- mkIndices ds2 size2, k <- mkIndices ds3 size3]
+                     in V3DC $ base // zip indices injectingElements
+        MatMul arg1 arg2
+          | et == R ->
+            case (shape, retrieveShape arg1 mp, retrieveShape arg2 mp) of
+              ([_m], [m, _n], [n]) ->
+                let V2DR x = eval' arg1
+                    V1DR y = eval' arg2
+                 in V1DR $
+                      listArray
+                        (0, m - 1)
+                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1]
+                        ]
+              ([_m, _p], [m, _n], [n, p]) ->
+                let V2DR x = eval' arg1
+                    V2DR y = eval' arg2
+                 in V2DR $
+                      listArray
+                        ((0, 0), (m - 1, p - 1))
+                        [ sum [(x ! (i, k)) * (y ! (k, j)) | k <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1],
+                            j <- [0 .. p - 1]
+                        ]
+          | et == C ->
+            case (shape, retrieveShape arg1 mp, retrieveShape arg2 mp) of
+              ([_m], [m, _n], [n]) ->
+                let V2DC x = eval' arg1
+                    V1DC y = eval' arg2
+                 in V1DC $
+                      listArray
+                        (0, m - 1)
+                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1]
+                        ]
+              ([_m, _p], [m, _n], [n, p]) ->
+                let V2DC x = eval' arg1
+                    V2DC y = eval' arg2
+                 in V2DC $
+                      listArray
+                        ((0, 0), (m - 1, p - 1))
+                        [ sum [(x ! (i, k)) * (y ! (k, j)) | k <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1],
+                            j <- [0 .. p - 1]
+                        ]
+        Transpose arg
+          | et == R ->
+            case (retrieveShape arg mp, shape) of
+              ([m], [1, _m]) ->
+                let V1DR x = eval' arg
+                 in V2DR $ listArray ((0, 0), (1, m - 1)) $ elems x
+              ([m, n], [_n, _m]) ->
+                let V2DR x = eval' arg
+                 in V2DR $ listArray ((0, 0), (n - 1, m - 1)) [x ! (j, i) | i <- [0 .. n - 1], j <- [0 .. m - 1]]
+          | et == C ->
+            case (retrieveShape arg mp, shape) of
+              ([m], [1, _m]) ->
+                let V1DC x = eval' arg
+                 in V2DC $ listArray ((0, 0), (1, m - 1)) $ elems x
+              ([m, n], [_n, _m]) ->
+                let V2DC x = eval' arg
+                 in V2DC $ listArray ((0, 0), (n - 1, m - 1)) [x ! (j, i) | i <- [0 .. n - 1], j <- [0 .. m - 1]]
+        node -> error $ show node
 
 zipWithA :: Ix x => (a -> b -> c) -> Array x a -> Array x b -> Array x c
 zipWithA f xs ys = listArray (bounds xs) $ zipWith f (elems xs) (elems ys)

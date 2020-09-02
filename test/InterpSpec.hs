@@ -305,10 +305,41 @@ prop_ExpScalar_4 (Suite exp1 valMap1) (IntB a) =
   (eval valMap1 exp1 /= VR 0)
     ==> (eval valMap1 (exp1 ^ (- a)) `shouldApprox` eval valMap1 (1 / (exp1 ^ a)))
 
+prop_TransposeTwice :: forall m n et. (IsElementType et, KnownNat m, KnownNat n) => Suite (D2 m n) et -> Expectation
+prop_TransposeTwice (Suite exp valMap) =
+  eval valMap (transpose (transpose exp)) `shouldApprox` eval valMap exp
+
+prop_TransposeMatrixMultiplication ::
+  forall m n p et.
+  (IsElementType et, KnownNat m, KnownNat n, KnownNat p) =>
+  Suite (D2 m n) et ->
+  Suite (D2 n p) et ->
+  Expectation
+prop_TransposeMatrixMultiplication (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (transpose $ exp1 ** exp2) `shouldApprox` eval valMap (transpose exp2 ** transpose exp1)
+  where
+    valMap = valMap1 `union` valMap2
+
+prop_MatrixMultplicationAssociative ::
+  forall m n p q et.
+  ( IsElementType et,
+    KnownNat m,
+    KnownNat n,
+    KnownNat p,
+    KnownNat q
+  ) =>
+  Suite (D2 m n) et ->
+  Suite (D2 n p) et ->
+  Suite (D2 p q) et ->
+  Expectation
+prop_MatrixMultplicationAssociative (Suite a valMap1) (Suite b valMap2) (Suite c valMap3) =
+  eval valMap ((a ** b) ** c) `shouldApprox` eval valMap (a ** (b ** c))
+  where
+    valMap = valMap1 `union` valMap2 `union` valMap3
+
 spec :: Spec
 spec =
   describe "Interp spec" $ do
-    --    specify "prop_dotProductScalar_1" $ property prop_dotProductScalar_1
     specify "prop_dotProduct1D_1" $ property prop_dotProduct1D_1
     specify "prop_dotProduct2D_1" $ property prop_dotProduct2D_1
     specify "prop_dotProduct1D_3" $ property prop_dotProduct1D_3
@@ -352,3 +383,19 @@ spec =
       property prop_ProjectInjectTwoR
     specify "prop_Project_Inject Two C" $
       property prop_ProjectInjectTwoC
+    specify "prop_Transpose_Twice 1" $
+      property (prop_TransposeTwice @3 @4 @R)
+    specify "prop_Transpose_Twice 2" $
+      property (prop_TransposeTwice @5 @7 @C)
+    specify "prop_Transpose_Twice 3" $
+      property (prop_TransposeTwice @4 @10 @R)
+    specify "transpose & matrix multiplication 1" $
+      property (prop_TransposeMatrixMultiplication @3 @4 @5 @R)
+    specify "transpose & matrix multiplication 2" $
+      property (prop_TransposeMatrixMultiplication @5 @8 @9 @C)
+    specify "transpose & matrix multiplication 3" $
+      property (prop_TransposeMatrixMultiplication @4 @2 @3 @R)
+    specify "matrix mul associative 1" $
+      property (prop_MatrixMultplicationAssociative @4 @2 @3 @1 @R)
+    specify "matrix mul associative 2" $
+      property (prop_MatrixMultplicationAssociative @4 @5 @6 @3 @C)
