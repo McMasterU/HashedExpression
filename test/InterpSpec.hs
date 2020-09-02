@@ -25,34 +25,6 @@ import Prelude hiding ((**), (^))
 import qualified Prelude
 
 -- |
-prop_AddScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_AddScalarR (Suite exp1 valMap1) (Suite exp2 valMap2) =
-  eval valMap (exp1 + exp2) == eval valMap exp1 + eval valMap exp2
-  where
-    valMap = valMap1 `union` valMap2
-
--- |
-prop_MultiplyScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_MultiplyScalarR (Suite exp1 valMap1) (Suite exp2 valMap2) =
-  eval valMap (exp1 * exp2) == eval valMap exp1 * eval valMap exp2
-  where
-    valMap = valMap1 `union` valMap2
-
--- |
-prop_AddScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
-prop_AddScalarC (Suite exp1 valMap1) (Suite exp2 valMap2) =
-  eval valMap (exp1 + exp2) == eval valMap exp1 + eval valMap exp2
-  where
-    valMap = valMap1 `union` valMap2
-
--- |
-prop_MultiplyScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
-prop_MultiplyScalarC (Suite exp1 valMap1) (Suite exp2 valMap2) =
-  eval valMap (exp1 * exp2) == eval valMap exp1 * eval valMap exp2
-  where
-    valMap = valMap1 `union` valMap2
-
--- |
 prop_RotateOneR1 :: SuiteOneR -> Bool
 prop_RotateOneR1 (Suite exp valMap) =
   eval valMap (rotate 0 exp) == eval valMap exp
@@ -92,13 +64,6 @@ prop_RotateTwoR3 (Suite exp valMap) amount1 amount2 =
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
 
---    a +: b = a + bi
-
-prop_realImag :: SuiteTwoR -> SuiteTwoR -> Expectation
-prop_realImag (Suite exp1 valMap1) (Suite exp2 valMap2) = do
-  (eval valMap exp1 +: eval valMap exp2) `shouldApprox` eval valMap (exp1 +: exp2)
-  where
-    valMap = valMap1 `union` valMap2
 
 --- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
 prop_ProjectInjectOneR :: SuiteOneR -> Expectation
@@ -299,12 +264,12 @@ prop_Identity_Multiplication (Suite exp1 valMap1) =
 
 prop_Inverse_Addition :: SuiteScalarR -> Bool
 prop_Inverse_Addition (Suite exp1 valMap1) =
-  eval valMap1 (exp1 + (negate exp1)) == 0
+  eval valMap1 (exp1 + (negate exp1)) == VR 0
 
 prop_Inverse_Multiplication :: SuiteScalarR -> Property
 prop_Inverse_Multiplication (Suite exp1 valMap1) =
-  eval valMap1 exp1 /= 0
-    ==> (eval valMap1 (exp1 * (1 / exp1)) `shouldApprox` 1)
+  eval valMap1 exp1 /= VR 0
+    ==> (eval valMap1 (exp1 * (1 / exp1)) `shouldApprox` VR 1)
 
 -- [ exponential properties ]
 -- 1) x^a * x^b = x ^ (a+b)
@@ -333,20 +298,13 @@ prop_ExpScalar_2 (Suite exp1 valMap1) (Suite exp2 valMap2) (IntB a) =
 
 prop_ExpScalar_3 :: SuiteScalarR -> IntB 10 -> IntB 10 -> Property
 prop_ExpScalar_3 (Suite exp1 valMap1) (IntB a) (IntB b) =
-  (eval valMap1 exp1 /= 0)
+  (eval valMap1 exp1 /= VR 0)
     ==> (eval valMap1 ((exp1 ^ a) / (exp1 ^ b)) `shouldApprox` eval valMap1 (exp1 ^ (a - b)))
 
 prop_ExpScalar_4 :: SuiteScalarR -> IntB 10 -> Property
 prop_ExpScalar_4 (Suite exp1 valMap1) (IntB a) =
-  (eval valMap1 exp1 /= 0)
+  (eval valMap1 exp1 /= VR 0)
     ==> (eval valMap1 (exp1 ^ (- a)) `shouldApprox` eval valMap1 (1 / (exp1 ^ a)))
-
-prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property
-prop_ExpScalar_5 (Suite exp1 valMap1) (Suite exp2 valMap2) (IntB a) =
-  (eval valMap exp2 /= 0)
-    ==> (((eval valMap (exp1 / exp2)) Prelude.** fromIntegral a) `shouldApprox` (eval valMap ((exp1 ^ a) / (exp2 ^ a))))
-  where
-    valMap = valMap1 `union` valMap2
 
 spec :: Spec
 spec =
@@ -372,12 +330,7 @@ spec =
     specify "prop_ExpScalar_2" $ property prop_ExpScalar_2
     specify "prop_ExpScalar_3" $ property prop_ExpScalar_3
     specify "prop_ExpScalar_4" $ property prop_ExpScalar_4
-    specify "prop_ExpScalar_5" $ property prop_ExpScalar_5
 
-    specify "prop_Add Scalar R" $ property prop_AddScalarR
-    specify "prop_Multiply Scalar R" $ property prop_MultiplyScalarR
-    specify "prop_Add Scalar C" $ property prop_AddScalarC
-    specify "prop_Multiply Scalar C" $ property prop_MultiplyScalarC
     specify "prop_Rotate One R rotate 0 should stay the same" $
       property prop_RotateOneR1
     specify "prop_Rotate One R rotate a and -a should stay the same" $

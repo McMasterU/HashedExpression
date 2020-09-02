@@ -166,7 +166,7 @@ prop_CEqualInterpScalarR (Suite exp valMap) =
     proceed withFT = do
       (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = read . head . splitOn " " $ outputSimple
-      let resultInterpNormalize = eval valMap exp
+      let VR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -182,7 +182,7 @@ prop_CEqualInterpScalarC (Suite exp valMap) = do
       (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let ([im], [re]) = readC outputCodeC
       let resultNormalize = im :+ re
-      let resultInterpNormalize = eval valMap exp
+      let VC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -197,7 +197,7 @@ prop_CEqualInterpOneR (Suite exp valMap) =
     proceed withFT = do
       (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = listArray (0, defaultDim1D - 1) $ readR outputSimple
-      let resultInterpNormalize = eval valMap exp
+      let V1DR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -213,7 +213,7 @@ prop_CEqualInterpOneC (Suite exp valMap) =
       (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let (re, im) = readC outputCodeC
           resultNormalize = listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
-          resultInterpNormalize = eval valMap exp
+          V1DC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -228,7 +228,7 @@ prop_CEqualInterpTwoR (Suite exp valMap) =
     proceed withFT = do
       (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ readR outputSimple
-      let resultInterpNormalize = eval valMap exp
+      let V2DR resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- |
@@ -244,7 +244,7 @@ prop_CEqualInterpTwoC (Suite exp valMap) =
       (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
       let (re, im) = readC outputCodeC
       let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ zipWith (:+) re im
-      let resultInterpNormalize = eval valMap exp
+      let V2DC resultInterpNormalize = eval valMap exp
       resultNormalize `shouldApprox` resultInterpNormalize
 
 -- | Spec

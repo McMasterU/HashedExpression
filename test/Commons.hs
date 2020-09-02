@@ -440,6 +440,27 @@ instance Approximable (Array (Int, Int, Int) (Complex Double)) where
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
+instance Approximable InterpValue where
+  VR x ~= VR y = x ~= y
+  V1DR x ~= V1DR y = x ~= y
+  V2DR x ~= V2DR y = x ~= y
+  V3DR x ~= V3DR y = x ~= y
+  VC x ~= VC y = x ~= y
+  V1DC x ~= V1DC y = x ~= y
+  V2DC x ~= V2DC y = x ~= y
+  V3DC x ~= V3DC y = x ~= y
+  _ ~= _ = False
+
+  prettifyShow a = case a of
+    VR x -> prettifyShow x
+    V1DR x -> prettifyShow x
+    V2DR x -> prettifyShow x
+    V3DR x -> prettifyShow x
+    VC x -> prettifyShow x
+    V1DC x -> prettifyShow x
+    V2DC x -> prettifyShow x
+    V3DC x -> prettifyShow x
+
 -------------------------------------------------------------------------------
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation
 shouldApprox x y = assertBool msg (x ~= y)
