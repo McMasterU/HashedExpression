@@ -53,7 +53,7 @@ module HashedExpression.Internal.Expression
     RotateAmount,
     InnerProductSpaceOp (..),
     MatrixMulOp (..),
-    TransposeOp(..)
+    TransposeOp (..),
   )
 where
 
@@ -65,7 +65,7 @@ import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import HashedExpression.Internal.Base
-import Prelude hiding ((^), (**))
+import Prelude hiding ((**), (^))
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -173,8 +173,8 @@ data Op
   | -- | Injection
     Inject [DimSelector] SubArg BaseArg -- inject Arg into BaseArg
   | -- | Matrix multiplication
-    MatMul Arg Arg 
-  | -- | Transpose 
+    MatMul Arg Arg
+  | -- | Transpose
     Transpose Arg
   deriving (Show, Eq, Ord)
 
@@ -255,7 +255,7 @@ instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
 
 -- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class Dimension d where
+class Dimension (d :: [Nat]) where
   toShape :: Proxy d -> Shape
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
@@ -327,13 +327,12 @@ class ProjectInjectOp s a b | s a -> b where
   project :: s -> a -> b
   inject :: s -> b -> a -> a
 
-
-class MatrixMulOp a b c | a b -> c where 
+class MatrixMulOp a b c | a b -> c where
   (**) :: a -> b -> c
-  matmul :: a -> b -> c 
+  matmul :: a -> b -> c
   matmul = (**)
-  
-class TransposeOp a b | a -> b where 
+
+class TransposeOp a b | a -> b where
   transpose :: a -> b
 
 -------------------------------------------------------------------------------

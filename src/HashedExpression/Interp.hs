@@ -659,7 +659,6 @@ evaluate2DComplex valMap (mp, n)
            in listArray
                 ((0, 0), (n - 1, m - 1))
                 [x ! (j, i) | i <- [0 .. m - 1], j <- [0 .. n - 1]]
-
       _ -> error "expression structure Two C is wrong"
   | otherwise = error "Two C but shape is not [size1, size2] ??"
 

@@ -21,7 +21,8 @@ import HashedExpression.Prettify
 import Test.Hspec
 import Test.QuickCheck
 import Var
-import Prelude hiding ((^))
+import Prelude hiding ((**), (^))
+import qualified Prelude
 
 -- |
 prop_AddScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
@@ -343,9 +344,9 @@ prop_ExpScalar_4 (Suite exp1 valMaps1) (IntB a) =
 prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property
 prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
   (eval valMaps exp2 /= 0)
-    ==> (((eval valMaps (exp1 / exp2)) ** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
+    ==> (((eval valMaps (exp1 / exp2)) Prelude.** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMaps = valMaps1 `union` valMap
 
 spec :: Spec
 spec =

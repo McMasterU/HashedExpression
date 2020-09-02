@@ -27,7 +27,7 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
-import Prelude hiding ((^), (**))
+import Prelude hiding ((**), (^))
 
 instance (Dimension d) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
@@ -296,24 +296,32 @@ instance
 
 -- TODO: 3D
 
-
 -------------------------------------------------------------------------------
 
-instance (KnownNat m, KnownNat n, KnownNat p) =>
-  MatrixMulOp (Expression (D2 m n) et) (Expression (D2 n p) et) (Expression (D2 m p) et) where
+instance
+  (KnownNat m, KnownNat n, KnownNat p) =>
+  MatrixMulOp (Expression (D2 m n) et) (Expression (D2 n p) et) (Expression (D2 m p) et)
+  where
   (**) = applyBinary specMatMul
 
-instance (KnownNat m, KnownNat n) =>
-  MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et) where
+instance
+  (KnownNat m, KnownNat n) =>
+  MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et)
+  where
   (**) = applyBinary specMatMul
 
-instance (KnownNat m, KnownNat n) => 
-  TransposeOp (Expression (D2 m n) et) (Expression (D2 n m) et) where 
+instance
+  (KnownNat m, KnownNat n) =>
+  TransposeOp (Expression (D2 m n) et) (Expression (D2 n m) et)
+  where
   transpose = applyUnary specTranspose
 
-instance (KnownNat m) => 
-  TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et) where 
+instance
+  (KnownNat m) =>
+  TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et)
+  where
   transpose = applyUnary specTranspose
+
 -------------------------------------------------------------------------------
 
 at :: forall i. (KnownNat i) => Proxy i
@@ -325,89 +333,75 @@ range = Proxy
 ranges :: forall start end step. (KnownNat start, KnownNat end, KnownNat step) => Proxy '(start, end, step)
 ranges = Proxy
 
----- | Create primitive expressions
+-------------------------------------------------------------------------------
+extractShape :: forall d. Dimension d => Shape
+extractShape = toShape (Proxy @d)
+
+-- | General version of creating variables, parameters, constants
+gvariable :: forall d. Dimension d => String -> Expression d R
+gvariable name = fromNode (extractShape @d, R, Var name)
+
+gparam :: forall d. Dimension d => String -> Expression d R
+gparam name = fromNode (extractShape @d, R, Param name)
+
+gconstant :: forall d. Dimension d => Double -> Expression d R
+gconstant value = fromNode (extractShape @d, R, Const value)
+
+---- | Auxiliary for creating variables
+--
+-- @
+--   let x = variable "x"
+--   let x = variable1D \@10 "x"
+--   let x = variable2D \@10 \@20 "x"
+--   let x = variable3D \@10 \@20 \@30 "x"
+-- @
 variable :: String -> Expression Scalar R
-variable name = fromNode ([], R, Var name)
+variable = gvariable @Scalar
 
--- | Create primitive expressions using Nat kind.
---
--- @
---   let exp = variable1D "var"
---   let exp = variableD \@10 "var"
--- @
-variable1D ::
-  forall n.
-  (KnownNat n) =>
-  String ->
-  Expression (D1 n) R
-variable1D name = fromNode ([nat @n], R, Var name)
+variable1D :: forall n. (KnownNat n) => String -> Expression (D1 n) R
+variable1D = gvariable @(D1 n)
 
--- | Create a variable for two-dimensional nat values
--- @
---  exp = variable2D "var"
---  exp = variable2D \@10 \@20 "var"
--- @
 variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> Expression (D2 m n) R
-variable2D name = fromNode ([nat @m, nat @n], R, Var name)
+variable2D = gvariable @(D2 m n)
 
--- | Create a variable for three-dimensional nat values
--- @
---  exp = variable3D "var"
---  exp = variable3D @10 @20 @30 "var"
--- @
 variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression (D3 m n p) R
-variable3D name = fromNode ([nat @m, nat @n, nat @p], R, Var name)
+variable3D = gvariable @(D3 m n p)
 
--- | create a scalar (non-vector) constant Expression
-constant :: Double -> Expression Scalar R
-constant val = fromNode ([], R, Const val)
-
--- | Declare a one-dimensional constant
--- @
---  constant2D @1 40
--- @
-constant1D :: forall n. (KnownNat n) => Double -> Expression (D1 n) R
-constant1D val = fromNode ([nat @n], R, Const val)
-
--- | Two-dimensional constant
--- @
---  constant2D @1 @2 40
--- @
-constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> Expression (D2 m n) R
-constant2D val = fromNode ([nat @m, nat @n], R, Const val)
-
--- | Three-dimensional constant
--- @
---  constant2D @1 @2 @3 40
--- @
-constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> Expression (D3 m n p) R
-constant3D val = fromNode ([nat @m, nat @n, nat @p], R, Const val)
-
--- | Create parameter
-param :: String -> Expression Scalar R
-param name = fromNode ([], R, Param name)
-
--- | Create a param for one-dimensional nat values
 --
 -- @
---   let exp = param1D "var"
---   let exp = param1D \@10 "var"
+--   let x = constant 0.12
+--   let x = constant1D \@10 0.12
+--   let x = constant2D \@10 \@20 0.12
+--   let x = constant3D \@10 \@20 \@30 0.12
 -- @
+constant :: Double -> Expression Scalar R
+constant = gconstant @Scalar
+
+constant1D :: forall n. (KnownNat n) => Double -> Expression (D1 n) R
+constant1D = gconstant @(D1 n)
+
+constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> Expression (D2 m n) R
+constant2D = gconstant @(D2 m n)
+
+constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> Expression (D3 m n p) R
+constant3D = gconstant @(D3 m n p)
+
+---- | Auxiliary for creating parameters
+--
+-- @
+--   let x = param "x"
+--   let x = param1D \@10 "x"
+--   let x = param2D \@10 \@20 "x"
+--   let x = param3D \@10 \@20 \@30 "x"
+-- @
+param :: String -> Expression Scalar R
+param = gparam @Scalar
+
 param1D :: forall n. (KnownNat n) => String -> Expression (D1 n) R
-param1D name = fromNode ([nat @n], R, Param name)
+param1D = gparam @(D1 n)
 
--- | Create a param for two-dimensional nat values
--- @
---  exp = param2D "var"
---  exp = param2D \@10 \@20 "var"
--- @
 param2D :: forall m n. (KnownNat m, KnownNat n) => String -> Expression (D2 m n) R
-param2D name = fromNode ([nat @m, nat @n], R, Param name)
+param2D = gparam @(D2 m n)
 
--- | Create a param for three-dimensional nat values
--- @
---  exp = param3D "var"
---  exp = param3D @10 @20 @30 "var"
--- @
 param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> Expression (D3 m n p) R
-param3D name = fromNode ([nat @m, nat @n, nat @p], R, Param name)
+param3D = gparam @(D3 m n p)

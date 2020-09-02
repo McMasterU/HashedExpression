@@ -335,6 +335,12 @@ varNodes mp = extract mp $
     (nID, (shape, _, Var varName)) -> Just (varName, shape, NodeID nID)
     _ -> Nothing
 
+paramNodes :: ExpressionMap -> [(String, Shape, NodeID)]
+paramNodes mp = extract mp $
+  \case
+    (nID, (shape, _, Param varName)) -> Just (varName, shape, NodeID nID)
+    _ -> Nothing
+
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation
 containsFTNode :: ExpressionMap -> Bool
 containsFTNode mp = any isFT $ IM.elems mp

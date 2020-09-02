@@ -246,21 +246,19 @@ specInject dmSelectors =
 -------------------------------------------------------------------------------
 specMatMul :: HasCallStack => BinarySpec
 specMatMul = BinarySpec {toOp = MatMul, decideShape = decideShape, decideET = decideET}
-  where 
-    decideShape [m, n] [p, q] 
+  where
+    decideShape [m, n] [p, q]
       | n == p = [m, q]
       | otherwise = error "invalid shape matrix multiplication"
-    decideShape [m, n] [p] 
+    decideShape [m, n] [p]
       | n == p = [m]
       | otherwise = error "invalid shape matrix multiplication"
     decideShape _ _ = error "invalid shape matrix multiplication"
     decideET x y = assertSame [x, y] x
 
 specTranspose :: HasCallStack => UnarySpec
-specTranspose = UnarySpec {toOp = Transpose, decideShape = decideShape, decideET = id}    
-  where 
+specTranspose = UnarySpec {toOp = Transpose, decideShape = decideShape, decideET = id}
+  where
     decideShape [m, n] = [n, m]
     decideShape [m] = [1, m]
     decideShape _ = error "invalid shape tranpose"
-    
-    

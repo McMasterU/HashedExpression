@@ -79,9 +79,9 @@ nodeTypeWeight node =
     MatMul {} -> 33
     Transpose {} -> 34
     -------------------------------------------------
-    Scale {} -> 100 
-    RealImag {} -> 101 
-    Sum {} -> 102 
+    Scale {} -> 100
+    RealImag {} -> 101
+    Sum {} -> 102
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool

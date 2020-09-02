@@ -39,7 +39,7 @@ import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
 import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
-import Prelude hiding ((^), (**))
+import Prelude hiding ((**), (^))
 import qualified Prelude
 
 simplifyUnwrapped :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
