@@ -28,7 +28,7 @@ data GenResult
 
 -- | The type class for code generating
 class Codegen configs where
-  generateProblemCode :: configs -> Problem -> ValMaps -> GenResult
+  generateProblemCode :: configs -> Problem -> ValMap -> GenResult
 
 -- | Indent `n` space each line of code
 indent ::

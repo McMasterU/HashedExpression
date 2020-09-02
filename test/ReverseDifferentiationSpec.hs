@@ -28,7 +28,7 @@ import Var
 import Prelude hiding ((^))
 import qualified Prelude
 
-sharedVariables :: ValMaps -> ValMaps -> [String]
+sharedVariables :: ValMap -> ValMap -> [String]
 sharedVariables mp1 mp2 = filter isVar $ Set.toList (Map.keysSet mp1 `Set.intersection` Map.keysSet mp2)
   where
     isVar name = 'p' `notElem` name

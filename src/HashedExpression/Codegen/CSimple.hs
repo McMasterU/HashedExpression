@@ -539,15 +539,15 @@ evaluating CSimpleCodegen {..} rootIDs =
 
 -------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
-  generateProblemCode :: CSimpleConfig -> Problem -> ValMaps -> GenResult
-  generateProblemCode cf@CSimpleConfig {..} Problem {..} valMaps
+  generateProblemCode :: CSimpleConfig -> Problem -> ValMap -> GenResult
+  generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap
     | Just errorMsg <- checkError = Invalid errorMsg
     | otherwise = Success $ \folder -> do
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
       let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
       -- Write values
-      forM_ (Map.toList valMaps) $ \(var, val) -> do
+      forM_ (Map.toList valMap) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
           let str = T.unwords . map tt . valElems $ val
           TIO.writeFile (folder </> var <.> "txt") str
@@ -596,10 +596,10 @@ instance Codegen CSimpleConfig where
       -------------------------------------------------------------------------------
       checkError :: Maybe String
       checkError
-        | Just name <- find (not . (`Map.member` valMaps)) params = Just $ "No value provided for " ++ name
+        | Just name <- find (not . (`Map.member` valMap)) params = Just $ "No value provided for " ++ name
         | otherwise,
           let isOk (var, nId)
-                | Just val <- Map.lookup var valMaps = compatible (retrieveShape nId expressionMap) val
+                | Just val <- Map.lookup var valMap = compatible (retrieveShape nId expressionMap) val
                 | otherwise = True,
           Just (var, shape) <- find (not . isOk) varsAndParams =
           Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
@@ -611,7 +611,7 @@ instance Codegen CSimpleConfig where
       objectiveOffset = cAddress objectiveId
       -- For both variables and values
       readValCodeEach (name, nId)
-        | Just val <- Map.lookup name valMaps = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
+        | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
         | otherwise =
           Scoped
             [ Printf ["Init value for " <> tt name <> " is not provided, generate random init for " <> tt name <> " ...\\n"],

@@ -64,10 +64,10 @@ chooseBranch marks val branches
 
 -- |  eval is our built-in interpreter which serves to verify semantic preservation of rewriting
 class Evaluable d rc output | d rc -> output where
-  eval :: ValMaps -> Expression d rc -> output
+  eval :: ValMap -> Expression d rc -> output
 
 instance Evaluable Scalar R Double where
-  eval :: ValMaps -> Expression Scalar R -> Double
+  eval :: ValMap -> Expression Scalar R -> Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
       case retrieveOp n mp of
@@ -170,7 +170,7 @@ instance Evaluable Scalar R Double where
     | otherwise = error "one r but shape is not [] ??"
 
 instance Evaluable Scalar C (Complex Double) where
-  eval :: ValMaps -> Expression Scalar C -> Complex Double
+  eval :: ValMap -> Expression Scalar C -> Complex Double
   eval valMap e@(Expression n mp)
     | [] <- retrieveShape n mp =
       case retrieveOp n mp of
@@ -261,7 +261,7 @@ foldrElementwise f [x] = x
 foldrElementwise f (x : xs) = zipWithA f x (foldrElementwise f xs)
 
 -- | the expression is undefined, here undefined 1D Real expressions are evaluated
-evaluate1DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array Int Double
+evaluate1DReal :: ValMap -> (ExpressionMap, NodeID) -> Array Int Double
 evaluate1DReal valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -357,12 +357,12 @@ evaluate1DReal valMap (mp, n)
   | otherwise = error "one r but shape is not [size] ??"
 
 instance (KnownNat n) => Evaluable (D1 n) R (Array Int Double) where
-  eval :: ValMaps -> Expression (D1 n) R -> Array Int Double
+  eval :: ValMap -> Expression (D1 n) R -> Array Int Double
   eval valMap (Expression n mp) = evaluate1DReal valMap (mp, n)
 
 -- | evaluate undefined 1D complex expression
 evaluate1DComplex ::
-  ValMaps -> (ExpressionMap, NodeID) -> Array Int (Complex Double)
+  ValMap -> (ExpressionMap, NodeID) -> Array Int (Complex Double)
 evaluate1DComplex valMap (mp, n)
   | [size] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -442,11 +442,11 @@ evaluate1DComplex valMap (mp, n)
   | otherwise = error "one C but shape is not [size] ??"
 
 instance (KnownNat n) => Evaluable (D1 n) C (Array Int (Complex Double)) where
-  eval :: ValMaps -> Expression (D1 n) C -> Array Int (Complex Double)
+  eval :: ValMap -> Expression (D1 n) C -> Array Int (Complex Double)
   eval valMap (Expression n mp) = evaluate1DComplex valMap (mp, n)
 
 -- | Evaluate 2D undefined input expressions
-evaluate2DReal :: ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) Double
+evaluate2DReal :: ValMap -> (ExpressionMap, NodeID) -> Array (Int, Int) Double
 evaluate2DReal valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -561,12 +561,12 @@ instance
   (KnownNat m, KnownNat n) =>
   Evaluable (D2 m n) R (Array (Int, Int) Double)
   where
-  eval :: ValMaps -> Expression (D2 m n) R -> Array (Int, Int) Double
+  eval :: ValMap -> Expression (D2 m n) R -> Array (Int, Int) Double
   eval valMap (Expression n mp) = evaluate2DReal valMap (mp, n)
 
 -- | Evaluate 2D undefined complex expression
 evaluate2DComplex ::
-  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int) (Complex Double)
+  ValMap -> (ExpressionMap, NodeID) -> Array (Int, Int) (Complex Double)
 evaluate2DComplex valMap (mp, n)
   | [size1, size2] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -667,12 +667,12 @@ instance
   Evaluable (D2 m n) C (Array (Int, Int) (Complex Double))
   where
   eval ::
-    ValMaps -> Expression (D2 m n) C -> Array (Int, Int) (Complex Double)
+    ValMap -> Expression (D2 m n) C -> Array (Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate2DComplex valMap (mp, n)
 
 -- | Evaluate 3D undefined complex expression
 evaluate3DReal ::
-  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) Double
+  ValMap -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) Double
 evaluate3DReal valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -760,12 +760,12 @@ instance
   (KnownNat m, KnownNat n, KnownNat p) =>
   Evaluable (D3 m n p) R (Array (Int, Int, Int) Double)
   where
-  eval :: ValMaps -> Expression (D3 m n p) R -> Array (Int, Int, Int) Double
+  eval :: ValMap -> Expression (D3 m n p) R -> Array (Int, Int, Int) Double
   eval valMap (Expression n mp) = evaluate3DReal valMap (mp, n)
 
 -- | Evaluate the 3D undefined expression
 evaluate3DComplex ::
-  ValMaps -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
+  ValMap -> (ExpressionMap, NodeID) -> Array (Int, Int, Int) (Complex Double)
 evaluate3DComplex valMap (mp, n)
   | [size1, size2, size3] <- retrieveShape n mp =
     case retrieveOp n mp of
@@ -838,7 +838,7 @@ instance
   Evaluable (D3 m n p) C (Array (Int, Int, Int) (Complex Double))
   where
   eval ::
-    ValMaps ->
+    ValMap ->
     Expression (D3 m n p) C ->
     Array (Int, Int, Int) (Complex Double)
   eval valMap (Expression n mp) = evaluate3DComplex valMap (mp, n)

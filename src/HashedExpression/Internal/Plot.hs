@@ -25,7 +25,7 @@ type FileName = String
 
 data Function = Function
   { expr :: Expression Scalar R,
-    predefinedValues :: ValMaps
+    predefinedValues :: ValMap
   }
 
 scalarVariables :: Function -> [String]

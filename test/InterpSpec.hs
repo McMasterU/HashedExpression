@@ -26,68 +26,68 @@ import qualified Prelude
 
 -- |
 prop_AddScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_AddScalarR (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
+prop_AddScalarR (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 + exp2) == eval valMap exp1 + eval valMap exp2
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 -- |
 prop_MultiplyScalarR :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_MultiplyScalarR (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
+prop_MultiplyScalarR (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 * exp2) == eval valMap exp1 * eval valMap exp2
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 -- |
 prop_AddScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
-prop_AddScalarC (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 + exp2) == eval valMaps exp1 + eval valMaps exp2
+prop_AddScalarC (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 + exp2) == eval valMap exp1 + eval valMap exp2
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 -- |
 prop_MultiplyScalarC :: SuiteScalarC -> SuiteScalarC -> Bool
-prop_MultiplyScalarC (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 * exp2) == eval valMaps exp1 * eval valMaps exp2
+prop_MultiplyScalarC (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 * exp2) == eval valMap exp1 * eval valMap exp2
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 -- |
 prop_RotateOneR1 :: SuiteOneR -> Bool
-prop_RotateOneR1 (Suite exp valMaps) =
-  eval valMaps (rotate 0 exp) == eval valMaps exp
+prop_RotateOneR1 (Suite exp valMap) =
+  eval valMap (rotate 0 exp) == eval valMap exp
 
 -- |
 prop_RotateOneR2 :: SuiteOneR -> Int -> Bool
-prop_RotateOneR2 (Suite exp valMaps) amount =
-  eval valMaps (f exp) == eval valMaps exp
+prop_RotateOneR2 (Suite exp valMap) amount =
+  eval valMap (f exp) == eval valMap exp
   where
     f = rotate amount . rotate (- amount)
 
 -- |
 prop_RotateOneR3 :: SuiteOneR -> Int -> Int -> Bool
-prop_RotateOneR3 (Suite exp valMaps) amount1 amount2 =
-  eval valMaps (f1 exp) == eval valMaps (f2 exp)
+prop_RotateOneR3 (Suite exp valMap) amount1 amount2 =
+  eval valMap (f1 exp) == eval valMap (f2 exp)
   where
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (amount1 + amount2)
 
 -- |
 prop_RotateTwoR1 :: SuiteTwoR -> Bool
-prop_RotateTwoR1 (Suite exp valMaps) =
-  eval valMaps (rotate (0, 0) exp) == eval valMaps exp
+prop_RotateTwoR1 (Suite exp valMap) =
+  eval valMap (rotate (0, 0) exp) == eval valMap exp
 
 -- |
 prop_RotateTwoR2 :: SuiteTwoR -> (Int, Int) -> Bool
-prop_RotateTwoR2 (Suite exp valMaps) (offset1, offset2) =
-  eval valMaps (f exp) == eval valMaps exp
+prop_RotateTwoR2 (Suite exp valMap) (offset1, offset2) =
+  eval valMap (f exp) == eval valMap exp
   where
     f = rotate (offset1, offset2) . rotate (- offset1, - offset2)
 
 -- |
 prop_RotateTwoR3 :: SuiteTwoR -> (Int, Int) -> (Int, Int) -> Bool
-prop_RotateTwoR3 (Suite exp valMaps) amount1 amount2 =
-  eval valMaps (f1 exp) == eval valMaps (f2 exp)
+prop_RotateTwoR3 (Suite exp valMap) amount1 amount2 =
+  eval valMap (f1 exp) == eval valMap (f2 exp)
   where
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
@@ -224,41 +224,41 @@ prop_ProjectInjectTwoC (Suite exp valMap) = do
 
 -- u . v = v . u
 prop_dotProduct1D_1 :: SuiteOneR -> SuiteOneR -> Bool
-prop_dotProduct1D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
+prop_dotProduct1D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 <.> exp2) == eval valMap (exp2 <.> exp1)
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 prop_dotProduct2D_1 :: SuiteTwoR -> SuiteTwoR -> Bool
-prop_dotProduct2D_1 (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 <.> exp2) == eval valMaps (exp2 <.> exp1)
+prop_dotProduct2D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 <.> exp2) == eval valMap (exp2 <.> exp1)
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 --[1D] |v|^2 = v . v
 -- prop_dotProduct1D_2 :: SuiteOneR -> Bool
--- prop_dotProduct1D_2 (Suite exp1 valMaps1) =
---     eval valMaps1 ((??? exp1)^2) == eval valMaps1 (exp1 <.> exp1)
+-- prop_dotProduct1D_2 (Suite exp1 valMap1) =
+--     eval valMap1 ((??? exp1)^2) == eval valMap1 (exp1 <.> exp1)
 
 --  a (u . v) = (a u) . v
 prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Expectation
-prop_dotProduct1D_3 (Suite a valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) =
-  eval valMaps (a * (exp1 <.> exp2)) `shouldApprox` eval valMaps ((a *. exp1) <.> exp2)
+prop_dotProduct1D_3 (Suite a valMap1) (Suite exp1 valMap2) (Suite exp2 valMap3) =
+  eval valMap (a * (exp1 <.> exp2)) `shouldApprox` eval valMap ((a *. exp1) <.> exp2)
   where
-    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+    valMap = valMap1 `union` valMap2 `union` valMap3
 
 prop_dotProduct2D_3 :: SuiteScalarR -> SuiteTwoR -> SuiteTwoR -> Expectation
-prop_dotProduct2D_3 (Suite a valMaps1) (Suite exp1 valMaps2) (Suite exp2 valMaps3) =
-  eval valMaps (a * (exp1 <.> exp2)) `shouldApprox` eval valMaps ((a *. exp1) <.> exp2)
+prop_dotProduct2D_3 (Suite a valMap1) (Suite exp1 valMap2) (Suite exp2 valMap3) =
+  eval valMap (a * (exp1 <.> exp2)) `shouldApprox` eval valMap ((a *. exp1) <.> exp2)
   where
-    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+    valMap = valMap1 `union` valMap2 `union` valMap3
 
 -- (au + bv) . w = (au) . w + (bv) . w
 prop_dotProduct1D_4 :: SuiteScalarR -> SuiteScalarR -> SuiteOneR -> SuiteOneR -> SuiteOneR -> Expectation
-prop_dotProduct1D_4 (Suite a valMaps1) (Suite b valMaps2) (Suite exp1 valMaps3) (Suite exp2 valMaps4) (Suite exp3 valMaps5) =
-  eval valMaps (((a *. exp1) + (b *. exp2)) <.> exp3) `shouldApprox` eval valMaps (((a *. exp1) <.> exp3) + ((b *. exp2) <.> exp3))
+prop_dotProduct1D_4 (Suite a valMap1) (Suite b valMap2) (Suite exp1 valMap3) (Suite exp2 valMap4) (Suite exp3 valMap5) =
+  eval valMap (((a *. exp1) + (b *. exp2)) <.> exp3) `shouldApprox` eval valMap (((a *. exp1) <.> exp3) + ((b *. exp2) <.> exp3))
   where
-    valMaps = valMaps1 `union` valMaps2 `union` valMaps3 `union` valMaps4 `union` valMaps5
+    valMap = valMap1 `union` valMap2 `union` valMap3 `union` valMap4 `union` valMap5
 
 -- [ arithmetic properties ]
 -- 1) commutative properties:  a + b = b + a
@@ -272,39 +272,39 @@ prop_dotProduct1D_4 (Suite a valMaps1) (Suite b valMaps2) (Suite exp1 valMaps3) 
 --                      a * (1 / a) = 1
 
 prop_Commutative_Addition :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_Commutative_Addition (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 + exp2) == eval valMaps (exp2 + exp1)
+prop_Commutative_Addition (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 + exp2) == eval valMap (exp2 + exp1)
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 prop_Commutative_Multiplication :: SuiteScalarR -> SuiteScalarR -> Bool
-prop_Commutative_Multiplication (Suite exp1 valMaps1) (Suite exp2 valMaps2) =
-  eval valMaps (exp1 * exp2) == eval valMaps (exp2 * exp1)
+prop_Commutative_Multiplication (Suite exp1 valMap1) (Suite exp2 valMap2) =
+  eval valMap (exp1 * exp2) == eval valMap (exp2 * exp1)
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 prop_Distributive :: SuiteScalarR -> SuiteScalarR -> SuiteScalarR -> Expectation
-prop_Distributive (Suite exp1 valMaps1) (Suite exp2 valMaps2) (Suite exp3 valMaps3) =
-  eval valMaps (exp1 * (exp2 + exp3)) `shouldApprox` eval valMaps ((exp1 * exp2) + (exp1 * exp3))
+prop_Distributive (Suite exp1 valMap1) (Suite exp2 valMap2) (Suite exp3 valMap3) =
+  eval valMap (exp1 * (exp2 + exp3)) `shouldApprox` eval valMap ((exp1 * exp2) + (exp1 * exp3))
   where
-    valMaps = valMaps1 `union` valMaps2 `union` valMaps3
+    valMap = valMap1 `union` valMap2 `union` valMap3
 
 prop_Identity_Addition :: SuiteScalarR -> Bool
-prop_Identity_Addition (Suite exp1 valMaps1) =
-  eval valMaps1 (exp1 + 0) == eval valMaps1 exp1
+prop_Identity_Addition (Suite exp1 valMap1) =
+  eval valMap1 (exp1 + 0) == eval valMap1 exp1
 
 prop_Identity_Multiplication :: SuiteScalarR -> Bool
-prop_Identity_Multiplication (Suite exp1 valMaps1) =
-  eval valMaps1 (exp1 * 1) == eval valMaps1 exp1
+prop_Identity_Multiplication (Suite exp1 valMap1) =
+  eval valMap1 (exp1 * 1) == eval valMap1 exp1
 
 prop_Inverse_Addition :: SuiteScalarR -> Bool
-prop_Inverse_Addition (Suite exp1 valMaps1) =
-  eval valMaps1 (exp1 + (negate exp1)) == 0
+prop_Inverse_Addition (Suite exp1 valMap1) =
+  eval valMap1 (exp1 + (negate exp1)) == 0
 
 prop_Inverse_Multiplication :: SuiteScalarR -> Property
-prop_Inverse_Multiplication (Suite exp1 valMaps1) =
-  eval valMaps1 exp1 /= 0
-    ==> (eval valMaps1 (exp1 * (1 / exp1)) `shouldApprox` 1)
+prop_Inverse_Multiplication (Suite exp1 valMap1) =
+  eval valMap1 exp1 /= 0
+    ==> (eval valMap1 (exp1 * (1 / exp1)) `shouldApprox` 1)
 
 -- [ exponential properties ]
 -- 1) x^a * x^b = x ^ (a+b)
@@ -322,31 +322,31 @@ instance (KnownNat n) => Arbitrary (IntB n) where
     return $ IntB $ abs (x `mod` nNat)
 
 prop_ExpScalar_1 :: SuiteScalarR -> IntB 5 -> IntB 5 -> Expectation
-prop_ExpScalar_1 (Suite exp1 valMaps1) (IntB a) (IntB b) =
-  eval valMaps1 ((exp1 ^ a) * (exp1 ^ b)) `shouldApprox` eval valMaps1 (exp1 ^ (a + b))
+prop_ExpScalar_1 (Suite exp1 valMap1) (IntB a) (IntB b) =
+  eval valMap1 ((exp1 ^ a) * (exp1 ^ b)) `shouldApprox` eval valMap1 (exp1 ^ (a + b))
 
 prop_ExpScalar_2 :: SuiteScalarR -> SuiteScalarR -> IntB 5 -> Expectation
-prop_ExpScalar_2 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
-  eval valMaps ((exp1 * exp2) ^ a) `shouldApprox` eval valMaps ((exp1 ^ a) * (exp2 ^ a))
+prop_ExpScalar_2 (Suite exp1 valMap1) (Suite exp2 valMap2) (IntB a) =
+  eval valMap ((exp1 * exp2) ^ a) `shouldApprox` eval valMap ((exp1 ^ a) * (exp2 ^ a))
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 prop_ExpScalar_3 :: SuiteScalarR -> IntB 10 -> IntB 10 -> Property
-prop_ExpScalar_3 (Suite exp1 valMaps1) (IntB a) (IntB b) =
-  (eval valMaps1 exp1 /= 0)
-    ==> (eval valMaps1 ((exp1 ^ a) / (exp1 ^ b)) `shouldApprox` eval valMaps1 (exp1 ^ (a - b)))
+prop_ExpScalar_3 (Suite exp1 valMap1) (IntB a) (IntB b) =
+  (eval valMap1 exp1 /= 0)
+    ==> (eval valMap1 ((exp1 ^ a) / (exp1 ^ b)) `shouldApprox` eval valMap1 (exp1 ^ (a - b)))
 
 prop_ExpScalar_4 :: SuiteScalarR -> IntB 10 -> Property
-prop_ExpScalar_4 (Suite exp1 valMaps1) (IntB a) =
-  (eval valMaps1 exp1 /= 0)
-    ==> (eval valMaps1 (exp1 ^ (- a)) `shouldApprox` eval valMaps1 (1 / (exp1 ^ a)))
+prop_ExpScalar_4 (Suite exp1 valMap1) (IntB a) =
+  (eval valMap1 exp1 /= 0)
+    ==> (eval valMap1 (exp1 ^ (- a)) `shouldApprox` eval valMap1 (1 / (exp1 ^ a)))
 
 prop_ExpScalar_5 :: SuiteScalarR -> SuiteScalarR -> IntB 10 -> Property
-prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
-  (eval valMaps exp2 /= 0)
-    ==> (((eval valMaps (exp1 / exp2)) Prelude.** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
+prop_ExpScalar_5 (Suite exp1 valMap1) (Suite exp2 valMap2) (IntB a) =
+  (eval valMap exp2 /= 0)
+    ==> (((eval valMap (exp1 / exp2)) Prelude.** fromIntegral a) `shouldApprox` (eval valMap ((exp1 ^ a) / (exp2 ^ a))))
   where
-    valMaps = valMaps1 `union` valMaps2
+    valMap = valMap1 `union` valMap2
 
 spec :: Spec
 spec =

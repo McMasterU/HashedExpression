@@ -72,7 +72,7 @@ getValue1D name size = readVal1D size . fromJust . Map.lookup name
 getValue2D :: String -> (Int, Int) -> Map String String -> Array (Int, Int) Double
 getValue2D name size = readVal2D size . fromJust . Map.lookup name
 
-solveProblem :: Problem -> ValMaps -> IO (Map String String)
+solveProblem :: Problem -> ValMap -> IO (Map String String)
 solveProblem problem valMap = do
   case generateProblemCode CSimpleConfig {output = OutputText} problem valMap of
     -- TODO: refine this

@@ -97,7 +97,7 @@ primitiveR = do
 primitiveC :: forall d. Dimension d => Gen (Expression d C)
 primitiveC = liftA2 (+:) primitiveR primitiveR
 
-genValMapFor :: Expression d et -> Gen ValMaps
+genValMapFor :: Expression d et -> Gen ValMap
 genValMapFor (Expression nID mp) = do
   let genVal :: Shape -> Gen Val
       genVal shape = do
@@ -269,7 +269,7 @@ instance (Dimension d, IsElementType et) => Arbitrary (Expression d et) where
 
 -------------------------------------------------------------------------------
 data Suite d et
-  = Suite (Expression d et) ValMaps
+  = Suite (Expression d et) ValMap
   deriving (Show)
 
 instance (Dimension d, IsElementType et) => Arbitrary (Suite d et) where
