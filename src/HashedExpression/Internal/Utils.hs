@@ -19,11 +19,12 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Prettify
 import Prelude hiding ((^))
+import Data.Function ((&))
 import qualified Prelude
 
 -- | Forward pipe operator in Elm
 (|>) :: a -> (a -> b) -> b
-(|>) = flip ($)
+(|>) = (&)
 
 infixl 1 |>
 
