@@ -66,4 +66,5 @@ spec :: Spec
 spec =
   describe "Reverse differentiation spec" $ do
     specify "linearity" $ pending
+
 --    specify "linearity" $ property prop_Linearity

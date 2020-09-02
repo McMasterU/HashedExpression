@@ -18,6 +18,7 @@ import qualified Data.List as List
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
+import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat)
 import HashedExpression.Internal.Expression
   ( D1,
@@ -32,7 +33,6 @@ import HashedExpression.Internal.Expression
     Scalar,
   )
 import HashedExpression.Internal.Node
-import GHC.IO.Unsafe (unsafePerformIO)
 import HashedExpression.Internal.Utils
 import HashedExpression.Prettify (prettify, showExp)
 import HashedExpression.Value

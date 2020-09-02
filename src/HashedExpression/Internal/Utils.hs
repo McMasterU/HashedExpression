@@ -3,6 +3,7 @@ module HashedExpression.Internal.Utils where
 import Data.Array
 import Data.Complex (Complex (..))
 import qualified Data.Complex as Complex
+import Data.Function ((&))
 import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
 import Data.List.Split (splitOn)
@@ -19,7 +20,6 @@ import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Prettify
 import Prelude hiding ((^))
-import Data.Function ((&))
 import qualified Prelude
 
 -- | Forward pipe operator in Elm

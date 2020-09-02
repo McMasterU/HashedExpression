@@ -64,7 +64,6 @@ prop_RotateTwoR3 (Suite exp valMap) amount1 amount2 =
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
 
-
 --- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
 prop_ProjectInjectOneR :: SuiteOneR -> Expectation
 prop_ProjectInjectOneR (Suite exp valMap) = do

@@ -19,7 +19,7 @@ module HashedExpression.Internal.Expression
     DimSelector (..),
     ProjectInjectOp (..),
     ExpressionMap,
-    IsElementType(..),
+    IsElementType (..),
     Expression (..),
     Arg,
     Args,
@@ -59,11 +59,11 @@ module HashedExpression.Internal.Expression
 where
 
 import Data.Array
-import Data.Typeable
 import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.Proxy (Proxy (..))
+import Data.Typeable
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (KnownNat, Nat, natVal)
 import HashedExpression.Internal.Base
@@ -239,6 +239,7 @@ instance IsElementType R where
 
 instance IsElementType C where
   toElementType = C
+
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Dimensions
