@@ -346,7 +346,7 @@ prop_ExpScalar_5 (Suite exp1 valMaps1) (Suite exp2 valMaps2) (IntB a) =
   (eval valMaps exp2 /= 0)
     ==> (((eval valMaps (exp1 / exp2)) Prelude.** fromIntegral a) `shouldApprox` (eval valMaps ((exp1 ^ a) / (exp2 ^ a))))
   where
-    valMaps = valMaps1 `union` valMap
+    valMaps = valMaps1 `union` valMaps2
 
 spec :: Spec
 spec =

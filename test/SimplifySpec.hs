@@ -29,6 +29,7 @@ shouldSimplifyTo exp1 exp2 = do
   simplify exp1 `shouldBe` simplify exp2
 
 -- |
+--prop_sameValueInterp :: Dimension d => Suite d et -> 
 prop_sameValueInterpScalarR :: SuiteScalarR -> Expectation
 prop_sameValueInterpScalarR (Suite exp valMaps) =
   eval valMaps exp `shouldApprox` eval valMaps (simplify exp)

@@ -19,6 +19,7 @@ module HashedExpression.Internal.Expression
     DimSelector (..),
     ProjectInjectOp (..),
     ExpressionMap,
+    IsElementType(..),
     Expression (..),
     Arg,
     Args,
@@ -58,6 +59,7 @@ module HashedExpression.Internal.Expression
 where
 
 import Data.Array
+import Data.Typeable
 import qualified Data.Complex as DC
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
@@ -223,12 +225,20 @@ data ElementType
     R
   | -- | Complex Elements
     C
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Typeable)
 
 type R = 'R
 
 type C = 'C
 
+class IsElementType (d :: ElementType) where
+  toElementType :: ElementType
+
+instance IsElementType R where
+  toElementType = R
+
+instance IsElementType C where
+  toElementType = C
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Dimensions
@@ -245,18 +255,18 @@ type D2 (m :: Nat) (n :: Nat) = '[m, n]
 type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
 
 instance Dimension '[] where
-  toShape _ = []
+  toShape = []
 
 --
 instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
-  toShape _ = (nat @x) : toShape (Proxy @xs)
+  toShape = (nat @x) : toShape @xs
 
 --
 
 -- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
 class Dimension (d :: [Nat]) where
-  toShape :: Proxy d -> Shape
+  toShape :: Shape
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
 --   from Integer to Int

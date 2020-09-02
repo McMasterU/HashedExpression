@@ -39,7 +39,7 @@ instance (Dimension d) => PowerOp (Expression d et) Int where
 --    (fromDouble 15) :: Expression Scalar R
 -- @
 fromDouble :: forall d. Dimension d => Double -> Expression d R
-fromDouble value = fromNode (toShape (Proxy @d), R, Const value)
+fromDouble value = fromNode (toShape @d, R, Const value)
 
 -- | Basic operations on Num class expressions with dimension constraint `d`
 instance Dimension d => Num (Expression d R) where
@@ -335,7 +335,7 @@ ranges = Proxy
 
 -------------------------------------------------------------------------------
 extractShape :: forall d. Dimension d => Shape
-extractShape = toShape (Proxy @d)
+extractShape = toShape @d
 
 -- | General version of creating variables, parameters, constants
 gvariable :: forall d. Dimension d => String -> Expression d R
