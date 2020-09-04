@@ -180,3 +180,14 @@ instance (MonadExpression m) => ProjectInjectOp [DimSelector] (m NodeID) (m Node
     x <- sub
     y <- base
     perform (Binary (specInject ss)) [x, y]
+
+instance (MonadExpression m) => MatrixMulOp (m NodeID) (m NodeID) (m NodeID) where
+  operand1 ** operand2 = do
+    x <- operand1
+    y <- operand1
+    perform (Binary specMatMul) [x, y]
+
+instance (MonadExpression m) => TransposeOp (m NodeID) (m NodeID) where
+  transpose operand = do
+    x <- operand
+    perform (Unary specTranspose) [x]

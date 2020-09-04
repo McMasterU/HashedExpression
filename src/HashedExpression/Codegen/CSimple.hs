@@ -535,6 +535,8 @@ evaluating CSimpleCodegen {..} rootIDs =
                               ]
                           ]
                in Scoped [copyBase, injectSub]
+            MatMul x y -> undefined
+            Transpose x -> undefined
             node -> error $ "Not implemented " ++ show node
 
 -------------------------------------------------------------------------------
