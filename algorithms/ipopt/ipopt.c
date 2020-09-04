@@ -20,7 +20,9 @@ extern const int var_size[NUM_VARIABLES];
 extern const int var_offset[NUM_VARIABLES];
 extern const int partial_derivative_offset[NUM_VARIABLES];
 extern const int objective_offset;
-extern double ptr[MEM_SIZE];
+
+extern double ptr[MEMORY_NUM_DOUBLES];
+extern complex double ptr_c[MEMORY_NUM_COMPLEX_DOUBLES];
 
 extern const int bound_pos[NUM_VARIABLES];
 extern double lower_bound[NUM_ACTUAL_VARIABLES];

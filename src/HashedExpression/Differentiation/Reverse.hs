@@ -22,7 +22,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import Prelude hiding ((^))
+import Prelude hiding ((**), (^))
 
 -- |
 partialDerivativesMap ::
@@ -223,5 +223,14 @@ partialDerivativesMap (Expression rootID mp) =
               C -> do
                 dY <- inject dss (zeroX +: zeroX) (from dN)
                 addDerivative y dY
+          MatMul x y -> do
+            -- mn np mp
+            dX <- from dN ** transpose (from y)
+            addDerivative x dX
+            dY <- transpose (from x) ** from dN
+            addDerivative y dY
+          Transpose x -> do
+            dX <- transpose $ from dN
+            addDerivative x dX
       (_, res) = runState go init
    in (contextMap res, partialDerivativeMap res)

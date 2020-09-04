@@ -215,24 +215,24 @@ expressionElementType (Expression (NodeID n) mp) =
 
 -- | Retrieve the 'Shape' of an 'Expression'
 {-# INLINE expressionShape #-}
-expressionShape :: HasCallStack => Expression d et -> Shape
-expressionShape (Expression (NodeID n) mp) =
+expressionShape :: (ExpressionMap, NodeID) -> Shape
+expressionShape (mp, NodeID n) =
   case IM.lookup n mp of
     Just (dim, _, _) -> dim
     _ -> error "expression not in map"
 
 -- | Retrieve the 'Node' of an 'Expression'
 {-# INLINE expressionNode #-}
-expressionNode :: HasCallStack => Expression d et -> Node
-expressionNode (Expression (NodeID n) mp) =
+expressionNode :: (ExpressionMap, NodeID) -> Node
+expressionNode (mp, NodeID n) =
   case IM.lookup n mp of
     Just internal -> internal
     _ -> error "expression not in map"
 
 -- | Retrieve the Op of an expression
 {-# INLINE expressionOp #-}
-expressionOp :: HasCallStack => Expression d et -> Op
-expressionOp (Expression (NodeID n) mp) =
+expressionOp :: (ExpressionMap, NodeID) -> Op
+expressionOp (mp, NodeID n) =
   case IM.lookup n mp of
     Just (_, _, op) -> op
     _ -> error "expression not in map"

@@ -16,7 +16,6 @@ import Data.List (intercalate, sort, tails)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, mapMaybe)
-import qualified Data.String.Interpolate as I
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import GHC.IO.Exception (ExitCode (..))
@@ -45,73 +44,77 @@ localOffset shape indices
     sum . zipWith (*) indices . map product . tail . tails $ shape
   | otherwise = error $ "shape and indices are not compatible" ++ show shape ++ show indices
 
-for1 :: T.Text -> Int -> Code -> Code
-for1 iter bound codes =
-  scoped $
-    [ [I.i|int #{iter};|],
-      [I.i|for (#{iter} = 0; #{iter} < #{bound}; #{iter}++)|]
-    ]
-      ++ scoped codes
-
 -- | Generate a fully working C program that compute the expression and
--- print out the result, mostly used for testing
+--   print out the result
 singleExpressionCProgram ::
   (Dimension d) => ValMap -> Expression d et -> Code
 singleExpressionCProgram valMap expr =
   [ "#include <math.h>", --
     "#include <stdio.h>",
     "#include <stdlib.h>",
+    "#include <complex.h>",
     if containsFTNode $ exMap expr
       then T.pack $ fftUtils
       else "",
-    "#include <complex.h>",
     "int main()" --
   ]
-    ++ scoped (initMemory ++ assignVals ++ codes ++ printValue ++ releaseMemory)
+    ++ scoped
+      ( initMemory
+          ++ fromCCode assigningValues
+          ++ codes
+          ++ fromCCode printValue
+          ++ fromCCode releaseMemory
+      )
   where
     (mp, n) = unwrap expr
     bound = product (retrieveShape n mp)
     et = retrieveElementType n mp
-    codeGen = initCodegen CSimpleConfig {output = OutputText} mp []
+    codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText} mp []
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
-    initMemory = [[I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]]
-    -- assign value to variables
-    assignVals = assigningValues codeGen valMap
+    initMemory :: Code
+    initMemory =
+      concatMap
+        fromCCode
+        [ "double *ptr" := (fun "malloc" ["sizeof(double) * " <> tt totalReal]),
+          "double complex *ptr_c" := (fun "malloc" ["sizeof(double complex) * " <> tt totalComplex])
+        ]
     -- codes to compute
-    codes = evaluating codeGen [n]
+    codes = evaluating codegen [n]
     -- print the value of expression
+    printValue :: CCode
     printValue
-      | et == R = for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
+      | et == R =
+        for i bound [Printf ["%f ", n !! i]]
       | et == C =
-        for1 i bound [[I.i|printf("%f ", #{(!!) codeGen n i});|]]
-          ++ [[I.i|printf("\\n");|]]
-          ++ for1 i bound [[I.i|printf("%f ", #{imAt codeGen n i});|]]
-    releaseMemory = ["free(ptr);"]
+        Scoped
+          [ for i bound [Printf ["%f ", fun "creal" [n !! i]]],
+            Printf ["\\n"],
+            for i bound [Printf ["%f ", fun "cimag" [n !! i]]]
+          ]
+    releaseMemory = Statement "free(ptr)"
     -------------------------------------------------------------------------------
-    assigningValues :: CSimpleCodegen -> ValMap -> Code
-    assigningValues CSimpleCodegen {..} valMap = concatMap assignValue names
+    assigningValues :: CCode
+    assigningValues = Scoped $ map assignValue names
       where
         [i, j, k, nooffset] = ["i", "j", "k", "0"]
         names :: [(String, NodeID)]
         names = varsWithNodeID mp ++ paramsWithNodeID mp
-        assignValue :: (String, NodeID) -> Code
+        assignValue :: (String, NodeID) -> CCode
         assignValue (name, n) =
           case Map.lookup name valMap of
-            Just (VScalar val) -> [[I.i|#{n !! nooffset} = #{val};|]]
+            Just (VScalar val) -> (n !! nooffset) := (tt val)
             Just (V1D array1d) ->
-              let assignIndex id = [[I.i|#{n !! (tt id)} = #{array1d ! id};|]]
-               in concatMap assignIndex $ indices array1d
+              let assignIndex id = (n !! tt id) := (tt (array1d ! id))
+               in Scoped $ map assignIndex $ indices array1d
             Just (V2D array2d) ->
               let shape = retrieveShape n mp
-                  assignIndex (id1, id2) =
-                    [[I.i|#{n !! tt (localOffset shape [id1, id2])} = #{array2d ! (id1, id2)};|]]
-               in concatMap assignIndex $ indices array2d
+                  assignIndex (id1, id2) = (n !! tt (localOffset shape [id1, id2])) := (tt (array2d ! (id1, id2)))
+               in Scoped $ map assignIndex $ indices array2d
             Just (V3D array3d) ->
               let shape = retrieveShape n mp
-                  assignIndex (id1, id2, id3) =
-                    [[I.i|#{n !! tt (localOffset shape [id1, id2, id3])} = #{array3d ! (id1, id2, id2)};|]]
-               in concatMap assignIndex $ indices array3d
-            _ -> []
+                  assignIndex (id1, id2, id3) = (n !! tt (localOffset shape [id1, id2, id3])) := (tt (array3d ! (id1, id2, id2)))
+               in Scoped $ map assignIndex $ indices array3d
+            _ -> Empty
 
 hasFFTW :: IO Bool
 hasFFTW = do
