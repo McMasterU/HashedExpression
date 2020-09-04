@@ -32,11 +32,11 @@ main = do
     describe "SimplifySpec" SimplifySpec.spec
     describe "CollisionSpec" CollisionSpec.spec
     describe "ProblemSpec" ProblemSpec.spec
+
     describe "InterpSpec" InterpSpec.spec
     describe "StructureSpec" StructureSpec.spec
     describe "ReverseDifferentiationSpec" ReverseDifferentiationSpec.spec
-  --
   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
     describe "SolverSpec" SolverSpec.spec
-  hspecWith defaultConfig {configQuickCheckSeed = Just 1237182163, configQuickCheckMaxSuccess = Just 10} $ do
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 10} $ do
     describe "CSimpleSpec" CSimpleSpec.spec

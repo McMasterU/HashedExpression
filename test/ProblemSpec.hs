@@ -107,7 +107,7 @@ prop_constructProblemBoxConstraint (Suite exp valMap) = do
 -- |
 makeValidScalarConstraint :: IO ConstraintStatement
 makeValidScalarConstraint = do
-  sc <- generate (sized (genExpR @Scalar))
+  sc <- generate (sized (genExp @Scalar @R))
   val1 <- VScalar <$> generate arbitrary
   val2 <- VScalar <$> generate arbitrary
   generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]

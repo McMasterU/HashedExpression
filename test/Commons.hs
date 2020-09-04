@@ -24,6 +24,7 @@ import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat, type (+), type (-))
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
@@ -81,22 +82,6 @@ genAtSelector size = do
   let id = elements [0 .. size - 1]
   oneof [At <$> id]
 
-primitiveR :: forall d. Dimension d => Gen (Expression d R)
-primitiveR = do
-  let shape = extractShape @d
-  dbl <- genDouble
-  name <- elements $ map pure ['a' .. 'z']
-  let varName = name ++ shapeToString shape
-  let parName = "p" ++ name ++ shapeToString shape
-  elements
-    [ gvariable @d varName,
-      gparam @d parName,
-      gconstant @d dbl
-    ]
-
-primitiveC :: forall d. Dimension d => Gen (Expression d C)
-primitiveC = liftA2 (+:) primitiveR primitiveR
-
 genValMapFor :: Expression d et -> Gen ValMap
 genValMapFor (Expression nID mp) = do
   let genVal :: Shape -> Gen Val
@@ -116,154 +101,141 @@ genValMapFor (Expression nID mp) = do
         )
   return $ Map.fromList vals
 
-genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (Expression d et)
-genExp size = case toElementType @et of
-  R -> wrap . unwrap <$> genExpR @d size
-  C -> wrap . unwrap <$> genExpC @d size
+primitiveRUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveRUntyped shape = do
+  dbl <- genDouble
+  name <- elements $ map pure ['a' .. 'z']
+  let varName = name ++ shapeToString shape
+  let parName = "p" ++ name ++ shapeToString shape
+  elements
+    [ fromNodeUnwrapped (shape, R, Var varName),
+      fromNodeUnwrapped (shape, R, Param parName),
+      fromNodeUnwrapped (shape, R, Const dbl)
+    ]
 
-genExpC :: forall d. (Dimension d) => Int -> Gen (Expression d C)
-genExpC size
-  | size == 0 = primitiveC @d
+primitiveCUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveCUntyped shape = do
+  re <- primitiveRUntyped shape
+  im <- primitiveRUntyped shape
+  return $ apply (Binary specRealImag) [re, im]
+
+genExpUntyped :: Int -> Shape -> ElementType -> Gen (ExpressionMap, NodeID)
+genExpUntyped qc shape et
+  | qc == 0 = case et of
+    R -> primitiveRUntyped shape
+    C -> primitiveCUntyped shape
   | otherwise =
-    let sub = genExpC @d (size `div` sizeReduceFactor)
-        subScalarR = genExpR @Scalar (size `div` sizeReduceFactor)
-        subScalarC = genExpC @Scalar (size `div` sizeReduceFactor)
-        subR = genExpR @d (size `div` sizeReduceFactor)
+    let sub = genExpUntyped (qc `div` sizeReduceFactor) shape et
+        subScalarR = genExpUntyped (qc `div` sizeReduceFactor) [] R
+        subScalarC = genExpUntyped (qc `div` sizeReduceFactor) [] C
+        subR = genExpUntyped (qc `div` sizeReduceFactor) shape R
+        subC = genExpUntyped (qc `div` sizeReduceFactor) shape C
+        subOf shape et = genExpUntyped (qc `div` sizeReduceFactor) shape et
         fromPiecewise = do
           numBranches <- elements [2, 3]
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let exp = piecewise marks condition branches
+          let exp = apply (ConditionAry (specPiecewise marks)) (condition : branches)
           return exp
-        binary op = liftA2 op sub sub
-        unary op = op <$> sub
+        binary spec = do
+          x <- sub
+          y <- sub
+          return $ apply spec [x, y]
+        unary spec = do
+          x <- sub
+          return $ apply spec [x]
         commonPossibilities =
           [ fromPiecewise,
-            binary (+),
-            binary (*),
-            liftA2 (*.) subScalarR sub,
-            unary negate,
-            unary (^ 2),
-            liftA2 (+:) subR subR,
-            unary ft,
-            unary ift
+            binary (Nary specSum),
+            binary (Nary specMul),
+            liftA2 (\x y -> apply (Binary specScale) [x, y]) subScalarR sub,
+            unary (Unary specNeg),
+            unary (Unary (specPower 2))
           ]
-        unsafeConvert :: Gen (Expression mustBe_d C) -> Gen (Expression d C)
-        unsafeConvert = fmap (wrap . unwrap)
-        specificShapePossibilities = case extractShape @d of
+        specificElementTypePosibilities
+          | et == R =
+            [ (\x -> apply (Unary specRealPart) [x]) <$> subC,
+              (\x -> apply (Unary specImagPart) [x]) <$> subC
+            ]
+          | et == C =
+            [ liftA2 (\x y -> apply (Binary specRealImag) [x, y]) subR subR,
+              unary (Unary specFT),
+              unary (Unary specIFT),
+              liftA2 (\x y -> apply (Binary specScale) [x, y]) subScalarC sub
+            ]
+        specificShapePossibilities = case shape of
           [] ->
-            let sub1D = genExpC @(D1 Default1D) (size `div` sizeReduceFactor)
-                sub2D = genExpC @(D2 Default2D1 Default2D2) (size `div` sizeReduceFactor)
-                fromProjection = do
-                  exp <- sub1D
-                  ds <- genAtSelector (nat @Default1D)
-                  return $ unsafeProject [ds] exp
-             in map unsafeConvert $
-                  [ liftA2 (<.>) sub1D sub1D,
-                    liftA2 (<.>) sub2D sub2D,
-                    fromProjection
-                  ]
+            let fromProjection = do
+                  size <- elements [3 .. 9]
+                  exp <- subOf [size] et
+                  ds <- genAtSelector size
+                  return $ apply (Unary (specProject [ds])) [exp]
+             in [ do
+                    size <- elements [3 .. 9]
+                    x <- subOf [size] et
+                    y <- subOf [size] et
+                    return $ apply (Binary specInnerProd) [x, y],
+                  do
+                    size1 <- elements [3 .. 9]
+                    size2 <- elements [3 .. 9]
+                    x <- subOf [size1, size2] et
+                    y <- subOf [size1, size2] et
+                    return $ apply (Binary specInnerProd) [x, y],
+                  fromProjection
+                ]
           [n] ->
             let fromRotate = do
                   amount <- elements [- n .. n]
-                  unsafeRotate [amount] <$> sub
+                  exp <- sub
+                  return $ apply (Unary (specRotate [amount])) [exp]
                 fromProjectInject = do
                   exp1 <- sub
                   exp2 <- sub
                   ds <- genDimSelector n
-                  return $ unsafeInject [ds] (unsafeProject [ds] exp1) exp2
-             in map unsafeConvert $
-                  [ fromRotate,
-                    fromProjectInject
-                  ]
+                  return $
+                    apply
+                      (Binary (specInject [ds]))
+                      [ apply (Unary (specProject [ds])) [exp1],
+                        exp2
+                      ]
+             in [ fromRotate,
+                  fromProjectInject
+                ]
           [m, n] ->
             let fromRotate = do
                   amount1 <- elements [- m .. m]
                   amount2 <- elements [- n .. n]
-                  unsafeRotate [amount1, amount2] <$> sub
+                  exp <- sub
+                  return $ apply (Unary (specRotate [amount1, amount2])) [exp]
                 fromProjectInject = do
                   exp1 <- sub
                   exp2 <- sub
                   ds1 <- genDimSelector m
                   ds2 <- genDimSelector n
-                  return $ unsafeInject [ds1, ds2] (unsafeProject [ds1, ds2] exp1) exp2
-             in map unsafeConvert $
-                  [ fromRotate,
-                    fromProjectInject
-                  ]
-     in oneof $ commonPossibilities ++ specificShapePossibilities
+                  return $
+                    apply
+                      (Binary (specInject [ds1, ds2]))
+                      [ apply (Unary (specProject [ds1, ds2])) [exp1],
+                        exp2
+                      ]
+                fromMatrixMul = do
+                  p <- elements [3 .. 9]
+                  x <- subOf [m, p] et
+                  y <- subOf [p, n] et
+                  return $ apply (Binary specMatMul) [x, y]
+                fromTranspose = do
+                  x <- subOf [n, m] et
+                  return $ apply (Unary specTranspose) [x]
+             in [ fromRotate,
+                  fromProjectInject,
+                  fromMatrixMul,
+                  fromTranspose
+                ]
+     in oneof $ commonPossibilities ++ specificShapePossibilities ++ specificElementTypePosibilities
 
-genExpR :: forall d. (Dimension d) => Int -> Gen (Expression d R)
-genExpR size
-  | size == 0 = primitiveR @d
-  | otherwise =
-    let sub = genExpR @d (size `div` sizeReduceFactor)
-        subScalarR = genExpR @Scalar (size `div` sizeReduceFactor)
-        subC = genExpC @d (size `div` sizeReduceFactor)
-        fromPiecewise = do
-          numBranches <- elements [2, 3]
-          branches <- vectorOf numBranches sub
-          condition <- sub
-          marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let exp = piecewise marks condition branches
-          return exp
-        binary op = liftA2 op sub sub
-        unary op = op <$> sub
-        commonPossibilities =
-          [ fromPiecewise,
-            binary (+),
-            binary (*),
-            liftA2 (*.) subScalarR sub,
-            unary negate,
-            unary (^ 2),
-            xRe <$> subC,
-            xIm <$> subC
-          ]
-        unsafeConvert :: Gen (Expression mustBe_d R) -> Gen (Expression d R)
-        unsafeConvert = fmap (wrap . unwrap)
-        specificShapePossibilities = case extractShape @d of
-          [] ->
-            let sub1D = genExpR @(D1 Default1D) (size `div` sizeReduceFactor)
-                sub2D = genExpR @(D2 Default2D1 Default2D2) (size `div` sizeReduceFactor)
-                fromProjection = do
-                  exp <- sub1D
-                  ds <- genAtSelector (nat @Default1D)
-                  return $ unsafeProject [ds] exp
-             in map unsafeConvert $
-                  [ liftA2 (<.>) sub1D sub1D,
-                    liftA2 (<.>) sub2D sub2D,
-                    fromProjection
-                  ]
-          [n] ->
-            let fromRotate = do
-                  amount <- elements [- n .. n]
-                  unsafeRotate [amount] <$> sub
-                fromProjectInject = do
-                  exp1 <- sub
-                  exp2 <- sub
-                  ds <- genDimSelector n
-                  return $ unsafeInject [ds] (unsafeProject [ds] exp1) exp2
-             in map unsafeConvert $
-                  [ fromRotate,
-                    fromProjectInject
-                  ]
-          [m, n] ->
-            let fromRotate = do
-                  amount1 <- elements [- m .. m]
-                  amount2 <- elements [- n .. n]
-                  unsafeRotate [amount1, amount2] <$> sub
-                fromProjectInject = do
-                  exp1 <- sub
-                  exp2 <- sub
-                  ds1 <- genDimSelector m
-                  ds2 <- genDimSelector n
-                  return $ unsafeInject [ds1, ds2] (unsafeProject [ds1, ds2] exp1) exp2
-             in map unsafeConvert $
-                  [ fromRotate,
-                    fromProjectInject
-                  ]
-     in oneof $ commonPossibilities ++ specificShapePossibilities
+genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (Expression d et)
+genExp size = wrap <$> genExpUntyped size (toShape @d) (toElementType @et)
 
 -------------------------------------------------------------------------------
 instance (Dimension d, IsElementType et) => Arbitrary (Expression d et) where
@@ -453,17 +425,15 @@ instance Approximable InterpValue where
   V3DC x ~= V3DC y = x ~= y
   _ ~= _ = False
 
-  prettifyShow a = show a
-
---    case a of
---    VR x -> prettifyShow x
---    V1DR x -> prettifyShow x
---    V2DR x -> prettifyShow x
---    V3DR x -> prettifyShow x
---    VC x -> prettifyShow x
---    V1DC x -> prettifyShow x
---    V2DC x -> prettifyShow x
---    V3DC x -> prettifyShow x
+  prettifyShow a = case a of
+    VR x -> prettifyShow x
+    V1DR x -> prettifyShow x
+    V2DR x -> prettifyShow x
+    V3DR x -> prettifyShow x
+    VC x -> prettifyShow x
+    V1DC x -> prettifyShow x
+    V2DC x -> prettifyShow x
+    V3DC x -> prettifyShow x
 
 -------------------------------------------------------------------------------
 shouldApprox :: (HasCallStack, Approximable a) => a -> a -> Expectation

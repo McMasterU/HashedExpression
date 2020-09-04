@@ -249,11 +249,11 @@ specMatMul = BinarySpec {toOp = MatMul, decideShape = decideShape, decideET = de
   where
     decideShape [m, n] [p, q]
       | n == p = [m, q]
-      | otherwise = error "invalid shape matrix multiplication"
-    decideShape [m, n] [p]
-      | n == p = [m]
-      | otherwise = error "invalid shape matrix multiplication"
-    decideShape _ _ = error "invalid shape matrix multiplication"
+      | otherwise = error $ "invalid shape matrix multiplication" ++ show [m, n] ++ " " ++ show [p, q]
+    --    decideShape [m, n] [p]
+    --      | n == p = [m]
+    --      | otherwise = error $ "invalid shape matrix multiplication" ++ show [m, n] ++ " " ++ show [p]
+    decideShape shape1 shape2 = error $ "invalid shape matrix multiplication" ++ show shape1 ++ " " ++ show shape2
     decideET x y = assertSame [x, y] x
 
 specTranspose :: HasCallStack => UnarySpec

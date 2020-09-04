@@ -383,8 +383,44 @@ evaluating CSimpleCodegen {..} rootIDs =
                               ]
                           ]
                in Scoped [copyBase, injectSub]
-            MatMul x y -> undefined
-            Transpose x -> undefined
+            MatMul x y ->
+              case (retrieveShape x cExpressionMap, retrieveShape y cExpressionMap) of
+                --                ([size1, size2], [_size2]) ->
+                --                  for i size1 $
+                --                    [ if et == R
+                --                        then "double acc" := "0"
+                --                        else "double complex acc" := "0",
+                --                      for j size2 $
+                --                        [ "int ij" := ("i * " <> tt size1 <> " + j"),
+                --                          "acc" := ("acc + " <> (x !! "ij") <> " * " <> (y !! j))
+                --                        ],
+                --                      (n !! i) := "acc"
+                --                    ]
+                ([size1, size2], [_size2, size3]) ->
+                  for i size1 $
+                    [ for j size3 $
+                        [ if et == R
+                            then "double acc" := "0"
+                            else "double complex acc" := "0",
+                          for k size2 $
+                            [ "int ik" := ("i * " <> tt size2 <> " + k"),
+                              "int kj" := ("k * " <> tt size3 <> " + j"),
+                              "acc" := ("acc + " <> (x !! "ik") <> " * " <> (y !! "kj"))
+                            ],
+                          "int ij" := ("i * " <> tt size3 <> " + j"),
+                          (n !! "ij") := "acc"
+                        ]
+                    ]
+            Transpose x -> case retrieveShape x cExpressionMap of
+              --              [size] -> for i size [(n !! i) := (x !! i)]
+              [size1, size2] ->
+                for i size2 $
+                  [ for j size1 $
+                      [ "int ij" := ("i * " <> tt size1 <> " + j"),
+                        "int ji" := ("j * " <> tt size2 <> " + i"),
+                        (n !! "ij") := (x !! "ji")
+                      ]
+                  ]
             node -> error $ "Not implemented " ++ show node
 
 --

@@ -224,6 +224,7 @@ partialDerivativesMap (Expression rootID mp) =
                 dY <- inject dss (zeroX +: zeroX) (from dN)
                 addDerivative y dY
           MatMul x y -> do
+            -- mn np mp
             dX <- from dN ** transpose (from y)
             addDerivative x dX
             dY <- transpose (from x) ** from dN
