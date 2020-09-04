@@ -145,7 +145,9 @@ genExpC size
             liftA2 (*.) subScalarR sub,
             unary negate,
             unary (^ 2),
-            liftA2 (+:) subR subR
+            liftA2 (+:) subR subR,
+            unary ft,
+            unary ift
           ]
         unsafeConvert :: Gen (Expression mustBe_d C) -> Gen (Expression d C)
         unsafeConvert = fmap (wrap . unwrap)

@@ -44,7 +44,9 @@ data CSimpleConfig = CSimpleConfig
   deriving (Eq, Show)
 
 -- | Offset w.r.t "ptr"
-type Address = Int
+data Address
+  = AddressReal Int
+  | AddressComplex Int
 
 -- | e.g: i, j, k
 type Index = Text
@@ -52,10 +54,9 @@ type Index = Text
 data CSimpleCodegen = CSimpleCodegen
   { cExpressionMap :: ExpressionMap,
     cAddress :: NodeID -> Address,
-    cMemSize :: Int,
+    totalReal :: Int,
+    totalComplex :: Int,
     (!!) :: NodeID -> Index -> Text,
-    imAt :: NodeID -> Index -> Text,
-    reAt :: NodeID -> Index -> Text,
     config :: CSimpleConfig
   }
 
@@ -131,24 +132,23 @@ forRange iter (start, end, step) codes =
     ]
 
 initCodegen :: CSimpleConfig -> ExpressionMap -> [NodeID] -> CSimpleCodegen
-initCodegen config mp consecutiveIDs =
+initCodegen config mp variableIDs =
   CSimpleCodegen
     { cExpressionMap = mp,
       cAddress = addressMap,
-      cMemSize = totalSize,
       (!!) = access,
-      imAt = imAt,
-      reAt = reAt,
+      totalReal = totalSizeReal,
+      totalComplex = totalSizeComplex,
       config = config
     }
   where
-    (cs, rest) = partition (`Set.member` Set.fromList consecutiveIDs) $ nodeIDs mp
-    f (addressMap, curSize) nID =
+    (cs, rest) = partition (`Set.member` Set.fromList variableIDs) $ nodeIDs mp
+    f (addressMap, curSizeReal, curSizeComplex) nID =
       let (shape, et, node) = retrieveNode nID mp
        in case et of
-            R -> (Map.insert nID curSize addressMap, curSize + product shape)
-            C -> (Map.insert nID curSize addressMap, curSize + 2 * product shape)
-    (memMap, totalSize) = foldl' f (Map.empty, 0) $ cs ++ rest
+            R -> (Map.insert nID (AddressReal curSizeReal) addressMap, curSizeReal + product shape, curSizeComplex)
+            C -> (Map.insert nID (AddressComplex curSizeComplex) addressMap, curSizeReal, curSizeComplex + product shape)
+    (memMap, totalSizeReal, totalSizeComplex) = foldl' f (Map.empty, 0, 0) $ cs ++ rest
     addressMap nID
       | Just offset <- Map.lookup nID memMap = offset
       | otherwise = error "Node ID doesn't exist in address map"
@@ -158,12 +158,11 @@ initCodegen config mp consecutiveIDs =
             | offsetVal == "" = ""
             | offsetVal == "0" = ""
             | otherwise = " + " <> offsetVal
-       in "ptr[" <> tt (addressMap nID) <> offset <> "]"
-    -- Accessor for complex
-    reAt nID offsetVal = access nID offsetVal
-    imAt nID offsetVal = access nID $ offsetVal <> " + " <> tt (product (retrieveShape nID mp))
+       in case addressMap nID of
+            AddressReal i -> "ptr[" <> tt i <> offset <> "]"
+            AddressComplex i -> "ptr_c[" <> tt i <> offset <> "]"
 
--------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 evaluating :: CSimpleCodegen -> [NodeID] -> Code
 evaluating CSimpleCodegen {..} rootIDs =
   concatMap (fromCCode . genCode) $ topologicalSortManyRoots (cExpressionMap, rootIDs)
@@ -171,10 +170,12 @@ evaluating CSimpleCodegen {..} rootIDs =
     shapeOf nID = retrieveShape nID cExpressionMap
     elementTypeOf nID = retrieveElementType nID cExpressionMap
     addressOf :: NodeID -> Text
-    addressOf nID = "(ptr + " <> tt (cAddress nID) <> ")"
+    addressOf nID = case cAddress nID of
+      AddressReal i -> "(ptr + " <> tt i <> ")"
+      AddressComplex i -> "(ptr_c + " <> tt i <> ")"
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     len nID = product (retrieveShape nID cExpressionMap)
-    complexAt arg i = "(" <> (arg `reAt` i) <> " + " <> (arg `imAt` i) <> " * I)"
+    --    complexAt arg i = "(" <> (arg `reAt` i) <> " + " <> (arg `imAt` i) <> " * I)"
     genCode :: NodeID -> CCode
     genCode n =
       let (shape, et, op) = retrieveNode n cExpressionMap
@@ -182,71 +183,23 @@ evaluating CSimpleCodegen {..} rootIDs =
             Var _ -> Empty
             Param _ -> Empty
             Const val -> for i (len n) [Assign (n !! i) (tt val)]
-            Sum args
-              | et == R ->
-                let sumAt i = T.intercalate " + " $ map (!! i) args
-                 in for i (len n) [Assign (n !! i) (sumAt i)]
-              | et == C ->
-                let sumReAt i = T.intercalate " + " $ map (`reAt` i) args
-                    sumImAt i = T.intercalate " + " $ map (`imAt` i) args
-                 in for i (len n) $
-                      [ Assign (n `reAt` i) (sumReAt i),
-                        Assign (n `imAt` i) (sumImAt i)
-                      ]
-            Mul args
-              | et == R ->
-                let prodAt i = T.intercalate " * " $ map (!! i) args
-                 in for i (len n) [Assign (n !! i) (prodAt i)]
-              | et == C ->
-                let prodAt i = T.intercalate " * " $ map (`complexAt` i) args
-                 in for i (len n) $
-                      [ Assign "double complex res" (prodAt i),
-                        Assign (n `reAt` i) "creal(res)",
-                        Assign (n `imAt` i) "cimag(res)"
-                      ]
+            Sum args ->
+              let sumAt i = T.intercalate " + " $ map (!! i) args
+               in for i (len n) [Assign (n !! i) (sumAt i)]
+            Mul args ->
+              let prodAt i = T.intercalate " * " $ map (!! i) args
+               in for i (len n) [Assign (n !! i) (prodAt i)]
             Power x arg
               | et == R ->
-                for i (len n) $
-                  [ Assign (n !! i) (fun "pow" [arg !! i, tt x])
-                  ]
+                for i (len n) [Assign (n !! i) (fun "pow" [arg !! i, tt x])]
               | et == C ->
-                for i (len n) $
-                  [ Assign "double complex res" (fun "cpow" [arg `complexAt` i, tt x]),
-                    Assign (n `reAt` i) "creal(res)",
-                    Assign (n `imAt` i) "cimag(res)"
-                  ]
-            Neg arg
-              | et == R -> for i (len n) [Assign (n !! i) ("-" <> (arg !! i))]
-              | et == C ->
-                for i (len n) $
-                  [ Assign (n `reAt` i) ("-" <> (arg `reAt` i)),
-                    Assign (n `imAt` i) ("-" <> (arg `imAt` i))
-                  ]
-            Scale scalar arg
-              | et == R -> for i (len n) [Assign (n !! i) ((scalar !! nooffset) <> "*" <> (arg !! i))]
-              | et == C,
-                retrieveElementType scalar cExpressionMap == R ->
-                for i (len n) $
-                  [ Assign (n `reAt` i) ((scalar !! nooffset) <> "*" <> (arg `reAt` i)),
-                    Assign (n `imAt` i) ((scalar !! nooffset) <> "*" <> (arg `imAt` i))
-                  ]
-              | et == C,
-                retrieveElementType scalar cExpressionMap == C ->
-                for i (len n) $
-                  [ Assign "double complex res" ((scalar `complexAt` nooffset) <> "*" <> (arg `complexAt` i)),
-                    Assign (n `reAt` i) "creal(res)",
-                    Assign (n `imAt` i) "cimag(res)"
-                  ]
-            Div arg1 arg2
-              | et == R ->
-                for i (len n) $
-                  [Assign (n !! i) ((arg1 !! i) <> " / " <> (arg2 !! i))]
-              | et == C ->
-                for i (len n) $
-                  [ Assign "double complex res" ((arg1 `complexAt` i) <> " / " <> (arg2 `complexAt` i)),
-                    Assign (n `reAt` i) "creal(res)",
-                    Assign (n `imAt` i) "cimag(res)"
-                  ]
+                for i (len n) [Assign (n !! i) (fun "cpow" [arg !! i, tt x])]
+            Neg arg ->
+              for i (len n) [Assign (n !! i) ("-" <> (arg !! i))]
+            Scale scalar arg ->
+              for i (len n) [Assign (n !! i) ((scalar !! nooffset) <> "*" <> (arg !! i))]
+            Div arg1 arg2 ->
+              for i (len n) [Assign (n !! i) ((arg1 !! i) <> " / " <> (arg2 !! i))]
             Sqrt arg -> for i (len n) [Assign (n !! i) (fun "sqrt" [arg !! i])]
             Sin arg -> for i (len n) [Assign (n !! i) (fun "sin" [arg !! i])]
             Cos arg -> for i (len n) [Assign (n !! i) (fun "cos" [arg !! i])]
@@ -264,37 +217,28 @@ evaluating CSimpleCodegen {..} rootIDs =
             Atanh arg -> for i (len n) [Assign (n !! i) (fun "atanh" [arg !! i])]
             RealImag arg1 arg2 ->
               for i (len n) $
-                [ Assign (n `reAt` i) (arg1 !! i),
-                  Assign (n `imAt` i) (arg2 !! i)
+                [ Assign (n !! i) ((arg1 !! i) <> " + " <> (arg2 !! i) <> " * I")
                 ]
-            RealPart arg -> for i (len n) [Assign (n !! i) (arg `reAt` i)]
-            ImagPart arg -> for i (len n) [Assign (n !! i) (arg `imAt` i)]
+            RealPart arg -> for i (len n) [Assign (n !! i) (fun "creal" [arg !! i])]
+            ImagPart arg -> for i (len n) [Assign (n !! i) (fun "cimag" [arg !! i])]
             Conjugate arg ->
               for i (len n) $
-                [ Assign (n `reAt` i) (arg `reAt` i),
-                  Assign (n `imAt` i) ("-" <> (arg `imAt` i))
+                [ Assign (n !! i) (fun "conj" [arg !! i])
                 ]
             InnerProd arg1 arg2
               | et == R && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> (arg2 !! nooffset))
+              | et == C && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> fun "conj" [arg2 !! nooffset])
               | et == R ->
                 Scoped
                   [ Assign "double acc" "0",
                     for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 !! i) <> "*" <> (arg2 !! i)))],
                     Assign (n !! nooffset) "acc"
                   ]
-              -- Conjugate the second operand
-              | et == C && null (shapeOf arg1) ->
-                Scoped
-                  [ Assign "double complex res" ((arg1 `complexAt` nooffset) <> " * " <> fun "conj" [arg2 `complexAt` nooffset]),
-                    Assign (n `reAt` nooffset) "creal(res)",
-                    Assign (n `imAt` nooffset) "cimag(res)"
-                  ]
               | et == C ->
                 Scoped
                   [ Assign "double complex acc" "0 + 0 * I",
-                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 `complexAt` i) <> " * " <> fun "conj" [arg2 `complexAt` i]))],
-                    Assign (n `reAt` nooffset) "creal(acc)",
-                    Assign (n `imAt` nooffset) "cimag(acc)"
+                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 !! i) <> " * " <> fun "conj" [arg2 !! i]))],
+                    Assign (n !! nooffset) "acc"
                   ]
             Piecewise marks condition branches ->
               let m : ms = marks
@@ -302,46 +246,21 @@ evaluating CSimpleCodegen {..} rootIDs =
                   elseifEach (m, b) =
                     elseif_
                       ((condition !! i) <> " <= " <> tt m)
-                      ( if et == R
-                          then [Assign (n !! i) (b !! i)]
-                          else
-                            [ Assign (n `reAt` i) (b `reAt` i),
-                              Assign (n `imAt` i) (b `imAt` i)
-                            ]
-                      )
+                      [Assign (n !! i) (b !! i)]
                in for i (len n) $
                     [ if_
                         ((condition !! i) <> " <= " <> tt m)
-                        ( if et == R
-                            then [Assign (n !! i) (b !! i)]
-                            else
-                              [ Assign (n `reAt` i) (b `reAt` i),
-                                Assign (n `imAt` i) (b `imAt` i)
-                              ]
-                        )
+                        [Assign (n !! i) (b !! i)]
                     ]
                       ++ map elseifEach (zip ms bs)
-                      ++ [ else_
-                             ( if et == R
-                                 then [Assign (n !! i) (lst !! i)]
-                                 else
-                                   [ Assign (n `reAt` i) (lst `reAt` i),
-                                     Assign (n `imAt` i) (lst `imAt` i)
-                                   ]
-                             )
+                      ++ [ else_ [Assign (n !! i) (lst !! i)]
                          ]
             Rotate [amount] arg ->
               let [size] = shape
                in for i size $
-                    [ Assign "int origin" ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size)
+                    [ Assign "int origin" ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size),
+                      Assign (n !! i) (arg !! "origin")
                     ]
-                      ++ ( if et == R
-                             then [Assign (n !! i) (arg !! "origin")]
-                             else
-                               [ Assign (n `reAt` i) (arg `reAt` "origin"),
-                                 Assign (n `imAt` i) (arg `imAt` "origin")
-                               ]
-                         )
             Rotate [amount1, amount2] arg ->
               let [size1, size2] = shape
                in for i size1 $
@@ -349,15 +268,9 @@ evaluating CSimpleCodegen {..} rootIDs =
                         [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
                           Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
                           Assign "int cur" ("i * " <> tt size2 <> " + j"),
-                          Assign "int origin" ("ai * " <> tt size2 <> " + aj")
+                          Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                          Assign (n !! "cur") (arg !! "origin")
                         ]
-                          ++ ( if et == R
-                                 then [Assign (n !! "cur") (arg !! "origin")]
-                                 else
-                                   [ Assign (n `reAt` "cur") (arg `reAt` "origin"),
-                                     Assign (n `imAt` "cur") (arg `imAt` "origin")
-                                   ]
-                             )
                     ]
             Rotate [amount1, amount2, amount3] arg ->
               let [size1, size2, size3] = shape
@@ -368,23 +281,19 @@ evaluating CSimpleCodegen {..} rootIDs =
                               Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
                               Assign "int ak" ("(j - " <> tt amount3 <> " + " <> tt size3 <> ") % " <> tt size3),
                               Assign "int cur" ("i * " <> tt size2 <> "*" <> tt size3 <> " + j * " <> tt size3 <> " + k"),
-                              Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak")
+                              Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                              Assign (n !! "cur") (arg !! "offset")
                             ]
-                              ++ ( if et == R
-                                     then [Assign (n !! "cur") (arg !! "offset")]
-                                     else
-                                       [ Assign (n `reAt` "cur") (arg `reAt` "offset"),
-                                         Assign (n `imAt` "cur") (arg `imAt` "offset")
-                                       ]
-                                 )
                         ]
                     ]
             FT arg ->
               case shape of
+                [] -> Assign (n !! nooffset) (arg !! nooffset)
                 [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_FORWARD"])
                 [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_FORWARD"])
             IFT arg ->
               case shape of
+                [] -> Assign (n !! nooffset) (arg !! nooffset)
                 [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_BACKWARD"])
                 [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_BACKWARD"])
             Project dss arg ->
@@ -393,40 +302,22 @@ evaluating CSimpleCodegen {..} rootIDs =
                   Scoped $
                     [ Assign "int nxt" "0",
                       forRange i (toRange ds size) $
-                        if et == R
-                          then
-                            [ Assign "int origin" ("i % " <> tt size),
-                              Assign (n !! "nxt") (arg !! "origin"),
-                              Assign "nxt" "nxt + 1"
-                            ]
-                          else
-                            [ Assign "int origin" ("i % " <> tt size),
-                              Assign (n `reAt` "nxt") (arg `reAt` "origin"),
-                              Assign (n `imAt` "nxt") (arg `imAt` "origin"),
-                              Assign "nxt" "nxt + 1"
-                            ]
+                        [ Assign "int origin" ("i % " <> tt size),
+                          Assign (n !! "nxt") (arg !! "origin"),
+                          Assign "nxt" "nxt + 1"
+                        ]
                     ]
                 ([ds1, ds2], [size1, size2]) ->
                   Scoped $
                     [ Assign "int nxt" "0",
                       forRange i (toRange ds1 size1) $
                         [ forRange j (toRange ds2 size2) $
-                            if et == R
-                              then
-                                [ Assign "int ai" ("i % " <> tt size1),
-                                  Assign "int aj" ("j % " <> tt size2),
-                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                                  Assign (n !! "nxt") (arg !! "origin"),
-                                  Assign "nxt" "nxt + 1"
-                                ]
-                              else
-                                [ Assign "int ai" ("i % " <> tt size1),
-                                  Assign "int aj" ("j % " <> tt size2),
-                                  Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                                  Assign (n `reAt` "nxt") (arg `reAt` "origin"),
-                                  Assign (n `imAt` "nxt") (arg `imAt` "origin"),
-                                  Assign "nxt" "nxt + 1"
-                                ]
+                            [ Assign "int ai" ("i % " <> tt size1),
+                              Assign "int aj" ("j % " <> tt size2),
+                              Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                              Assign (n !! "nxt") (arg !! "origin"),
+                              Assign "nxt" "nxt + 1"
+                            ]
                         ]
                     ]
                 ([ds1, ds2, ds3], [size1, size2, size3]) ->
@@ -435,76 +326,42 @@ evaluating CSimpleCodegen {..} rootIDs =
                       forRange i (toRange ds1 size1) $
                         [ forRange j (toRange ds2 size2) $
                             [ forRange k (toRange ds3 size3) $
-                                if et == R
-                                  then
-                                    [ Assign "int ai" ("i % " <> tt size1),
-                                      Assign "int aj" ("j % " <> tt size2),
-                                      Assign "int ak" ("k % " <> tt size3),
-                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                      Assign (n !! "nxt") (arg !! "origin"),
-                                      Assign "nxt" "nxt + 1"
-                                    ]
-                                  else
-                                    [ Assign "int ai" ("i % " <> tt size1),
-                                      Assign "int aj" ("j % " <> tt size2),
-                                      Assign "int ak" ("k % " <> tt size3),
-                                      Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                      Assign (n `reAt` "nxt") (arg `reAt` "origin"),
-                                      Assign (n `imAt` "nxt") (arg `imAt` "origin"),
-                                      Assign "nxt" "nxt + 1"
-                                    ]
+                                [ Assign "int ai" ("i % " <> tt size1),
+                                  Assign "int aj" ("j % " <> tt size2),
+                                  Assign "int ak" ("k % " <> tt size3),
+                                  Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                  Assign (n !! "nxt") (arg !! "origin"),
+                                  Assign "nxt" "nxt + 1"
+                                ]
                             ]
                         ]
                     ]
             Inject dss sub base ->
               let copyBase =
                     for i (len n) $
-                      if et == R
-                        then [Assign (n !! i) (base !! i)]
-                        else
-                          [ Assign (n `reAt` i) (base `reAt` i),
-                            Assign (n `imAt` i) (base `imAt` i)
-                          ]
+                      [Assign (n !! i) (base !! i)]
                   injectSub =
                     case (dss, retrieveShape n cExpressionMap) of
                       ([ds], [size]) ->
                         Scoped $
                           [ Assign "int nxt" "0",
                             forRange i (toRange ds size) $
-                              if et == R
-                                then
-                                  [ Assign "int origin" ("i % " <> tt size),
-                                    Assign (n !! "origin") (sub !! "nxt"),
-                                    Assign "nxt" "nxt + 1"
-                                  ]
-                                else
-                                  [ Assign "int origin" ("i % " <> tt size),
-                                    Assign (n `reAt` "origin") (sub `reAt` "nxt"),
-                                    Assign (n `imAt` "origin") (sub `imAt` "nxt"),
-                                    Assign "nxt" "nxt + 1"
-                                  ]
+                              [ Assign "int origin" ("i % " <> tt size),
+                                Assign (n !! "origin") (sub !! "nxt"),
+                                Assign "nxt" "nxt + 1"
+                              ]
                           ]
                       ([ds1, ds2], [size1, size2]) ->
                         Scoped $
                           [ Assign "int nxt" "0",
                             forRange i (toRange ds1 size1) $
                               [ forRange j (toRange ds2 size2) $
-                                  if et == R
-                                    then
-                                      [ Assign "int ai" ("i % " <> tt size1),
-                                        Assign "int aj" ("j % " <> tt size2),
-                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                                        Assign (n !! "origin") (sub !! "nxt"),
-                                        Assign "nxt" "nxt + 1"
-                                      ]
-                                    else
-                                      [ Assign "int ai" ("i % " <> tt size1),
-                                        Assign "int aj" ("j % " <> tt size2),
-                                        Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                                        Assign (n `reAt` "origin") (sub `reAt` "nxt"),
-                                        Assign (n `imAt` "origin") (sub `imAt` "nxt"),
-                                        Assign "nxt" "nxt + 1"
-                                      ]
+                                  [ Assign "int ai" ("i % " <> tt size1),
+                                    Assign "int aj" ("j % " <> tt size2),
+                                    Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
+                                    Assign (n !! "origin") (sub !! "nxt"),
+                                    Assign "nxt" "nxt + 1"
+                                  ]
                               ]
                           ]
                       ([ds1, ds2, ds3], [size1, size2, size3]) ->
@@ -513,24 +370,13 @@ evaluating CSimpleCodegen {..} rootIDs =
                             forRange i (toRange ds1 size1) $
                               [ forRange j (toRange ds2 size2) $
                                   [ forRange k (toRange ds3 size3) $
-                                      if et == R
-                                        then
-                                          [ Assign "int ai" ("i % " <> tt size1),
-                                            Assign "int aj" ("j % " <> tt size2),
-                                            Assign "int ak" ("k % " <> tt size3),
-                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                            Assign (n !! "origin") (sub !! "nxt"),
-                                            Assign "nxt" "nxt + 1"
-                                          ]
-                                        else
-                                          [ Assign "int ai" ("i % " <> tt size1),
-                                            Assign "int aj" ("j % " <> tt size2),
-                                            Assign "int ak" ("k % " <> tt size3),
-                                            Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                            Assign (n `reAt` "origin") (sub `reAt` "nxt"),
-                                            Assign (n `imAt` "origin") (sub `imAt` "nxt"),
-                                            Assign "nxt" "nxt + 1"
-                                          ]
+                                      [ Assign "int ai" ("i % " <> tt size1),
+                                        Assign "int aj" ("j % " <> tt size2),
+                                        Assign "int ak" ("k % " <> tt size3),
+                                        Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                        Assign (n !! "origin") (sub !! "nxt"),
+                                        Assign "nxt" "nxt + 1"
+                                      ]
                                   ]
                               ]
                           ]
@@ -539,7 +385,8 @@ evaluating CSimpleCodegen {..} rootIDs =
             Transpose x -> undefined
             node -> error $ "Not implemented " ++ show node
 
--------------------------------------------------------------------------------
+--
+---------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
   generateProblemCode :: CSimpleConfig -> Problem -> ValMap -> GenResult
   generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap
@@ -575,6 +422,7 @@ instance Codegen CSimpleConfig where
               ]
       TIO.writeFile (folder </> "problem.c") $ T.intercalate "\n" codes
     where
+      addressReal nID = let AddressReal res = cAddress nID in res
       -------------------------------------------------------------------------------
       -- variables
       vars :: [String]
@@ -608,9 +456,9 @@ instance Codegen CSimpleConfig where
         | otherwise = Nothing
       -------------------------------------------------------------------------------
       codegen@CSimpleCodegen {..} = initCodegen cf expressionMap (map nodeId variables)
-      variableOffsets = map (cAddress . nodeId) variables
-      partialDerivativeOffsets = map (cAddress . partialDerivativeId) variables
-      objectiveOffset = cAddress objectiveId
+      variableOffsets = map (addressReal . nodeId) variables
+      partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
+      objectiveOffset = addressReal objectiveId
       -- For both variables and values
       readValCodeEach (name, nId)
         | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
@@ -621,7 +469,7 @@ instance Codegen CSimpleConfig where
                 [Assign ("ptr[" <> tt offset <> "+ i]") ("(double) rand() / RAND_MAX")]
             ]
         where
-          offset = cAddress nId
+          offset = addressReal nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       writeResultCodeEach :: Variable -> CCode
@@ -652,7 +500,7 @@ instance Codegen CSimpleConfig where
         where
           nId = nodeId variable
           name = varName variable
-          offset = cAddress nId
+          offset = addressReal nId
           shape = retrieveShape nId expressionMap
       -------------------------------------------------------------------------------
       defineStuffs :: Code
@@ -662,24 +510,26 @@ instance Codegen CSimpleConfig where
           "#include <stdlib.h>",
           "#include <time.h>",
           "#include \"hdf5.h\"",
+          "#include <complex.h>",
           if containsFTNode expressionMap
             then tt fftUtils
             else "",
-          "#include <complex.h>",
           "// number of (higher dimensional) variables ",
           "#define NUM_VARIABLES " <> tt (length variables),
-          "// number of real variables, because each higher dimensional var is a grid of real variables",
+          "// number of scalar variables (because each higher dimensional var is a grid of scalar variables)",
           "#define NUM_ACTUAL_VARIABLES " <> tt (sum variableSizes),
-          "#define MEM_SIZE " <> tt cMemSize,
+          "#define MEMORY_NUM_DOUBLES " <> tt totalReal,
+          "#define MEMORY_NUM_COMPLEX_DOUBLES " <> tt totalComplex,
           "// all the actual double variables are allocated",
           "// one after another, starts from here",
-          "#define VARS_START_OFFSET " <> tt (cAddress (nodeId . head $ variables)),
+          "#define VARS_START_OFFSET " <> tt (addressReal (nodeId . head $ variables)),
           "const char* var_name[NUM_VARIABLES] = {" <> (T.intercalate ", " . map (ttq . varName) $ variables) <> "};",
           "const int var_size[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableSizes) <> "};",
           "const int var_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableOffsets) <> "};",
           "const int partial_derivative_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ partialDerivativeOffsets) <> "};",
           "const int objective_offset = " <> tt objectiveOffset <> ";",
-          "double ptr[MEM_SIZE];"
+          "double ptr[" <> tt totalReal <> "];",
+          "complex double ptr_c[" <> tt totalComplex <> "];"
         ]
       -------------------------------------------------------------------------------
       constraintCodes =
@@ -710,13 +560,13 @@ instance Codegen CSimpleConfig where
                 "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];",
                 "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];",
                 "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {"
-                  <> (T.intercalate "," . map (tt . cAddress . constraintValueId) $ scalarConstraints)
+                  <> (T.intercalate "," . map (tt . addressReal . constraintValueId) $ scalarConstraints)
                   <> "};",
                 "",
                 "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {"
                   <> T.intercalate
                     ", "
-                    [ "{" <> T.intercalate "," (map (tt . cAddress) . constraintPartialDerivatives $ sc) <> "}"
+                    [ "{" <> T.intercalate "," (map (tt . addressReal) . constraintPartialDerivatives $ sc) <> "}"
                       | sc <- scalarConstraints
                     ]
                   <> "};"

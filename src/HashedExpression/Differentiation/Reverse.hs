@@ -22,7 +22,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import Prelude hiding ((^), (**))
+import Prelude hiding ((**), (^))
 
 -- |
 partialDerivativesMap ::

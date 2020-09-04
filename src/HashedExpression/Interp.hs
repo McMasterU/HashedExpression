@@ -185,6 +185,7 @@ eval valMap (Expression nID mp) =
               let V3DC arr = eval' arg
                in V3DC $ rotate3D (size1, size2, size3) (amount1, amount2, amount3) arr
         FT arg -> case shape of
+          [] -> eval' arg
           [size] ->
             let V1DC arr = eval' arg
              in V1DC $ fourierTransform1D FT_FORWARD size arr
@@ -195,6 +196,7 @@ eval valMap (Expression nID mp) =
             let V3DC arr = eval' arg
              in V3DC $ fourierTransform3D FT_FORWARD (size1, size2, size3) arr
         IFT arg -> case shape of
+          [] -> eval' arg
           [size] ->
             let V1DC arr = eval' arg
              in V1DC $ fourierTransform1D FT_BACKWARD size arr
