@@ -75,9 +75,8 @@ singleExpressionCProgram valMap expr =
     initMemory =
       concatMap
         fromCCode
-        [ --      [I.i|double *ptr = malloc(sizeof(double) * #{cMemSize codeGen});|]
-          Assign "double *ptr" (fun "malloc" ["sizeof(double) * " <> tt totalReal]),
-          Assign "double complex *ptr_c" (fun "malloc" ["sizeof(double complex) * " <> tt totalComplex])
+        [ "double *ptr" := (fun "malloc" ["sizeof(double) * " <> tt totalReal]),
+          "double complex *ptr_c" := (fun "malloc" ["sizeof(double complex) * " <> tt totalComplex])
         ]
     -- codes to compute
     codes = evaluating codegen [n]
@@ -103,17 +102,17 @@ singleExpressionCProgram valMap expr =
         assignValue :: (String, NodeID) -> CCode
         assignValue (name, n) =
           case Map.lookup name valMap of
-            Just (VScalar val) -> Assign (n !! nooffset) (tt val)
+            Just (VScalar val) -> (n !! nooffset) := (tt val)
             Just (V1D array1d) ->
-              let assignIndex id = Assign (n !! tt id) (tt (array1d ! id))
+              let assignIndex id = (n !! tt id) := (tt (array1d ! id))
                in Scoped $ map assignIndex $ indices array1d
             Just (V2D array2d) ->
               let shape = retrieveShape n mp
-                  assignIndex (id1, id2) = Assign (n !! tt (localOffset shape [id1, id2])) (tt (array2d ! (id1, id2)))
+                  assignIndex (id1, id2) = (n !! tt (localOffset shape [id1, id2])) := (tt (array2d ! (id1, id2)))
                in Scoped $ map assignIndex $ indices array2d
             Just (V3D array3d) ->
               let shape = retrieveShape n mp
-                  assignIndex (id1, id2, id3) = Assign (n !! tt (localOffset shape [id1, id2, id3])) (tt (array3d ! (id1, id2, id2)))
+                  assignIndex (id1, id2, id3) = (n !! tt (localOffset shape [id1, id2, id3])) := (tt (array3d ! (id1, id2, id2)))
                in Scoped $ map assignIndex $ indices array3d
             _ -> Empty
 

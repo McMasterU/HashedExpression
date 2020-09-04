@@ -60,8 +60,10 @@ data CSimpleCodegen = CSimpleCodegen
     config :: CSimpleConfig
   }
 
+infix 1 :=
+
 data CCode
-  = Assign Text Text
+  = Text := Text
   | Statement Text
   | Control Text [CCode]
   | Empty
@@ -70,9 +72,9 @@ data CCode
 
 fromCCode :: CCode -> Code
 fromCCode c = case c of
-  Assign lhs rhs -> [lhs <> " = " <> rhs <> ";"]
+  (lhs := rhs) -> [lhs <> " = " <> rhs <> ";"]
   Statement ss -> [ss <> ";"]
-  Control control codes -> [control] ++ scoped (concatMap fromCCode codes)
+  Control control codes -> control : scoped (concatMap fromCCode codes)
   Empty -> []
   Scoped codes -> scoped (concatMap fromCCode codes)
   Printf [] -> []
@@ -182,63 +184,63 @@ evaluating CSimpleCodegen {..} rootIDs =
        in case op of
             Var _ -> Empty
             Param _ -> Empty
-            Const val -> for i (len n) [Assign (n !! i) (tt val)]
+            Const val -> for i (len n) [(n !! i) := tt val]
             Sum args ->
               let sumAt i = T.intercalate " + " $ map (!! i) args
-               in for i (len n) [Assign (n !! i) (sumAt i)]
+               in for i (len n) [(n !! i) := sumAt i]
             Mul args ->
               let prodAt i = T.intercalate " * " $ map (!! i) args
-               in for i (len n) [Assign (n !! i) (prodAt i)]
+               in for i (len n) [(n !! i) := prodAt i]
             Power x arg
               | et == R ->
-                for i (len n) [Assign (n !! i) (fun "pow" [arg !! i, tt x])]
+                for i (len n) [(n !! i) := fun "pow" [arg !! i, tt x]]
               | et == C ->
-                for i (len n) [Assign (n !! i) (fun "cpow" [arg !! i, tt x])]
+                for i (len n) [(n !! i) := fun "cpow" [arg !! i, tt x]]
             Neg arg ->
-              for i (len n) [Assign (n !! i) ("-" <> (arg !! i))]
+              for i (len n) [(n !! i) := ("-" <> (arg !! i))]
             Scale scalar arg ->
-              for i (len n) [Assign (n !! i) ((scalar !! nooffset) <> "*" <> (arg !! i))]
+              for i (len n) [(n !! i) := ((scalar !! nooffset) <> "*" <> (arg !! i))]
             Div arg1 arg2 ->
-              for i (len n) [Assign (n !! i) ((arg1 !! i) <> " / " <> (arg2 !! i))]
-            Sqrt arg -> for i (len n) [Assign (n !! i) (fun "sqrt" [arg !! i])]
-            Sin arg -> for i (len n) [Assign (n !! i) (fun "sin" [arg !! i])]
-            Cos arg -> for i (len n) [Assign (n !! i) (fun "cos" [arg !! i])]
-            Tan arg -> for i (len n) [Assign (n !! i) (fun "tan" [arg !! i])]
-            Exp arg -> for i (len n) [Assign (n !! i) (fun "exp" [arg !! i])]
-            Log arg -> for i (len n) [Assign (n !! i) (fun "log" [arg !! i])]
-            Sinh arg -> for i (len n) [Assign (n !! i) (fun "sinh" [arg !! i])]
-            Cosh arg -> for i (len n) [Assign (n !! i) (fun "cosh" [arg !! i])]
-            Tanh arg -> for i (len n) [Assign (n !! i) (fun "tanh" [arg !! i])]
-            Asin arg -> for i (len n) [Assign (n !! i) (fun "asin" [arg !! i])]
-            Acos arg -> for i (len n) [Assign (n !! i) (fun "acos" [arg !! i])]
-            Atan arg -> for i (len n) [Assign (n !! i) (fun "atan" [arg !! i])]
-            Asinh arg -> for i (len n) [Assign (n !! i) (fun "asinh" [arg !! i])]
-            Acosh arg -> for i (len n) [Assign (n !! i) (fun "acosh" [arg !! i])]
-            Atanh arg -> for i (len n) [Assign (n !! i) (fun "atanh" [arg !! i])]
+              for i (len n) [(n !! i) := ((arg1 !! i) <> " / " <> (arg2 !! i))]
+            Sqrt arg -> for i (len n) [(n !! i) := fun "sqrt" [arg !! i]]
+            Sin arg -> for i (len n) [(n !! i) := fun "sin" [arg !! i]]
+            Cos arg -> for i (len n) [(n !! i) := fun "cos" [arg !! i]]
+            Tan arg -> for i (len n) [(n !! i) := fun "tan" [arg !! i]]
+            Exp arg -> for i (len n) [(n !! i) := fun "exp" [arg !! i]]
+            Log arg -> for i (len n) [(n !! i) := fun "log" [arg !! i]]
+            Sinh arg -> for i (len n) [(n !! i) := fun "sinh" [arg !! i]]
+            Cosh arg -> for i (len n) [(n !! i) := fun "cosh" [arg !! i]]
+            Tanh arg -> for i (len n) [(n !! i) := fun "tanh" [arg !! i]]
+            Asin arg -> for i (len n) [(n !! i) := fun "asin" [arg !! i]]
+            Acos arg -> for i (len n) [(n !! i) := fun "acos" [arg !! i]]
+            Atan arg -> for i (len n) [(n !! i) := fun "atan" [arg !! i]]
+            Asinh arg -> for i (len n) [(n !! i) := fun "asinh" [arg !! i]]
+            Acosh arg -> for i (len n) [(n !! i) := fun "acosh" [arg !! i]]
+            Atanh arg -> for i (len n) [(n !! i) := fun "atanh" [arg !! i]]
             RealImag arg1 arg2 ->
               for i (len n) $
-                [ Assign (n !! i) ((arg1 !! i) <> " + " <> (arg2 !! i) <> " * I")
+                [ (n !! i) := ((arg1 !! i) <> " + " <> (arg2 !! i) <> " * I")
                 ]
-            RealPart arg -> for i (len n) [Assign (n !! i) (fun "creal" [arg !! i])]
-            ImagPart arg -> for i (len n) [Assign (n !! i) (fun "cimag" [arg !! i])]
+            RealPart arg -> for i (len n) [(n !! i) := fun "creal" [arg !! i]]
+            ImagPart arg -> for i (len n) [(n !! i) := fun "cimag" [arg !! i]]
             Conjugate arg ->
               for i (len n) $
-                [ Assign (n !! i) (fun "conj" [arg !! i])
+                [ (n !! i) := fun "conj" [arg !! i]
                 ]
             InnerProd arg1 arg2
-              | et == R && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> (arg2 !! nooffset))
-              | et == C && null (shapeOf arg1) -> Assign (n !! nooffset) ((arg1 !! nooffset) <> " * " <> fun "conj" [arg2 !! nooffset])
+              | et == R && null (shapeOf arg1) -> (n !! nooffset) := ((arg1 !! nooffset) <> " * " <> (arg2 !! nooffset))
+              | et == C && null (shapeOf arg1) -> (n !! nooffset) := ((arg1 !! nooffset) <> " * " <> fun "conj" [arg2 !! nooffset])
               | et == R ->
                 Scoped
-                  [ Assign "double acc" "0",
-                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 !! i) <> "*" <> (arg2 !! i)))],
-                    Assign (n !! nooffset) "acc"
+                  [ "double acc" := "0",
+                    for i (len arg1) ["acc" := ("acc + " <> ((arg1 !! i) <> "*" <> (arg2 !! i)))],
+                    (n !! nooffset) := "acc"
                   ]
               | et == C ->
                 Scoped
-                  [ Assign "double complex acc" "0 + 0 * I",
-                    for i (len arg1) [Assign "acc" ("acc + " <> ((arg1 !! i) <> " * " <> fun "conj" [arg2 !! i]))],
-                    Assign (n !! nooffset) "acc"
+                  [ "double complex acc" := "0 + 0 * I",
+                    for i (len arg1) ["acc" := ("acc + " <> ((arg1 !! i) <> " * " <> fun "conj" [arg2 !! i]))],
+                    (n !! nooffset) := "acc"
                   ]
             Piecewise marks condition branches ->
               let m : ms = marks
@@ -246,30 +248,30 @@ evaluating CSimpleCodegen {..} rootIDs =
                   elseifEach (m, b) =
                     elseif_
                       ((condition !! i) <> " <= " <> tt m)
-                      [Assign (n !! i) (b !! i)]
+                      [(n !! i) := (b !! i)]
                in for i (len n) $
                     [ if_
                         ((condition !! i) <> " <= " <> tt m)
-                        [Assign (n !! i) (b !! i)]
+                        [(n !! i) := (b !! i)]
                     ]
                       ++ map elseifEach (zip ms bs)
-                      ++ [ else_ [Assign (n !! i) (lst !! i)]
+                      ++ [ else_ [(n !! i) := (lst !! i)]
                          ]
             Rotate [amount] arg ->
               let [size] = shape
                in for i size $
-                    [ Assign "int origin" ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size),
-                      Assign (n !! i) (arg !! "origin")
+                    [ "int origin" := ("(i - " <> tt amount <> " + " <> tt size <> ") % " <> tt size),
+                      (n !! i) := (arg !! "origin")
                     ]
             Rotate [amount1, amount2] arg ->
               let [size1, size2] = shape
                in for i size1 $
                     [ for j size2 $
-                        [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
-                          Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
-                          Assign "int cur" ("i * " <> tt size2 <> " + j"),
-                          Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                          Assign (n !! "cur") (arg !! "origin")
+                        [ "int ai" := ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                          "int aj" := ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                          "int cur" := ("i * " <> tt size2 <> " + j"),
+                          "int origin" := ("ai * " <> tt size2 <> " + aj"),
+                          (n !! "cur") := (arg !! "origin")
                         ]
                     ]
             Rotate [amount1, amount2, amount3] arg ->
@@ -277,61 +279,61 @@ evaluating CSimpleCodegen {..} rootIDs =
                in for i size1 $
                     [ for j size2 $
                         [ for k size3 $
-                            [ Assign "int ai" ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
-                              Assign "int aj" ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
-                              Assign "int ak" ("(j - " <> tt amount3 <> " + " <> tt size3 <> ") % " <> tt size3),
-                              Assign "int cur" ("i * " <> tt size2 <> "*" <> tt size3 <> " + j * " <> tt size3 <> " + k"),
-                              Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                              Assign (n !! "cur") (arg !! "offset")
+                            [ "int ai" := ("(i - " <> tt amount1 <> " + " <> tt size1 <> ") % " <> tt size1),
+                              "int aj" := ("(j - " <> tt amount2 <> " + " <> tt size2 <> ") % " <> tt size2),
+                              "int ak" := ("(j - " <> tt amount3 <> " + " <> tt size3 <> ") % " <> tt size3),
+                              "int cur" := ("i * " <> tt size2 <> "*" <> tt size3 <> " + j * " <> tt size3 <> " + k"),
+                              "int origin" := ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                              (n !! "cur") := (arg !! "offset")
                             ]
                         ]
                     ]
             FT arg ->
               case shape of
-                [] -> Assign (n !! nooffset) (arg !! nooffset)
+                [] -> (n !! nooffset) := (arg !! nooffset)
                 [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_FORWARD"])
                 [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_FORWARD"])
             IFT arg ->
               case shape of
-                [] -> Assign (n !! nooffset) (arg !! nooffset)
+                [] -> (n !! nooffset) := (arg !! nooffset)
                 [size] -> Statement (fun "dft_1d" [tt size, addressOf arg, addressOf n, "FFTW_BACKWARD"])
                 [size1, size2] -> Statement (fun "dft_2d" [tt size1, tt size2, addressOf arg, addressOf n, "FFTW_BACKWARD"])
             Project dss arg ->
               case (dss, retrieveShape arg cExpressionMap) of
                 ([ds], [size]) ->
                   Scoped $
-                    [ Assign "int nxt" "0",
+                    [ "int nxt" := "0",
                       forRange i (toRange ds size) $
-                        [ Assign "int origin" ("i % " <> tt size),
-                          Assign (n !! "nxt") (arg !! "origin"),
-                          Assign "nxt" "nxt + 1"
+                        [ "int origin" := ("i % " <> tt size),
+                          (n !! "nxt") := (arg !! "origin"),
+                          "nxt" := "nxt + 1"
                         ]
                     ]
                 ([ds1, ds2], [size1, size2]) ->
                   Scoped $
-                    [ Assign "int nxt" "0",
+                    [ "int nxt" := "0",
                       forRange i (toRange ds1 size1) $
                         [ forRange j (toRange ds2 size2) $
-                            [ Assign "int ai" ("i % " <> tt size1),
-                              Assign "int aj" ("j % " <> tt size2),
-                              Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                              Assign (n !! "nxt") (arg !! "origin"),
-                              Assign "nxt" "nxt + 1"
+                            [ "int ai" := ("i % " <> tt size1),
+                              "int aj" := ("j % " <> tt size2),
+                              "int origin" := ("ai * " <> tt size2 <> " + aj"),
+                              (n !! "nxt") := (arg !! "origin"),
+                              "nxt" := "nxt + 1"
                             ]
                         ]
                     ]
                 ([ds1, ds2, ds3], [size1, size2, size3]) ->
                   Scoped $
-                    [ Assign "int nxt" "0",
+                    [ "int nxt" := "0",
                       forRange i (toRange ds1 size1) $
                         [ forRange j (toRange ds2 size2) $
                             [ forRange k (toRange ds3 size3) $
-                                [ Assign "int ai" ("i % " <> tt size1),
-                                  Assign "int aj" ("j % " <> tt size2),
-                                  Assign "int ak" ("k % " <> tt size3),
-                                  Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                  Assign (n !! "nxt") (arg !! "origin"),
-                                  Assign "nxt" "nxt + 1"
+                                [ "int ai" := ("i % " <> tt size1),
+                                  "int aj" := ("j % " <> tt size2),
+                                  "int ak" := ("k % " <> tt size3),
+                                  "int origin" := ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                  (n !! "nxt") := (arg !! "origin"),
+                                  "nxt" := "nxt + 1"
                                 ]
                             ]
                         ]
@@ -339,43 +341,43 @@ evaluating CSimpleCodegen {..} rootIDs =
             Inject dss sub base ->
               let copyBase =
                     for i (len n) $
-                      [Assign (n !! i) (base !! i)]
+                      [(n !! i) := (base !! i)]
                   injectSub =
                     case (dss, retrieveShape n cExpressionMap) of
                       ([ds], [size]) ->
                         Scoped $
-                          [ Assign "int nxt" "0",
+                          [ "int nxt" := "0",
                             forRange i (toRange ds size) $
-                              [ Assign "int origin" ("i % " <> tt size),
-                                Assign (n !! "origin") (sub !! "nxt"),
-                                Assign "nxt" "nxt + 1"
+                              [ "int origin" := ("i % " <> tt size),
+                                (n !! "origin") := (sub !! "nxt"),
+                                "nxt" := "nxt + 1"
                               ]
                           ]
                       ([ds1, ds2], [size1, size2]) ->
                         Scoped $
-                          [ Assign "int nxt" "0",
+                          [ "int nxt" := "0",
                             forRange i (toRange ds1 size1) $
                               [ forRange j (toRange ds2 size2) $
-                                  [ Assign "int ai" ("i % " <> tt size1),
-                                    Assign "int aj" ("j % " <> tt size2),
-                                    Assign "int origin" ("ai * " <> tt size2 <> " + aj"),
-                                    Assign (n !! "origin") (sub !! "nxt"),
-                                    Assign "nxt" "nxt + 1"
+                                  [ "int ai" := ("i % " <> tt size1),
+                                    "int aj" := ("j % " <> tt size2),
+                                    "int origin" := ("ai * " <> tt size2 <> " + aj"),
+                                    (n !! "origin") := (sub !! "nxt"),
+                                    "nxt" := "nxt + 1"
                                   ]
                               ]
                           ]
                       ([ds1, ds2, ds3], [size1, size2, size3]) ->
                         Scoped $
-                          [ Assign "int nxt" "0",
+                          [ "int nxt" := "0",
                             forRange i (toRange ds1 size1) $
                               [ forRange j (toRange ds2 size2) $
                                   [ forRange k (toRange ds3 size3) $
-                                      [ Assign "int ai" ("i % " <> tt size1),
-                                        Assign "int aj" ("j % " <> tt size2),
-                                        Assign "int ak" ("k % " <> tt size3),
-                                        Assign "int origin" ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
-                                        Assign (n !! "origin") (sub !! "nxt"),
-                                        Assign "nxt" "nxt + 1"
+                                      [ "int ai" := ("i % " <> tt size1),
+                                        "int aj" := ("j % " <> tt size2),
+                                        "int ak" := ("k % " <> tt size3),
+                                        "int origin" := ("ai * " <> tt size2 <> "*" <> tt size3 <> " + aj * " <> tt size3 <> " + ak"),
+                                        (n !! "origin") := (sub !! "nxt"),
+                                        "nxt" := "nxt + 1"
                                       ]
                                   ]
                               ]
@@ -466,7 +468,7 @@ instance Codegen CSimpleConfig where
           Scoped
             [ Printf ["Init value for " <> tt name <> " is not provided, generate random init for " <> tt name <> " ...\\n"],
               for "i" (product shape) $
-                [Assign ("ptr[" <> tt offset <> "+ i]") ("(double) rand() / RAND_MAX")]
+                [("ptr[" <> tt offset <> "+ i]") := "(double) rand() / RAND_MAX"]
             ]
         where
           offset = addressReal nId
@@ -478,10 +480,10 @@ instance Codegen CSimpleConfig where
           Scoped
             [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.h5...\\n"],
               Statement "hid_t file, space, dset",
-              Assign ("hsize_t dims[" <> tt (length shape) <> "]") ("{" <> T.intercalate ", " (map tt shape) <> "}"),
-              Assign "file" (fun "H5Fcreate" [ttq $ name <> "_out.h5", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
-              Assign "space" (fun "H5Screate_simple" [tt $ length shape, "dims", "NULL"]),
-              Assign "dset" (fun "H5Dcreate" ["file", ttq name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              ("hsize_t dims[" <> tt (length shape) <> "]") := ("{" <> T.intercalate ", " (map tt shape) <> "}"),
+              "file" := (fun "H5Fcreate" [ttq $ name <> "_out.h5", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
+              "space" := (fun "H5Screate_simple" [tt $ length shape, "dims", "NULL"]),
+              "dset" := (fun "H5Dcreate" ["file", ttq name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
               Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> tt offset]),
               Statement "H5Dclose(dset)",
               Statement "H5Sclose(space)",
@@ -491,7 +493,7 @@ instance Codegen CSimpleConfig where
           Scoped $
             [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.txt...\\n"],
               Statement "FILE *file",
-              Assign "file" (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
+              "file" := (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
               for "i" (product shape) $
                 [ Statement (fun "fprintf" ["file", ttq "%f ", "ptr[" <> tt offset <> " + i]"])
                 ],
@@ -638,7 +640,7 @@ toShapeString shape
 generateReadValuesCode :: (String, Int) -> String -> Val -> CCode
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> Scoped [Assign ("*(" <> tt address <> ")") (tt value)]
+    VScalar value -> Scoped [("*(" <> tt address <> ")") := (tt value)]
     V1D _ -> readFileText (tt name <> ".txt")
     V2D _ -> readFileText (tt name <> ".txt")
     V3D _ -> readFileText (tt name <> ".txt")
@@ -646,13 +648,13 @@ generateReadValuesCode (name, size) address val =
     VFile (HDF5 filePath dataset) -> readFileHD5 (tt filePath) (tt dataset)
     VNum value ->
       for "i" size $
-        [ Assign ("*(" <> tt address <> " + i)") (tt value)
+        [ ("*(" <> tt address <> " + i)") := (tt value)
         ]
   where
     readFileText filePath =
       Scoped
         [ Printf ["Reading " <> tt name <> " from text file " <> filePath <> " ...\\n"],
-          Assign "FILE *fp" (fun "fopen" [ttq filePath, ttq "r"]),
+          "FILE *fp" := (fun "fopen" [ttq filePath, ttq "r"]),
           for "i" size $
             [ Statement (fun "fscanf" ["fp", ttq "%lf", tt address <> " + i"])
             ],
@@ -662,8 +664,8 @@ generateReadValuesCode (name, size) address val =
       Scoped
         [ Printf ["Reading " <> tt name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
           Statement "hid_t file, dset",
-          Assign "file" (fun "H5Fopen" [ttq filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
-          Assign "dset" (fun "H5Dopen" ["file", ttq dataset, "H5P_DEFAULT"]),
+          "file" := (fun "H5Fopen" [ttq filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
+          "dset" := (fun "H5Dopen" ["file", ttq dataset, "H5P_DEFAULT"]),
           Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", tt address]),
           Statement "H5Fclose (file)",
           Statement "H5Dclose (dset)"
