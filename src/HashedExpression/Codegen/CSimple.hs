@@ -531,7 +531,10 @@ instance Codegen CSimpleConfig where
               Statement "FILE *file",
               "file" := (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
               for "i" (product shape) $
-                [ Statement (fun "fprintf" ["file", ttq "%f ", "ptr[" <> tt offset <> " + i]"])
+                [ Statement (fun "fprintf" ["file", ttq "%f", "ptr[" <> tt offset <> " + i]"]),
+                  if_ ("i + 1 < " <> tt (product shape)) $
+                    [ Statement (fun "fprintf" ["file", ttq " "])
+                    ]
                 ],
               Statement "fclose(file)"
             ]

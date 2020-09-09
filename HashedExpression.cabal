@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 045ca7a5495f397505bbf6a8aa4653896b910615b0b4036f8d140a46fcba35af
+-- hash: a5854a3937b22761f244d49484d2af07d32c00430f2c2ab334cc788077c8e544
 
 name:           HashedExpression
 version:        0.0.6
@@ -88,6 +88,8 @@ library
 executable HashedExpression-exe
   main-is: Main.hs
   other-modules:
+      Problems.Ex1
+      Problems.Ex2
       Paths_HashedExpression
   hs-source-dirs:
       app
