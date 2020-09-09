@@ -229,13 +229,12 @@ newtype Constraint = Constraint [ConstraintStatement]
 -------------------------------------------------------------------------------
 
 -- | Information about whether the optimization problem is well-founded
-data ProblemResult
-  = -- | The problem is valid, here is the problem
-    ProblemValid Problem
-  | -- | The problem is invalid, here is the reason
-    ProblemInvalid String
-  deriving (Show)
-
+-- data ProblemResult
+--  = -- | The problem is valid, here is the problem
+--    ProblemValid Problem
+--  | -- | The problem is invalid, here is the reason
+--    ProblemInvalid String
+--  deriving (Show)
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
 -------------------------------------------------------------------------------
@@ -376,11 +375,9 @@ constructProblemHelper obj (Constraint constraints) = do
         _ -> throwError "Only scalar inequality and box constraint for variable are supported"
 
 -- | Construct a Problem from given objective function and constraints
-constructProblem :: Expression Scalar R -> Constraint -> ProblemResult
+constructProblem :: Expression Scalar R -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
-  case runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty of
-    Left reason -> ProblemInvalid reason
-    Right (problem, _) -> ProblemValid problem
+  fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where
     simplifiedObjective = simplify objectiveFunction
     simplifiedConstraint = Constraint $ map (mapExpressionCS simplifyUnwrapped) cs

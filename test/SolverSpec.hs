@@ -38,7 +38,7 @@ import System.FilePath hiding ((<.>))
 import System.Process
 import System.Time.Extra (sleep)
 import Test.Hspec
-import Test.QuickCheck hiding (Success)
+import Test.QuickCheck hiding (Right)
 import Var
 import Prelude hiding ((!!), (^))
 
@@ -76,10 +76,10 @@ solveProblem :: Problem -> ValMap -> IO (Map String String)
 solveProblem problem valMap = do
   case generateProblemCode CSimpleConfig {output = OutputText} problem valMap of
     -- TODO: refine this
-    Success proceed -> do
+    Right proceed -> do
       folderName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
       let cwd = "C" </> folderName
-      readProcess "cp" ["-R", "algorithms/lbfgs-b", cwd] ""
+      readProcess "cp" ["-R", "solvers/lbfgs-b", cwd] ""
       proceed cwd
       runCommandIn cwd "make"
       runCommandIn cwd "./lbfgs-b"
@@ -97,7 +97,7 @@ prop_Rosenbrock a b =
         y = variable "y"
     let obj = (constant a - x) ^ 2 + constant b * (y - x ^ 2) ^ 2
     case constructProblem obj (Constraint []) of
-      ProblemValid p -> do
+      Right p -> do
         res <- solveProblem p Map.empty
         let xGot = getValueScalar "x" res
         let yGot = getValueScalar "y" res
@@ -112,7 +112,7 @@ spec =
       let x = variable1D @10 "x"
       let obj = (x - 10) <.> (x - 10)
       case constructProblem obj (Constraint []) of
-        ProblemValid p -> do
+        Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue1D "x" 10 res
           let xExpect = listArray (0, 9) $ replicate 10 10
@@ -121,7 +121,7 @@ spec =
       let x = variable2D @5 @5 "x"
       let obj = (x * log x) <.> 1
       case constructProblem obj (Constraint []) of
-        ProblemValid p -> do
+        Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue2D "x" (5, 5) res
           let xExpect = listArray ((0, 0), (4, 4)) $ replicate 25 (1 / 2.7182818285)
@@ -133,7 +133,7 @@ spec =
       let b = param1D @10 "b"
       let obj = norm2square (ft (x +: y) - (a +: b))
       case constructProblem obj (Constraint []) of
-        ProblemValid p -> do
+        Right p -> do
           valA <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
           valB <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
           res <- solveProblem p (Map.fromList [("a", V1D valA), ("b", V1D valB)])
@@ -150,7 +150,7 @@ spec =
       let oddX = project (ranges @1 @19 @2) x
       let obj = 100 * norm2square (evenX ^ 2 - oddX) + norm2square (evenX - 1)
       case constructProblem obj (Constraint []) of
-        ProblemValid p -> do
+        Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue1D "x" 20 res
           let xExpect = listArray (0, 19) $ replicate 20 1

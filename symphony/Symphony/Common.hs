@@ -22,6 +22,12 @@ data CompileError
 
 type Result a = ExceptT CompileError IO a
 
+
+liftEitherString :: Either String a -> Result a 
+liftEitherString m = case m of 
+  Left error -> throwError $ GeneralError error
+  Right a -> return a
+  
 -- | (name, shape, initialize value)
 type Vars = Map String (HE.Shape, Maybe HV.Val)
 
