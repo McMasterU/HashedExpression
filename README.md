@@ -60,7 +60,7 @@ Supported operations:
 - piecewise function
 - Fourier Transform, inverse Fourier Transform
 - dot product (inner product), matrix multiplication
-- For more, see: [src/HashedExpression/Internal/Expression.hs](src/HashedExpression/Internal/Expression.hs)
+- For more, see: [src/HashedExpression/Operation.hs](src/HashedExpression/Operation.hs)
 
 ## Examples
 
