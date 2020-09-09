@@ -40,7 +40,7 @@ ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
 ![](docs/images/ex1_after.png)
 
 ### Logistic regression
-Taken from [exercise 1](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex2) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
+Taken from [exercise 2](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex2) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
 
 Model is in [app/Examples/Ex2.hs](app/Examples/Ex2.hs), data is in [examples/ex2](examples/ex2)
 
