@@ -1,7 +1,66 @@
 # HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
-A type-safe symbolic computing Haskell embeded DSL for solving optimization problems.
+A type-safe Haskell-embeded DSL for solving optimization problems.
 
-## Motivation
+## Features
+- Provide a type-safe APIs to model optimization problems. This is achieved by employing Haskell's phantom-type and type-level programming, especially type-level natural numbers to properly constraint shape and element type (Real or Complex).
+    - For example, we couldn't add 2 expression with mismatched shape/element type:
+    ```haskell
+    λ> let x = variable1D @10 "x"
+    λ> let y = variable1D @9 "y"
+    λ> :t x
+    x :: Expression (D1 10) 'R
+    λ> :t y
+    y :: Expression (D1 9) 'R
+    λ> x + y
+    <interactive>:5:5: error:
+        • Couldn't match type ‘9’ with ‘10’
+          Expected type: Expression (D1 10) 'R
+            Actual type: Expression (D1 9) 'R
+        • In the second argument of ‘(+)’, namely ‘y’
+          In the expression: x + y
+          In an equation for ‘it’: it = x + y
+    ```
+    ```haskell
+    λ> let x = variable1D @10 "x"
+    λ> let x = variable2D @10 @10 "x"
+    λ> let y = variable2D @10 @10 "y"
+    λ> let c = x +: y
+    λ> :t c
+    c :: Expression '[10, 10] 'C
+    λ> let z = variable2D @10 @10 "z"
+    λ> :t z
+    z :: Expression (D2 10 10) 'R
+    λ> z + c
+    
+    <interactive>:13:5: error:
+        • Couldn't match type ‘'C’ with ‘'R’
+          Expected type: Expression (D2 10 10) 'R
+            Actual type: Expression '[10, 10] 'C
+          Type synonyms expanded:
+          Expected type: Expression '[10, 10] 'R
+            Actual type: Expression '[10, 10] 'C
+        • In the second argument of ‘(+)’, namely ‘c’
+          In the expression: z + c
+          In an equation for ‘it’: it = z + c
+    ```
+    
+- Automatically simplify expressions and compute derivatives, identify common subexpressions.
+    - We represent expressions symbolically. Expressions are hashed and indexed in a common lookup table, thus allows for identifying common subexpressions.
+    - Derivatives are computed by reverse accumulation method.
+- Generate code which can be feed to optimization solvers (such as LBFGS, LBFGS-B, Ipopt, see [solvers](solvers)).
+    - Currently, we have a code generator that produce C99 code. 
+    - Since code generation is decoupled from all other steps, we could easily provide other generators. A version of SIMD C is WIP, and later a GPU version.
+
+Supported operations:
+- basic algebraic operations: addition, multiplication, etc.
+- complex related: real, imag, conjugate, etc.
+- trigonometry, log, exponential, power.
+- rotate
+- projection (think of Python's slice notation, but with type-safety), and injection (reverse of projection)
+- piecewise function
+- Fourier Transform, inverse Fourier Transform
+- dot product (inner product), matrix multiplication
+- For more, see: [src/HashedExpression/Internal/Expression.hs](src/HashedExpression/Internal/Expression.hs)
 
 ## Examples
 
@@ -27,7 +86,7 @@ ex1_linearRegression =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "problems" </> "ex1"
+          workingDir = "examples" </> "ex1"
         }
 
 ex1 :: IO ()
@@ -64,7 +123,7 @@ ex2_logisticRegression =
             [ x :-> VFile (TXT "x_expanded.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "problems" </> "ex2"
+          workingDir = "examples" </> "ex2"
         }
 
 ex2 :: IO ()
@@ -103,7 +162,7 @@ brain_reconstructFromMRI =
               re :-> VFile (HDF5 "kspace.h5" "re"),
               mask :-> VFile (HDF5 "mask.h5" "mask")
             ],
-          workingDir = "problems" </> "brain"
+          workingDir = "examples" </> "brain"
         }
 
 brain :: IO ()
