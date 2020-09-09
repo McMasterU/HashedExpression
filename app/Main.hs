@@ -3,7 +3,9 @@
 
 module Main where
 
-import Problems.Ex1
+import Examples.Ex1
+import Examples.Ex2
+import Examples.Brain
 
 main :: IO ()
 main = print "hello world"

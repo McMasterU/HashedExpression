@@ -1,96 +1,120 @@
-## HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
-
+# HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
 A type-safe symbolic computing Haskell embeded DSL for solving optimization problems.
 
-## Symphony
+## Motivation
 
-Symphony is a standalone language backed by HashedExpression, it somewhat resembles AMPL (but free).
-### Installation
-We haven't yet publish it to Cabal (or Homebrew, apt-get), in the mean time, you can clone this repository and run:
-```terminal
-$ stack install --ghc-options -O2
-```
+## Examples
 
-### Usage
-Consider minimizing the negative entropy function ![image](https://latex.codecogs.com/gif.latex?%5Cdpi%7B100%7D%20%5Chuge%20f%28p%29%20%3D%20%5Csum_%7Bi%20%3D%201%7D%5En%20p_i%20%5Clog%28p_i%29)
+For those examples taken from Coursera's [Machine Learning](https://www.coursera.org/learn/machine-learning), data and plotting scripts are based on https://github.com/nsoojin/coursera-ml-py. 
 
-Create `entropy.sp`: 
+### Linear regression
+Taken from [exercise 1](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex1) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
+
+Model is in [app/Examples/Ex1.hs](app/Examples/Ex1.hs), data is in [examples/ex1](examples/ex1)
+
 ```haskell
-variables:
-  p[10][10]
+ex1_linearRegression :: OptimizationProblem
+ex1_linearRegression =
+  let x = param1D @97 "x"
+      y = param1D @97 "y"
+      theta0 = variable "theta0"
+      theta1 = variable "theta1"
+      objective = norm2square ((theta0 *. 1) + (theta1 *. x) - y)
+   in OptimizationProblem
+        { objective = objective,
+          constraints = [],
+          values =
+            [ x :-> VFile (TXT "x.txt"),
+              y :-> VFile (TXT "y.txt")
+            ],
+          workingDir = "problems" </> "ex1"
+        }
 
-constraints: 
-  p >= 0.1
-
-minimize:
-  p <.> log (p) 
-
-solver: lbfgs-b
+ex1 :: IO ()
+ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
 ```
-(<.> is dot product)
-
-Run symphony:
-```terminal
-$ symphony entropy.sp
-```
-
-Symphony will generate code and download the solver (L-BFGS-B in this case) to current working directory. 
-Then simply compile the code and run:
-```terminal
-$ make
-```
-(Note that we use [HDF5](https://www.hdfgroup.org/solutions/hdf5/) for reading and writing dataset)
-
-```terminal
-$ ./lbfgs-b
-....
-....
-F     = final function value
-           * * * 
-   N    Tit   Tnf  Tnint  Skip  Nact      Projg        F
-  100     7     8    45     0     0     4.36e-06 -3.67879e+01
-21
- Total User time 2.470e-04 seconds.
-Writing p to p_out.h5...     
-```
-Which is what we expected, and the output value of `p` is written in HDF5 file `p_out.h5`.
+(`(*.)` is scaling )
 
 
-For more, checkout `examples/Brain/brain.sp` example which solves an optimization problem to reconstruct image from loss MRI signal, details about the problem can be found at [MRI-Image-Reconstruction](examples/MRI-Image-Reconstruction.pdf).
+![](docs/images/ex1_before.png)
+![](docs/images/ex1_after.png)
+
+### Logistic regression
+Taken from [exercise 1](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex2) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
+
+Model is in [app/Examples/Ex2.hs](app/Examples/Ex2.hs), data is in [examples/ex2](examples/ex2)
+
 ```haskell
-variables:
-  x[128][128] = 0
+sigmoid :: (Dimension d) => Expression d R -> Expression d R
+sigmoid x = 1.0 / (1.0 + exp (-x))
 
-constants:
-  im[128][128] = Dataset("kspace.h5", "im")
-  re[128][128] = Dataset("kspace.h5", "re")
-  mask[128][128] = Dataset("mask.h5", "mask")
-  xLowerBound[128][128] = Dataset("bound.h5", "lb")
-  xUpperBound[128][128] = Dataset("bound.h5", "ub")
+ex2_logisticRegression :: OptimizationProblem
+ex2_logisticRegression =
+  let x = param2D @118 @28 "x"
+      y = param2D @118 @1 "y"
+      theta = variable2D @28 @1 "theta"
+      hypothesis = sigmoid (x ** theta)
+      lambda = 1
+      regTheta = project (range @1 @27, at @0) theta
+      regularization = (lambda / 2) * (regTheta <.> regTheta)
+   in OptimizationProblem
+        { objective = sumElements ((-y) * log hypothesis - (1 - y) * log (1 - hypothesis)) + regularization,
+          constraints = [],
+          values =
+            [ x :-> VFile (TXT "x_expanded.txt"),
+              y :-> VFile (TXT "y.txt")
+            ],
+          workingDir = "problems" </> "ex2"
+        }
 
-constraints:
-  x >= xLowerBound, x <= xUpperBound
-
-let:
-  smootherX = rotate (0, 1) x + rotate (0, -1) x - 2 *. x
-  smootherY = rotate (1, 0) x + rotate (-1, 0) x - 2 *. x
-  regularization = norm2square smootherX + norm2square smootherY
-
-
-minimize:
-  norm2square ((mask +: 0) * (ft x - (re +: im))) + 3000 *. regularization
-  
-solver: lbfgs-b
+ex2 :: IO ()
+ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
 ```
 
+( `(**)` is matrix multiplication, `(<.>)` is dot product, `project (range @1 @27, at @0) theta` is the typed version of `theta[1:27,0]` )
 
-### Docker 
-We provide ready-to-use and up-to-date docker image [hashexpression/symphony](https://hub.docker.com/r/hashexpression/symphony) which has 
-`symphony` and all prerequisites installed. All you need is pull and create a container.
+![](docs/images/ex2_before.png)
+![](docs/images/ex2_after.png)
+
+### MRI Reconstruction
+
+Model is in [app/Examples/Brain.hs](app/Examples/Brain.hs), data is in [examples/brain](examples/brain)
+
+```haskell
+brain_reconstructFromMRI :: OptimizationProblem
+brain_reconstructFromMRI =
+  let -- variables
+      x = variable2D @128 @128 "x"
+      -- parameters
+      im = param2D @128 @128 "im"
+      re = param2D @128 @128 "re"
+      mask = param2D @128 @128 "mask"
+      -- regularization
+      lambda = 3000
+      regularization = lambda * (norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x))
+   in OptimizationProblem
+        { objective = norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im))) + regularization,
+          constraints =
+            [ x .<= VFile (HDF5 "bound.h5" "ub"),
+              x .>= VFile (HDF5 "bound.h5" "lb")
+            ],
+          values =
+            [ im :-> VFile (HDF5 "kspace.h5" "im"),
+              re :-> VFile (HDF5 "kspace.h5" "re"),
+              mask :-> VFile (HDF5 "mask.h5" "mask")
+            ],
+          workingDir = "problems" </> "brain"
+        }
+
+brain :: IO ()
+brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
+```
+
+![](docs/images/brain_before.png)
+![](docs/images/brain_after.png)
 
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.
-
 
 ## About
 The project is developed and maintained by [Dr. Christopher Anand](https://github.com/christopheranand)'s research group, Computing and Software department, McMaster University.

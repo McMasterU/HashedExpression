@@ -1,4 +1,4 @@
-module Problems.Ex1 where
+module Examples.Ex1 where
 
 import HashedExpression
 import System.FilePath ((</>))

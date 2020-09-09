@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os.path
+from os import path
+
 
 def plot_data(x, y):
     plt.scatter(x, y, c='r', marker="x")
@@ -18,6 +21,11 @@ plt.figure(0)
 plot_data(X, y)
 
 input('Program paused. Press ENTER to continue')
+
+# ------------------------ RESULT ---------------------------------
+if not path.exists('theta0_out.txt') or not path.exists('theta1_out.txt'):
+  print("Please run app/Examples/Ex1.hs and run make to produce result first...")
+  exit()
 
 theta0 = np.loadtxt("theta0_out.txt")
 theta1 = np.loadtxt("theta1_out.txt")
