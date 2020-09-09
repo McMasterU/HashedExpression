@@ -56,7 +56,7 @@ Writing p to p_out.h5...
 Which is what we expected, and the output value of `p` is written in HDF5 file `p_out.h5`.
 
 
-For more, checkout `examples/Brain/brain.sp` example which solves an optimization problem to reconstruct image from loss MRI signal, details about the problem can be found at [MRI-Image-Reconstruction](examples/MRI-Image-Reconstruction.pdf).
+For more, checkout `examples/Brain/brain.sp` example which solves an optimization problem to reconstruct image from loss MRI signal, details about the problem can be found at [MRI-Image-Reconstruction](docs/images/MRI-Image-Reconstruction.pdf).
 ```haskell
 variables:
   x[128][128] = 0

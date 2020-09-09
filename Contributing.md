@@ -2,7 +2,7 @@
 ## Why Hashed Expression
 Normally, we would see (arithmetic) expressions represented as tree.
 For example, the expression `f = (xy + 2x + 1)xy`
-![tree](examples/tree.png)
+![tree](docs/images/tree.png)
 
 How do we evaluate `f` with a given value of `x` and `y`, e.g `x = 2`, `y = 3`?
 Such function would be something like this in Haskell:
@@ -21,7 +21,7 @@ For example, `evaluate sub x` is called 4 times.
 
 So we want to identify all the common subexpressions and link them accordingly.
 Now the expression is no longer a Tree, but a Directed Acyclic Graph (DAG). 
-![dag](examples/dag.png)
+![dag](docs/images/dag.png)
 
 Let's analyze this DAG a bit:
 - It's a single-root DAG.
@@ -34,11 +34,11 @@ So what kind of data structure should we use for this kind of DAG?
 Our approach: each node/subexpression is uniquely indexed by hash of (1) and (2). 
 The expression is now a hash table with a root node ID.
 
-![Hash](examples/Hash.png)
+![Hash](docs/images/Hash.png)
 (Root ID is in maroon color)
 
 Or explicitly:
-![Hash explicit](examples/Hash_Explicit.png)
+![Hash explicit](docs/images/Hash_Explicit.png)
 
 ## Generating Haddock (with Docker)
 Build the docker image located in docs (it's important you do this from the root of the repo), with

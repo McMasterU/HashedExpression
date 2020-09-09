@@ -43,6 +43,7 @@ def plot_decision_boundary(theta, X, y):
     plt.legend([cs.collections[0]], ['Decision Boundary'])
 
 plt.ion()
+
 X_original = np.loadtxt('x_original.txt', delimiter=' ')
 y = np.loadtxt('y.txt')
 plot_data(X_original, y)
@@ -56,7 +57,7 @@ X = np.loadtxt('x_expanded.txt', delimiter=' ')
 
 # ------------------------ RESULT ---------------------------------
 if not path.exists('theta_out.txt'):
-  print("Please run app/Problems/Ex2.hs and run make to produce result first...")
+  print("Please run app/Examples/Ex2.hs and run make to produce result first...")
   exit()
 
 theta = np.loadtxt('theta_out.txt', delimiter=' ')

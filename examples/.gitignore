@@ -1,3 +1,5 @@
 # Created by .ignore support plugin (hsz.mobi)
 !*.txt
 *_out.txt
+!*.h5
+*_out.h5
