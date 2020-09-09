@@ -1,7 +1,6 @@
 # Ignore everything
-*
 
 # except Docker file
-!images/
+!images
 !.gitignore
 !Dockerfile
