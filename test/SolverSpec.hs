@@ -79,7 +79,7 @@ solveProblem problem valMap = do
     Success proceed -> do
       folderName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
       let cwd = "C" </> folderName
-      readProcess "cp" ["-R", "algorithms/lbfgs-b", cwd] ""
+      readProcess "cp" ["-R", "solvers/lbfgs-b", cwd] ""
       proceed cwd
       runCommandIn cwd "make"
       runCommandIn cwd "./lbfgs-b"
