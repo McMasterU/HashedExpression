@@ -426,10 +426,10 @@ evaluating CSimpleCodegen {..} rootIDs =
 --
 ---------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
-  generateProblemCode :: CSimpleConfig -> Problem -> ValMap -> GenResult
+  generateProblemCode :: CSimpleConfig -> Problem -> ValMap -> Either String (String -> IO ())
   generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap
-    | Just errorMsg <- checkError = Invalid errorMsg
-    | otherwise = Success $ \folder -> do
+    | Just errorMsg <- checkError = Left errorMsg
+    | otherwise = Right $ \folder -> do
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
       let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val

@@ -7,22 +7,26 @@ import qualified Data.Array as Array
 import Data.List (intercalate)
 import Data.Map (empty, fromList, union)
 import qualified Data.Map as Map
-import HashedExpression.Codegen
-import HashedExpression.Codegen.CSimple
-import HashedExpression.Internal.Expression
-import HashedExpression.Operation
-import HashedExpression.Prettify
-import HashedExpression.Value
-import HashedExpression.Problem
+import HashedExpression
+import System.FilePath ((</>))
 import Prelude hiding ((^))
 
+linearRegression :: OptimizationProblem
+linearRegression =
+  let x = param1D @97 "x"
+      y = param1D @97 "y"
+      theta0 = variable "theta0"
+      theta1 = variable "theta1"
+      objective = norm2square ((theta0 *. 1) + (theta1 *. x) - y)
+   in OptimizationProblem
+        { objective = objective,
+          constraints = [],
+          values =
+            [ x :-> VFile (TXT "x.txt"),
+              y :-> VFile (TXT "y.txt")
+            ],
+          workingDir = "problems" </> "ex1"
+        }
+
 main :: IO ()
-main = do
-  let x = variable2D @10 @10 "x"
-  let obj = x <.> log x
-  case constructProblem obj (Constraint [
-        x <.> log x .>= VNum (-30)
-      ]) of
-    ProblemValid p ->
-      case generateProblemCode CSimpleConfig {output = OutputText} p Map.empty of
-        Success proceed -> proceed "solvers/ipopt"
+main = proceed linearRegression CSimpleConfig {output = OutputText}

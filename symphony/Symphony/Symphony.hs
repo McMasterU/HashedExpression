@@ -123,20 +123,20 @@ generateCode outputPath (ValidSymphony objectiveExp vars consts css solver) = do
           (wrap objectiveExp)
           -- Constraints
           (HS.Constraint css)
-  case problemGen of
-    HS.ProblemValid heProblem -> do
-      let valMap =
-            Map.mapMaybeWithKey varVal vars
-              `Map.union` Map.mapMaybeWithKey constVal consts
-      case generateProblemCode CSimple.CSimpleConfig {output = CSimple.OutputHDF5} heProblem valMap of
-        Invalid reason -> throwError $ GeneralError reason
-        Success res -> do
-          liftIO $ putStrLn "Problem detail:"
-          liftIO $ print $ heProblem
-          liftIO $ res outputPath
-          liftIO $ putStrLn "Download solver & adapter......"
-          liftIO $ downloadSolver outputPath solver
-    HS.ProblemInvalid reason -> throwError $ GeneralError reason
+  heProblem <- liftEitherString problemGen
+--  case problemGen of
+--    HS.ProblemValid heProblem -> do
+  let valMap = Map.mapMaybeWithKey varVal vars `Map.union` Map.mapMaybeWithKey constVal consts
+  res <- liftEitherString $ generateProblemCode CSimple.CSimpleConfig {output = CSimple.OutputHDF5} heProblem valMap
+--  case generateProblemCode CSimple.CSimpleConfig {output = CSimple.OutputHDF5} heProblem valMap of
+--    Invalid reason -> throwError $ GeneralError reason
+--    Success res -> do
+  liftIO $ putStrLn "Problem detail:"
+  liftIO $ print $ heProblem
+  liftIO $ res outputPath
+  liftIO $ putStrLn "Download solver & adapter......"
+  liftIO $ downloadSolver outputPath solver
+--    HS.ProblemInvalid reason -> throwError $ GeneralError reason
   where
     varVal _ (_, Just val) = Just val
     varVal _ _ = Nothing

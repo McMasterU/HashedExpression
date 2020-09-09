@@ -47,9 +47,9 @@ prop_constructProblemNoConstraint (Suite exp valMap) = do
   let names = Map.keys valMap
   let constructResult = constructProblem exp (Constraint [])
   case constructResult of
-    ProblemInvalid reason ->
+    Left reason ->
       assertFailure $ "Can't construct problem: " ++ reason
-    ProblemValid Problem {..} -> do
+    Right Problem {..} -> do
       return ()
 
 -- |
@@ -95,9 +95,9 @@ prop_constructProblemBoxConstraint (Suite exp valMap) = do
   let constraints = Constraint sampled
   let constructResult = constructProblem exp constraints
   case constructResult of
-    ProblemInvalid reason ->
+    Left reason ->
       assertFailure $ "Can't construct problem: " ++ reason
-    ProblemValid Problem {..} -> do
+    Right Problem {..} -> do
       case (sampled, boxConstraints) of
         (_ : _, []) ->
           assertFailure
@@ -131,9 +131,9 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
   let constraints = Constraint $ sampled ++ scc
   let constructResult = constructProblem exp constraints
   case constructResult of
-    ProblemInvalid reason ->
+    Left reason ->
       assertFailure $ "Can't construct problem: " ++ reason
-    ProblemValid Problem {..} -> do
+    Right Problem {..} -> do
       case (scc, scalarConstraints) of
         ([], _) -> return ()
         (_ : _, []) ->
@@ -145,7 +145,7 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
           mapM_ isOk sConstraints
 
 -- | List of hand-written problems and the expected result whether this problem is valid
-problemsRepo :: [(ProblemResult, Bool)]
+problemsRepo :: [(Either String Problem, Bool)]
 problemsRepo =
   [ ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
           f = x <.> y + z <.> t
@@ -208,16 +208,16 @@ spec =
     --      let obj = x1 <.> y1 + x + y
     --          constraints = Constraint []
     --      case constructProblem obj constraints of
-    --        ProblemInvalid _ -> assertFailure "should construct problem properly"
-    --        ProblemValid problem -> do
+    --        Left _ -> assertFailure "should construct problem properly"
+    --        Right problem -> do
     --          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp x1, debugPrintExp y1]
     --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 1), debugPrintExp (constant 1), debugPrintExp y1, debugPrintExp x1]
     --    specify "unit test 2" $ do
     --      let obj = x2 <.> y2
     --          constraints = Constraint [z + y .>= VNum 1, z + x .<= VNum 2]
     --      case constructProblem obj constraints of
-    --        ProblemInvalid _ -> assertFailure "should construct problem properly"
-    --        ProblemValid problem -> do
+    --        Left _ -> assertFailure "should construct problem properly"
+    --        Right problem -> do
     --          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp z, debugPrintExp x2]
     --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp y2]
     --          printScalarConstraintsPartialDerivatives problem
@@ -228,8 +228,8 @@ spec =
     --      let obj = 1
     --          constraints = Constraint [x2 <.> a2 .>= VNum 1, m + 2 * n .<= VNum 2]
     --      case constructProblem obj constraints of
-    --        ProblemInvalid _ -> assertFailure "should construct problem properly"
-    --        ProblemValid problem -> do
+    --        Left _ -> assertFailure "should construct problem properly"
+    --        Right problem -> do
     --          printVariables problem `shouldBe` [debugPrintExp m, debugPrintExp n, debugPrintExp x2]
     --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp zero2]
     --          printScalarConstraintsPartialDerivatives problem
@@ -239,9 +239,9 @@ spec =
     --    specify "test hand-written problems" $
     --      forM_ problemsRepo $ \(problemResult, expected) -> do
     --        case (problemResult, expected) of
-    --          (ProblemValid p, True) -> do
+    --          (Right p, True) -> do
     --            return ()
-    --          (ProblemInvalid _, False) ->
+    --          (Left _, False) ->
     --            return ()
     --          _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
     specify "valid problem should be constructed successfully" $

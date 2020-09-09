@@ -26,10 +26,20 @@ module HashedExpression
     module HashedExpression.Interp,
     module HashedExpression.Problem,
     module HashedExpression.Value,
+    module HashedExpression.Codegen,
+    module HashedExpression.Codegen.CSimple,
+    ValueAssignment(..),
+    OptimizationProblem(..),
+    proceed
   )
 where
 
+import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
+import HashedExpression.Codegen
+import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
 import HashedExpression.Operation
@@ -37,3 +47,31 @@ import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
 import Prelude hiding ((**), (^))
+
+data ValueAssignment
+  = forall d et. Expression d et :-> Val
+
+mkValMap :: [ValueAssignment] -> ValMap
+mkValMap ss = Map.fromList $ mapMaybe f ss
+  where
+    f (Expression nID mp :-> val)
+      | (_, _, Var name) <- retrieveNode nID mp = Just (name, val)
+      | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
+      | otherwise = Nothing
+
+data OptimizationProblem =
+  OptimizationProblem
+    { objective :: Expression Scalar R,
+      constraints :: [ConstraintStatement],
+      values :: [ValueAssignment],
+      workingDir :: String
+    }
+
+proceed :: Codegen codegen => OptimizationProblem -> codegen -> IO ()
+proceed OptimizationProblem {..} codegen = do
+  case constructProblem objective (Constraint constraints) of
+    Right problem ->
+      case generateProblemCode codegen problem (mkValMap values) of
+        Right ok -> ok workingDir
+        Left reason -> putStrLn reason
+    Left reason -> putStrLn reason
