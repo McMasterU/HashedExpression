@@ -26,7 +26,7 @@ brain_reconstructFromMRI =
               re :-> VFile (HDF5 "kspace.h5" "re"),
               mask :-> VFile (HDF5 "mask.h5" "mask")
             ],
-          workingDir = "problems" </> "brain"
+          workingDir = "examples" </> "brain"
         }
 
 brain :: IO ()

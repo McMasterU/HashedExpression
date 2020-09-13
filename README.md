@@ -4,7 +4,7 @@ Type-safe modelling DSL, symbolic transformation, and code generation for solvin
 
 
 ## Features
-- A type-safe, correct by construction APIs to model optimization problems, empowered by Haskell's phantom-type and type-level programming.
+- A type-safe, correct-by-construction APIs to model optimization problems, empowered by Haskell's phantom-type and type-level programming.
     - For example, adding 2 expressions with mismatched shape or element type (**R** or C) will result in type error will result in type error:
     ```haskell
     λ> let x = variable1D @10 "x"
@@ -106,19 +106,22 @@ Model is in [app/Examples/Ex2.hs](app/Examples/Ex2.hs), data is in [examples/ex2
 
 ```haskell
 sigmoid :: (Dimension d) => Expression d R -> Expression d R
-sigmoid x = 1.0 / (1.0 + exp (-x))
+sigmoid x = 1.0 / (1.0 + exp (- x))
 
 ex2_logisticRegression :: OptimizationProblem
 ex2_logisticRegression =
-  let x = param2D @118 @28 "x"
-      y = param2D @118 @1 "y"
-      theta = variable2D @28 @1 "theta"
+  let -- variables
+      theta = variable1D @28 "theta"
+      -- parameters
+      x = param2D @118 @28 "x"
+      y = param1D @118 "y"
       hypothesis = sigmoid (x ** theta)
+      -- regularization
       lambda = 1
-      regTheta = project (range @1 @27, at @0) theta
+      regTheta = project (range @1 @27) theta
       regularization = (lambda / 2) * (regTheta <.> regTheta)
    in OptimizationProblem
-        { objective = sumElements ((-y) * log hypothesis - (1 - y) * log (1 - hypothesis)) + regularization,
+        { objective = sumElements ((- y) * log hypothesis - (1 - y) * log (1 - hypothesis)) + regularization,
           constraints = [],
           values =
             [ x :-> VFile (TXT "x_expanded.txt"),

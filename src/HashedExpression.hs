@@ -28,9 +28,9 @@ module HashedExpression
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
-    ValueAssignment(..),
-    OptimizationProblem(..),
-    proceed
+    ValueAssignment (..),
+    OptimizationProblem (..),
+    proceed,
   )
 where
 
@@ -59,13 +59,12 @@ mkValMap ss = Map.fromList $ mapMaybe f ss
       | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
       | otherwise = Nothing
 
-data OptimizationProblem =
-  OptimizationProblem
-    { objective :: Expression Scalar R,
-      constraints :: [ConstraintStatement],
-      values :: [ValueAssignment],
-      workingDir :: String
-    }
+data OptimizationProblem = OptimizationProblem
+  { objective :: Expression Scalar R,
+    constraints :: [ConstraintStatement],
+    values :: [ValueAssignment],
+    workingDir :: String
+  }
 
 proceed :: Codegen codegen => OptimizationProblem -> codegen -> IO ()
 proceed OptimizationProblem {..} codegen = do

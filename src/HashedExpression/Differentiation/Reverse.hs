@@ -19,7 +19,6 @@ import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
 import HashedExpression.Internal.Context
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((**), (^))
@@ -223,12 +222,20 @@ partialDerivativesMap (Expression rootID mp) =
               C -> do
                 dY <- inject dss (zeroX +: zeroX) (from dN)
                 addDerivative y dY
-          MatMul x y -> do
-            -- mn np mp
-            dX <- from dN ** transpose (from y)
-            addDerivative x dX
-            dY <- transpose (from x) ** from dN
-            addDerivative y dY
+          MatMul x y ->
+            case (retrieveShape x curMp, retrieveShape y curMp) of
+              ([m, n], [_n, p]) -> do
+                -- mn np mp
+                dX <- from dN ** transpose (from y)
+                addDerivative x dX
+                dY <- transpose (from x) ** from dN
+                addDerivative y dY
+              ([m, n], [_n]) -> do
+                -- mn n m
+                dX <- (coerceTo [m, 1] $ from dN) ** (coerceTo [1, n] $ from y)
+                addDerivative x dX
+                dY <- transpose (from x) ** from dN
+                addDerivative y dY
           Transpose x -> do
             dX <- transpose $ from dN
             addDerivative x dX

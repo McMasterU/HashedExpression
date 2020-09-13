@@ -191,3 +191,8 @@ instance (MonadExpression m) => TransposeOp (m NodeID) (m NodeID) where
   transpose operand = do
     x <- operand
     perform (Unary specTranspose) [x]
+
+coerceTo :: (MonadExpression m) => Shape -> m NodeID -> m NodeID
+coerceTo shape operand = do
+  x <- operand
+  perform (Unary (specCoerce shape)) [x]

@@ -18,7 +18,7 @@ ex1_linearRegression =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "problems" </> "ex1"
+          workingDir = "examples" </> "ex1"
         }
 
 ex1 :: IO ()

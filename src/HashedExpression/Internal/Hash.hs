@@ -113,6 +113,7 @@ hash (shape, et, node) rehashNum =
         Inject ss sub base -> offsetHash 34 . hashString' $ (intercalate separator . map toStringHash $ ss) ++ separator ++ show sub ++ show base
         MatMul arg1 arg2 -> offsetHash 35 . hashString' $ show arg1 ++ separator ++ show arg2
         Transpose arg -> offsetHash 36 . hashString' $ show arg
+        Coerce s arg -> offsetHash 37 . hashString' $ (intercalate separator . map show $ s) ++ separator ++ show arg
 
 -- | Check the outcome of a generated hash value
 data HashOutcome
