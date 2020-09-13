@@ -1,9 +1,11 @@
 # HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
-A type-safe Haskell-embeded DSL for solving optimization problems.
+
+Type-safe modelling DSL, symbolic transformation of expressions (simplification and computing derivatives), and code generation for solving optimization problems.
+
 
 ## Features
-- Provide a type-safe APIs to model optimization problems. This is achieved by employing Haskell's phantom-type and type-level programming, especially type-level natural numbers to properly constraint shape and element type (Real or Complex).
-    - For example, we couldn't add 2 expression with mismatched shape/element type:
+- A type-safe, correct by construction APIs to model optimization problems, empowered by Haskell's phantom-type and type-level programming.
+    - For example, adding 2 expressions with mismatched shape or element type (**R** or C) will result in type error will result in type error:
     ```haskell
     λ> let x = variable1D @10 "x"
     λ> let y = variable1D @9 "y"
@@ -55,8 +57,7 @@ Supported operations:
 - basic algebraic operations: addition, multiplication, etc.
 - complex related: real, imag, conjugate, etc.
 - trigonometry, log, exponential, power.
-- rotate
-- projection (think of Python's slice notation, but with type-safety), and injection (reverse of projection)
+- rotation, projection (think of Python's slice notation, but with type-safety), and injection (reverse of projection)
 - piecewise function
 - Fourier Transform, inverse Fourier Transform
 - dot product (inner product), matrix multiplication
@@ -182,5 +183,8 @@ List of contributors:
 - [Nhan Thai](https://github.com/dandoh)
 - [Curtis D'alves](https://github.com/dalvescb)
 - [Christopher Anand](https://github.com/christopheranand)
-- ...
+- [Christopher Schankula](https://github.com/CSchank)
+- [Nasim Khoonkari ](https://github.com/Nasim91)
+- [Habib Ghaffari Hadigheh](https://github.com/ghhabib2)
+- [Padma Pasupathi](https://github.com/padmapasupathi)
 

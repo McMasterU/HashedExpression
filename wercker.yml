@@ -32,11 +32,11 @@ create-release:
     - script:
         name: Create lbfgs-b archive
         code: |
-          tar czfh lbfgs-b-$RELEASE_VERSION.tar.gz --directory=algorithms/lbfgs-b `ls algorithms/lbfgs-b`
+          tar czfh lbfgs-b-$RELEASE_VERSION.tar.gz --directory=solvers/lbfgs-b `ls solvers/lbfgs-b`
     - script:
         name: Create ipopt archive
         code: |
-          tar czfh ipopt-$RELEASE_VERSION.tar.gz --directory=algorithms/ipopt `ls algorithms/ipopt`
+          tar czfh ipopt-$RELEASE_VERSION.tar.gz --directory=solvers/ipopt `ls solvers/ipopt`
     - wercker/github-create-release@2.1.1:
         token: $GITHUB_TOKEN
         tag: v$RELEASE_VERSION
@@ -53,21 +53,21 @@ create-release:
 
 
 
-create-docker-image:
-  box: hashexpression/symphony_env
-  steps:
-    - script:
-        name: Remove unncessary directories & files
-        code: |
-          rm -rf .stack-work
-          rm -rf .git
-    - script:
-        name: Copy symphony to PATH
-        code: |
-          cp bins/symphony /usr/bin
-    - internal/docker-push:
-        username: $DOCKERHUB_USERNAME # Registry username
-        password: $DUCKERHUB_PASSWORD # Registry password
-        repository: hashexpression/symphony
+# create-docker-image:
+#   box: hashexpression/symphony_env
+#   steps:
+#     - script:
+#         name: Remove unncessary directories & files
+#         code: |
+#           rm -rf .stack-work
+#           rm -rf .git
+#     - script:
+#         name: Copy symphony to PATH
+#         code: |
+#           cp bins/symphony /usr/bin
+#     - internal/docker-push:
+#         username: $DOCKERHUB_USERNAME # Registry username
+#         password: $DUCKERHUB_PASSWORD # Registry password
+#         repository: hashexpression/symphony
 
 
