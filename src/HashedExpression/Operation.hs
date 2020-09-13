@@ -304,11 +304,11 @@ instance
   where
   (**) = applyBinary specMatMul
 
---instance
---  (KnownNat m, KnownNat n) =>
---  MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et)
---  where
---  (**) = applyBinary specMatMul
+instance
+  (KnownNat m, KnownNat n) =>
+  MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et)
+  where
+  (**) = applyBinary specMatMul
 
 instance
   (KnownNat m, KnownNat n) =>
@@ -316,11 +316,11 @@ instance
   where
   transpose = applyUnary specTranspose
 
---instance
---  (KnownNat m) =>
---  TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et)
---  where
---  transpose = applyUnary specTranspose
+-- instance
+--   (KnownNat m) =>
+--   TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et)
+--   where
+--   transpose = applyUnary specTranspose
 
 -------------------------------------------------------------------------------
 

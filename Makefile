@@ -7,12 +7,6 @@ doc:
 format:
 	find src -type f -name '*.hs' | xargs $(FORMAT)
 	find test -type f -name '*.hs' | xargs $(FORMAT)
-	find symphony/Symphony -type f -name '*.hs' | xargs $(FORMAT)
-
-
-check:
-	stack clean
-	stack build --fast --ghc-options -Wall
 
 clean:
 	-git clean -f -x C/

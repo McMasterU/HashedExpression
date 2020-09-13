@@ -199,8 +199,14 @@ genExpUntyped qc shape et
                       [ apply (Unary (specProject [ds])) [exp1],
                         exp2
                       ]
+                fromMatrixMul = do
+                  m <- elements [3 .. 9]
+                  x <- subOf [n, m] et
+                  y <- subOf [m] et
+                  return $ apply (Binary specMatMul) [x, y]
              in [ fromRotate,
-                  fromProjectInject
+                  fromProjectInject,
+                  fromMatrixMul
                 ]
           [m, n] ->
             let fromRotate = do
