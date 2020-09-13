@@ -35,12 +35,11 @@ dependencies:
   - file-embed
 
 extra-source-files:
-  - symphony/*.hs
   - ChangeLog.md
 
-build-tools:
-  - alex
-  - happy
+# build-tools:
+#   - alex
+#   - happy
 
 default-extensions:
   - OverloadedStrings
@@ -86,20 +85,20 @@ executables:
     dependencies:
       - HashedExpression
       - hspec
-  symphony:
-    main:                Main.hs
-    source-dirs:
-      - symphony
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
-    dependencies:
-      - HashedExpression
-      - regex-posix
-      - optparse-applicative
-      - JuicyPixels
-      - process
+  # symphony:
+  #   main:                Main.hs
+  #   source-dirs:
+  #     - symphony
+  #   ghc-options:
+  #     - -threaded
+  #     - -rtsopts
+  #     - -with-rtsopts=-N
+  #   dependencies:
+  #     - HashedExpression
+  #     - regex-posix
+  #     - optparse-applicative
+  #     - JuicyPixels
+  #     - process
 
 
 tests:
