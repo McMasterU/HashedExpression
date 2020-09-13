@@ -1,6 +1,6 @@
 # HashedExpression [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/s/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
 
-Type-safe modelling DSL, symbolic transformation of expressions (simplification and computing derivatives), and code generation for solving optimization problems.
+Type-safe modelling DSL, symbolic transformation, and code generation for solving optimization problems.
 
 
 ## Features
