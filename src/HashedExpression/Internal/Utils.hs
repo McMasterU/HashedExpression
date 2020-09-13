@@ -108,6 +108,21 @@ mkIndices (At i) size = [i]
 mkIndices (Range start end step) size =
   map (`mod` size) [start, start + step .. if end >= start then end else end + size]
 
+breakSub :: Int -> [a] -> [([a], [a], [a])]
+breakSub len [] = []
+breakSub len xs | len > length xs = []
+breakSub len xs@(y : ys) =
+  ([], take len xs, drop len xs) :
+  map (\(prefix, sub, suffix) -> (y : prefix, sub, suffix)) (breakSub len ys)
+
+coercible :: Shape -> Shape -> Bool
+coercible sml target =
+  any
+    ( \(prefix, sub, suffix) ->
+        sub == sml && all (== 1) prefix && all (== 1) suffix
+    )
+    $ breakSub (length sml) target
+
 -------------------------------------------------------------------------------
 zipMp :: forall a b c. Ord a => Map a b -> Map a c -> Map a (b, c)
 zipMp mp1 mp2 = foldl' f Map.empty $ Map.keys mp1

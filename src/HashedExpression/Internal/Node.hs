@@ -78,6 +78,7 @@ nodeTypeWeight node =
     Inject {} -> 33
     MatMul {} -> 33
     Transpose {} -> 34
+    Coerce {} -> 35
     -------------------------------------------------
     Scale {} -> 100
     RealImag {} -> 101
@@ -128,6 +129,7 @@ opArgs node =
     Inject ss sub base -> [sub, base]
     MatMul arg1 arg2 -> [arg1, arg2]
     Transpose arg -> [arg]
+    Coerce s arg -> [arg]
 
 mapOp :: (NodeID -> NodeID) -> Op -> Op
 mapOp f op =
@@ -169,6 +171,7 @@ mapOp f op =
     Inject s sub base -> Inject s (f sub) (f base)
     MatMul arg1 arg2 -> MatMul (f arg1) (f arg2)
     Transpose arg -> Transpose (f arg)
+    Coerce s arg -> Coerce s (f arg)
 
 mapNode :: (NodeID -> NodeID) -> Node -> Node
 mapNode f (shape, et, op) = (shape, et, mapOp f op)

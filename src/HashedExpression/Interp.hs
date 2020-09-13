@@ -302,15 +302,15 @@ eval valMap (Expression nID mp) =
         MatMul arg1 arg2
           | et == R ->
             case (shape, retrieveShape arg1 mp, retrieveShape arg2 mp) of
-              --              ([_m], [m, _n], [n]) ->
-              --                let V2DR x = eval' arg1
-              --                    V1DR y = eval' arg2
-              --                 in V1DR $
-              --                      listArray
-              --                        (0, m - 1)
-              --                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
-              --                          | i <- [0 .. m - 1]
-              --                        ]
+              ([_m], [m, _n], [n]) ->
+                let V2DR x = eval' arg1
+                    V1DR y = eval' arg2
+                 in V1DR $
+                      listArray
+                        (0, m - 1)
+                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1]
+                        ]
               ([_m, _p], [m, _n], [n, p]) ->
                 let V2DR x = eval' arg1
                     V2DR y = eval' arg2
@@ -323,15 +323,15 @@ eval valMap (Expression nID mp) =
                         ]
           | et == C ->
             case (shape, retrieveShape arg1 mp, retrieveShape arg2 mp) of
-              --              ([_m], [m, _n], [n]) ->
-              --                let V2DC x = eval' arg1
-              --                    V1DC y = eval' arg2
-              --                 in V1DC $
-              --                      listArray
-              --                        (0, m - 1)
-              --                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
-              --                          | i <- [0 .. m - 1]
-              --                        ]
+              ([_m], [m, _n], [n]) ->
+                let V2DC x = eval' arg1
+                    V1DC y = eval' arg2
+                 in V1DC $
+                      listArray
+                        (0, m - 1)
+                        [ sum [(x ! (i, j)) * (y ! j) | j <- [0 .. n - 1]]
+                          | i <- [0 .. m - 1]
+                        ]
               ([_m, _p], [m, _n], [n, p]) ->
                 let V2DC x = eval' arg1
                     V2DC y = eval' arg2
@@ -345,20 +345,23 @@ eval valMap (Expression nID mp) =
         Transpose arg
           | et == R ->
             case (retrieveShape arg mp, shape) of
-              --              ([m], [1, _m]) ->
-              --                let V1DR x = eval' arg
-              --                 in V2DR $ listArray ((0, 0), (1, m - 1)) $ elems x
+              -- ([m], [1, _m]) ->
+              --   let V1DR x = eval' arg
+              --    in V2DR $ listArray ((0, 0), (1, m - 1)) $ elems x
               ([m, n], [_n, _m]) ->
                 let V2DR x = eval' arg
                  in V2DR $ listArray ((0, 0), (n - 1, m - 1)) [x ! (j, i) | i <- [0 .. n - 1], j <- [0 .. m - 1]]
           | et == C ->
             case (retrieveShape arg mp, shape) of
-              --              ([m], [1, _m]) ->
-              --                let V1DC x = eval' arg
-              --                 in V2DC $ listArray ((0, 0), (1, m - 1)) $ elems x
+              -- ([m], [1, _m]) ->
+              --   let V1DC x = eval' arg
+              --    in V2DC $ listArray ((0, 0), (1, m - 1)) $ elems x
               ([m, n], [_n, _m]) ->
                 let V2DC x = eval' arg
                  in V2DC $ listArray ((0, 0), (n - 1, m - 1)) [x ! (j, i) | i <- [0 .. n - 1], j <- [0 .. m - 1]]
+        Coerce _ arg
+          | et == R -> constructR . extractR $ eval' arg
+          | et == C -> constructC . extractC $ eval' arg
         node -> error $ show node
 
 zipWithA :: Ix x => (a -> b -> c) -> Array x a -> Array x b -> Array x c

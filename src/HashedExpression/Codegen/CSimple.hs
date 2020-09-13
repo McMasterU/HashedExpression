@@ -146,23 +146,26 @@ initCodegen config mp variableIDs =
   where
     (cs, rest) = partition (`Set.member` Set.fromList variableIDs) $ nodeIDs mp
     f (addressMap, curSizeReal, curSizeComplex) nID =
-      let (shape, et, node) = retrieveNode nID mp
-       in case et of
-            R -> (Map.insert nID (AddressReal curSizeReal) addressMap, curSizeReal + product shape, curSizeComplex)
-            C -> (Map.insert nID (AddressComplex curSizeComplex) addressMap, curSizeReal, curSizeComplex + product shape)
+      let (shape, et, op) = retrieveNode nID mp
+       in case (op, et) of
+            (Coerce {}, _) -> (addressMap, curSizeReal, curSizeComplex)
+            (_, R) -> (Map.insert nID (AddressReal curSizeReal) addressMap, curSizeReal + product shape, curSizeComplex)
+            (_, C) -> (Map.insert nID (AddressComplex curSizeComplex) addressMap, curSizeReal, curSizeComplex + product shape)
     (memMap, totalSizeReal, totalSizeComplex) = foldl' f (Map.empty, 0, 0) $ cs ++ rest
     addressMap nID
       | Just offset <- Map.lookup nID memMap = offset
       | otherwise = error "Node ID doesn't exist in address map"
     access :: NodeID -> Text -> Text
-    access nID offsetVal =
-      let offset
-            | offsetVal == "" = ""
-            | offsetVal == "0" = ""
-            | otherwise = " + " <> offsetVal
-       in case addressMap nID of
-            AddressReal i -> "ptr[" <> tt i <> offset <> "]"
-            AddressComplex i -> "ptr_c[" <> tt i <> offset <> "]"
+    access nID offsetVal
+      | Coerce _ from <- retrieveOp nID mp = access from offsetVal
+      | otherwise =
+        let offset
+              | offsetVal == "" = ""
+              | offsetVal == "0" = ""
+              | otherwise = " + " <> offsetVal
+         in case addressMap nID of
+              AddressReal i -> "ptr[" <> tt i <> offset <> "]"
+              AddressComplex i -> "ptr_c[" <> tt i <> offset <> "]"
 
 ---------------------------------------------------------------------------------
 evaluating :: CSimpleCodegen -> [NodeID] -> Code
@@ -385,17 +388,17 @@ evaluating CSimpleCodegen {..} rootIDs =
                in Scoped [copyBase, injectSub]
             MatMul x y ->
               case (retrieveShape x cExpressionMap, retrieveShape y cExpressionMap) of
-                --                ([size1, size2], [_size2]) ->
-                --                  for i size1 $
-                --                    [ if et == R
-                --                        then "double acc" := "0"
-                --                        else "double complex acc" := "0",
-                --                      for j size2 $
-                --                        [ "int ij" := ("i * " <> tt size1 <> " + j"),
-                --                          "acc" := ("acc + " <> (x !! "ij") <> " * " <> (y !! j))
-                --                        ],
-                --                      (n !! i) := "acc"
-                --                    ]
+                ([size1, size2], [_size2]) ->
+                  for i size1 $
+                    [ if et == R
+                        then "double acc" := "0"
+                        else "double complex acc" := "0",
+                      for j size2 $
+                        [ "int ij" := ("i * " <> tt size2 <> " + j"),
+                          "acc" := ("acc + " <> (x !! "ij") <> " * " <> (y !! j))
+                        ],
+                      (n !! i) := "acc"
+                    ]
                 ([size1, size2], [_size2, size3]) ->
                   for i size1 $
                     [ for j size3 $
@@ -412,7 +415,6 @@ evaluating CSimpleCodegen {..} rootIDs =
                         ]
                     ]
             Transpose x -> case retrieveShape x cExpressionMap of
-              --              [size] -> for i size [(n !! i) := (x !! i)]
               [size1, size2] ->
                 for i size2 $
                   [ for j size1 $
@@ -421,6 +423,7 @@ evaluating CSimpleCodegen {..} rootIDs =
                         (n !! "ij") := (x !! "ji")
                       ]
                   ]
+            Coerce {} -> Empty
             node -> error $ "Not implemented " ++ show node
 
 --

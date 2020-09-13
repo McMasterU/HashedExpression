@@ -178,6 +178,8 @@ data Op
     MatMul Arg Arg
   | -- | Transpose
     Transpose Arg
+  | -- | Internal only: coerce shape
+    Coerce Shape Arg
   deriving (Show, Eq, Ord)
 
 -- | Used by operators in the 'Node' type to reference another subexpression (i.e another 'Node')

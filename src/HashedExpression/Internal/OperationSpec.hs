@@ -12,6 +12,7 @@
 -- This modules contains specification for all operations (each corresponding to a constructor of @Op)
 module HashedExpression.Internal.OperationSpec where
 
+import Data.Function ((&))
 import Data.List (sort)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
@@ -250,9 +251,9 @@ specMatMul = BinarySpec {toOp = MatMul, decideShape = decideShape, decideET = de
     decideShape [m, n] [p, q]
       | n == p = [m, q]
       | otherwise = error $ "invalid shape matrix multiplication" ++ show [m, n] ++ " " ++ show [p, q]
-    --    decideShape [m, n] [p]
-    --      | n == p = [m]
-    --      | otherwise = error $ "invalid shape matrix multiplication" ++ show [m, n] ++ " " ++ show [p]
+    decideShape [m, n] [p]
+      | n == p = [m]
+      | otherwise = error $ "invalid shape matrix multiplication" ++ show [m, n] ++ " " ++ show [p]
     decideShape shape1 shape2 = error $ "invalid shape matrix multiplication" ++ show shape1 ++ " " ++ show shape2
     decideET x y = assertSame [x, y] x
 
@@ -260,5 +261,12 @@ specTranspose :: HasCallStack => UnarySpec
 specTranspose = UnarySpec {toOp = Transpose, decideShape = decideShape, decideET = id}
   where
     decideShape [m, n] = [n, m]
-    decideShape [m] = [1, m]
+    -- decideShape [m] = [1, m]
     decideShape _ = error "invalid shape tranpose"
+
+specCoerce :: HasCallStack => Shape -> UnarySpec
+specCoerce targetShape = UnarySpec {toOp = Coerce targetShape, decideShape = decideShape, decideET = id}
+  where
+    decideShape shape
+      | coercible shape targetShape || coercible targetShape shape = targetShape
+    decideShape _ = error "not coercible"
