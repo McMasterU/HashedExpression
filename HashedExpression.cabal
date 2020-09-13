@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bccf74eaa87ab257a251fdb0263686b18b04a3f8db590acdaa3b2318fc71b2a2
+-- hash: 6877893ae55d102627beb1628de12422ca33969535bcfda6e0a428908910e4c1
 
 name:           HashedExpression
-version:        0.0.6
+version:        0.0.8
 description:    Please see the README on GitHub at <https://github.com/McMasterU/HashedExpression#readme>
 homepage:       https://github.com/McMasterU/HashedExpression#readme
 bug-reports:    https://github.com/McMasterU/HashedExpression/issues
