@@ -25,10 +25,10 @@ create-release:
         name: Get release version
         code: |
           export RELEASE_VERSION=$(cat VERSION)
-    - script:
-        name: Create symphony archive
-        code: |
-          tar czf symphony-$RELEASE_VERSION-linux.tar.gz --directory=bins symphony
+    # - script:
+    #     name: Create symphony archive
+    #     code: |
+    #       tar czf symphony-$RELEASE_VERSION-linux.tar.gz --directory=bins symphony
     - script:
         name: Create lbfgs-b archive
         code: |
@@ -41,9 +41,9 @@ create-release:
         token: $GITHUB_TOKEN
         tag: v$RELEASE_VERSION
         title: v$RELEASE_VERSION
-    - wercker/github-upload-asset@2.1.1:
-        token: $GITHUB_TOKEN
-        file: symphony-$RELEASE_VERSION-linux.tar.gz
+    # - wercker/github-upload-asset@2.1.1:
+    #     token: $GITHUB_TOKEN
+    #     file: symphony-$RELEASE_VERSION-linux.tar.gz
     - wercker/github-upload-asset@2.1.1:
         token: $GITHUB_TOKEN
         file: ipopt-$RELEASE_VERSION.tar.gz

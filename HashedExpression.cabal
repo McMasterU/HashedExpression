@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7a497ce4b74906e9b6587891c860e29091feea6ac2ac440ebe68799239b48f04
+-- hash: bccf74eaa87ab257a251fdb0263686b18b04a3f8db590acdaa3b2318fc71b2a2
 
 name:           HashedExpression
 version:        0.0.6
@@ -18,14 +18,6 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
-    symphony/AbsHashedLang.hs
-    symphony/ComposOp.hs
-    symphony/ErrM.hs
-    symphony/LayoutHashedLang.hs
-    symphony/Main.hs
-    symphony/ParHashedLang.hs
-    symphony/PrintHashedLang.hs
-    symphony/SkelHashedLang.hs
     ChangeLog.md
 
 source-repository head
@@ -63,9 +55,6 @@ library
   hs-source-dirs:
       src
   default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
-  build-tools:
-      alex
-    , happy
   build-depends:
       array
     , base
@@ -96,9 +85,6 @@ executable HashedExpression-exe
       app
   default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-tools:
-      alex
-    , happy
   build-depends:
       HashedExpression
     , array
@@ -114,54 +100,6 @@ executable HashedExpression-exe
     , hspec
     , mtl
     , process
-    , split
-    , text
-    , time
-    , utility-ht
-  default-language: Haskell2010
-
-executable symphony
-  main-is: Main.hs
-  other-modules:
-      AbsHashedLang
-      ComposOp
-      ErrM
-      LayoutHashedLang
-      LexHashedLang
-      ParHashedLang
-      ParHashedLang
-      PrintHashedLang
-      SkelHashedLang
-      Symphony.Common
-      Symphony.Entry
-      Symphony.Exp
-      Symphony.Solver
-      Symphony.Symphony
-      Paths_HashedExpression
-  hs-source-dirs:
-      symphony
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-tools:
-      alex
-    , happy
-  build-depends:
-      HashedExpression
-    , JuicyPixels
-    , array
-    , base
-    , binary
-    , bytestring
-    , containers
-    , deepseq
-    , easyplot
-    , extra
-    , file-embed
-    , filepath
-    , mtl
-    , optparse-applicative
-    , process
-    , regex-posix
     , split
     , text
     , time
@@ -187,9 +125,6 @@ test-suite HashedExpression-test
       test
   default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-tools:
-      alex
-    , happy
   build-depends:
       HUnit
     , HashedExpression

@@ -1,1 +1,22 @@
-cradle: {stack: {component: "HashedExpression:lib" }}
+cradle:
+  stack:
+    - path: "./src"
+      component: "HashedExpression:lib"
+
+    - path: "./app/Main.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples.Brain.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples.Ex1.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples.Ex2.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Paths_HashedExpression.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./test"
+      component: "HashedExpression:test:HashedExpression-test"
