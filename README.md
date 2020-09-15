@@ -96,8 +96,8 @@ ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
 (`(*.)` is scaling )
 
 
-![](docs/images/ex1_before.png)
-![](docs/images/ex1_after.png)
+<img src="docs/images/ex1_before.png" width="450px"/>
+<img src="docs/images/ex1_after.png" width="450px"/>
 
 ### Logistic regression
 Taken from [exercise 2](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex2) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
@@ -136,8 +136,8 @@ ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
 
 ( `(**)` is matrix multiplication, `(<.>)` is dot product, `project (range @1 @27, at @0) theta` is the typed version of `theta[1:27,0]` )
 
-![](docs/images/ex2_before.png)
-![](docs/images/ex2_after.png)
+<img src="docs/images/ex2_before.png" width="450px"/>
+<img src="docs/images/ex2_after.png" width="450px"/>
 
 ### MRI Reconstruction
 
@@ -173,8 +173,8 @@ brain :: IO ()
 brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
 ```
 
-![](docs/images/brain_before.png)
-![](docs/images/brain_after.png)
+<img src="docs/images/brain_before.png" width="450px"/>
+<img src="docs/images/brain_after.png" width="450px"/>
 
 ### Neural network
 Taken from [exercise 4](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex4) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
@@ -224,8 +224,8 @@ ex4 :: IO ()
 ex4 = proceed ex4_neuralNetwork CSimpleConfig {output = OutputHDF5, maxIteration = Just 400}
 ```
 
-![](docs/images/nn_before.png)
-![](docs/images/nn_weight.png)
+<img src="docs/images/nn_before.png" width="450px"/>
+<img src="docs/images/nn_weight.png" width="450px"/>
 
 (The second image visualizes the (trained) hidden layer. Training set accuracy 99.64%)
 
