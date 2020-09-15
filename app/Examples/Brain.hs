@@ -26,8 +26,8 @@ brain_reconstructFromMRI =
               re :-> VFile (HDF5 "kspace.h5" "re"),
               mask :-> VFile (HDF5 "mask.h5" "mask")
             ],
-          workingDir = "examples" </> "brain"
+          workingDir = "examples" </> "Brain"
         }
 
 brain :: IO ()
-brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
+brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5, maxIteration = Nothing}

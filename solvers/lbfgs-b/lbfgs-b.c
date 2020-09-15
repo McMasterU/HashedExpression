@@ -29,7 +29,6 @@ extern void evaluate_objective();
 extern void evaluate_partial_derivatives();
 extern void write_result();
 
-int num_iterations;
 
 int main() {
     int i, j;
@@ -100,7 +99,7 @@ int main() {
     //    iprint>100  print details of every iteration including x and g;
     //   When iprint > 0, the file iterate.dat will be created to
     //                    summarize the iteration.
-    static integer iprint = 0;
+    static integer iprint = 50;
 
 
     // MARK: initialization, read values, bounds
@@ -123,6 +122,7 @@ int main() {
     }
 
     *task = START;
+    int num_iter = 0;
     /*        ------- the beginning of the loop ---------- */
 L111:
     /*     This is the call to the L-BFGS-B code. */
@@ -145,13 +145,17 @@ L111:
           }
         }
 
+
         f = ptr[objective_offset];
 
         goto L111;
     }
 
     if ( *task==NEW_X ) {
-        goto L111;
+        num_iter++;
+        if (MAX_NUM_ITERATIONS == 0 || num_iter <= MAX_NUM_ITERATIONS) {
+          goto L111;
+        }
     }
 
     write_result();

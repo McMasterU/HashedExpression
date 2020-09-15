@@ -39,7 +39,8 @@ data DataOutput = OutputText | OutputHDF5 deriving (Eq, Show)
 
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
-  { output :: DataOutput
+  { output :: DataOutput,
+    maxIteration :: Maybe Int
   }
   deriving (Eq, Show)
 
@@ -507,7 +508,7 @@ instance Codegen CSimpleConfig where
           Scoped
             [ Printf ["Init value for " <> tt name <> " is not provided, generate random init for " <> tt name <> " ...\\n"],
               for "i" (product shape) $
-                [("ptr[" <> tt offset <> "+ i]") := "(double) rand() / RAND_MAX"]
+                [("ptr[" <> tt offset <> "+ i]") := "0.2 * (double) rand() / RAND_MAX"]
             ]
         where
           offset = addressReal nId
@@ -567,6 +568,7 @@ instance Codegen CSimpleConfig where
           "// all the actual double variables are allocated",
           "// one after another, starts from here",
           "#define VARS_START_OFFSET " <> tt (addressReal (nodeId . head $ variables)),
+          "#define MAX_NUM_ITERATIONS " <> tt (fromMaybe 0 maxIteration),
           "const char* var_name[NUM_VARIABLES] = {" <> (T.intercalate ", " . map (ttq . varName) $ variables) <> "};",
           "const int var_size[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableSizes) <> "};",
           "const int var_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableOffsets) <> "};",

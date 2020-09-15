@@ -3,9 +3,10 @@
 
 module Main where
 
-import Examples.Ex1
-import Examples.Ex2
 import Examples.Brain
+import Examples.LinearRegression
+import Examples.LogisticRegression ()
+import Examples.NeuralNetwork
 
 main :: IO ()
-main = print "hello world"
+main = ex4
