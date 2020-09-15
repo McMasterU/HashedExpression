@@ -69,7 +69,7 @@ singleExpressionCProgram valMap expr =
     (mp, n) = unwrap expr
     bound = product (retrieveShape n mp)
     et = retrieveElementType n mp
-    codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText} mp []
+    codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText, maxIteration = Nothing} mp []
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     initMemory :: Code
     initMemory =
