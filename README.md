@@ -70,7 +70,7 @@ For those examples taken from Coursera's [Machine Learning](https://www.coursera
 ### Linear regression
 Taken from [exercise 1](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex1) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
 
-Model is in [app/Examples/Ex1.hs](app/Examples/Ex1.hs), data is in [examples/ex1](examples/ex1)
+Model is in [app/Examples/LinearRegression.hs](app/Examples/LinearRegression.hs), data & plotting script is in [examples/LinearRegression](examples/LinearRegression)
 
 ```haskell
 ex1_linearRegression :: OptimizationProblem
@@ -87,7 +87,7 @@ ex1_linearRegression =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "examples" </> "ex1"
+          workingDir = "examples" </> "LinearRegression"
         }
 
 ex1 :: IO ()
@@ -102,7 +102,7 @@ ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
 ### Logistic regression
 Taken from [exercise 2](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex2) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
 
-Model is in [app/Examples/Ex2.hs](app/Examples/Ex2.hs), data is in [examples/ex2](examples/ex2)
+Model is in [app/Examples/LogisticRegression.hs](app/Examples/LogisticRegression.hs), data & plotting script is in [examples/LogisticRegression](examples/LogisticRegression)
 
 ```haskell
 sigmoid :: (Dimension d) => Expression d R -> Expression d R
@@ -127,7 +127,7 @@ ex2_logisticRegression =
             [ x :-> VFile (TXT "x_expanded.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "examples" </> "ex2"
+          workingDir = "examples" </> "LogisticRegression"
         }
 
 ex2 :: IO ()
@@ -141,7 +141,7 @@ ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
 
 ### MRI Reconstruction
 
-Model is in [app/Examples/Brain.hs](app/Examples/Brain.hs), data is in [examples/brain](examples/brain)
+Model is in [app/Examples/Brain.hs](app/Examples/Brain.hs), data is in [examples/Brain](examples/Brain)
 
 ```haskell
 brain_reconstructFromMRI :: OptimizationProblem
@@ -166,7 +166,7 @@ brain_reconstructFromMRI =
               re :-> VFile (HDF5 "kspace.h5" "re"),
               mask :-> VFile (HDF5 "mask.h5" "mask")
             ],
-          workingDir = "examples" </> "brain"
+          workingDir = "examples" </> "Brain"
         }
 
 brain :: IO ()
@@ -175,6 +175,59 @@ brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
 
 ![](docs/images/brain_before.png)
 ![](docs/images/brain_after.png)
+
+### Neural network
+Taken from [exercise 4](https://github.com/nsoojin/coursera-ml-py/tree/master/machine-learning-ex4) - [Machine Learning](https://www.coursera.org/learn/machine-learning) - Coursera.
+
+Model is in [app/Examples/NeuralNetwork.hs](app/Examples/NeuralNetwork.hs), data & plotting script is in [examples/NeuralNetwork](examples/NeuralNetwork)
+
+```haskell
+sigmoid :: (Dimension d) => Expression d R -> Expression d R
+sigmoid x = 1.0 / (1.0 + exp (- x))
+
+prependColumn ::
+  forall m n.
+  (Injectable 0 (m - 1) m m, Injectable 1 n n (n + 1)) =>
+  Double ->
+  Expression (D2 m n) R ->
+  Expression (D2 m (n + 1)) R
+prependColumn v exp = inject (range @0 @(m - 1), range @1 @n) exp (constant2D @m @(n + 1) v)
+
+ex4_neuralNetwork :: OptimizationProblem
+ex4_neuralNetwork =
+  let x = param2D @5000 @400 "x"
+      y = param2D @5000 @10 "y"
+      -- variables
+      theta1 = variable2D @401 @25 "theta1"
+      theta2 = variable2D @26 @10 "theta2"
+      -- neural net
+      a1 = prependColumn 1 x
+      z2 = sigmoid (a1 ** theta1)
+      a2 = prependColumn 1 z2
+      hypothesis = sigmoid (a2 ** theta2)
+      -- regularization
+      lambda = 1
+      regTheta1 = project (range @1 @400, range @0 @24) theta1 -- no first row
+      regTheta2 = project (range @1 @25, range @0 @9) theta2 -- no first row
+      regularization = (lambda / 2) * (norm2square regTheta1 + norm2square regTheta2)
+   in OptimizationProblem
+        { objective = sumElements ((- y) * log hypothesis - (1 - y) * log (1 - hypothesis)) + regularization,
+          constraints = [],
+          values =
+            [ x :-> VFile (HDF5 "data.h5" "x"),
+              y :-> VFile (HDF5 "data.h5" "y")
+            ],
+          workingDir = "examples" </> "NeuralNetwork"
+        }
+
+ex4 :: IO ()
+ex4 = proceed ex4_neuralNetwork CSimpleConfig {output = OutputHDF5, maxIteration = Just 400}
+```
+
+![](docs/images/nn_before.png)
+![](docs/images/nn_weight.png)
+
+(The second image visualizes the (trained) hidden layer. Training set accuracy 99.64%)
 
 ## Contributing
 Please read `Contributing.md`. PRs are welcome.
