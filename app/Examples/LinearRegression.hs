@@ -1,4 +1,4 @@
-module Examples.Ex1 where
+module Examples.LinearRegression where
 
 import HashedExpression
 import System.FilePath ((</>))
@@ -18,7 +18,7 @@ ex1_linearRegression =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
             ],
-          workingDir = "examples" </> "ex1"
+          workingDir = "examples" </> "LinearRegression"
         }
 
 ex1 :: IO ()

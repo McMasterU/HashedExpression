@@ -43,7 +43,7 @@ ex4_neuralNetwork =
             [ x :-> VFile (HDF5 "data.h5" "x"),
               y :-> VFile (HDF5 "data.h5" "y")
             ],
-          workingDir = "examples" </> "ex4"
+          workingDir = "examples" </> "NeuralNetwork"
         }
 
 ex4 :: IO ()

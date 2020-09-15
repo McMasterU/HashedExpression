@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0df60ac2faa61564d1e76f2c619787568ab9588b7e0e4f148f2c725910a07d14
+-- hash: 124c0d82cb86956280296d7c8a74b8199f827e970fa78a0da147b794e111e851
 
 name:           HashedExpression
 version:        0.0.8
@@ -78,8 +78,8 @@ executable HashedExpression-exe
   main-is: Main.hs
   other-modules:
       Examples.Brain
-      Examples.Ex1
-      Examples.Ex2
+      Examples.LinearRegression
+      Examples.LogisticRegression
       Examples.NeuralNetwork
       Paths_HashedExpression
   hs-source-dirs:

@@ -7,7 +7,6 @@ from os import path
 
 def display_data(x):
     (m, n) = x.shape
-    print(x.shape)
 
     # Set example_width automatically if not passed in
     example_width = np.round(np.sqrt(n)).astype(int)
@@ -80,8 +79,6 @@ theta1 = np.array(theta1_f.get('theta1'))
 theta2_f = h5py.File('theta2_out.h5', 'r')
 theta2 = np.array(theta2_f.get('theta2'))
 
-print(theta1.shape)
-print(theta2.shape)
 
 print('Visualizing Neural Network...')
 
