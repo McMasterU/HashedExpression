@@ -30,4 +30,4 @@ ex2_logisticRegression =
         }
 
 ex2 :: IO ()
-ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
+ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText, maxIteration = Nothing}

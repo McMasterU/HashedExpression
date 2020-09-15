@@ -22,4 +22,4 @@ ex1_linearRegression =
         }
 
 ex1 :: IO ()
-ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
+ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText, maxIteration = Nothing}

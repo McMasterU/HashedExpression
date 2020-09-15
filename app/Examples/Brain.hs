@@ -30,4 +30,4 @@ brain_reconstructFromMRI =
         }
 
 brain :: IO ()
-brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
+brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5, maxIteration = Nothing}

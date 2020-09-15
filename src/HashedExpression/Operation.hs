@@ -14,19 +14,14 @@
 -- to create multidimensional constants and variables
 module HashedExpression.Operation where
 
-import Data.Array
 import Data.IntMap.Strict (fromList, union, unions)
 import Data.List (sort)
 import Data.Proxy
-import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
-import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
 import Prelude hiding ((**), (^))
 
 instance (Dimension d) => PowerOp (Expression d et) Int where
@@ -219,6 +214,14 @@ instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (Expre
 type x < y = (CmpNat x y ~ 'LT)
 
 type Size start end step n = (((n + end - start) `Mod` n) `Div` step + 1)
+
+type Injectable start end sub base =
+  ( (KnownNat start, KnownNat end),
+    KnownNat sub,
+    KnownNat base,
+    (start < base, end < base),
+    sub ~ Size start end 1 base
+  )
 
 -------------------------------------------------------------------------------
 instance
