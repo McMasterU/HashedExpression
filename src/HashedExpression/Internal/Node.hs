@@ -11,7 +11,7 @@
 -- This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
 -- Node, returning a Node's arguments, returning a Node's shape, etc
 module HashedExpression.Internal.Node
-  ( nodeTypeWeight,
+  ( opTypeWeight,
     sameOp,
     opArgs,
     retrieveElementType,
@@ -34,15 +34,10 @@ import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 
--- | For ordering things inside 'Sum' or 'Product' so we can write rules like
---
--- @
---   restOfProduct ~* (x +: y) ~* (z +: w) |.~~> restOfProduct ~*
---   restOfSum ~+ (x +: y) ~+ (u +: v) |.~~> restOfSum ~+ ((x + u) +: (y + v))
---   ...
--- @
-nodeTypeWeight :: HasCallStack => Op -> Int
-nodeTypeWeight node =
+-- | For ordering op
+-- 
+opTypeWeight :: HasCallStack => Op -> Int
+opTypeWeight node =
   case node of
     Const {} -> 0
     Var {} -> 1
@@ -86,7 +81,7 @@ nodeTypeWeight node =
 
 -- | Equality for 'Node' types (i.e same constructor), not equality of hash
 sameOp :: HasCallStack => Op -> Op -> Bool
-sameOp node1 node2 = nodeTypeWeight node1 == nodeTypeWeight node2
+sameOp node1 node2 = opTypeWeight node1 == opTypeWeight node2
 
 -- | Retrieve the parameters (i.e 'Args') attached to a given 'Node'
 opArgs :: Op -> Args

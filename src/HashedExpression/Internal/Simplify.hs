@@ -367,5 +367,5 @@ reorderOperands exp@(mp, n)
     just s1 <.> just s2
   | otherwise = just n
   where
-    weight nID = nodeTypeWeight $ retrieveOp nID mp
+    weight nID = opTypeWeight $ retrieveOp nID mp
     sortOperands os = concatMap sort . groupOn weight . sortWith weight $ os

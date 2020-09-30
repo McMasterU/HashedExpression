@@ -249,32 +249,6 @@ instance IsElementType C where
 -- --------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
-type Scalar = '[]
-
-type D1 (n :: Nat) = '[n]
-
-type D2 (m :: Nat) (n :: Nat) = '[m, n]
-
-type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
-
-instance Dimension '[] where
-  toShape = []
-
---
-instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
-  toShape = (nat @x) : toShape @xs
-
---
-
--- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
---   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class Dimension (d :: [Nat]) where
-  toShape :: Shape
-
--- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
---   from Integer to Int
-nat :: forall n. (KnownNat n) => Int
-nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- | A Shape encodes the the dimensions (via the length of a list) and size of elements.
 --   It is the data level representation of the 'Dimension' class that's used to encode
@@ -284,6 +258,31 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 -- >  [n]       => KnownNat n => Dimension n
 -- >  [n, m]    => (KnownNat n, KnownNat m) => Dimension '(n,m)
 type Shape = [Int]
+
+-- | Type-level encoding of shapes
+type Scalar = '[]
+
+type D1 (n :: Nat) = '[n]
+
+type D2 (m :: Nat) (n :: Nat) = '[m, n]
+
+type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
+
+-- | Use to constrain 'Expression' dimensions at the type level. The size of each dimension in a vector can be specified
+--   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
+class Dimension (d :: [Nat]) where
+  toShape :: Shape
+
+instance Dimension '[] where
+  toShape = []
+
+instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
+  toShape = (nat @x) : toShape @xs
+
+-- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
+--   from Integer to Int
+nat :: forall n. (KnownNat n) => Int
+nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
