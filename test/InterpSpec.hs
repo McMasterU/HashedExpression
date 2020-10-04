@@ -15,7 +15,7 @@ import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Utils
 import HashedExpression.Interp
-import HashedExpression.Operation hiding (product, sum)
+import HashedExpression.Operation 
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
 import Test.Hspec

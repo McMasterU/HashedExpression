@@ -6,6 +6,6 @@ import Data.FileEmbed
 fftUtils :: String
 fftUtils = $(embedStringFile "embed/fftw.c")
 
--- | Version of HashedExpression and Symphony
+-- | Version of HashedExpression
 version :: String
 version = $(embedStringFile "VERSION")

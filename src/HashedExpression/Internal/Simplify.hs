@@ -37,7 +37,6 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
-import HashedExpression.Operation (constant)
 import HashedExpression.Prettify
 import Prelude hiding ((**), (^))
 import qualified Prelude

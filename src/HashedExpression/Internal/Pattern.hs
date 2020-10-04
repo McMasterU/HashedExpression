@@ -90,7 +90,6 @@ import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Utils
-import HashedExpression.Operation
 import Prelude (Bool)
 import Prelude hiding ((^))
 import qualified Prelude
