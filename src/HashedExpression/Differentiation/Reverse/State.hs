@@ -7,7 +7,14 @@
 -- Portability :  unportable
 --
 -- Helper for reverse accumulation method
-module HashedExpression.Differentiation.Reverse.State where
+module HashedExpression.Differentiation.Reverse.State
+  ( from,
+    addDerivative,
+    setPartialDerivative,
+    ComputeReverseM,
+    ComputeDState (..),
+  )
+where
 
 import Control.Monad.State.Strict
 import qualified Data.IntMap.Strict as IM
@@ -17,9 +24,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.MonadExpression
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
+import HashedExpression.Internal.MonadExpression
 import Prelude hiding ((^))
 
 data ComputeDState = ComputeDState
@@ -29,16 +35,12 @@ data ComputeDState = ComputeDState
   }
 
 -- |
-modifyContextMap :: (ExpressionMap -> ExpressionMap) -> ComputeReverseM ()
-modifyContextMap f = modify' $ \s -> s {contextMap = f (contextMap s)}
-
--- |
 addDerivative :: NodeID -> NodeID -> ComputeReverseM ()
 addDerivative x dx = modify' $ \s -> s {cumulativeDerivatives = Map.insertWith (++) x [dx] (cumulativeDerivatives s)}
 
 -- |
-modifyPartialDerivativeMap :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
-modifyPartialDerivativeMap f = modify' $ \s -> s {partialDerivativeMap = f (partialDerivativeMap s)}
+setPartialDerivative :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
+setPartialDerivative f = modify' $ \s -> s {partialDerivativeMap = f (partialDerivativeMap s)}
 
 -- |
 type ComputeReverseM a = State ComputeDState a
@@ -47,7 +49,7 @@ instance MonadExpression (State ComputeDState) where
   introduceNode node = do
     mp <- gets contextMap
     let nID = hashNode (checkCollisionMap mp) node
-    modifyContextMap $ IM.insert nID node
+    modify' $ \s -> s {contextMap = IM.insert nID node (contextMap s)}
     return $ NodeID nID
 
   getContextMap = gets contextMap

@@ -18,10 +18,7 @@ module HashedExpression.Internal.Node
     retrieveNode,
     retrieveOp,
     retrieveShape,
-    expressionElementType,
-    expressionNode,
     expressionOp,
-    expressionShape,
     mapOp,
     mapNode,
   )
@@ -32,10 +29,8 @@ import Data.List (sort)
 import Data.Tuple.Extra (fst3, snd3, thd3)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 
 -- | For ordering op
--- 
 opTypeWeight :: HasCallStack => Op -> Int
 opTypeWeight node =
   case node of
@@ -201,30 +196,6 @@ retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
 retrieveShape (NodeID n) mp =
   case IM.lookup n mp of
     Just (shape, _, _) -> shape
-    _ -> error "expression not in map"
-
--- | Retrieve the 'ElementType' (i.e 'R','C') of a 'Expression'
-{-# INLINE expressionElementType #-}
-expressionElementType :: HasCallStack => Expression d et -> ElementType
-expressionElementType (Expression (NodeID n) mp) =
-  case IM.lookup n mp of
-    Just (_, et, _) -> et
-    _ -> error "expression not in map"
-
--- | Retrieve the 'Shape' of an 'Expression'
-{-# INLINE expressionShape #-}
-expressionShape :: (ExpressionMap, NodeID) -> Shape
-expressionShape (mp, NodeID n) =
-  case IM.lookup n mp of
-    Just (dim, _, _) -> dim
-    _ -> error "expression not in map"
-
--- | Retrieve the 'Node' of an 'Expression'
-{-# INLINE expressionNode #-}
-expressionNode :: (ExpressionMap, NodeID) -> Node
-expressionNode (mp, NodeID n) =
-  case IM.lookup n mp of
-    Just internal -> internal
     _ -> error "expression not in map"
 
 -- | Retrieve the Op of an expression

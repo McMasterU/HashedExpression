@@ -17,14 +17,10 @@ import HashedExpression.Internal
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Utils
-import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
-import HashedExpression.Prettify
 import Test.Hspec
 import Test.QuickCheck
-import Var
 import Prelude hiding ((^))
 import qualified Prelude
 

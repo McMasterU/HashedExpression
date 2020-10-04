@@ -39,9 +39,7 @@ showExp = putStrLn . prettify
 -- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
 prettify :: Expression d et -> String
 prettify e@(Expression n mp) =
-  let shape = expressionShape $ unwrap e
-      node = expressionOp $ unwrap e
-      et = expressionElementType e
+  let (shape, et, op) = retrieveNode n mp
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
@@ -57,8 +55,7 @@ showExpDebug = putStrLn . prettifyDebug
 --   ghci as long as you define corresponding variable identifiers
 prettifyDebug :: Expression d et -> String
 prettifyDebug e@(Expression n mp) =
-  let shape = expressionShape $ unwrap e
-      node = expressionOp $ unwrap e
+  let (shape, et, op) = retrieveNode n mp
    in T.unpack (hiddenPrettify True $ unwrap e)
 
 -- |
@@ -83,7 +80,7 @@ debugPrintExp = debugPrint . unwrap
 --  where
 --    mkString (n, str) = show n ++ " --> " ++ str
 
--- | auxillary function for computing pretty format of an 'Expression'
+-- | auxiliary function for computing pretty format of an 'Expression'
 hiddenPrettify ::
   -- | retain syntactically valid (for use in ghci)
   Bool ->

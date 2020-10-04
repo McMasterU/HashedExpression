@@ -10,7 +10,7 @@
 module HashedExpression.Interp where
 
 import Data.Array
-import Data.Complex
+import Data.Complex hiding (conjugate)
 import Data.Function ((&))
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
@@ -20,18 +20,8 @@ import qualified Data.Map as Map
 import Debug.Trace (traceId, traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat)
-import HashedExpression.Internal.Expression
-  ( D1,
-    D2,
-    D3,
-    DimSelector (..),
-    ElementType (..),
-    Expression (..),
-    ExpressionMap,
-    NodeID,
-    Op (..),
-    Scalar,
-  )
+import HashedExpression.Internal.Base hiding ((**))
+import HashedExpression.Internal.Expression hiding ((**))
 import HashedExpression.Internal.Node
 import HashedExpression.Utils
 import HashedExpression.Prettify (prettify, showExp)

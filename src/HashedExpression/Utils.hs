@@ -16,9 +16,7 @@ import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
-import HashedExpression.Prettify
 import Prelude hiding ((^))
 import qualified Prelude
 

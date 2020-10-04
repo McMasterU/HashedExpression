@@ -13,7 +13,6 @@ module HashedExpression.Codegen where
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Problem
 import HashedExpression.Value

@@ -27,7 +27,6 @@ import HashedExpression.Internal.Expression hiding ((<.>))
 import HashedExpression.Internal.Node
 import HashedExpression.Utils
 import HashedExpression.Interp
-import HashedExpression.Prettify
 import HashedExpression.Value
 import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)

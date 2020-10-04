@@ -18,7 +18,7 @@ module HashedExpression.Value where
 import Data.Array
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 
 -- | The name of a dataset within an HDF5 file
 type Dataset = String

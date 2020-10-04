@@ -3,18 +3,11 @@
 import CSimpleSpec (evaluateCodeC)
 import qualified CSimpleSpec
 import qualified CollisionSpec
-import Commons
-import Data.Array.Unboxed as U
 import qualified Data.IntMap as IM
 import Data.Map (fromList, union)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
-import HashedExpression.Internal.Expression
-import HashedExpression.Utils
-import HashedExpression.Interp
-import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation
-import HashedExpression.Prettify
 import qualified InterpSpec
 import qualified ProblemSpec
 import qualified ReverseDifferentiationSpec
@@ -23,7 +16,6 @@ import qualified SolverSpec
 import qualified StructureSpec
 import Test.Hspec
 import Test.Hspec.Runner
-import Var
 import Prelude hiding ((^))
 
 main :: IO ()

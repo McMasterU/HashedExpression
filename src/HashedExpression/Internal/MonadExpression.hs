@@ -14,11 +14,9 @@ import qualified Data.IntMap.Strict as IM
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Utils
 
 -- |
 class (Monad m) => MonadExpression m where

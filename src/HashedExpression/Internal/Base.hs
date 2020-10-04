@@ -11,6 +11,7 @@ module HashedExpression.Internal.Base where
 
 import Data.IntMap.Strict (IntMap)
 import Data.Typeable (Typeable)
+import Prelude hiding ((**), (^))
 
 newtype NodeID = NodeID {unNodeID :: Int} deriving (Eq, Ord)
 
@@ -146,3 +147,73 @@ type ExpressionMap = IntMap Node
 -- | The internals of an 'Expression' are a collection of 'Op' with
 --   their dimensions
 type Node = (Shape, ElementType, Op)
+
+-- |
+--
+-- | Interface for power
+class PowerOp a b | a -> b where
+  (^) :: a -> b -> a
+
+-- | Interface for scaling
+class ScaleOp a b where
+  scale :: a -> b -> b
+  (*.) :: a -> b -> b
+  (*.) = scale
+
+-- | Interface for complex combinators
+class ComplexRealOp r c | r -> c, c -> r where
+  -- | construct complex from real / imaginary parts
+  (+:) :: r -> r -> c
+
+  -- | extract real part from complex
+  xRe :: c -> r
+
+  -- | extract imaginary part from complex
+  xIm :: c -> r
+
+  -- | conjugate
+  conjugate :: c -> c
+
+-- | Interface for inner product
+class InnerProductSpaceOp a b | a -> b where
+  (<.>) :: a -> a -> b
+
+-- | Interface for rotation
+class RotateOp k a | a -> k where
+  rotate :: k -> a -> a
+
+-- | Interface for piecewise function
+class PiecewiseOp a b where
+  piecewise :: [Double] -> a -> [b] -> b
+
+-- | Interface for fourier transform
+class FTOp a b | a -> b, b -> a where
+  ft :: a -> b
+  ift :: b -> a
+
+-- |
+class ProjectInjectOp s a b | s a -> b where
+  project :: s -> a -> b
+  inject :: s -> b -> a -> a
+
+class MatrixMulOp a b c | a b -> c where
+  (**) :: a -> b -> c
+  matmul :: a -> b -> c
+  matmul = (**)
+
+class TransposeOp a b | a -> b where
+  transpose :: a -> b
+
+-------------------------------------------------------------------------------
+infixl 6 +:
+
+infixl 8 *., `scale`, <.>, **
+
+infixl 8 ^
+
+-------------------------------------------------------------------------------
+
+-- | If the type corresponds to a scalar real expression
+--
+class IsScalarReal e where
+  asScalarReal :: e -> (ExpressionMap, NodeID)

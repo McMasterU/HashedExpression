@@ -23,14 +23,11 @@ import Debug.Trace (traceShowId)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownNat, Nat, type (+), type (-))
 import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Utils
 import HashedExpression.Interp
-import HashedExpression.Operation
 import qualified HashedExpression.Operation
-import HashedExpression.Prettify
 import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec

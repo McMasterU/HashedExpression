@@ -23,14 +23,9 @@ import qualified Data.Text.IO as TIO
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
-import HashedExpression.Embed
-import HashedExpression.Internal
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Node
-import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
-import HashedExpression.Prettify
 import HashedExpression.Problem
 import qualified HashedExpression.Problem as P
 import HashedExpression.Value

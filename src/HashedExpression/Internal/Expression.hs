@@ -15,6 +15,7 @@ module HashedExpression.Internal.Expression
   ( nat,
     IsElementType (..),
     Expression (..),
+
     -- * Expression Element Types
 
     -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
@@ -43,7 +44,7 @@ module HashedExpression.Internal.Expression
     MatrixMulOp (..),
     TransposeOp (..),
     ProjectInjectOp (..),
-    module HashedExpression.Internal.Base
+    module HashedExpression.Internal.Base,
   )
 where
 
@@ -58,9 +59,7 @@ import GHC.TypeLits (KnownNat, Nat, natVal)
 import HashedExpression.Internal.Base
 import Prelude hiding ((**), (^))
 
-
--- | 
--- 
+-- |
 data Expression (d :: [Nat]) (et :: ElementType) = Expression
   { -- | index to the topological root of ExpressionMap
     exRootID :: NodeID,
@@ -123,65 +122,5 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | Interface for power 
-class PowerOp a b | a -> b where
-  (^) :: a -> b -> a
-
--- | Interface for scaling 
-class ScaleOp a b where
-  scale :: a -> b -> b
-  (*.) :: a -> b -> b
-  (*.) = scale
-
--- | Interface for complex combinators 
-class ComplexRealOp r c | r -> c, c -> r where
-  -- | construct complex from real / imaginary parts
-  (+:) :: r -> r -> c
-
-  -- | extract real part from complex 
-  xRe :: c -> r
-
-  -- | extract imaginary part from complex 
-  xIm :: c -> r
-
-  -- | conjugate
-  conjugate :: c -> c
-
--- | Interface for inner product 
-class InnerProductSpaceOp a b | a -> b where
-  (<.>) :: a -> a -> b
-
--- | Interface for rotation 
-class RotateOp k a | a -> k where
-  rotate :: k -> a -> a
-
--- | Interface for piecewise function
---   
-class PiecewiseOp a b where
-  piecewise :: [Double] -> a -> [b] -> b
-
--- | Interface for fourier transform 
---   
-class FTOp a b | a -> b, b -> a where
-  ft :: a -> b
-  ift :: b -> a
-
--- |
-class ProjectInjectOp s a b | s a -> b where
-  project :: s -> a -> b
-  inject :: s -> b -> a -> a
-
-class MatrixMulOp a b c | a b -> c where
-  (**) :: a -> b -> c
-  matmul :: a -> b -> c
-  matmul = (**)
-
-class TransposeOp a b | a -> b where
-  transpose :: a -> b
-
--------------------------------------------------------------------------------
-infixl 6 +:
-
-infixl 8 *., `scale`, <.>, **
-
-infixl 8 ^
+instance IsScalarReal (Expression Scalar R) where
+  asScalarReal (Expression nID mp) = (mp, nID)

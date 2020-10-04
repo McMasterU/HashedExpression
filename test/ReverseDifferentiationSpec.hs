@@ -11,19 +11,9 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Tuple.Extra (thd3)
 import Debug.Trace (traceShow)
-import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal (removeUnreachable, unwrap)
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Node
-import HashedExpression.Utils
-import HashedExpression.Interp
-import qualified HashedExpression.Operation
-import HashedExpression.Prettify
-import HashedExpression.Value
 import Test.HUnit (assertBool)
 import Test.Hspec
-import Test.QuickCheck
-import Var
 import Prelude hiding ((^))
 import qualified Prelude
 

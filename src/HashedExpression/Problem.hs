@@ -26,12 +26,10 @@ import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
 import HashedExpression.Internal.MonadExpression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Simplify
-import HashedExpression.Utils
 import HashedExpression.Prettify
 import HashedExpression.Value
 

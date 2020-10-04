@@ -31,8 +31,8 @@ import qualified Data.Map.Strict as Map
 import GHC.Exts (sortWith)
 import HashedExpression.Internal
 import HashedExpression.Internal.MonadExpression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Rewrite
