@@ -17,7 +17,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Context
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import Prelude hiding ((^))

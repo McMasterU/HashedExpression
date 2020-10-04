@@ -84,12 +84,12 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import Prelude (Bool)
 import Prelude hiding ((^))
 import qualified Prelude

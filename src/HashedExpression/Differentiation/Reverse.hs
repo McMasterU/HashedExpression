@@ -17,7 +17,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec

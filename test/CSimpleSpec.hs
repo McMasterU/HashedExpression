@@ -25,7 +25,7 @@ import HashedExpression.Embed
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression hiding ((<.>))
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Prettify
 import HashedExpression.Value

@@ -26,7 +26,7 @@ import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
 import qualified HashedExpression.Operation
@@ -327,11 +327,6 @@ infix 4 ~=
 relativeError :: Double -> Double -> Double
 relativeError a b = abs (a - b) / max (abs a) (abs b)
 
-{-
-Instance which belongs to approximable class for Double precision inputs.
-It takes 2 double precision inputs and return whether are within acceptable numerical error.
-Returns true if the error is less than the condition value
--}
 instance Approximable Double where
   (~=) :: Double -> Double -> Bool
   a ~= b
@@ -354,40 +349,24 @@ instance Approximable (Complex Double) where
   prettifyShow a =
     prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i" --  Prettyprint a string produced by show
 
-{-
-Instance which belongs to approximable class for 1D array with Double-precision elements as an input.
-Returns true if the dimentions are the same and the input arrays be elementwisely within acceptable numerical error.
--}
 instance Approximable (Array Int Double) where
   (~=) :: Array Int Double -> Array Int Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 1D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array Int (Complex Double)) where
   (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 2D array with double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int) Double) where
   (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 2D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int) (Complex Double)) where
   (~=) ::
     Array (Int, Int) (Complex Double) ->
@@ -397,20 +376,12 @@ instance Approximable (Array (Int, Int) (Complex Double)) where
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 3D array with double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int, Int) Double) where
   (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 3D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
   (~=) ::
     Array (Int, Int, Int) (Complex Double) ->

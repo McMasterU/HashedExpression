@@ -25,13 +25,13 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Simplify
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Prettify
 import HashedExpression.Value
 

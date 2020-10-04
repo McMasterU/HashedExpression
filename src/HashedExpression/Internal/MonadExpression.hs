@@ -7,7 +7,7 @@
 -- Maintainer  :  anandc@mcmaster.ca
 -- Stability   :  provisional
 -- Portability :  unportable
-module HashedExpression.Internal.Context where
+module HashedExpression.Internal.MonadExpression where
 
 import Control.Monad.State.Strict
 import qualified Data.IntMap.Strict as IM
@@ -18,7 +18,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 
 -- |
 class (Monad m) => MonadExpression m where

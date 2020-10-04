@@ -16,7 +16,7 @@ import HashedExpression.Internal.Expression
     Scalar,
     exMap,
   )
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Value
 import System.Process (readProcessWithExitCode)

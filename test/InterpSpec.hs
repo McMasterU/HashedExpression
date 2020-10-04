@@ -13,7 +13,7 @@ import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation 
 import qualified HashedExpression.Operation

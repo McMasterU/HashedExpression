@@ -27,7 +27,7 @@ import HashedExpression.Embed (fftUtils)
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression (ElementType (..), Expression, ExpressionMap, NodeID (..), Op (..), Shape, exMap)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Problem
 import HashedExpression.Value
 import System.FilePath

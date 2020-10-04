@@ -27,7 +27,7 @@ import HashedExpression.Embed
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation
 import HashedExpression.Prettify

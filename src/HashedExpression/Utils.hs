@@ -1,4 +1,4 @@
-module HashedExpression.Internal.Utils where
+module HashedExpression.Utils where
 
 import Data.Array
 import Data.Complex (Complex (..))

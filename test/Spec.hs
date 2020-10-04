@@ -10,7 +10,7 @@ import Data.Map (fromList, union)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import HashedExpression.Operation hiding (product, sum)
 import qualified HashedExpression.Operation

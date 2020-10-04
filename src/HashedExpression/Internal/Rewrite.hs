@@ -35,12 +35,12 @@ import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import Prelude hiding ((^))
 
 newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a} deriving (Functor, Applicative, Monad)

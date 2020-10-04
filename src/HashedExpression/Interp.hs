@@ -33,7 +33,7 @@ import HashedExpression.Internal.Expression
     Scalar,
   )
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Prettify (prettify, showExp)
 import HashedExpression.Value
 

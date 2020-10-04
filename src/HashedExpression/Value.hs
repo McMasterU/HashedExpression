@@ -12,7 +12,7 @@
 -- @
 --  valMap = fromList [("x",v1),("y",v2),....]
 -- @
--- where @"x","y"@ are variable identifiers and @v1,v2@ are of type 'Val'
+-- where @"x","y"@ are identifiers and @v1,v2@ are of type 'Val'
 module HashedExpression.Value where
 
 import Data.Array
@@ -66,7 +66,7 @@ valElems val =
 valueFromHaskell :: Val -> Bool
 valueFromHaskell val =
   case val of
-    VScalar v -> True
+    VScalar _ -> True
     V1D vs -> True
     V2D vs -> True
     V3D vs -> True

@@ -15,7 +15,7 @@ import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal (removeUnreachable, unwrap)
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
+import HashedExpression.Utils
 import HashedExpression.Interp
 import qualified HashedExpression.Operation
 import HashedExpression.Prettify
