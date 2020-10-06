@@ -7,7 +7,7 @@
 -- Portability :  unportable
 --
 -- Simplifying expressions
-module HashedExpression.Internal.Simplify (simplify, simplifyUnwrapped) where
+module HashedExpression.Internal.Simplify (simplify) where
 
 import Control.Monad.State.Strict
 import Data.List (partition, sort)
@@ -23,8 +23,8 @@ import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
 
-simplifyUnwrapped :: Expr -> Expr
-simplifyUnwrapped = removeUnreachable . apply
+simplify :: Expr -> Expr
+simplify = removeUnreachable . apply
   where
     apply =
       multipleTimes 1000 . toRecursiveTransformation . chainModifications $
@@ -54,8 +54,6 @@ simplifyUnwrapped = removeUnreachable . apply
                 ]
             )
 
-simplify :: IsExpression e => e -> e
-simplify = wrapExpression . simplifyUnwrapped . asExpression
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]

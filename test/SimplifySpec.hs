@@ -2,10 +2,12 @@ module SimplifySpec where
 
 import Commons
 import HashedExpression.Internal.Base
-import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Simplify
-import HashedExpression.Interp
-  hiding (product, sum)
+import HashedExpression.Interp hiding
+  ( product,
+    sum,
+  )
+import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import Test.Hspec
 import Test.QuickCheck (property)
@@ -20,33 +22,39 @@ shouldSimplifyTo ::
   Expression d et ->
   IO ()
 shouldSimplifyTo exp1 exp2 = do
-  prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
-  simplify exp1 `shouldBe` simplify exp2
+  prettify (simplify (asExpression exp1)) `shouldBe` prettify (simplify (asExpression exp2))
+  simplify (asExpression exp1)`shouldBe` simplify (asExpression exp2)
 
 -- |
 prop_sameValueInterpScalarR :: SuiteScalarR -> Expectation
-prop_sameValueInterpScalarR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpScalarR (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 prop_sameValueInterpScalarC :: SuiteScalarC -> Expectation
-prop_sameValueInterpScalarC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpScalarC (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 prop_sameValueInterpOneR :: SuiteOneR -> Expectation
-prop_sameValueInterpOneR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpOneR (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 prop_sameValueInterpOneC :: SuiteOneC -> Expectation
-prop_sameValueInterpOneC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpOneC (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 prop_sameValueInterpTwoR :: SuiteTwoR -> Expectation
-prop_sameValueInterpTwoR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpTwoR (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 prop_sameValueInterpTwoC :: SuiteTwoC -> Expectation
-prop_sameValueInterpTwoC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterpTwoC (Suite e valMap) =
+  let expr = asExpression e
+   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 spec :: Spec
 spec =
@@ -100,7 +108,7 @@ spec =
     specify "scale rules" $ do
       x *. (y *. v) `shouldSimplifyTo` (x * y) *. v
     specify "negate rules" $ do
-      negate (negate x) `shouldSimplifyTo` simplify x
+      negate (negate x) `shouldSimplifyTo` x
       negate (negate (x + y)) `shouldSimplifyTo` (x + y)
       negate zero `shouldSimplifyTo` zero
     specify "simplify one d one zero" $ do

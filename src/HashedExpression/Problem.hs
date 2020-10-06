@@ -286,7 +286,7 @@ constructProblemHelper obj (Constraint constraints) = do
   let processF exp = do
         let (mp, name2ID) = partialDerivativesMap exp
         let (names, beforeMergeIDs) = unzip $ Map.toList name2ID
-        afterMergedIDs <- mapM (mergeToMain . simplifyUnwrapped . (mp,)) beforeMergeIDs
+        afterMergedIDs <- mapM (mergeToMain . simplify . (mp,)) beforeMergeIDs
         return $ Map.fromList $ zip names afterMergedIDs
   let lookupDerivative :: (String, Shape) -> Map String NodeID -> ProblemConstructingM NodeID
       lookupDerivative (name, shape) dMap = case Map.lookup name dMap of
@@ -361,5 +361,5 @@ constructProblem :: IsScalarReal e => e -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
   fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where
-    simplifiedObjective = simplifyUnwrapped $ asExpression objectiveFunction
-    simplifiedConstraint = Constraint $ map (mapExpressionCS simplifyUnwrapped) cs
+    simplifiedObjective = simplify $ asExpression objectiveFunction
+    simplifiedConstraint = Constraint $ map (mapExpressionCS simplify) cs

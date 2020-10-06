@@ -7,22 +7,17 @@
 module InterpSpec where
 
 import Commons
-import Data.Complex (Complex (..))
-import Data.Map.Strict (fromList, union)
-import Data.Maybe (fromJust)
-import Debug.Trace (traceShowId)
-import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-), type (<=))
+import Data.Map.Strict (union)
+import GHC.TypeLits (KnownNat, type (-))
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
-
+import HashedExpression.Modeling.Typed
 import Test.Hspec
 import Test.QuickCheck
 import Var
 import Prelude hiding ((**), (^))
-import qualified Prelude
 
 -------------------------------------------------------------------------------
 unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
@@ -170,33 +165,6 @@ prop_ProjectInjectTwoC (Suite exp valMap) = do
           $ zero2 +: zero2
   eval valMap combine `shouldBe` eval valMap exp
 
--- ideas:
---    dot product (<.>) vs scaling (*.)
---    exponential and log
---    conjugate of complex number
---    power and square root
---    advance: piecewise function
-
--- properties of dot product
--- u . v = |u||v| cos t
--- u . v = v . u
--- u . v = 0 when u and v are orthogonal
--- 0 . 0 = 0
-
--- | v|^2 = v . v
---  a (u . v) = (a u) . v
---  (au + bv) . w = (au) . w + (bv) . w
-
--- [Scalar] 0 . 0 = 0
--- prop_dotProductScalar_1 ::  Bool
--- prop_dotProductScalar_1 =
---   let
---     n = variable "n"
---     valMap = fromList [("n", VNum 0)]
---   in
---     n <.> n == n
-
--- u . v = v . u
 prop_dotProduct1D_1 :: SuiteOneR -> SuiteOneR -> Bool
 prop_dotProduct1D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
   eval valMap (exp1 <.> exp2) == eval valMap (exp2 <.> exp1)
@@ -209,12 +177,7 @@ prop_dotProduct2D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
   where
     valMap = valMap1 `union` valMap2
 
---[1D] |v|^2 = v . v
--- prop_dotProduct1D_2 :: SuiteOneR -> Bool
--- prop_dotProduct1D_2 (Suite exp1 valMap1) =
---     eval valMap1 ((??? exp1)^2) == eval valMap1 (exp1 <.> exp1)
 
---  a (u . v) = (a u) . v
 prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Expectation
 prop_dotProduct1D_3 (Suite a valMap1) (Suite exp1 valMap2) (Suite exp2 valMap3) =
   eval valMap (a * (exp1 <.> exp2)) `shouldApprox` eval valMap ((a *. exp1) <.> exp2)
@@ -233,17 +196,6 @@ prop_dotProduct1D_4 (Suite a valMap1) (Suite b valMap2) (Suite exp1 valMap3) (Su
   eval valMap (((a *. exp1) + (b *. exp2)) <.> exp3) `shouldApprox` eval valMap (((a *. exp1) <.> exp3) + ((b *. exp2) <.> exp3))
   where
     valMap = valMap1 `union` valMap2 `union` valMap3 `union` valMap4 `union` valMap5
-
--- [ arithmetic properties ]
--- 1) commutative properties:  a + b = b + a
---                             a * b = b * a
--- 2) associative properties:  a + (b + c) = (a + b) + c
---                             (a * b) * c = a * (b * c)
--- 3) Distributive properties: a * (b + c) = a * b + a * c
--- 4) Identity element: a + 0 = a
---                      a * 1 = a
--- 5) Inverse Element:  a + (-a) = 0
---                      a * (1 / a) = 1
 
 prop_Commutative_Addition :: SuiteScalarR -> SuiteScalarR -> Bool
 prop_Commutative_Addition (Suite exp1 valMap1) (Suite exp2 valMap2) =
@@ -279,13 +231,6 @@ prop_Inverse_Multiplication :: SuiteScalarR -> Property
 prop_Inverse_Multiplication (Suite exp1 valMap1) =
   eval valMap1 exp1 /= VR 0
     ==> (eval valMap1 (exp1 * (1 / exp1)) `shouldApprox` VR 1)
-
--- [ exponential properties ]
--- 1) x^a * x^b = x ^ (a+b)
--- 2) (xy)^a = x^a * y^a
--- 3) (x^a) / (x^b) = x ^ (a-b), x != 0
--- 4) a^(-m) = 1 / a^m, a != 0
--- 5) (a/b)^m = a^m / b^m, b != 0
 
 newtype IntB n = IntB Int deriving (Show, Eq, Ord)
 

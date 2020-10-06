@@ -11,7 +11,6 @@ import HashedExpression.Internal
     topologicalSort,
     topologicalSortManyRoots,
   )
-import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Node
 import Test.Hspec
 import Test.QuickCheck
@@ -27,7 +26,7 @@ isAfter xs x y = filter (liftA2 (||) (== x) (== y)) xs == [y, x]
 
 -- | Property of topological sort
 prop_TopologicalSort :: ArbitraryExpresion -> Bool
-prop_TopologicalSort (ArbitraryExpresion (Expression n mp)) =
+prop_TopologicalSort (ArbitraryExpresion (mp, n)) =
   let sortedNodeId = topologicalSort (mp, n)
       dependencies n = opArgs $ retrieveOp n mp
       withChildren = zip sortedNodeId (map dependencies sortedNodeId)
@@ -41,7 +40,7 @@ prop_TopologicalSortManyRoots xs
   | length xs <= 1 = True
   | otherwise = noDuplicate sortedNodeId && all prop withChildren
   where
-    (mergedMap, roots) = safeMerges $ map getWrappedExp xs
+    (mergedMap, roots) = safeMerges $ map unArbitraryExpression xs
     sortedNodeId = topologicalSortManyRoots (mergedMap, roots)
     dependencies n = opArgs $ retrieveOp n mergedMap
     withChildren = zip sortedNodeId (map dependencies sortedNodeId)

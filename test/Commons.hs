@@ -16,9 +16,9 @@ import qualified Data.Map.Strict as Map
 import Data.Set (fromList, toList)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
+import HashedExpression.Modeling.Typed
 import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
@@ -60,8 +60,8 @@ genAtSelector size = do
   let id = elements [0 .. size - 1]
   oneof [At <$> id]
 
-genValMapFor :: Expression d et -> Gen ValMap
-genValMapFor (Expression nID mp) = do
+genValMapFor :: ExpressionMap -> Gen ValMap
+genValMapFor mp = do
   let genVal :: Shape -> Gen Val
       genVal shape = do
         let dbls = vectorOf (product shape) genDouble
@@ -233,7 +233,7 @@ data Suite d et
 instance (Dimension d, IsElementType et) => Arbitrary (Suite d et) where
   arbitrary = do
     exp <- arbitrary
-    valMap <- genValMapFor exp
+    valMap <- genValMapFor (exMap exp)
     return $ Suite exp valMap
 
 -------------------------------------------------------------------------------
@@ -250,25 +250,28 @@ type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
 type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (Dimension d) => ArbitraryExpresion (Expression d et)
-
-instance Show ArbitraryExpresion where
-  show (ArbitraryExpresion exp) = show exp
+newtype ArbitraryExpresion = ArbitraryExpresion {unArbitraryExpression :: Expr}
+  deriving (Show, Ord, Eq)
 
 instance Arbitrary ArbitraryExpresion where
   arbitrary =
-    oneof
-      [ ArbitraryExpresion <$> sized (genExp @Scalar @R),
-        ArbitraryExpresion <$> sized (genExp @Scalar @C),
-        ArbitraryExpresion <$> sized (genExp @(D1 Default1D) @R),
-        ArbitraryExpresion <$> sized (genExp @(D1 Default1D) @C),
-        ArbitraryExpresion <$> sized (genExp @(D2 Default2D1 Default2D2) @R),
-        ArbitraryExpresion <$> sized (genExp @(D2 Default2D1 Default2D2) @C)
-      ]
+    ArbitraryExpresion
+      <$> oneof
+        [ sized (\sz -> genExpUntyped sz [] R),
+          sized (\sz -> genExpUntyped sz [] C),
+          sized (\sz -> genExpUntyped sz [defaultDim1D] R),
+          sized (\sz -> genExpUntyped sz [defaultDim1D] C),
+          sized (\sz -> genExpUntyped sz [default1stDim2D, default2ndDim2D] R),
+          sized (\sz -> genExpUntyped sz [default1stDim2D, default2ndDim2D] C)
+        ]
 
--- |
-getWrappedExp :: ArbitraryExpresion -> Expr
-getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
+data XSuite = XSuite Expr ValMap deriving (Show, Eq, Ord)
+
+instance Arbitrary XSuite where
+  arbitrary = do
+    ArbitraryExpresion exp <- arbitrary
+    valMap <- genValMapFor (fst exp)
+    return $ XSuite exp valMap
 
 -------------------------------------------------------------------------------
 
