@@ -10,24 +10,19 @@ module ProblemSpec where
 import Commons
 import Control.Monad (replicateM)
 import Data.Array
-import qualified Data.Map.Strict as Map
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Modeling.Typed
-
-import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
-import Var
 import Prelude hiding ((^))
 
 -- |
-prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemNoConstraint (Suite exp valMap) = do
-  let names = Map.keys valMap
+prop_constructProblemNoConstraint :: Expression Scalar R -> Expectation
+prop_constructProblemNoConstraint exp = do
   let constructResult = constructProblem exp (Constraint [])
   case constructResult of
     Left reason ->
@@ -46,12 +41,12 @@ makeValidBoxConstraint (name, shape) =
       generate $
         elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
     [size] -> do
-      let x = variable1D @Default1D name
+      let x = fromNodeUnwrapped (shape, R, Var name)
       val1 <- V1D . listArray (0, size - 1) <$> generate (vectorOf size arbitrary)
       val2 <- V1D . listArray (0, size - 1) <$> generate (vectorOf size arbitrary)
       generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
     [size1, size2] -> do
-      let x = variable2D @Default2D1 @Default2D2 name
+      let x = fromNodeUnwrapped (shape, R, Var name)      
       val1 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
       val2 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
       generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
@@ -65,13 +60,13 @@ makeValidBoxConstraint (name, shape) =
 --                generate (vectorOf (size1 * size2 * size3) arbitrary)
 --            generate $
 --                elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
+
 varNodesWithShape :: ExpressionMap -> [(String, Shape)]
 varNodesWithShape mp = map (\(name, shape, _) -> (name, shape)) $ varNodes mp
 
 -- |
-prop_constructProblemBoxConstraint :: SuiteScalarR -> Expectation
-prop_constructProblemBoxConstraint (Suite exp valMap) = do
-  let names = Map.keys valMap
+prop_constructProblemBoxConstraint :: Expression Scalar R -> Expectation
+prop_constructProblemBoxConstraint exp = do
   let vs = varNodesWithShape (exMap exp)
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
@@ -96,21 +91,13 @@ makeValidScalarConstraint = do
   generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]
 
 -- |
-prop_constructProblemScalarConstraints :: SuiteScalarR -> Expectation
-prop_constructProblemScalarConstraints (Suite exp valMap) = do
-  --  print "-------------------------------------------------------------"
-  --  showExp $ exp
-  let names = Map.keys valMap
-  --  print names
+prop_constructProblemScalarConstraints :: Expression Scalar R -> Expectation
+prop_constructProblemScalarConstraints exp = do
   let vs = varNodesWithShape (exMap exp)
-  --  print $ vs
-  -- box constraints
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
-  -- scalar constraints
   numScalarConstraint <- generate $ elements [2 .. 4]
   scc <- replicateM numScalarConstraint makeValidScalarConstraint
-  --  forM_ scc $ \sc -> print $ debugPrint $ getExpressionCS sc
   let constraints = Constraint $ sampled ++ scc
   let constructResult = constructProblem exp constraints
   case constructResult of
@@ -127,7 +114,7 @@ prop_constructProblemScalarConstraints (Suite exp valMap) = do
           assertBool "Empty constraint ?" $ not (null sConstraints)
           mapM_ isOk sConstraints
 
--- | List of hand-written problems and the expected result whether this problem is valid
+-- | List of hand-written problems and the expected result 
 problemsRepo :: [(Either String Problem, Bool)]
 problemsRepo =
   [ ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
@@ -138,7 +125,6 @@ problemsRepo =
                 y .<= VFile (TXT "y_ub.txt"),
                 x <.> z .>= VScalar 3
               ]
-          vars = ["x", "y", "z", "t"]
        in constructProblem f constraints,
       True
     ),
@@ -150,7 +136,6 @@ problemsRepo =
                 y .<= VFile (TXT "y_ub.txt"),
                 x <.> z .>= VScalar 3
               ]
-          vars = ["x", "y", "z", "t"]
        in constructProblem f constraints,
       False
     ),
@@ -169,68 +154,12 @@ problemsRepo =
     )
   ]
 
-printVariables :: Problem -> [String]
-printVariables Problem {..} =
-  map (\Variable {..} -> debugPrint (expressionMap, nodeId)) variables
-
-printPartialDerivatives :: Problem -> [String]
-printPartialDerivatives Problem {..} =
-  map (\Variable {..} -> debugPrint (expressionMap, partialDerivativeId)) variables
-
-printScalarConstraintPartialDerivatives :: Problem -> ScalarConstraint -> [String]
-printScalarConstraintPartialDerivatives Problem {..} ScalarConstraint {..} =
-  map (\id -> debugPrint (expressionMap, id)) constraintPartialDerivatives
-
-printScalarConstraintsPartialDerivatives :: Problem -> [[String]]
-printScalarConstraintsPartialDerivatives problem@Problem {..} = map (printScalarConstraintPartialDerivatives problem) scalarConstraints
-
 spec :: Spec
 spec =
   describe "Hash Solver spec " $ do
-    --    specify "unit test 1" $ do
-    --      let obj = x1 <.> y1 + x + y
-    --          constraints = Constraint []
-    --      case constructProblem obj constraints of
-    --        Left _ -> assertFailure "should construct problem properly"
-    --        Right problem -> do
-    --          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp x1, debugPrintExp y1]
-    --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 1), debugPrintExp (constant 1), debugPrintExp y1, debugPrintExp x1]
-    --    specify "unit test 2" $ do
-    --      let obj = x2 <.> y2
-    --          constraints = Constraint [z + y .>= VNum 1, z + x .<= VNum 2]
-    --      case constructProblem obj constraints of
-    --        Left _ -> assertFailure "should construct problem properly"
-    --        Right problem -> do
-    --          printVariables problem `shouldBe` [debugPrintExp x, debugPrintExp y, debugPrintExp z, debugPrintExp x2]
-    --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp y2]
-    --          printScalarConstraintsPartialDerivatives problem
-    --            `shouldBe` [ [debugPrintExp (constant 1), debugPrintExp (constant 0), debugPrintExp (constant 1), debugPrintExp zero2],
-    --                         [debugPrintExp (constant 0), debugPrintExp (constant 1), debugPrintExp (constant 1), debugPrintExp zero2]
-    --                       ]
-    --    specify "unit test 3" $ do
-    --      let obj = 1
-    --          constraints = Constraint [x2 <.> a2 .>= VNum 1, m + 2 * n .<= VNum 2]
-    --      case constructProblem obj constraints of
-    --        Left _ -> assertFailure "should construct problem properly"
-    --        Right problem -> do
-    --          printVariables problem `shouldBe` [debugPrintExp m, debugPrintExp n, debugPrintExp x2]
-    --          printPartialDerivatives problem `shouldBe` [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp zero2]
-    --          printScalarConstraintsPartialDerivatives problem
-    --            `shouldBe` [ [debugPrintExp (constant 1), debugPrintExp (constant 2), debugPrintExp zero2],
-    --                         [debugPrintExp (constant 0), debugPrintExp (constant 0), debugPrintExp a2]
-    --                       ]
-    --    specify "test hand-written problems" $
-    --      forM_ problemsRepo $ \(problemResult, expected) -> do
-    --        case (problemResult, expected) of
-    --          (Right p, True) -> do
-    --            return ()
-    --          (Left _, False) ->
-    --            return ()
-    --          _ -> assertFailure $ "Should be " ++ show expected ++ " to construct but result is " ++ show problemResult
     specify "valid problem should be constructed successfully" $
       property prop_constructProblemNoConstraint
-
---    specify "valid box constrained problem should be constructed successfully" $
---      property prop_constructProblemBoxConstraint
---    specify "valid scalar constraints problem should be successfully successfully" $
---      property prop_constructProblemScalarConstraints
+    specify "valid box constrained problem should be constructed successfully" $
+      property prop_constructProblemBoxConstraint
+    specify "valid scalar constraints problem should be successfully successfully" $
+      property prop_constructProblemScalarConstraints

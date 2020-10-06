@@ -14,8 +14,8 @@
 -- expression maps, create new entry, etc.
 module HashedExpression.Internal where
 
-import Control.Monad (forM_, unless)
 import Control.Monad.ST.Strict
+import Control.Monad.State.Strict
 import Data.Array.MArray
 import Data.Array.ST
 import qualified Data.Array.Unboxed as UA
@@ -40,7 +40,7 @@ import Prelude hiding ((^))
 apply ::
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
-  -- | the operands 
+  -- | the operands
   [Expr] ->
   -- | the resulting expression
   Expr
@@ -50,12 +50,6 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
     resNode = createNode option operands
     resID = hashNode (checkCollisionMap mergedMap) resNode
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Expression Transformations
-
--- --------------------------------------------------------------------------------------------------------------------
 
 -- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
 --   Construct using the 'toTransformation' function
@@ -88,12 +82,6 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
     go k lastExp curExp
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Other
-
--- --------------------------------------------------------------------------------------------------------------------
 
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
@@ -271,5 +259,3 @@ containsFTNode mp = any isFT $ IM.elems mp
 
 nodeIDs :: ExpressionMap -> [NodeID]
 nodeIDs = map NodeID . IM.keys
-
--------------------------------------------------------------------------------

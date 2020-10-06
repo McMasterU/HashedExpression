@@ -25,8 +25,8 @@ isAfter :: (Eq a) => [a] -> a -> a -> Bool
 isAfter xs x y = filter (liftA2 (||) (== x) (== y)) xs == [y, x]
 
 -- | Property of topological sort
-prop_TopologicalSort :: ArbitraryExpresion -> Bool
-prop_TopologicalSort (ArbitraryExpresion (mp, n)) =
+prop_TopologicalSort :: ArbitraryExpr -> Bool
+prop_TopologicalSort (ArbitraryExpr (mp, n)) =
   let sortedNodeId = topologicalSort (mp, n)
       dependencies n = opArgs $ retrieveOp n mp
       withChildren = zip sortedNodeId (map dependencies sortedNodeId)
@@ -35,12 +35,12 @@ prop_TopologicalSort (ArbitraryExpresion (mp, n)) =
 
 ---- |
 ----
-prop_TopologicalSortManyRoots :: [ArbitraryExpresion] -> Bool
+prop_TopologicalSortManyRoots :: [ArbitraryExpr] -> Bool
 prop_TopologicalSortManyRoots xs
   | length xs <= 1 = True
   | otherwise = noDuplicate sortedNodeId && all prop withChildren
   where
-    (mergedMap, roots) = safeMerges $ map unArbitraryExpression xs
+    (mergedMap, roots) = safeMerges $ map unArbitraryExpr xs
     sortedNodeId = topologicalSortManyRoots (mergedMap, roots)
     dependencies n = opArgs $ retrieveOp n mergedMap
     withChildren = zip sortedNodeId (map dependencies sortedNodeId)

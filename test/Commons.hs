@@ -250,26 +250,21 @@ type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
 type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
 
 -------------------------------------------------------------------------------
-newtype ArbitraryExpresion = ArbitraryExpresion {unArbitraryExpression :: Expr}
+newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: Expr}
   deriving (Show, Ord, Eq)
 
-instance Arbitrary ArbitraryExpresion where
-  arbitrary =
-    ArbitraryExpresion
-      <$> oneof
-        [ sized (\sz -> genExpUntyped sz [] R),
-          sized (\sz -> genExpUntyped sz [] C),
-          sized (\sz -> genExpUntyped sz [defaultDim1D] R),
-          sized (\sz -> genExpUntyped sz [defaultDim1D] C),
-          sized (\sz -> genExpUntyped sz [default1stDim2D, default2ndDim2D] R),
-          sized (\sz -> genExpUntyped sz [default1stDim2D, default2ndDim2D] C)
-        ]
+instance Arbitrary ArbitraryExpr where
+  arbitrary = do 
+    elementType <- elements [R, C]
+    shapeLength <- elements [0..2]
+    shape <- vectorOf shapeLength $ elements [1..6]
+    ArbitraryExpr <$> sized (\sz -> genExpUntyped sz shape elementType)
 
 data XSuite = XSuite Expr ValMap deriving (Show, Eq, Ord)
 
 instance Arbitrary XSuite where
   arbitrary = do
-    ArbitraryExpresion exp <- arbitrary
+    ArbitraryExpr exp <- arbitrary
     valMap <- genValMapFor (fst exp)
     return $ XSuite exp valMap
 

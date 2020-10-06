@@ -25,46 +25,14 @@ shouldSimplifyTo exp1 exp2 = do
   prettify (simplify (asExpression exp1)) `shouldBe` prettify (simplify (asExpression exp2))
   simplify (asExpression exp1)`shouldBe` simplify (asExpression exp2)
 
--- |
-prop_sameValueInterpScalarR :: SuiteScalarR -> Expectation
-prop_sameValueInterpScalarR (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
-
-prop_sameValueInterpScalarC :: SuiteScalarC -> Expectation
-prop_sameValueInterpScalarC (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
-
-prop_sameValueInterpOneR :: SuiteOneR -> Expectation
-prop_sameValueInterpOneR (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
-
-prop_sameValueInterpOneC :: SuiteOneC -> Expectation
-prop_sameValueInterpOneC (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
-
-prop_sameValueInterpTwoR :: SuiteTwoR -> Expectation
-prop_sameValueInterpTwoR (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
-
-prop_sameValueInterpTwoC :: SuiteTwoC -> Expectation
-prop_sameValueInterpTwoC (Suite e valMap) =
-  let expr = asExpression e
-   in eval valMap expr `shouldApprox` eval valMap (simplify expr)
+prop_sameValueInterp :: XSuite -> Expectation
+prop_sameValueInterp (XSuite expr valMap) =
+  eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 spec :: Spec
 spec =
   describe "simplify spec" $ do
-    specify "same value interp scalar R" $ property prop_sameValueInterpScalarR
-    specify "same value interp scalar C" $ property prop_sameValueInterpScalarC
-    specify "same value interp one R" $ property prop_sameValueInterpOneR
-    specify "same value interp one C" $ property prop_sameValueInterpOneC
-    specify "same value interp two R" $ property prop_sameValueInterpTwoR
-    specify "same value interp two C" $ property prop_sameValueInterpTwoC
+    specify "same value interp" $ property prop_sameValueInterp
     specify "simplify scalar one zero" $ do
       constant 0.0 *. constant 9.0 `shouldSimplifyTo` constant 0.0
       x * one `shouldSimplifyTo` x
