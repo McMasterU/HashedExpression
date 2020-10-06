@@ -6,40 +6,25 @@
 module SolverSpec where
 
 import Commons
-import Control.Applicative (liftA2)
-import Control.Concurrent
-import Control.Monad (forM, replicateM_, unless, when)
+import Control.Monad (forM)
 import Data.Array
-import Data.Complex (Complex (..))
-import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate, sort, tails)
 import Data.List.Extra (trim)
 import Data.List.Split (splitOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, mapMaybe)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import Data.Maybe (fromJust)
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
-import HashedExpression.Embed
-import HashedExpression.Internal
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Base
 import HashedExpression.Interp
-import HashedExpression.Operation
-import HashedExpression.Prettify
+import HashedExpression.Modeling.Typed
 import HashedExpression.Problem
-import qualified HashedExpression.Problem as P
 import HashedExpression.Value
 import System.FilePath hiding ((<.>))
 import System.Process
-import System.Time.Extra (sleep)
 import Test.Hspec
 import Test.QuickCheck hiding (Right)
-import Var
 import Prelude hiding ((!!), (^))
 
 runCommandIn :: FilePath -> String -> IO ExitCode
@@ -74,7 +59,7 @@ getValue2D name size = readVal2D size . fromJust . Map.lookup name
 
 solveProblem :: Problem -> ValMap -> IO (Map String String)
 solveProblem problem valMap = do
-  case generateProblemCode CSimpleConfig {output = OutputText, maxIteration = Nothing } problem valMap of
+  case generateProblemCode CSimpleConfig {output = OutputText, maxIteration = Nothing} problem valMap of
     -- TODO: refine this
     Right proceed -> do
       folderName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
@@ -142,6 +127,7 @@ spec =
           let xExpect = xRe (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
           let yExpect = xIm (fourierTransform1D FT_BACKWARD 10 (valA +: valB))
           xGot `shouldApprox` xExpect
+          yGot `shouldApprox` yExpect
     specify "Rosenbrock, 2 variables different parameters" $ do
       property prop_Rosenbrock
     specify "Rosenbrock multidimensional" $ do

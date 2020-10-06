@@ -10,25 +10,22 @@
 module HashedExpression.Differentiation.Reverse where
 
 import Control.Monad.State.Strict
-import qualified Data.IntMap.Strict as IM
-import Data.List (foldl')
 import Data.List.HT (removeEach)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((**), (^))
 
 -- |
-partialDerivativesMap ::
-  Expression Scalar R ->
-  (ExpressionMap, Map String NodeID)
-partialDerivativesMap (Expression rootID mp) =
-  let reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
+partialDerivativesMap :: IsScalarReal e => e -> (ExpressionMap, Map String NodeID)
+partialDerivativesMap scalarRealExp =
+  let (mp, rootID) = asScalarRealRawExpr scalarRealExp
+      reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
       init = ComputeDState mp Map.empty Map.empty
       num_ :: Double -> ComputeReverseM NodeID
       num_ = const_ []
@@ -50,7 +47,7 @@ partialDerivativesMap (Expression rootID mp) =
         let one = introduceNode (shape, R, Const 1)
         let zero = introduceNode (shape, R, Const 0)
         case op of
-          Var name -> modifyPartialDerivativeMap (Map.insert name dN)
+          Var name -> setPartialDerivative (Map.insert name dN)
           Param _ -> return ()
           Const _ -> return ()
           Sum args -> do
@@ -232,7 +229,7 @@ partialDerivativesMap (Expression rootID mp) =
                 addDerivative y dY
               ([m, n], [_n]) -> do
                 -- mn n m
-                dX <- (coerceTo [m, 1] $ from dN) ** (coerceTo [1, n] $ from y)
+                dX <- coerceTo [m, 1] (from dN) ** coerceTo [1, n] (from y)
                 addDerivative x dX
                 dY <- transpose (from x) ** from dN
                 addDerivative y dY

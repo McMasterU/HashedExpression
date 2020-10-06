@@ -1,8 +1,6 @@
 module Var where
 
-import Data.Set (Set, fromList)
-import HashedExpression.Internal.Expression
-import HashedExpression.Operation
+import HashedExpression.Modeling.Typed
 import Prelude hiding (const)
 
 type Default1D = 10

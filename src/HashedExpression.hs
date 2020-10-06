@@ -19,12 +19,12 @@
 -- the above code creates a simple HashedExpression using the
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
-  ( module HashedExpression.Internal.Expression,
-    module HashedExpression.Operation,
+  ( module HashedExpression.Modeling.Typed,
     module HashedExpression.Internal.Simplify,
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
     module HashedExpression.Problem,
+    module HashedExpression.Internal.Base,
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
@@ -38,29 +38,31 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-import HashedExpression.Operation
+import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
 import Prelude hiding ((**), (^))
 
 data ValueAssignment
-  = forall d et. Expression d et :-> Val
+  = forall d et. TypedExpr d et :-> Val
 
 mkValMap :: [ValueAssignment] -> ValMap
 mkValMap ss = Map.fromList $ mapMaybe f ss
   where
-    f (Expression nID mp :-> val)
+    f (e :-> val)
       | (_, _, Var name) <- retrieveNode nID mp = Just (name, val)
       | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
       | otherwise = Nothing
+      where
+        (mp, nID) = asRawExpr e
 
 data OptimizationProblem = OptimizationProblem
-  { objective :: Expression Scalar R,
+  { objective :: TypedExpr Scalar R,
     constraints :: [ConstraintStatement],
     values :: [ValueAssignment],
     workingDir :: String

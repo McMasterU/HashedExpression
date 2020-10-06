@@ -24,8 +24,7 @@ where
 import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
-import Debug.Trace (traceShowId)
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 
 -- | hardcoded modulos used in hash function (i.e 'hashString')
 modulo :: Int
@@ -125,7 +124,6 @@ data HashOutcome
 
 type CheckCollision = Node -> Int -> HashOutcome
 
--- |
 -- | IsOk if doesn't collide with the provided expression map
 --   IsClash otherwise
 checkCollisionMap :: ExpressionMap -> CheckCollision
@@ -138,7 +136,7 @@ checkCollisionMap mp node nID =
 -- | IsOk if doesn't collide with any of provided expression map
 --   IsClash otherwise
 checkCollisionMaps :: [ExpressionMap] -> CheckCollision
-checkCollisionMaps [] node nID = IsOk nID
+checkCollisionMaps [] _ nID = IsOk nID
 checkCollisionMaps (mp : mps) node nID = case checkCollisionMap mp node nID of
   IsClash -> IsClash
   IsOk _ -> checkCollisionMaps mps node nID

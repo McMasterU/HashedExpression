@@ -8,15 +8,15 @@ import HashedExpression
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
 
-sigmoid :: (Dimension d) => Expression d R -> Expression d R
+sigmoid :: (Dimension d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 prependColumn ::
   forall m n.
   (Injectable 0 (m - 1) m m, Injectable 1 n n (n + 1)) =>
   Double ->
-  Expression (D2 m n) R ->
-  Expression (D2 m (n + 1)) R
+  TypedExpr (D2 m n) R ->
+  TypedExpr (D2 m (n + 1)) R
 prependColumn v exp = inject (range @0 @(m - 1), range @1 @n) exp (constant2D @m @(n + 1) v)
 
 ex4_neuralNetwork :: OptimizationProblem

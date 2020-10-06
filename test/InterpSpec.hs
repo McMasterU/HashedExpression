@@ -7,22 +7,24 @@
 module InterpSpec where
 
 import Commons
-import Data.Complex (Complex (..))
-import Data.Map.Strict (fromList, union)
-import Data.Maybe (fromJust)
-import Debug.Trace (traceShowId)
-import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-), type (<=))
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils
+import Data.Map.Strict (union)
+import GHC.TypeLits (KnownNat)
+import HashedExpression.Internal.Base
 import HashedExpression.Interp
-import HashedExpression.Operation hiding (product, sum)
-import qualified HashedExpression.Operation
-import HashedExpression.Prettify
+import HashedExpression.Modeling.Typed
 import Test.Hspec
 import Test.QuickCheck
-import Var
 import Prelude hiding ((**), (^))
-import qualified Prelude
+
+newtype IntB n = IntB Int deriving (Show, Eq, Ord)
+
+instance (KnownNat n) => Arbitrary (IntB n) where
+  arbitrary = do
+    let nNat = nat @n
+    x <- arbitrary
+    return $ IntB $ abs (x `mod` nNat)
+
+-------------------------------------------------------------------------------
 
 -- |
 prop_RotateOneR1 :: SuiteOneR -> Bool
@@ -64,129 +66,6 @@ prop_RotateTwoR3 (Suite exp valMap) amount1 amount2 =
     f1 = rotate amount1 . rotate amount2
     f2 = rotate (fst amount1 + fst amount2, snd amount1 + snd amount2)
 
---- TODO: Maybe implement term-level projecting and injecting and thus able to randomize selectors ?
-prop_ProjectInjectOneR :: SuiteOneR -> Expectation
-prop_ProjectInjectOneR (Suite exp valMap) = do
-  let s = range @1 @5
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = range @5 @6
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = at @7
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = range @0 @9
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s1 = range @0 @4
-      s2 = range @5 @(Default1D - 1)
-  let part1 = project s1 exp
-  let part2 = project s2 exp
-  let combine = inject s1 part1 . inject s2 part2 $ zero1
-  eval valMap combine `shouldBe` eval valMap exp
-  let s1 = range @0 @2
-      s2 = range @3 @(Default1D - 1)
-  let part1 = project s1 exp
-  let part2 = project s2 exp
-  let combine = inject s1 part1 . inject s2 part2 $ zero1
-  eval valMap combine `shouldBe` eval valMap exp
-
--- | Get 2 projection parts, injecting them to 0 correspondingly should equal the original
-prop_ProjectInjectOneRUntyped :: SuiteOneR -> Expectation
-prop_ProjectInjectOneRUntyped (Suite exp valMap) = do
-  between <- generate $ elements [0 .. defaultDim1D - 2]
-  let ds1 = [Range 0 between 1]
-  let ds2 = [Range (between + 1) (defaultDim1D - 1) 1]
-  let part1 = unsafeProject ds1 exp
-  let part2 = unsafeProject ds2 exp
-  let combined = unsafeInject ds1 part1 . unsafeInject ds2 part2 $ zero1
-  eval valMap combined `shouldBe` eval valMap exp
-
-prop_ProjectInjectOneC :: SuiteOneC -> Expectation
-prop_ProjectInjectOneC (Suite exp valMap) = do
-  let s = range @2 @3
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = range @1 @6
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = at @3
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = range @0 @9
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s1 = ranges @0 @(Default1D - 1) @2
-      s2 = ranges @1 @(Default1D - 1) @2
-  let part1 = project s1 exp
-  let part2 = project s2 exp
-  let combine = inject s1 part1 . inject s2 part2 $ zero1 +: zero1
-  eval valMap combine `shouldBe` eval valMap exp
-  let s1 = ranges @0 @(Default1D - 1) @3
-      s2 = ranges @1 @(Default1D - 1) @3
-      s3 = ranges @2 @(Default1D - 1) @3
-  let part1 = project s1 exp
-  let part2 = project s2 exp
-  let part3 = project s3 exp
-  let combine = inject s3 part3 . inject s1 part1 . inject s2 part2 $ zero1 +: zero1
-  eval valMap combine `shouldBe` eval valMap exp
-
-prop_ProjectInjectTwoR :: SuiteTwoR -> Expectation
-prop_ProjectInjectTwoR (Suite exp valMap) = do
-  let s = (range @2 @3, at @4)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (ranges @1 @3 @2, at @2)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (at @3, at @3)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (at @3, range @0 @2)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let part1 = project (range @0 @2, range @0 @(Default2D2 - 1)) exp
-  let part2 = project (range @3 @4, range @0 @(Default2D2 - 1)) exp
-  let combine =
-        inject (range @0 @2, range @0 @(Default2D2 - 1)) part1
-          . inject (range @3 @4, range @0 @(Default2D2 - 1)) part2
-          $ zero2
-  eval valMap combine `shouldBe` eval valMap exp
-
-prop_ProjectInjectTwoC :: SuiteTwoC -> Expectation
-prop_ProjectInjectTwoC (Suite exp valMap) = do
-  let s = (range @2 @3, at @4)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (ranges @1 @3 @2, at @2)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (at @3, at @3)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let s = (at @3, range @0 @2)
-  eval valMap (inject s (project s exp) exp) `shouldBe` eval valMap exp
-  let part1 = project (range @0 @2, range @0 @(Default2D2 - 1)) exp
-  let part2 = project (range @3 @4, range @0 @(Default2D2 - 1)) exp
-  let combine =
-        inject (range @0 @2, range @0 @(Default2D2 - 1)) part1
-          . inject (range @3 @4, range @0 @(Default2D2 - 1)) part2
-          $ zero2 +: zero2
-  eval valMap combine `shouldBe` eval valMap exp
-
--- ideas:
---    dot product (<.>) vs scaling (*.)
---    exponential and log
---    conjugate of complex number
---    power and square root
---    advance: piecewise function
-
--- properties of dot product
--- u . v = |u||v| cos t
--- u . v = v . u
--- u . v = 0 when u and v are orthogonal
--- 0 . 0 = 0
-
--- | v|^2 = v . v
---  a (u . v) = (a u) . v
---  (au + bv) . w = (au) . w + (bv) . w
-
--- [Scalar] 0 . 0 = 0
--- prop_dotProductScalar_1 ::  Bool
--- prop_dotProductScalar_1 =
---   let
---     n = variable "n"
---     valMap = fromList [("n", VNum 0)]
---   in
---     n <.> n == n
-
--- u . v = v . u
 prop_dotProduct1D_1 :: SuiteOneR -> SuiteOneR -> Bool
 prop_dotProduct1D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
   eval valMap (exp1 <.> exp2) == eval valMap (exp2 <.> exp1)
@@ -199,12 +78,6 @@ prop_dotProduct2D_1 (Suite exp1 valMap1) (Suite exp2 valMap2) =
   where
     valMap = valMap1 `union` valMap2
 
---[1D] |v|^2 = v . v
--- prop_dotProduct1D_2 :: SuiteOneR -> Bool
--- prop_dotProduct1D_2 (Suite exp1 valMap1) =
---     eval valMap1 ((??? exp1)^2) == eval valMap1 (exp1 <.> exp1)
-
---  a (u . v) = (a u) . v
 prop_dotProduct1D_3 :: SuiteScalarR -> SuiteOneR -> SuiteOneR -> Expectation
 prop_dotProduct1D_3 (Suite a valMap1) (Suite exp1 valMap2) (Suite exp2 valMap3) =
   eval valMap (a * (exp1 <.> exp2)) `shouldApprox` eval valMap ((a *. exp1) <.> exp2)
@@ -223,17 +96,6 @@ prop_dotProduct1D_4 (Suite a valMap1) (Suite b valMap2) (Suite exp1 valMap3) (Su
   eval valMap (((a *. exp1) + (b *. exp2)) <.> exp3) `shouldApprox` eval valMap (((a *. exp1) <.> exp3) + ((b *. exp2) <.> exp3))
   where
     valMap = valMap1 `union` valMap2 `union` valMap3 `union` valMap4 `union` valMap5
-
--- [ arithmetic properties ]
--- 1) commutative properties:  a + b = b + a
---                             a * b = b * a
--- 2) associative properties:  a + (b + c) = (a + b) + c
---                             (a * b) * c = a * (b * c)
--- 3) Distributive properties: a * (b + c) = a * b + a * c
--- 4) Identity element: a + 0 = a
---                      a * 1 = a
--- 5) Inverse Element:  a + (-a) = 0
---                      a * (1 / a) = 1
 
 prop_Commutative_Addition :: SuiteScalarR -> SuiteScalarR -> Bool
 prop_Commutative_Addition (Suite exp1 valMap1) (Suite exp2 valMap2) =
@@ -269,21 +131,6 @@ prop_Inverse_Multiplication :: SuiteScalarR -> Property
 prop_Inverse_Multiplication (Suite exp1 valMap1) =
   eval valMap1 exp1 /= VR 0
     ==> (eval valMap1 (exp1 * (1 / exp1)) `shouldApprox` VR 1)
-
--- [ exponential properties ]
--- 1) x^a * x^b = x ^ (a+b)
--- 2) (xy)^a = x^a * y^a
--- 3) (x^a) / (x^b) = x ^ (a-b), x != 0
--- 4) a^(-m) = 1 / a^m, a != 0
--- 5) (a/b)^m = a^m / b^m, b != 0
-
-newtype IntB n = IntB Int deriving (Show, Eq, Ord)
-
-instance (KnownNat n) => Arbitrary (IntB n) where
-  arbitrary = do
-    let nNat = nat @n
-    x <- arbitrary
-    return $ IntB $ abs (x `mod` nNat)
 
 prop_ExpScalar_1 :: SuiteScalarR -> IntB 5 -> IntB 5 -> Expectation
 prop_ExpScalar_1 (Suite exp1 valMap1) (IntB a) (IntB b) =
@@ -373,16 +220,6 @@ spec =
       property prop_RotateTwoR2
     specify "prop_Rotate Two R rotate a then rotate b should equal rotate (a + b)" $
       property prop_RotateTwoR3
-    specify "prop_Project_Inject One R" $
-      property prop_ProjectInjectOneR
-    specify "prop_Project_Inject One R Untyped" $
-      property prop_ProjectInjectOneRUntyped
-    specify "prop_Project_Inject One C" $
-      property prop_ProjectInjectOneC
-    specify "prop_Project_Inject Two R" $
-      property prop_ProjectInjectTwoR
-    specify "prop_Project_Inject Two C" $
-      property prop_ProjectInjectTwoC
     specify "prop_Transpose_Twice 1" $
       property (prop_TransposeTwice @3 @4 @R)
     specify "prop_Transpose_Twice 2" $

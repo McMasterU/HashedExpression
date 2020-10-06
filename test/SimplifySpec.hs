@@ -1,16 +1,13 @@
 module SimplifySpec where
 
 import Commons
-import Data.Complex (Complex (..))
-import Data.Map.Strict (union)
-import Data.Maybe (fromJust)
-import Debug.Trace (traceShowId)
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Simplify
-import HashedExpression.Internal.Utils
-import HashedExpression.Interp
-import HashedExpression.Operation hiding (product, sum)
-import qualified HashedExpression.Operation
+import HashedExpression.Interp hiding
+  ( product,
+    sum,
+  )
+import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import Test.Hspec
 import Test.QuickCheck (property)
@@ -21,47 +18,21 @@ infix 1 `shouldSimplifyTo`
 
 shouldSimplifyTo ::
   (HasCallStack, Dimension d) =>
-  Expression d et ->
-  Expression d et ->
+  TypedExpr d et ->
+  TypedExpr d et ->
   IO ()
 shouldSimplifyTo exp1 exp2 = do
-  prettify (simplify exp1) `shouldBe` prettify (simplify exp2)
-  simplify exp1 `shouldBe` simplify exp2
+  prettify (simplify (asRawExpr exp1)) `shouldBe` prettify (simplify (asRawExpr exp2))
+  simplify (asRawExpr exp1) `shouldBe` simplify (asRawExpr exp2)
 
--- |
-prop_sameValueInterpScalarR :: SuiteScalarR -> Expectation
-prop_sameValueInterpScalarR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
-
-prop_sameValueInterpScalarC :: SuiteScalarC -> Expectation
-prop_sameValueInterpScalarC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
-
-prop_sameValueInterpOneR :: SuiteOneR -> Expectation
-prop_sameValueInterpOneR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
-
-prop_sameValueInterpOneC :: SuiteOneC -> Expectation
-prop_sameValueInterpOneC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
-
-prop_sameValueInterpTwoR :: SuiteTwoR -> Expectation
-prop_sameValueInterpTwoR (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
-
-prop_sameValueInterpTwoC :: SuiteTwoC -> Expectation
-prop_sameValueInterpTwoC (Suite exp valMap) =
-  eval valMap exp `shouldApprox` eval valMap (simplify exp)
+prop_sameValueInterp :: XSuite -> Expectation
+prop_sameValueInterp (XSuite expr valMap) =
+  eval valMap expr `shouldApprox` eval valMap (simplify expr)
 
 spec :: Spec
 spec =
   describe "simplify spec" $ do
-    specify "same value interp scalar R" $ property prop_sameValueInterpScalarR
-    specify "same value interp scalar C" $ property prop_sameValueInterpScalarC
-    specify "same value interp one R" $ property prop_sameValueInterpOneR
-    specify "same value interp one C" $ property prop_sameValueInterpOneC
-    specify "same value interp two R" $ property prop_sameValueInterpTwoR
-    specify "same value interp two C" $ property prop_sameValueInterpTwoC
+    specify "same value interp" $ property prop_sameValueInterp
     specify "simplify scalar one zero" $ do
       constant 0.0 *. constant 9.0 `shouldSimplifyTo` constant 0.0
       x * one `shouldSimplifyTo` x
@@ -105,7 +76,7 @@ spec =
     specify "scale rules" $ do
       x *. (y *. v) `shouldSimplifyTo` (x * y) *. v
     specify "negate rules" $ do
-      negate (negate x) `shouldSimplifyTo` simplify x
+      negate (negate x) `shouldSimplifyTo` x
       negate (negate (x + y)) `shouldSimplifyTo` (x + y)
       negate zero `shouldSimplifyTo` zero
     specify "simplify one d one zero" $ do
@@ -138,16 +109,3 @@ spec =
       rotate (0, 1) (rotate (2, -3) x2) `shouldSimplifyTo` rotate (2, -2) x2
       rotate (0, 0, 0) x3 `shouldSimplifyTo` x3
       rotate (2, 3, 4) (s *. y3) `shouldSimplifyTo` s *. rotate (2, 3, 4) y3
-    specify "more unit tests" $ do
-      x `shouldSimplifyTo` x
-      constant 1 / x `shouldSimplifyTo` x ^ (-1)
-      x + x `shouldSimplifyTo` constant 2 *. x
-      x - x `shouldSimplifyTo` constant 0
-      x * x `shouldSimplifyTo` x ^ 2
-      x / x `shouldSimplifyTo` constant 1
-      x + y `shouldSimplifyTo` x + y
-      x - y `shouldSimplifyTo` x - y
-      x * y `shouldSimplifyTo` x * y
-      x / y `shouldSimplifyTo` x * y ^ (-1)
-      (x * y) * (x * y) `shouldSimplifyTo` (x ^ 2) * (y ^ 2)
-      (x / y) * (x / y) `shouldSimplifyTo` (y ^ (-2)) * (x ^ 2)

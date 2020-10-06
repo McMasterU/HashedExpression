@@ -25,17 +25,12 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Rewrite
 import HashedExpression.Internal.Simplify
-import HashedExpression.Internal.Utils
 import HashedExpression.Prettify
 import HashedExpression.Value
-
--- TODO: better sections in the Haddock.
 
 -------------------------------------------------------------------------------
 
@@ -116,8 +111,6 @@ instance Show Problem where
 
 -------------------------------------------------------------------------------
 
--------------------------------------------------------------------------------
-
 -- | Negative infinity
 ninf :: Double
 ninf = -1 / 0
@@ -131,11 +124,11 @@ inf = 1 / 0
 -- | The statement of a constraint, including an 'ExpressionMap' subexpressions, the root 'NodeID' and its value
 data ConstraintStatement
   = -- | A lower bound constraint
-    Lower (ExpressionMap, NodeID) Val
+    Lower RawExpr Val
   | -- | An upper bound constraint
-    Upper (ExpressionMap, NodeID) Val
+    Upper RawExpr Val
   | -- | A constraint with a lower and upper bound
-    Between (ExpressionMap, NodeID) (Val, Val)
+    Between RawExpr (Val, Val)
   deriving (Show, Eq, Ord)
 
 -- * Functions for creating 'ConstraintStatement's.
@@ -144,59 +137,59 @@ infix 1 `between`, .>=, .<=, .==
 
 -- | The expression is greater than the given value
 (.>=) ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the lower bound
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.>=) exp = Lower (unwrap exp)
+(.>=) exp = Lower (asRawExpr exp)
 
 -- | The expression is less than the given value
 (.<=) ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the upper bound
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.<=) exp = Upper (unwrap exp)
+(.<=) exp = Upper (asRawExpr exp)
 
 -- | The expression is between two values
 between ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the lower and upper bounds
   (Val, Val) ->
   -- | The corresponding constraint statement
   ConstraintStatement
-between exp = Between (unwrap exp)
+between exp = Between (asRawExpr exp)
 
 -- | An equality constraint
 --
 --   Note: this is the same as setting the upper and lower bound to the same value
 (.==) ::
-  (Dimension d) =>
-  -- | The expression
-  Expression d R ->
+  IsExpression e =>
+  -- | The constraint expression
+  e ->
   -- | The value to set equal to the expression
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.==) exp val = Between (unwrap exp) (val, val)
+(.==) exp val = Between (asRawExpr exp) (val, val)
 
 -- | Extract the expression from the 'ConstraintStatement'
-getExpressionCS :: ConstraintStatement -> (ExpressionMap, NodeID)
+getExpressionCS :: ConstraintStatement -> RawExpr
 getExpressionCS cs =
   case cs of
     Lower exp _ -> exp
     Upper exp _ -> exp
     Between exp _ -> exp
 
-mapExpressionCS :: ((ExpressionMap, NodeID) -> (ExpressionMap, NodeID)) -> ConstraintStatement -> ConstraintStatement
+mapExpressionCS :: (RawExpr -> RawExpr) -> ConstraintStatement -> ConstraintStatement
 mapExpressionCS f cs =
   case cs of
     Lower exp v -> Lower (f exp) v
@@ -215,7 +208,7 @@ getValCS cs =
 isBoxConstraint :: ConstraintStatement -> Bool
 isBoxConstraint cs =
   case retrieveOp n mp of
-    Var var -> True
+    Var _ -> True
     _ -> False
   where
     (mp, n) = getExpressionCS cs
@@ -228,17 +221,10 @@ newtype Constraint = Constraint [ConstraintStatement]
 
 -------------------------------------------------------------------------------
 
--- | Information about whether the optimization problem is well-founded
--- data ProblemResult
---  = -- | The problem is valid, here is the problem
---    ProblemValid Problem
---  | -- | The problem is invalid, here is the reason
---    ProblemInvalid String
---  deriving (Show)
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
 -------------------------------------------------------------------------------
-getBound :: (ExpressionMap, NodeID) -> [ConstraintStatement] -> (Double, Double)
+getBound :: RawExpr -> [ConstraintStatement] -> (Double, Double)
 getBound (mp, n) = foldl update (ninf, inf)
   where
     getNum val = case val of
@@ -264,29 +250,29 @@ toBoxConstraint cs = case cs of
     let Var name = retrieveOp n mp
      in BoxBetween name vals
 
-mergeToMain :: (ExpressionMap, NodeID) -> ProblemConstructingM NodeID
+mergeToMain :: RawExpr -> ProblemConstructingM NodeID
 mergeToMain (mp, nID) = do
   curMp <- get
   let (mergedMp, mergedNID) = safeMerge curMp (mp, nID)
   put mergedMp
   return mergedNID
 
-varsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+varsWithShape :: RawExpr -> [(String, Shape)]
 varsWithShape = mapMaybe collect . IM.toList . fst
   where
-    collect (nID, (shape, _, Var name)) = Just (name, shape)
+    collect (_, (shape, _, Var name)) = Just (name, shape)
     collect _ = Nothing
 
-paramsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+paramsWithShape :: RawExpr -> [(String, Shape)]
 paramsWithShape = mapMaybe collect . IM.toList . fst
   where
-    collect (nID, (shape, _, Param name)) = Just (name, shape)
+    collect (_, (shape, _, Param name)) = Just (name, shape)
     collect _ = Nothing
 
-constructProblemHelper :: Expression Scalar R -> Constraint -> ProblemConstructingM Problem
+constructProblemHelper :: IsScalarReal e => e -> Constraint -> ProblemConstructingM Problem
 constructProblemHelper obj (Constraint constraints) = do
-  let vs = concatMap varsWithShape $ unwrap obj : map getExpressionCS constraints
-  let ps = concatMap paramsWithShape $ unwrap obj : map getExpressionCS constraints
+  let vs = concatMap varsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
+  let ps = concatMap paramsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
   when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
     throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
@@ -298,21 +284,20 @@ constructProblemHelper obj (Constraint constraints) = do
   let processF exp = do
         let (mp, name2ID) = partialDerivativesMap exp
         let (names, beforeMergeIDs) = unzip $ Map.toList name2ID
-        afterMergedIDs <- mapM (mergeToMain . simplifyUnwrapped . (mp,)) beforeMergeIDs
+        afterMergedIDs <- mapM (mergeToMain . simplify . (mp,)) beforeMergeIDs
         return $ Map.fromList $ zip names afterMergedIDs
   let lookupDerivative :: (String, Shape) -> Map String NodeID -> ProblemConstructingM NodeID
       lookupDerivative (name, shape) dMap = case Map.lookup name dMap of
         Just dID -> return dID
         _ -> introduceNode (shape, R, Const 0)
   -------------------------------------------------------------------------------
-  fID <- mergeToMain $ unwrap obj
+  fID <- mergeToMain $ asScalarRealRawExpr obj
   fPartialDerivativeMap <- processF obj
   -------------------------------------------------------------------------------
-  let processScalarConstraint :: (ExpressionMap, NodeID) -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
-      processScalarConstraint (mp, nID) = do
-        let (lb, ub) = getBound (mp, nID) scalarCS
-            exp = Expression @Scalar @R nID mp
-        gID <- mergeToMain $ unwrap exp
+  let processScalarConstraint :: RawExpr -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
+      processScalarConstraint exp = do
+        let (lb, ub) = getBound exp scalarCS
+        gID <- mergeToMain $ exp
         mapHaha <- processF exp
         return (gID, mapHaha, (lb, ub))
   scalarConstraintsInfo <- mapM processScalarConstraint expScalarConstraints
@@ -355,11 +340,6 @@ constructProblemHelper obj (Constraint constraints) = do
       }
   where
     -------------------------------------------------------------------------------
-    checkConflictShape :: [(String, Shape)] -> ProblemConstructingM ()
-    checkConflictShape vs = case find (\ls -> length ls > 1) $ map nub $ groupOn fst . sortOn fst $ vs of
-      Just ((x, _) : _) -> throwError $ "Shape of " ++ show x ++ " is not consistent between objective and constraints"
-      _ -> return ()
-    -------------------------------------------------------------------------------
     checkConstraint :: ConstraintStatement -> ProblemConstructingM ()
     checkConstraint cs = do
       let (mp, n) = getExpressionCS cs
@@ -372,12 +352,12 @@ constructProblemHelper obj (Constraint constraints) = do
           | not . all (compatible []) $ getValCS cs ->
             throwError "Scalar expression must be bounded by scalar value"
           | otherwise -> return ()
-        _ -> throwError "Only scalar inequality and box constraint for variable are supported"
+        _ -> throwError "Only scalar inequality and box constraint are supported"
 
 -- | Construct a Problem from given objective function and constraints
-constructProblem :: Expression Scalar R -> Constraint -> Either String Problem
+constructProblem :: IsScalarReal e => e -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
   fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where
-    simplifiedObjective = simplify objectiveFunction
-    simplifiedConstraint = Constraint $ map (mapExpressionCS simplifyUnwrapped) cs
+    simplifiedObjective = simplify $ asRawExpr objectiveFunction
+    simplifiedConstraint = Constraint $ map (mapExpressionCS simplify) cs

@@ -4,7 +4,7 @@ import HashedExpression
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
 
-sigmoid :: (Dimension d) => Expression d R -> Expression d R
+sigmoid :: (Dimension d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 ex2_logisticRegression :: OptimizationProblem

@@ -11,24 +11,21 @@
 module HashedExpression.Codegen.CSimple where
 
 import Control.Monad (forM_, when)
-import Data.Array (indices, (!))
-import Data.IntMap.Strict (IntMap)
-import qualified Data.IntMap.Strict as IM
-import Data.List (find, foldl', intercalate, partition, sortOn, tails)
+import Data.List (find, foldl', partition, sortOn)
 import Data.List.HT (viewR)
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import HashedExpression.Codegen
+import HashedExpression.Codegen (Code, Codegen (..), indent)
 import HashedExpression.Embed (fftUtils)
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression (ElementType (..), Expression, ExpressionMap, NodeID (..), Op (..), Shape, exMap)
+import HashedExpression.Internal.Base (ElementType (..), ExpressionMap, NodeID (..), Op (..), Shape)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
-import HashedExpression.Internal.Utils
 import HashedExpression.Problem
+import HashedExpression.Utils
 import HashedExpression.Value
 import System.FilePath
 import Prelude hiding ((!!))

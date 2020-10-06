@@ -6,11 +6,11 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module contains functionality for printing an 'Expression' in a readable (i.e pretty) format. This can be very
--- useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
+-- This module contains functionality for printing an 'TypedExpr' in a readable (i.e pretty) format. This can be very
+-- useful for debugging as the pretty format is still a syntactically valid 'TypedExpr' that can be pasted into ghci
 module HashedExpression.Prettify
   ( prettify,
-    prettifyDebug,
+    asString,
     showExpDebug,
     showExp,
     hiddenPrettify,
@@ -19,47 +19,36 @@ module HashedExpression.Prettify
   )
 where
 
-import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
-
-unwrap :: Expression d et -> (ExpressionMap, NodeID)
-unwrap (Expression n mp) = (mp, n)
-
-wrap :: (ExpressionMap, NodeID) -> Expression d et
-wrap = uncurry $ flip Expression
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout.
 --   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
-showExp :: Expression d et -> IO ()
+showExp :: IsExpression e => e -> IO ()
 showExp = putStrLn . prettify
 
--- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
-prettify :: Expression d et -> String
-prettify e@(Expression n mp) =
-  let shape = expressionShape $ unwrap e
-      node = expressionOp $ unwrap e
-      et = expressionElementType e
+-- | Visualize an 'TypedExpr' in a pretty format. If you wish to enter the result into ghci, use 'asString'
+prettify :: IsExpression e => e -> String
+prettify e =
+  let (mp, n) = asRawExpr e
+      (shape, et, _) = retrieveNode n mp
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
       typeName = " :: " ++ dimensionStr ++ show et
-   in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
+   in T.unpack (hiddenPrettify False $ asRawExpr e) ++ typeName
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
 --   ghci as long as you define corresponding variable identifiers
-showExpDebug :: Expression d et -> IO ()
-showExpDebug = putStrLn . prettifyDebug
+showExpDebug :: IsExpression e => e -> IO ()
+showExpDebug = putStrLn . asString
 
--- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
+-- | Visualize an 'TypedExpr' in a pretty format. Generally, you can re-enter a pretty printed 'TypedExpr' into
 --   ghci as long as you define corresponding variable identifiers
-prettifyDebug :: Expression d et -> String
-prettifyDebug e@(Expression n mp) =
-  let shape = expressionShape $ unwrap e
-      node = expressionOp $ unwrap e
-   in T.unpack (hiddenPrettify True $ unwrap e)
+asString :: IsExpression e => e -> String
+asString e = T.unpack (hiddenPrettify True $ asRawExpr e)
 
 -- |
 prettifyDimSelector :: DimSelector -> String
@@ -68,14 +57,14 @@ prettifyDimSelector (Range start end 1) = show start ++ ":" ++ show end
 prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" ++ show n
 
 -- | same as 'prettify' without any overhead
-debugPrint :: (ExpressionMap, NodeID) -> String
+debugPrint :: RawExpr -> String
 debugPrint = T.unpack . hiddenPrettify False
 
-debugPrintExp :: Expression d et -> String
-debugPrintExp = debugPrint . unwrap
+debugPrintExp :: IsExpression e => e -> String
+debugPrintExp = debugPrint . asRawExpr
 
--- | Print every entry (invididually) of an 'Expression'
--- showAllEntries :: forall d et. Expression d et -> IO ()
+-- | Print every entry (invididually) of an 'TypedExpr'
+-- showAllEntries :: forall d et. TypedExpr d et -> IO ()
 -- showAllEntries e = do
 --  putStrLn "--------------------------"
 --  putStrLn $ intercalate "\n" . map mkString $ allEntries e
@@ -83,12 +72,12 @@ debugPrintExp = debugPrint . unwrap
 --  where
 --    mkString (n, str) = show n ++ " --> " ++ str
 
--- | auxillary function for computing pretty format of an 'Expression'
+-- | auxiliary function for computing pretty format of an 'TypedExpr'
 hiddenPrettify ::
   -- | retain syntactically valid (for use in ghci)
   Bool ->
   -- | (unwrapped) expression to be prettified
-  (ExpressionMap, NodeID) ->
+  RawExpr ->
   -- | resulting "pretty" expression
   T.Text
 hiddenPrettify pastable (mp, n) =

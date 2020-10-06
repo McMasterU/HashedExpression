@@ -14,55 +14,36 @@
 -- expression maps, create new entry, etc.
 module HashedExpression.Internal where
 
-import Control.Monad (forM, forM_, unless, when)
-import Control.Monad.Reader (Reader, ask, runReader)
 import Control.Monad.ST.Strict
+import Control.Monad.State.Strict
 import Data.Array.MArray
 import Data.Array.ST
 import qualified Data.Array.Unboxed as UA
-import Data.Graph (buildG, topSort)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (foldl', groupBy, sort, sortBy, sortOn)
+import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.STRef.Strict
-import Data.Set (Set, empty, insert, member)
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import Debug.Trace (traceShowId)
-import GHC.Exts (sortWith)
-import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
-import HashedExpression.Prettify
 import Prelude hiding ((^))
-
--- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
-unwrap :: Expression d et -> (ExpressionMap, NodeID)
-unwrap (Expression n mp) = (mp, n)
-
--- | Wrap a 'ExpressionMap' and root 'NodeID' into an "Expression" type
-wrap :: (ExpressionMap, NodeID) -> Expression d et
-wrap = uncurry $ flip Expression
 
 -------------------------------------------------------------------------------
 
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+-- | Helper function that generalizes the construction of 'TypedExpr' combinators/operators by merging
 --   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
 --   provided via 'OperationOption'.
 apply ::
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
-  -- | the operands (unwrapped 'Expression')
-  [(ExpressionMap, NodeID)] ->
-  -- | the resulting (unwrapped) 'Expression'
-  (ExpressionMap, NodeID)
+  -- | the operands
+  [RawExpr] ->
+  -- | the resulting expression
+  RawExpr
 apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
   where
     (mergedMap, nIDs) = safeMerges exps
@@ -70,63 +51,9 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
     resNode = createNode option operands
     resID = hashNode (checkCollisionMap mergedMap) resNode
 
-applyUnary ::
-  HasCallStack =>
-  UnarySpec ->
-  -- | the operand
-  Expression d1 et1 ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyUnary spec e1 = wrap . apply (Unary spec) $ [unwrap e1]
-
-applyNary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  NarySpec ->
-  -- | the operands
-  [Expression d1 et1] ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyNary spec = wrap . apply (Nary spec) . map unwrap
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression' and a fixed (binary) arity
-applyBinary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  BinarySpec ->
-  -- | the "left" operand
-  Expression d1 et1 ->
-  -- | the "right" operand
-  Expression d2 et2 ->
-  -- | the resulting 'Expression'
-  Expression d3 et3
-applyBinary spec e1 e2 = wrap . apply (Binary spec) $ [unwrap e1, unwrap e2]
-
-applyConditionAry ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  ConditionarySpec ->
-  -- | the conditional/selector operand
-  Expression d et1 ->
-  -- | operands (branches) that could be selected
-  [Expression d et2] ->
-  -- | the resulting 'Expression'
-  Expression d et2
-applyConditionAry spec e branches =
-  wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
-
--------------------------------------------------------------------------------
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Expression Transformations
-
--- --------------------------------------------------------------------------------------------------------------------
-
--- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
+-- | Transformation type, take a (unwrapped) 'TypedExpr' and return a transformed (unwrapped) 'TypedExpr'.
 --   Construct using the 'toTransformation' function
-type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+type Transformation = RawExpr -> RawExpr
 
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
@@ -156,17 +83,11 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
       | snd lastExp == snd curExp = curExp
       | otherwise = go (k - 1) curExp (smp curExp)
 
--- --------------------------------------------------------------------------------------------------------------------
-
--- * Other
-
--- --------------------------------------------------------------------------------------------------------------------
-
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSort ::
-  -- | unwrapped 'Expression'
-  (ExpressionMap, NodeID) ->
+  -- | The expression
+  RawExpr ->
   -- | list in topological order (independent to dependent)
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
@@ -174,7 +95,7 @@ topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 -- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSortManyRoots ::
-  -- | many rooted unwrapped 'Expression'
+  -- | TypedExpr Map and root nodes
   (ExpressionMap, [NodeID]) ->
   -- | list in topological order (independent to dependent)
   [NodeID]
@@ -214,15 +135,6 @@ topologicalSortManyRoots (mp, ns) = map NodeID $ filter (/= -1) . UA.elems $ top
           unless isMarked $ dfs n
         return order
 
--- | Retrieves all 'Var' nodes in an 'Expression'
-expressionVarNodes :: (Dimension d) => Expression d et -> [(String, NodeID)]
-expressionVarNodes (Expression n mp) = mapMaybe collect ns
-  where
-    ns = topologicalSort (mp, n)
-    collect nId
-      | Var varName <- retrieveOp nId mp = Just (varName, nId)
-      | otherwise = Nothing
-
 toTotal :: Map NodeID NodeID -> (NodeID -> NodeID)
 toTotal mp nID = case Map.lookup nID mp of
   Just other -> other
@@ -248,16 +160,16 @@ safeMergeManyRoots accMp (mp, ns) =
    in (mergedMap, map (toTotal finalSub) ns)
 
 -- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+safeMerge :: ExpressionMap -> RawExpr -> RawExpr
 safeMerge accMp (mp, n) =
   let (resMp, [resN]) = safeMergeManyRoots accMp (mp, [n])
    in (resMp, resN)
 
-safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
+safeMerges :: [RawExpr] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
 safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
   where
-    f :: (ExpressionMap, [NodeID]) -> (ExpressionMap, NodeID) -> (ExpressionMap, [NodeID])
+    f :: (ExpressionMap, [NodeID]) -> RawExpr -> (ExpressionMap, [NodeID])
     f (acc, accIds) (valMP, valNID) =
       let (mergedMap, nID) = safeMerge acc (valMP, valNID)
        in (mergedMap, accIds ++ [nID])
@@ -301,21 +213,17 @@ createNode spec args =
 
 -------------------------------------------------------------------------------
 
--- | Create an Expression from a standalone 'Node'
-fromNode :: Node -> Expression d et
-fromNode node = Expression (NodeID h) (IM.insert h node IM.empty)
+-- | Create an unwrapped Expresion from a standalone 'Node'
+fromNodeUnwrapped :: Node -> RawExpr
+fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
   where
     checkCollision = checkCollisionMap IM.empty
     h = hashNode checkCollision node
 
--- | Create an unwrapped Expresion from a standalone 'Node'
-fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
-fromNodeUnwrapped = unwrap . fromNode
-
 extract :: ExpressionMap -> ((Int, Node) -> Maybe a) -> [a]
 extract mp collect = mapMaybe collect $ IM.toList mp
 
--- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'TypedExpr'
 varsWithNodeID :: ExpressionMap -> [(String, NodeID)]
 varsWithNodeID mp = extract
   mp
@@ -351,15 +259,3 @@ containsFTNode mp = any isFT $ IM.elems mp
 
 nodeIDs :: ExpressionMap -> [NodeID]
 nodeIDs = map NodeID . IM.keys
-
--------------------------------------------------------------------------------
-
--- | All the entries of the expression
-allEntries :: Expression d et -> [(NodeID, String)]
-allEntries (Expression n mp) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
-
--- | Print every entry (individually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
-allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
-allEntriesDebug (mp, n) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp

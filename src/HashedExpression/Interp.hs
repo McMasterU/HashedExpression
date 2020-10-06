@@ -10,31 +10,12 @@
 module HashedExpression.Interp where
 
 import Data.Array
-import Data.Complex
-import Data.Function ((&))
-import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate)
+import Data.Complex hiding (conjugate)
 import qualified Data.List as List
-import Data.Map (Map, fromList)
 import qualified Data.Map as Map
-import Debug.Trace (traceId, traceShowId)
-import GHC.IO.Unsafe (unsafePerformIO)
-import GHC.TypeLits (KnownNat)
-import HashedExpression.Internal.Expression
-  ( D1,
-    D2,
-    D3,
-    DimSelector (..),
-    ElementType (..),
-    Expression (..),
-    ExpressionMap,
-    NodeID,
-    Op (..),
-    Scalar,
-  )
+import HashedExpression.Internal.Base hiding ((**))
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
-import HashedExpression.Prettify (prettify, showExp)
+import HashedExpression.Utils
 import HashedExpression.Value
 
 data InterpValue
@@ -48,11 +29,12 @@ data InterpValue
   | V3DC (Array (Int, Int, Int) (Complex Double))
   deriving (Show, Eq)
 
-eval :: ValMap -> Expression d et -> InterpValue
-eval valMap (Expression nID mp) =
-  let (shape, et, op) = retrieveNode nID mp
+eval :: IsExpression e => ValMap -> e -> InterpValue
+eval valMap e =
+  let (mp, nID) = asRawExpr e
+      (shape, et, op) = retrieveNode nID mp
       eval' :: NodeID -> InterpValue
-      eval' x = eval valMap (Expression x mp)
+      eval' x = eval valMap (mp, x)
       -------------------------------------------------------------------------------
       -- Partial helper functions
       constructR :: [Double] -> InterpValue

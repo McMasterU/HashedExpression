@@ -6,19 +6,19 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module contains functionality for defining values to be subbed into a 'Expression'. An 'Expression' is provided values via a 'ValMap',
+-- This module contains functionality for defining values to be subbed into a 'TypedExpr'. An 'TypedExpr' is provided values via a 'ValMap',
 -- which should be constructed like any other 'Map', for example
 --
 -- @
 --  valMap = fromList [("x",v1),("y",v2),....]
 -- @
--- where @"x","y"@ are variable identifiers and @v1,v2@ are of type 'Val'
+-- where @"x","y"@ are identifiers and @v1,v2@ are of type 'Val'
 module HashedExpression.Value where
 
 import Data.Array
 import Data.Map (Map, fromList)
 import qualified Data.Map as Map
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 
 -- | The name of a dataset within an HDF5 file
 type Dataset = String
@@ -66,7 +66,7 @@ valElems val =
 valueFromHaskell :: Val -> Bool
 valueFromHaskell val =
   case val of
-    VScalar v -> True
+    VScalar _ -> True
     V1D vs -> True
     V2D vs -> True
     V3D vs -> True

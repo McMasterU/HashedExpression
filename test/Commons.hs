@@ -6,38 +6,26 @@
 module Commons where
 
 import Control.Applicative (liftA2)
-import Control.Monad (foldM, forM)
+import Control.Monad (foldM)
 import Data.Array hiding (range)
 import Data.Complex (Complex (..), imagPart, realPart)
 import Data.Function ((&))
-import Data.Function.HT (nest)
-import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, mapMaybe)
-import Data.Proxy (Proxy (..))
-import Data.Set (Set, fromList, toList)
-import Data.Time (diffUTCTime, getCurrentTime)
-import Debug.Trace (traceShowId)
-import GHC.IO.Unsafe (unsafePerformIO)
-import GHC.TypeLits (KnownNat, Nat, type (+), type (-))
+import Data.Set (fromList, toList)
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Node
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.Builder
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Interp
-import HashedExpression.Operation
-import qualified HashedExpression.Operation
-import HashedExpression.Prettify
+import HashedExpression.Modeling.Typed
 import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
 import Text.Printf
 import Var
-import Prelude hiding ((^))
+import Prelude hiding ((**), (^))
 
 sizeReduceFactor :: Int
 sizeReduceFactor = 3
@@ -61,16 +49,6 @@ vectorOfDifferent sz gen = foldM f [] [1 .. sz]
     f acc _ = (: acc) <$> gen `suchThat` (not . flip elem acc)
 
 -------------------------------------------------------------------------------
-unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
-unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
-
-unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
-unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
-
-unsafeRotate :: RotateAmount -> Expression d1 et1 -> Expression d2 et2
-unsafeRotate amount e = wrap $ apply (Unary (specRotate amount)) [unwrap e]
-
--------------------------------------------------------------------------------
 genDimSelector :: Int -> Gen DimSelector
 genDimSelector size = do
   let id = elements [0 .. size - 1]
@@ -82,8 +60,8 @@ genAtSelector size = do
   let id = elements [0 .. size - 1]
   oneof [At <$> id]
 
-genValMapFor :: Expression d et -> Gen ValMap
-genValMapFor (Expression nID mp) = do
+genValMapFor :: ExpressionMap -> Gen ValMap
+genValMapFor mp = do
   let genVal :: Shape -> Gen Val
       genVal shape = do
         let dbls = vectorOf (product shape) genDouble
@@ -101,25 +79,25 @@ genValMapFor (Expression nID mp) = do
         )
   return $ Map.fromList vals
 
-primitiveRUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveRUntyped :: Shape -> Gen ExprBuilder
 primitiveRUntyped shape = do
   dbl <- genDouble
   name <- elements $ map pure ['a' .. 'z']
   let varName = name ++ shapeToString shape
   let parName = "p" ++ name ++ shapeToString shape
   elements
-    [ fromNodeUnwrapped (shape, R, Var varName),
-      fromNodeUnwrapped (shape, R, Param parName),
-      fromNodeUnwrapped (shape, R, Const dbl)
+    [ introduceNode (shape, R, Var varName),
+      introduceNode (shape, R, Param parName),
+      introduceNode (shape, R, Const dbl)
     ]
 
-primitiveCUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveCUntyped :: Shape -> Gen ExprBuilder
 primitiveCUntyped shape = do
   re <- primitiveRUntyped shape
   im <- primitiveRUntyped shape
-  return $ apply (Binary specRealImag) [re, im]
+  return $ re +: im
 
-genExpUntyped :: Int -> Shape -> ElementType -> Gen (ExpressionMap, NodeID)
+genExpUntyped :: Int -> Shape -> ElementType -> Gen ExprBuilder
 genExpUntyped qc shape et
   | qc == 0 = case et of
     R -> primitiveRUntyped shape
@@ -136,33 +114,27 @@ genExpUntyped qc shape et
           branches <- vectorOf numBranches sub
           condition <- subR
           marks <- sort <$> vectorOfDifferent (numBranches - 1) arbitrary
-          let exp = apply (ConditionAry (specPiecewise marks)) (condition : branches)
-          return exp
-        binary spec = do
-          x <- sub
-          y <- sub
-          return $ apply spec [x, y]
-        unary spec = do
-          x <- sub
-          return $ apply spec [x]
+          return $ piecewise marks condition branches
+        binary op = liftA2 op sub sub
+        unary op = op <$> sub
         commonPossibilities =
           [ fromPiecewise,
-            binary (Nary specSum),
-            binary (Nary specMul),
-            liftA2 (\x y -> apply (Binary specScale) [x, y]) subScalarR sub,
-            unary (Unary specNeg),
-            unary (Unary (specPower 2))
+            binary (+),
+            binary (*),
+            liftA2 (*.) subScalarR sub,
+            unary (negate),
+            unary (^ 2)
           ]
         specificElementTypePosibilities
           | et == R =
-            [ (\x -> apply (Unary specRealPart) [x]) <$> subC,
-              (\x -> apply (Unary specImagPart) [x]) <$> subC
+            [ xRe <$> subC,
+              xIm <$> subC
             ]
           | et == C =
-            [ liftA2 (\x y -> apply (Binary specRealImag) [x, y]) subR subR,
-              unary (Unary specFT),
-              unary (Unary specIFT),
-              liftA2 (\x y -> apply (Binary specScale) [x, y]) subScalarC sub
+            [ liftA2 (+:) subR subR,
+              unary ft,
+              unary ift,
+              liftA2 (*.) subScalarC sub
             ]
         specificShapePossibilities = case shape of
           [] ->
@@ -170,40 +142,35 @@ genExpUntyped qc shape et
                   size <- elements [3 .. 9]
                   exp <- subOf [size] et
                   ds <- genAtSelector size
-                  return $ apply (Unary (specProject [ds])) [exp]
+                  return $ project [ds] exp
              in [ do
                     size <- elements [3 .. 9]
                     x <- subOf [size] et
                     y <- subOf [size] et
-                    return $ apply (Binary specInnerProd) [x, y],
+                    return $ x <.> y,
                   do
                     size1 <- elements [3 .. 9]
                     size2 <- elements [3 .. 9]
                     x <- subOf [size1, size2] et
                     y <- subOf [size1, size2] et
-                    return $ apply (Binary specInnerProd) [x, y],
+                    return $ x <.> y,
                   fromProjection
                 ]
           [n] ->
             let fromRotate = do
                   amount <- elements [- n .. n]
                   exp <- sub
-                  return $ apply (Unary (specRotate [amount])) [exp]
+                  return $ rotate [amount] exp
                 fromProjectInject = do
                   exp1 <- sub
                   exp2 <- sub
                   ds <- genDimSelector n
-                  return $
-                    apply
-                      (Binary (specInject [ds]))
-                      [ apply (Unary (specProject [ds])) [exp1],
-                        exp2
-                      ]
+                  return $ inject [ds] (project [ds] exp1) exp2
                 fromMatrixMul = do
                   m <- elements [3 .. 9]
                   x <- subOf [n, m] et
                   y <- subOf [m] et
-                  return $ apply (Binary specMatMul) [x, y]
+                  return $ x ** y
              in [ fromRotate,
                   fromProjectInject,
                   fromMatrixMul
@@ -213,26 +180,21 @@ genExpUntyped qc shape et
                   amount1 <- elements [- m .. m]
                   amount2 <- elements [- n .. n]
                   exp <- sub
-                  return $ apply (Unary (specRotate [amount1, amount2])) [exp]
+                  return $ rotate [amount1, amount2] exp
                 fromProjectInject = do
                   exp1 <- sub
                   exp2 <- sub
                   ds1 <- genDimSelector m
                   ds2 <- genDimSelector n
-                  return $
-                    apply
-                      (Binary (specInject [ds1, ds2]))
-                      [ apply (Unary (specProject [ds1, ds2])) [exp1],
-                        exp2
-                      ]
+                  return $ inject [ds1, ds2] (project [ds1, ds2] exp1) exp2
                 fromMatrixMul = do
                   p <- elements [3 .. 9]
                   x <- subOf [m, p] et
                   y <- subOf [p, n] et
-                  return $ apply (Binary specMatMul) [x, y]
+                  return $ x ** y
                 fromTranspose = do
                   x <- subOf [n, m] et
-                  return $ apply (Unary specTranspose) [x]
+                  return $ transpose x
              in [ fromRotate,
                   fromProjectInject,
                   fromMatrixMul,
@@ -240,22 +202,22 @@ genExpUntyped qc shape et
                 ]
      in oneof $ commonPossibilities ++ specificShapePossibilities ++ specificElementTypePosibilities
 
-genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (Expression d et)
-genExp size = wrap <$> genExpUntyped size (toShape @d) (toElementType @et)
+genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (TypedExpr d et)
+genExp size = TypedExpr <$> genExpUntyped size (toShape @d) (toElementType @et)
 
 -------------------------------------------------------------------------------
-instance (Dimension d, IsElementType et) => Arbitrary (Expression d et) where
+instance (Dimension d, IsElementType et) => Arbitrary (TypedExpr d et) where
   arbitrary = sized genExp
 
 -------------------------------------------------------------------------------
 data Suite d et
-  = Suite (Expression d et) ValMap
+  = Suite (TypedExpr d et) ValMap
   deriving (Show)
 
 instance (Dimension d, IsElementType et) => Arbitrary (Suite d et) where
   arbitrary = do
     exp <- arbitrary
-    valMap <- genValMapFor exp
+    valMap <- genValMapFor (fst $ asRawExpr exp)
     return $ Suite exp valMap
 
 -------------------------------------------------------------------------------
@@ -272,33 +234,26 @@ type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
 type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
 
 -------------------------------------------------------------------------------
-data ArbitraryExpresion = forall d et. (Dimension d) => ArbitraryExpresion (Expression d et)
+newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: RawExpr}
+  deriving (Show, Ord, Eq)
 
-instance Show ArbitraryExpresion where
-  show (ArbitraryExpresion exp) = show exp
+instance Arbitrary ArbitraryExpr where
+  arbitrary = do
+    elementType <- elements [R, C]
+    shapeLength <- elements [0 .. 2]
+    shape <- vectorOf shapeLength $ elements [1 .. 6]
+    ArbitraryExpr . buildExpr <$> sized (\sz -> genExpUntyped sz shape elementType)
 
-instance Arbitrary ArbitraryExpresion where
-  arbitrary =
-    oneof
-      [ ArbitraryExpresion <$> sized (genExp @Scalar @R),
-        ArbitraryExpresion <$> sized (genExp @Scalar @C),
-        ArbitraryExpresion <$> sized (genExp @(D1 Default1D) @R),
-        ArbitraryExpresion <$> sized (genExp @(D1 Default1D) @C),
-        ArbitraryExpresion <$> sized (genExp @(D2 Default2D1 Default2D2) @R),
-        ArbitraryExpresion <$> sized (genExp @(D2 Default2D1 Default2D2) @C)
-      ]
+data XSuite = XSuite RawExpr ValMap deriving (Show, Eq, Ord)
 
--- |
-getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, NodeID)
-getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
+instance Arbitrary XSuite where
+  arbitrary = do
+    ArbitraryExpr exp <- arbitrary
+    valMap <- genValMapFor (fst exp)
+    return $ XSuite exp valMap
 
 -------------------------------------------------------------------------------
 
--- |
-sz :: Expression d et -> Int
-sz = IM.size . exMap
-
--------------------------------------------------------------------------------
 instance (Ix i, Num a) => Num (Array i a) where
   (+) arr1 arr2 = listArray (bounds arr1) $ zipWith (+) (elems arr1) (elems arr2)
   (*) arr1 arr2 = listArray (bounds arr1) $ zipWith (*) (elems arr1) (elems arr2)
@@ -327,11 +282,6 @@ infix 4 ~=
 relativeError :: Double -> Double -> Double
 relativeError a b = abs (a - b) / max (abs a) (abs b)
 
-{-
-Instance which belongs to approximable class for Double precision inputs.
-It takes 2 double precision inputs and return whether are within acceptable numerical error.
-Returns true if the error is less than the condition value
--}
 instance Approximable Double where
   (~=) :: Double -> Double -> Bool
   a ~= b
@@ -354,40 +304,24 @@ instance Approximable (Complex Double) where
   prettifyShow a =
     prettifyShow (realPart a) ++ " + " ++ prettifyShow (imagPart a) ++ "i" --  Prettyprint a string produced by show
 
-{-
-Instance which belongs to approximable class for 1D array with Double-precision elements as an input.
-Returns true if the dimentions are the same and the input arrays be elementwisely within acceptable numerical error.
--}
 instance Approximable (Array Int Double) where
   (~=) :: Array Int Double -> Array Int Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 1D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array Int (Complex Double)) where
   (~=) :: Array Int (Complex Double) -> Array Int (Complex Double) -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 2D array with double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int) Double) where
   (~=) :: Array (Int, Int) Double -> Array (Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 2D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int) (Complex Double)) where
   (~=) ::
     Array (Int, Int) (Complex Double) ->
@@ -397,20 +331,12 @@ instance Approximable (Array (Int, Int) (Complex Double)) where
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 3D array with double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int, Int) Double) where
   (~=) :: Array (Int, Int, Int) Double -> Array (Int, Int, Int) Double -> Bool
   a ~= b = (bounds a == bounds b) && and (zipWith (~=) (elems a) (elems b))
   prettifyShow a =
     "[" ++ (intercalate ", " . map prettifyShow . elems $ a) ++ "]" --  concatenate "," to seperate the elements of array in prettify
 
-{-
-Instance which belongs to approximable class for 3D array with complex double-precision elements as an input.
-Returns true if the dimentions are the same and "~=" be elementwisely true for input arrays.
--}
 instance Approximable (Array (Int, Int, Int) (Complex Double)) where
   (~=) ::
     Array (Int, Int, Int) (Complex Double) ->

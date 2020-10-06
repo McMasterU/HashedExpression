@@ -15,8 +15,8 @@ module HashedExpression.Internal.OperationSpec where
 import Data.Function ((&))
 import Data.List (sort)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Utils
+import HashedExpression.Internal.Base
+import HashedExpression.Utils
 
 data UnarySpec = UnarySpec
   { toOp :: Arg -> Op,

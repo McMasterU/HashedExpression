@@ -6,16 +6,10 @@
 module CSimpleSpec where
 
 import Commons
-import Control.Applicative (liftA2)
-import Control.Concurrent
-import Control.Monad (replicateM_, unless, when)
 import Data.Array
-import Data.Complex (Complex (..))
-import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate, sort, tails)
+import Data.List (tails)
 import Data.List.Split (splitOn)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import GHC.IO.Exception (ExitCode (..))
@@ -23,17 +17,15 @@ import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression hiding ((<.>))
+import HashedExpression.Internal.Base hiding ((<.>))
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.Utils
 import HashedExpression.Interp
-import HashedExpression.Prettify
+import HashedExpression.Utils
 import HashedExpression.Value
 import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)
 import Test.Hspec
 import Test.QuickCheck
-import Var
 import Prelude hiding ((!!))
 
 -- | Compute the inner offset:
@@ -46,14 +38,13 @@ localOffset shape indices
 
 -- | Generate a fully working C program that compute the expression and
 --   print out the result
-singleExpressionCProgram ::
-  (Dimension d) => ValMap -> Expression d et -> Code
-singleExpressionCProgram valMap expr =
+singleExpressionCProgram :: IsExpression e => ValMap -> e -> Code
+singleExpressionCProgram valMap e =
   [ "#include <math.h>", --
     "#include <stdio.h>",
     "#include <stdlib.h>",
     "#include <complex.h>",
-    if containsFTNode $ exMap expr
+    if containsFTNode $ mp
       then T.pack $ fftUtils
       else "",
     "int main()" --
@@ -66,9 +57,9 @@ singleExpressionCProgram valMap expr =
           ++ fromCCode releaseMemory
       )
   where
-    (mp, n) = unwrap expr
-    bound = product (retrieveShape n mp)
-    et = retrieveElementType n mp
+    (mp, n) = asRawExpr e
+    (shape, et, op) = retrieveNode n mp
+    bound = product shape
     codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText, maxIteration = Nothing} mp []
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     initMemory :: Code
@@ -84,10 +75,16 @@ singleExpressionCProgram valMap expr =
     printValue :: CCode
     printValue
       | et == R =
-        for i bound [Printf ["%f ", n !! i]]
+        Scoped
+          [ Printf [T.intercalate " " $ map tt shape],
+            Printf ["\\n"],
+            for i bound [Printf ["%f ", n !! i]]
+          ]
       | et == C =
         Scoped
-          [ for i bound [Printf ["%f ", fun "creal" [n !! i]]],
+          [ Printf [T.intercalate " " $ map tt shape],
+            Printf ["\\n"],
+            for i bound [Printf ["%f ", fun "creal" [n !! i]]],
             Printf ["\\n"],
             for i bound [Printf ["%f ", fun "cimag" [n !! i]]]
           ]
@@ -116,30 +113,16 @@ singleExpressionCProgram valMap expr =
                in Scoped $ map assignIndex $ indices array3d
             _ -> Empty
 
-hasFFTW :: IO Bool
-hasFFTW = do
-  fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
-  let cFilePath = "C" </> fileName <.> "c"
-      executablePath = "C" </> fileName
-      codes = ["#include <fftw3.h>", "int main() {}"]
-      program = T.intercalate "\n" . map T.pack $ codes
-  TIO.writeFile cFilePath program
-  (exitCode, output, _) <- readProcessWithExitCode "gcc" [cFilePath, "-o", executablePath, "-lm", "-lfftw3"] ""
-  readProcessWithExitCode "rm" [cFilePath] ""
-  readProcessWithExitCode "rm" [executablePath] ""
-  return $ exitCode == ExitSuccess
-
 -- |
-evaluateCodeC :: (Dimension d) => Bool -> Expression d et -> ValMap -> IO (ExitCode, String)
-evaluateCodeC withFT exp valMap = do
+evaluateCodeC :: IsExpression e => e -> ValMap -> IO (ExitCode, String)
+evaluateCodeC e valMap = do
+  let exp = asRawExpr e
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
   let cFilePath = "C" </> fileName <.> "c"
       executablePath = "C" </> fileName
       program = singleExpressionCProgram valMap exp
-      libs
-        | withFT = ["-lm", "-lfftw3"]
-        | otherwise = ["-lm"]
+      libs = ["-lm", "-lfftw3"]
   TIO.writeFile cFilePath (T.intercalate "\n" program)
   readProcess "gcc" ([cFilePath, "-o", executablePath] ++ libs) ""
   (exitCode, output, _) <- readProcessWithExitCode executablePath [] ""
@@ -147,122 +130,36 @@ evaluateCodeC withFT exp valMap = do
   readProcess "rm" [executablePath] ""
   return (exitCode, output)
 
+readMany :: Read a => String -> [a]
+readMany = map read . filter (not . null) . splitOn " "
+
 -- | Parse output of the C program
-readR :: String -> [Double]
-readR = map read . filter (not . null) . splitOn " "
-
--- |
-readC :: String -> ([Double], [Double])
-readC str = (readR rePart, readR imPart)
+readAsInterpVal :: String -> InterpValue
+readAsInterpVal str = case lines of
+  [shapeStr, xs] ->
+    case readMany shapeStr of
+      [] -> VR . head . readMany $ xs
+      [size] -> V1DR . listArray (0, size - 1) . readMany $ xs
+      [size1, size2] -> V2DR . listArray ((0, 0), (size1 - 1, size2 - 1)) . readMany $ xs
+  [shapeStr, rs, is] ->
+    case readMany shapeStr of
+      [] -> VC $ (head . readMany $ rs) +: (head . readMany $ is)
+      [size] -> V1DC $ (listArray (0, size - 1) . readMany $ rs) +: (listArray (0, size - 1) . readMany $ is)
+      [size1, size2] ->
+        V2DC $ (listArray ((0, 0), (size1 - 1, size2 - 1)) . readMany $ rs) +: (listArray ((0, 0), (size1 - 1, size2 - 1)) . readMany $ is)
   where
-    [rePart, imPart] = splitOn "\n" str
+    lines = splitOn "\n" str
 
--- |
-prop_CEqualInterpScalarR :: SuiteScalarR -> Expectation
-prop_CEqualInterpScalarR (Suite exp valMap) =
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
-      let resultNormalize = read . head . splitOn " " $ outputSimple
-      let VR resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
-
--- |
-prop_CEqualInterpScalarC :: SuiteScalarC -> Expectation
-prop_CEqualInterpScalarC (Suite exp valMap) = do
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
-      let ([im], [re]) = readC outputCodeC
-      let resultNormalize = im :+ re
-      let VC resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
-
--- |
-prop_CEqualInterpOneR :: SuiteOneR -> Expectation
-prop_CEqualInterpOneR (Suite exp valMap) =
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
-      let resultNormalize = listArray (0, defaultDim1D - 1) $ readR outputSimple
-      let V1DR resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
-
--- |
-prop_CEqualInterpOneC :: SuiteOneC -> Expectation
-prop_CEqualInterpOneC (Suite exp valMap) =
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
-      let (re, im) = readC outputCodeC
-          resultNormalize = listArray (0, defaultDim1D - 1) $ zipWith (:+) re im
-          V1DC resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
-
--- |
-prop_CEqualInterpTwoR :: SuiteTwoR -> Expectation
-prop_CEqualInterpTwoR (Suite exp valMap) =
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputSimple) <- evaluateCodeC withFT exp valMap
-      let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ readR outputSimple
-      let V2DR resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
-
--- |
-prop_CEqualInterpTwoC :: SuiteTwoC -> Expectation
-prop_CEqualInterpTwoC (Suite exp valMap) =
-  if containsFTNode $ exMap exp
-    then do
-      hasFTLib <- hasFFTW
-      when hasFTLib $ proceed True
-    else proceed False
-  where
-    proceed withFT = do
-      (exitCode, outputCodeC) <- evaluateCodeC withFT exp valMap
-      let (re, im) = readC outputCodeC
-      let resultNormalize = listArray ((0, 0), (default1stDim2D - 1, default2ndDim2D - 1)) $ zipWith (:+) re im
-      let V2DC resultInterpNormalize = eval valMap exp
-      resultNormalize `shouldApprox` resultInterpNormalize
+prop_CEqualInterp :: XSuite -> Expectation
+prop_CEqualInterp (XSuite exp valMap) = do
+  (_, outputC) <- evaluateCodeC exp valMap
+  let resultC = readAsInterpVal outputC
+  let resultInterp = eval valMap exp
+  resultC `shouldApprox` resultInterp
 
 -- | Spec
 spec :: Spec
 spec =
   describe "C simple spec" $ do
-    specify "Evaluate hash interp should equal to C code evaluation (Expression Scalar R)" $
-      property prop_CEqualInterpScalarR
-    specify "Evaluate hash interp should equal to C code evaluation (Expression Scalar C)" $
-      property prop_CEqualInterpScalarC
-    specify "Evaluate hash interp should equal to C code evaluation (Expression One R)" $
-      property prop_CEqualInterpOneR
-    specify "Evaluate hash interp should equal to C code evaluation (Expression One C)" $
-      property prop_CEqualInterpOneC
-    specify "Evaluate hash interp should equal to C code evaluation (Expression Two R)" $
-      property prop_CEqualInterpTwoR
-    specify "Evaluate hash interp should equal to C code evaluation (Expression Two C)" $
-      property prop_CEqualInterpTwoC
+    specify "C equal interp" $
+      property prop_CEqualInterp

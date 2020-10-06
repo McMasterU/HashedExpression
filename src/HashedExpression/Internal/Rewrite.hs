@@ -13,44 +13,24 @@ module HashedExpression.Internal.Rewrite
   )
 where
 
-import Control.Monad (forM, forM_, unless, when)
-import Control.Monad.Reader (Reader, ask, runReader)
-import Control.Monad.ST.Strict
 import Control.Monad.State.Strict
-import Data.Array.MArray
-import Data.Array.ST
-import qualified Data.Array.Unboxed as UA
-import Data.Graph (buildG, topSort)
-import qualified Data.IntMap.Strict as IM
-import qualified Data.IntSet as IS
-import Data.List (find, foldl', groupBy, sort, sortBy, sortOn)
-import Data.List.Extra (firstJust)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, isJust, mapMaybe)
-import Data.STRef.Strict
-import Data.Set (Set, empty, insert, member)
-import qualified Data.Set as Set
-import Debug.Trace (traceShowId)
-import GHC.Exts (sortWith)
-import GHC.Stack (HasCallStack)
+import Data.Maybe (fromJust)
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
 import Prelude hiding ((^))
 
 newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a} deriving (Functor, Applicative, Monad)
 
-runRewrite :: Rewrite NodeID -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+runRewrite :: Rewrite NodeID -> RawExpr -> RawExpr
 runRewrite (Rewrite rw) exp =
   let (nID, newMP) = runState rw (fst exp)
    in (newMP, nID)
 
-type Modification = (ExpressionMap, NodeID) -> Rewrite NodeID
+type Modification = RawExpr -> Rewrite NodeID
 
 chainModifications :: [Modification] -> Modification
 chainModifications rewrite expr = foldM f (snd expr) rewrite

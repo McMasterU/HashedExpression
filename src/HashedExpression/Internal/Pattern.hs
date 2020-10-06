@@ -9,7 +9,7 @@
 -- Portability :  unportable
 --
 -- Helper functions/instances to make pattern guards involving Expressions easier to read.
--- Traditional pattern matching on a 'Expression' is difficult because 'Node' arguments are in hashed form, use this
+-- Traditional pattern matching on a 'TypedExpr' is difficult because 'Node' arguments are in hashed form, use this
 -- data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
 -- 'Transformation', for example
 --
@@ -76,24 +76,15 @@ module HashedExpression.Internal.Pattern
 where
 
 import Control.Monad.State.Strict
-import qualified Data.IntMap.Strict as IM
-import Data.List (foldl')
-import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
-import Debug.Trace (trace, traceShowId)
-import HashedExpression.Internal
-import HashedExpression.Internal.Context
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
-import HashedExpression.Internal.OperationSpec
 import HashedExpression.Internal.Rewrite
-import HashedExpression.Internal.Utils
-import HashedExpression.Operation
-import Prelude (Bool)
+import HashedExpression.Utils
 import Prelude hiding ((^))
-import qualified Prelude
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -105,7 +96,7 @@ import qualified Prelude
 --   (provided via 'Pattern')
 type Substitution = (GuardedPattern, Pattern)
 
-fromSubstitution :: Substitution -> ((ExpressionMap, NodeID) -> Rewrite NodeID)
+fromSubstitution :: Substitution -> (RawExpr -> Rewrite NodeID)
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   | Just match <- match exp pattern,
     condition exp match =
@@ -155,7 +146,7 @@ infixl 1 |.
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | This data type contains constructors for representing different patterns a 'Node' in a 'Expression' may contain.
+-- | This data type contains constructors for representing different patterns a 'Node' in a 'TypedExpr' may contain.
 --   Match any 'Node' to a hole using 'PHole', to distinguish between holes each must be given a unique identifier (i.e 'Capture')
 --   TODO haddock: why do we have some ops wrapping PatternList and the same ops with [Pattern]
 data Pattern
@@ -387,7 +378,7 @@ branches = PListHole id 2
 -- | Check if the match satisfy some properties so that rewrite can happen
 type Condition =
   -- | The matched expression
-  (ExpressionMap, NodeID) ->
+  RawExpr ->
   -- | The match
   Match ->
   -- | Whether this match satisfy the condition
@@ -486,7 +477,7 @@ sameAmount pra1 pra2 exp match =
 -- TODO haddock: the capture is always minBound??? this has to be an issue
 -- TODO: the minBound trick is to avoid other capture, NT: probably should introduce a capture for PatternList as well
 matchList ::
-  -- | from base 'Expression'
+  -- | from base 'TypedExpr'
   ExpressionMap ->
   -- | List of expressions
   [NodeID] ->
@@ -519,7 +510,7 @@ matchList mp ns (PListHole fs listCapture)
 type PowerValue = Int
 
 -- | A wrapper for different 'Map' that associate a capture (i.e hole identifier) to matched 'NodeID'. The function 'match' will
---   return this type if it succesfully matches a 'Expression' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
+--   return this type if it succesfully matches a 'TypedExpr' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
 --   a pattern. For example, 'PHole' wraps a 'Int' identifier, so we need a 'Map' that associates those identifiers to 'NodeID'
 data Match = Match
   { -- | Associates 'PHole' identifiers to corresponding matched 'NodeID'
@@ -547,9 +538,9 @@ unionMatch match1 match2 =
     (rotateAmountCapturesMap match1 `union` rotateAmountCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
--- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
---      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-match :: (ExpressionMap, NodeID) -> Pattern -> Maybe Match
+-- e.g: match (TypedExpr: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
+--      match (TypedExpr sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
+match :: RawExpr -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let catMatch = foldl unionMatch emptyMatch
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
@@ -565,7 +556,7 @@ match (mp, n) outerWH =
         (Const c, PConst whc)
           | c == whc -> Just emptyMatch
         (Sum args, PSum whs) -> recursiveAndCombine args whs
-        (Sum args, PSumList pl@(PListHole _ listCapture)) ->
+        (Sum args, PSumList pl) ->
           matchList mp args pl
         (Sum args, PSumRest listCapture ps)
           | length args > length ps,
@@ -579,7 +570,7 @@ match (mp, n) outerWH =
                     } ->
             Just $ unionMatch matchNormalParts matchListPart
         (Mul args, PMul whs) -> recursiveAndCombine args whs
-        (Mul args, PMulList pl@(PListHole _ listCapture)) ->
+        (Mul args, PMulList pl) ->
           matchList mp args pl
         (Mul args, PMulRest listCapture ps)
           | length args > (length ps),
@@ -681,14 +672,14 @@ buildFromPatternRotateAmount match pra =
       map negate (buildFromPatternRotateAmount match pra)
 
 buildFromPatternList ::
-  (ExpressionMap, NodeID) -> Match -> PatternList -> [Rewrite NodeID]
+  RawExpr -> Match -> PatternList -> [Rewrite NodeID]
 buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
     error "Capture not in the Map Capture [Int] which should never happens"
 
-buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> Rewrite NodeID
+buildFromPattern :: RawExpr -> Match -> Pattern -> Rewrite NodeID
 buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape originalN originalMp)
   where
     build :: Maybe Shape -> Pattern -> Rewrite NodeID

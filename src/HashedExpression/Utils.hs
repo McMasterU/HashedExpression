@@ -1,4 +1,4 @@
-module HashedExpression.Internal.Utils where
+module HashedExpression.Utils where
 
 import Data.Array
 import Data.Complex (Complex (..))
@@ -15,10 +15,8 @@ import qualified Data.Text as T
 import Data.Time (diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.Stack (HasCallStack)
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
-import HashedExpression.Prettify
 import Prelude hiding ((^))
 import qualified Prelude
 

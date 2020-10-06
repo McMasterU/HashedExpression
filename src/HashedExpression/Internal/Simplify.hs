@@ -7,43 +7,24 @@
 -- Portability :  unportable
 --
 -- Simplifying expressions
-module HashedExpression.Internal.Simplify (simplify, simplifyUnwrapped) where
+module HashedExpression.Internal.Simplify (simplify) where
 
 import Control.Monad.State.Strict
-import Data.Eq.HT (equating)
-import Data.Function.HT (nest)
-import qualified Data.IntMap.Strict as IM
-import qualified Data.IntSet as IS
-import Data.List
-  ( find,
-    foldl',
-    group,
-    groupBy,
-    intercalate,
-    partition,
-    sort,
-    sortBy,
-    sortOn,
-    transpose,
-  )
-import Data.List.Extra (firstJust, groupOn, groupSort)
-import qualified Data.Map.Strict as Map
+import Data.List (partition, sort)
+import Data.List.Extra (groupOn)
 import GHC.Exts (sortWith)
 import HashedExpression.Internal
-import HashedExpression.Internal.Context
-import HashedExpression.Internal.Expression
-import HashedExpression.Internal.Hash
+import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Rewrite
-import HashedExpression.Internal.Utils
-import HashedExpression.Operation (constant)
-import HashedExpression.Prettify
+import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
 
-simplifyUnwrapped :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
-simplifyUnwrapped = removeUnreachable . apply
+simplify :: RawExpr -> RawExpr
+simplify = removeUnreachable . apply
   where
     apply =
       multipleTimes 1000 . toRecursiveTransformation . chainModifications $
@@ -72,9 +53,6 @@ simplifyUnwrapped = removeUnreachable . apply
                   rotateRules
                 ]
             )
-
-simplify :: forall d et. (Dimension d) => Expression d et -> Expression d et
-simplify = wrap . simplifyUnwrapped . unwrap
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -367,5 +345,5 @@ reorderOperands exp@(mp, n)
     just s1 <.> just s2
   | otherwise = just n
   where
-    weight nID = nodeTypeWeight $ retrieveOp nID mp
+    weight nID = opTypeWeight $ retrieveOp nID mp
     sortOperands os = concatMap sort . groupOn weight . sortWith weight $ os

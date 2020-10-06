@@ -1,24 +1,21 @@
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- |
--- Module      :  HashedExpression.Internal.Expression
+-- Module      :  HashedExpression.Internal.MonadExpression
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca
 -- Stability   :  provisional
 -- Portability :  unportable
-module HashedExpression.Internal.Context where
+module HashedExpression.Internal.MonadExpression where
 
 import Control.Monad.State.Strict
 import qualified Data.IntMap.Strict as IM
-import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal.Utils
 
 -- |
 class (Monad m) => MonadExpression m where
