@@ -25,12 +25,12 @@ import Prelude hiding ((^))
 
 newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a} deriving (Functor, Applicative, Monad)
 
-runRewrite :: Rewrite NodeID -> Expr -> Expr
+runRewrite :: Rewrite NodeID -> RawExpr -> RawExpr
 runRewrite (Rewrite rw) exp =
   let (nID, newMP) = runState rw (fst exp)
    in (newMP, nID)
 
-type Modification = Expr -> Rewrite NodeID
+type Modification = RawExpr -> Rewrite NodeID
 
 chainModifications :: [Modification] -> Modification
 chainModifications rewrite expr = foldM f (snd expr) rewrite

@@ -96,7 +96,7 @@ import Prelude hiding ((^))
 --   (provided via 'Pattern')
 type Substitution = (GuardedPattern, Pattern)
 
-fromSubstitution :: Substitution -> (Expr -> Rewrite NodeID)
+fromSubstitution :: Substitution -> (RawExpr -> Rewrite NodeID)
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   | Just match <- match exp pattern,
     condition exp match =
@@ -378,7 +378,7 @@ branches = PListHole id 2
 -- | Check if the match satisfy some properties so that rewrite can happen
 type Condition =
   -- | The matched expression
-  Expr ->
+  RawExpr ->
   -- | The match
   Match ->
   -- | Whether this match satisfy the condition
@@ -540,7 +540,7 @@ unionMatch match1 match2 =
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-match :: Expr -> Pattern -> Maybe Match
+match :: RawExpr -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let catMatch = foldl unionMatch emptyMatch
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
@@ -672,14 +672,14 @@ buildFromPatternRotateAmount match pra =
       map negate (buildFromPatternRotateAmount match pra)
 
 buildFromPatternList ::
-  Expr -> Match -> PatternList -> [Rewrite NodeID]
+  RawExpr -> Match -> PatternList -> [Rewrite NodeID]
 buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
     error "Capture not in the Map Capture [Int] which should never happens"
 
-buildFromPattern :: Expr -> Match -> Pattern -> Rewrite NodeID
+buildFromPattern :: RawExpr -> Match -> Pattern -> Rewrite NodeID
 buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape originalN originalMp)
   where
     build :: Maybe Shape -> Pattern -> Rewrite NodeID

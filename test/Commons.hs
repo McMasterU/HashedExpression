@@ -217,7 +217,7 @@ data Suite d et
 instance (Dimension d, IsElementType et) => Arbitrary (Suite d et) where
   arbitrary = do
     exp <- arbitrary
-    valMap <- genValMapFor (fst $ asExpression exp)
+    valMap <- genValMapFor (fst $ asRawExpr exp)
     return $ Suite exp valMap
 
 -------------------------------------------------------------------------------
@@ -234,7 +234,7 @@ type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
 type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
 
 -------------------------------------------------------------------------------
-newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: Expr}
+newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: RawExpr}
   deriving (Show, Ord, Eq)
 
 instance Arbitrary ArbitraryExpr where
@@ -244,7 +244,7 @@ instance Arbitrary ArbitraryExpr where
     shape <- vectorOf shapeLength $ elements [1 .. 6]
     ArbitraryExpr . buildExpr <$> sized (\sz -> genExpUntyped sz shape elementType)
 
-data XSuite = XSuite Expr ValMap deriving (Show, Eq, Ord)
+data XSuite = XSuite RawExpr ValMap deriving (Show, Eq, Ord)
 
 instance Arbitrary XSuite where
   arbitrary = do

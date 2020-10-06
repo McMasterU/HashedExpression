@@ -59,7 +59,7 @@ mkValMap ss = Map.fromList $ mapMaybe f ss
       | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
       | otherwise = Nothing
       where
-        (mp, nID) = asExpression e
+        (mp, nID) = asRawExpr e
 
 data OptimizationProblem = OptimizationProblem
   { objective :: Expression Scalar R,

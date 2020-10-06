@@ -24,7 +24,7 @@ import Prelude hiding ((**), (^))
 -- |
 partialDerivativesMap :: IsScalarReal e => e -> (ExpressionMap, Map String NodeID)
 partialDerivativesMap scalarRealExp =
-  let (mp, rootID) = asScalarReal scalarRealExp
+  let (mp, rootID) = asScalarRealRawExpr scalarRealExp
       reverseTopoOrder = reverse $ topologicalSort (mp, rootID)
       init = ComputeDState mp Map.empty Map.empty
       num_ :: Double -> ComputeReverseM NodeID

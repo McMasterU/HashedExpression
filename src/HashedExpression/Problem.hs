@@ -124,11 +124,11 @@ inf = 1 / 0
 -- | The statement of a constraint, including an 'ExpressionMap' subexpressions, the root 'NodeID' and its value
 data ConstraintStatement
   = -- | A lower bound constraint
-    Lower Expr Val
+    Lower RawExpr Val
   | -- | An upper bound constraint
-    Upper Expr Val
+    Upper RawExpr Val
   | -- | A constraint with a lower and upper bound
-    Between Expr (Val, Val)
+    Between RawExpr (Val, Val)
   deriving (Show, Eq, Ord)
 
 -- * Functions for creating 'ConstraintStatement's.
@@ -144,7 +144,7 @@ infix 1 `between`, .>=, .<=, .==
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.>=) exp = Lower (asExpression exp)
+(.>=) exp = Lower (asRawExpr exp)
 
 -- | The expression is less than the given value
 (.<=) ::
@@ -155,7 +155,7 @@ infix 1 `between`, .>=, .<=, .==
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.<=) exp = Upper (asExpression exp)
+(.<=) exp = Upper (asRawExpr exp)
 
 -- | The expression is between two values
 between ::
@@ -166,7 +166,7 @@ between ::
   (Val, Val) ->
   -- | The corresponding constraint statement
   ConstraintStatement
-between exp = Between (asExpression exp)
+between exp = Between (asRawExpr exp)
 
 -- | An equality constraint
 --
@@ -179,17 +179,17 @@ between exp = Between (asExpression exp)
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.==) exp val = Between (asExpression exp) (val, val)
+(.==) exp val = Between (asRawExpr exp) (val, val)
 
 -- | Extract the expression from the 'ConstraintStatement'
-getExpressionCS :: ConstraintStatement -> Expr
+getExpressionCS :: ConstraintStatement -> RawExpr
 getExpressionCS cs =
   case cs of
     Lower exp _ -> exp
     Upper exp _ -> exp
     Between exp _ -> exp
 
-mapExpressionCS :: (Expr -> Expr) -> ConstraintStatement -> ConstraintStatement
+mapExpressionCS :: (RawExpr -> RawExpr) -> ConstraintStatement -> ConstraintStatement
 mapExpressionCS f cs =
   case cs of
     Lower exp v -> Lower (f exp) v
@@ -224,7 +224,7 @@ newtype Constraint = Constraint [ConstraintStatement]
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
 -------------------------------------------------------------------------------
-getBound :: Expr -> [ConstraintStatement] -> (Double, Double)
+getBound :: RawExpr -> [ConstraintStatement] -> (Double, Double)
 getBound (mp, n) = foldl update (ninf, inf)
   where
     getNum val = case val of
@@ -250,20 +250,20 @@ toBoxConstraint cs = case cs of
     let Var name = retrieveOp n mp
      in BoxBetween name vals
 
-mergeToMain :: Expr -> ProblemConstructingM NodeID
+mergeToMain :: RawExpr -> ProblemConstructingM NodeID
 mergeToMain (mp, nID) = do
   curMp <- get
   let (mergedMp, mergedNID) = safeMerge curMp (mp, nID)
   put mergedMp
   return mergedNID
 
-varsWithShape :: Expr -> [(String, Shape)]
+varsWithShape :: RawExpr -> [(String, Shape)]
 varsWithShape = mapMaybe collect . IM.toList . fst
   where
     collect (_, (shape, _, Var name)) = Just (name, shape)
     collect _ = Nothing
 
-paramsWithShape :: Expr -> [(String, Shape)]
+paramsWithShape :: RawExpr -> [(String, Shape)]
 paramsWithShape = mapMaybe collect . IM.toList . fst
   where
     collect (_, (shape, _, Param name)) = Just (name, shape)
@@ -271,8 +271,8 @@ paramsWithShape = mapMaybe collect . IM.toList . fst
 
 constructProblemHelper :: IsScalarReal e => e -> Constraint -> ProblemConstructingM Problem
 constructProblemHelper obj (Constraint constraints) = do
-  let vs = concatMap varsWithShape $ asScalarReal obj : map getExpressionCS constraints
-  let ps = concatMap paramsWithShape $ asScalarReal obj : map getExpressionCS constraints
+  let vs = concatMap varsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
+  let ps = concatMap paramsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
   when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
     throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
@@ -291,10 +291,10 @@ constructProblemHelper obj (Constraint constraints) = do
         Just dID -> return dID
         _ -> introduceNode (shape, R, Const 0)
   -------------------------------------------------------------------------------
-  fID <- mergeToMain $ asScalarReal obj
+  fID <- mergeToMain $ asScalarRealRawExpr obj
   fPartialDerivativeMap <- processF obj
   -------------------------------------------------------------------------------
-  let processScalarConstraint :: Expr -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
+  let processScalarConstraint :: RawExpr -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
       processScalarConstraint exp = do
         let (lb, ub) = getBound exp scalarCS
         gID <- mergeToMain $ exp
@@ -359,5 +359,5 @@ constructProblem :: IsScalarReal e => e -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
   fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where
-    simplifiedObjective = simplify $ asExpression objectiveFunction
+    simplifiedObjective = simplify $ asRawExpr objectiveFunction
     simplifiedConstraint = Constraint $ map (mapExpressionCS simplify) cs

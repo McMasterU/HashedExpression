@@ -153,7 +153,7 @@ type ExpressionMap = IntMap Node
 type Node = (Shape, ElementType, Op)
 
 -- | Expression
-type Expr = (ExpressionMap, NodeID)
+type RawExpr = (ExpressionMap, NodeID)
 
 -- |
 --
@@ -222,15 +222,15 @@ infixl 8 ^
 
 -- | If the type corresponds to an expression
 class IsExpression e where
-  asExpression :: e -> Expr
+  asRawExpr :: e -> RawExpr
 
 -- | If the type corresponds to a scalar real expression
 class IsExpression e => IsScalarReal e where
-  asScalarReal :: e -> Expr
+  asScalarRealRawExpr :: e -> RawExpr
 
 -------------------------------------------------------------------------------
-instance IsExpression Expr where
-  asExpression = id
+instance IsExpression RawExpr where
+  asRawExpr = id
 
-instance IsScalarReal Expr where
-  asScalarReal = id
+instance IsScalarReal RawExpr where
+  asScalarRealRawExpr = id

@@ -67,7 +67,7 @@ varNodesWithShape mp = map (\(name, shape, _) -> (name, shape)) $ varNodes mp
 -- |
 prop_constructProblemBoxConstraint :: Expression Scalar R -> Expectation
 prop_constructProblemBoxConstraint e = do
-  let exp = asExpression e
+  let exp = asRawExpr e
   let vs = varNodesWithShape $ fst exp
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
@@ -94,7 +94,7 @@ makeValidScalarConstraint = do
 -- |
 prop_constructProblemScalarConstraints :: Expression Scalar R -> Expectation
 prop_constructProblemScalarConstraints e = do
-  let exp = asExpression e
+  let exp = asRawExpr e
   let vs = varNodesWithShape $ fst exp
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs

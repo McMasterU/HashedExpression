@@ -82,10 +82,10 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 -----------------------------------------------------------------------------------------------------------------------
 
 instance IsExpression (Expression d et) where
-  asExpression = buildExpr . extractBuilder
+  asRawExpr = buildExpr . extractBuilder
 
 instance IsScalarReal (Expression Scalar R) where
-  asScalarReal = buildExpr . extractBuilder
+  asScalarRealRawExpr = buildExpr . extractBuilder
 
 -----------------------------------------------------------------------------------------------------------------------
 unary :: (ExprBuilder -> ExprBuilder) -> Expression d1 et1 -> Expression d2 et2

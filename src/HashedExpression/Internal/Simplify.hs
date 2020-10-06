@@ -23,7 +23,7 @@ import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
 
-simplify :: Expr -> Expr
+simplify :: RawExpr -> RawExpr
 simplify = removeUnreachable . apply
   where
     apply =

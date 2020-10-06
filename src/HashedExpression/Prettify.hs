@@ -32,13 +32,13 @@ showExp = putStrLn . prettify
 -- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'asString'
 prettify :: IsExpression e => e -> String
 prettify e =
-  let (mp, n) = asExpression e
+  let (mp, n) = asRawExpr e
       (shape, et, _) = retrieveNode n mp
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
       typeName = " :: " ++ dimensionStr ++ show et
-   in T.unpack (hiddenPrettify False $ asExpression e) ++ typeName
+   in T.unpack (hiddenPrettify False $ asRawExpr e) ++ typeName
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
 --   ghci as long as you define corresponding variable identifiers
@@ -48,7 +48,7 @@ showExpDebug = putStrLn . asString
 -- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
 --   ghci as long as you define corresponding variable identifiers
 asString :: IsExpression e => e -> String
-asString e = T.unpack (hiddenPrettify True $ asExpression e)
+asString e = T.unpack (hiddenPrettify True $ asRawExpr e)
 
 -- |
 prettifyDimSelector :: DimSelector -> String
@@ -57,11 +57,11 @@ prettifyDimSelector (Range start end 1) = show start ++ ":" ++ show end
 prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" ++ show n
 
 -- | same as 'prettify' without any overhead
-debugPrint :: Expr -> String
+debugPrint :: RawExpr -> String
 debugPrint = T.unpack . hiddenPrettify False
 
 debugPrintExp :: IsExpression e => e -> String
-debugPrintExp = debugPrint . asExpression
+debugPrintExp = debugPrint . asRawExpr
 
 -- | Print every entry (invididually) of an 'Expression'
 -- showAllEntries :: forall d et. Expression d et -> IO ()
@@ -77,7 +77,7 @@ hiddenPrettify ::
   -- | retain syntactically valid (for use in ghci)
   Bool ->
   -- | (unwrapped) expression to be prettified
-  Expr ->
+  RawExpr ->
   -- | resulting "pretty" expression
   T.Text
 hiddenPrettify pastable (mp, n) =

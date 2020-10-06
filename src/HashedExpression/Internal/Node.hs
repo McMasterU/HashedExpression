@@ -198,7 +198,7 @@ retrieveShape (NodeID n) mp =
 
 -- | Retrieve the Op of an expression
 {-# INLINE expressionOp #-}
-expressionOp :: Expr -> Op
+expressionOp :: RawExpr -> Op
 expressionOp (mp, NodeID n) =
   case IM.lookup n mp of
     Just (_, _, op) -> op

@@ -1,4 +1,4 @@
-module HashedExpression.Internal.Builder where
+module HashedExpression.Internal.Builder (buildExpr, ExprBuilder) where
 
 import Control.Monad.State.Strict
 import qualified Data.IntMap.Strict as IM
@@ -6,16 +6,16 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.MonadExpression
 import Prelude hiding ((^))
 
-newtype Build a = Build {unBuild :: State ExpressionMap a} deriving (Functor, Applicative, Monad)
+newtype Builder a = Builder (State ExpressionMap a) deriving (Functor, Applicative, Monad)
 
-instance MonadExpression Build where
-  introduceNode node = Build (introduceNode node)
-  getContextMap = Build getContextMap
+instance MonadExpression Builder where
+  introduceNode node = Builder (introduceNode node)
+  getContextMap = Builder getContextMap
 
-type ExprBuilder = Build NodeID
+type ExprBuilder = Builder NodeID
 
-buildExpr :: ExprBuilder -> Expr
-buildExpr (Build exB) =
+buildExpr :: ExprBuilder -> RawExpr
+buildExpr (Builder exB) =
   let (nID, mp) = runState exB IM.empty
    in (mp, nID)
 

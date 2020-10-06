@@ -31,7 +31,7 @@ data InterpValue
 
 eval :: IsExpression e => ValMap -> e -> InterpValue
 eval valMap e =
-  let (mp, nID) = asExpression e
+  let (mp, nID) = asRawExpr e
       (shape, et, op) = retrieveNode nID mp
       eval' :: NodeID -> InterpValue
       eval' x = eval valMap (mp, x)

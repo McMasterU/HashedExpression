@@ -22,8 +22,8 @@ shouldSimplifyTo ::
   Expression d et ->
   IO ()
 shouldSimplifyTo exp1 exp2 = do
-  prettify (simplify (asExpression exp1)) `shouldBe` prettify (simplify (asExpression exp2))
-  simplify (asExpression exp1) `shouldBe` simplify (asExpression exp2)
+  prettify (simplify (asRawExpr exp1)) `shouldBe` prettify (simplify (asRawExpr exp2))
+  simplify (asRawExpr exp1) `shouldBe` simplify (asRawExpr exp2)
 
 prop_sameValueInterp :: XSuite -> Expectation
 prop_sameValueInterp (XSuite expr valMap) =

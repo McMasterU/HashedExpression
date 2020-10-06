@@ -57,7 +57,7 @@ singleExpressionCProgram valMap e =
           ++ fromCCode releaseMemory
       )
   where
-    (mp, n) = asExpression e
+    (mp, n) = asRawExpr e
     (shape, et, op) = retrieveNode n mp
     bound = product shape
     codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText, maxIteration = Nothing} mp []
@@ -116,7 +116,7 @@ singleExpressionCProgram valMap e =
 -- |
 evaluateCodeC :: IsExpression e => e -> ValMap -> IO (ExitCode, String)
 evaluateCodeC e valMap = do
-  let exp = asExpression e
+  let exp = asRawExpr e
   readProcessWithExitCode "mkdir" ["C"] ""
   fileName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']
   let cFilePath = "C" </> fileName <.> "c"

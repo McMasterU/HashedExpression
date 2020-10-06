@@ -41,9 +41,9 @@ apply ::
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
   -- | the operands
-  [Expr] ->
+  [RawExpr] ->
   -- | the resulting expression
-  Expr
+  RawExpr
 apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
   where
     (mergedMap, nIDs) = safeMerges exps
@@ -53,7 +53,7 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
 
 -- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
 --   Construct using the 'toTransformation' function
-type Transformation = Expr -> Expr
+type Transformation = RawExpr -> RawExpr
 
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
@@ -87,7 +87,7 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 --   unreachable nodes will be ignored
 topologicalSort ::
   -- | The expression
-  Expr ->
+  RawExpr ->
   -- | list in topological order (independent to dependent)
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
@@ -160,16 +160,16 @@ safeMergeManyRoots accMp (mp, ns) =
    in (mergedMap, map (toTotal finalSub) ns)
 
 -- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: ExpressionMap -> Expr -> Expr
+safeMerge :: ExpressionMap -> RawExpr -> RawExpr
 safeMerge accMp (mp, n) =
   let (resMp, [resN]) = safeMergeManyRoots accMp (mp, [n])
    in (resMp, resN)
 
-safeMerges :: [Expr] -> (ExpressionMap, [NodeID])
+safeMerges :: [RawExpr] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
 safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
   where
-    f :: (ExpressionMap, [NodeID]) -> Expr -> (ExpressionMap, [NodeID])
+    f :: (ExpressionMap, [NodeID]) -> RawExpr -> (ExpressionMap, [NodeID])
     f (acc, accIds) (valMP, valNID) =
       let (mergedMap, nID) = safeMerge acc (valMP, valNID)
        in (mergedMap, accIds ++ [nID])
@@ -214,7 +214,7 @@ createNode spec args =
 -------------------------------------------------------------------------------
 
 -- | Create an unwrapped Expresion from a standalone 'Node'
-fromNodeUnwrapped :: Node -> Expr
+fromNodeUnwrapped :: Node -> RawExpr
 fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
   where
     checkCollision = checkCollisionMap IM.empty
