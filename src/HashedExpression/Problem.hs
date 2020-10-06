@@ -32,7 +32,6 @@ import HashedExpression.Internal.Simplify
 import HashedExpression.Prettify
 import HashedExpression.Value
 
--- TODO: better sections in the Haddock.
 
 -------------------------------------------------------------------------------
 
@@ -113,7 +112,6 @@ instance Show Problem where
 
 -------------------------------------------------------------------------------
 
--------------------------------------------------------------------------------
 
 -- | Negative infinity
 ninf :: Double
@@ -212,7 +210,7 @@ getValCS cs =
 isBoxConstraint :: ConstraintStatement -> Bool
 isBoxConstraint cs =
   case retrieveOp n mp of
-    Var var -> True
+    Var _ -> True
     _ -> False
   where
     (mp, n) = getExpressionCS cs
@@ -225,13 +223,6 @@ newtype Constraint = Constraint [ConstraintStatement]
 
 -------------------------------------------------------------------------------
 
--- | Information about whether the optimization problem is well-founded
--- data ProblemResult
---  = -- | The problem is valid, here is the problem
---    ProblemValid Problem
---  | -- | The problem is invalid, here is the reason
---    ProblemInvalid String
---  deriving (Show)
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
 -------------------------------------------------------------------------------
@@ -271,13 +262,13 @@ mergeToMain (mp, nID) = do
 varsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
 varsWithShape = mapMaybe collect . IM.toList . fst
   where
-    collect (nID, (shape, _, Var name)) = Just (name, shape)
+    collect (_, (shape, _, Var name)) = Just (name, shape)
     collect _ = Nothing
 
 paramsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
 paramsWithShape = mapMaybe collect . IM.toList . fst
   where
-    collect (nID, (shape, _, Param name)) = Just (name, shape)
+    collect (_, (shape, _, Param name)) = Just (name, shape)
     collect _ = Nothing
 
 constructProblemHelper :: IsScalarReal e => e -> Constraint -> ProblemConstructingM Problem

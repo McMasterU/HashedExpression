@@ -26,13 +26,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.STRef.Strict
-import qualified Data.Text as T
-import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
-import HashedExpression.Prettify
 import Prelude hiding ((^))
 
 -------------------------------------------------------------------------------
