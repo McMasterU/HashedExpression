@@ -21,7 +21,7 @@ import Test.QuickCheck
 import Prelude hiding ((^))
 
 -- |
-prop_constructProblemNoConstraint :: Expression Scalar R -> Expectation
+prop_constructProblemNoConstraint :: TypedExpr Scalar R -> Expectation
 prop_constructProblemNoConstraint exp = do
   let constructResult = constructProblem exp (Constraint [])
   case constructResult of
@@ -65,7 +65,7 @@ varNodesWithShape :: ExpressionMap -> [(String, Shape)]
 varNodesWithShape mp = map (\(name, shape, _) -> (name, shape)) $ varNodes mp
 
 -- |
-prop_constructProblemBoxConstraint :: Expression Scalar R -> Expectation
+prop_constructProblemBoxConstraint :: TypedExpr Scalar R -> Expectation
 prop_constructProblemBoxConstraint e = do
   let exp = asRawExpr e
   let vs = varNodesWithShape $ fst exp
@@ -92,7 +92,7 @@ makeValidScalarConstraint = do
   generate $ elements [sc .<= val1, sc .>= val2, sc `between` (val1, val2)]
 
 -- |
-prop_constructProblemScalarConstraints :: Expression Scalar R -> Expectation
+prop_constructProblemScalarConstraints :: TypedExpr Scalar R -> Expectation
 prop_constructProblemScalarConstraints e = do
   let exp = asRawExpr e
   let vs = varNodesWithShape $ fst exp

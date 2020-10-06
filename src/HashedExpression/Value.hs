@@ -6,7 +6,7 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module contains functionality for defining values to be subbed into a 'Expression'. An 'Expression' is provided values via a 'ValMap',
+-- This module contains functionality for defining values to be subbed into a 'TypedExpr'. An 'TypedExpr' is provided values via a 'ValMap',
 -- which should be constructed like any other 'Map', for example
 --
 -- @

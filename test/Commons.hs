@@ -202,16 +202,16 @@ genExpUntyped qc shape et
                 ]
      in oneof $ commonPossibilities ++ specificShapePossibilities ++ specificElementTypePosibilities
 
-genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (Expression d et)
-genExp size = Expression <$> genExpUntyped size (toShape @d) (toElementType @et)
+genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (TypedExpr d et)
+genExp size = TypedExpr <$> genExpUntyped size (toShape @d) (toElementType @et)
 
 -------------------------------------------------------------------------------
-instance (Dimension d, IsElementType et) => Arbitrary (Expression d et) where
+instance (Dimension d, IsElementType et) => Arbitrary (TypedExpr d et) where
   arbitrary = sized genExp
 
 -------------------------------------------------------------------------------
 data Suite d et
-  = Suite (Expression d et) ValMap
+  = Suite (TypedExpr d et) ValMap
   deriving (Show)
 
 instance (Dimension d, IsElementType et) => Arbitrary (Suite d et) where

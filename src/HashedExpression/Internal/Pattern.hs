@@ -9,7 +9,7 @@
 -- Portability :  unportable
 --
 -- Helper functions/instances to make pattern guards involving Expressions easier to read.
--- Traditional pattern matching on a 'Expression' is difficult because 'Node' arguments are in hashed form, use this
+-- Traditional pattern matching on a 'TypedExpr' is difficult because 'Node' arguments are in hashed form, use this
 -- data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
 -- 'Transformation', for example
 --
@@ -146,7 +146,7 @@ infixl 1 |.
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- | This data type contains constructors for representing different patterns a 'Node' in a 'Expression' may contain.
+-- | This data type contains constructors for representing different patterns a 'Node' in a 'TypedExpr' may contain.
 --   Match any 'Node' to a hole using 'PHole', to distinguish between holes each must be given a unique identifier (i.e 'Capture')
 --   TODO haddock: why do we have some ops wrapping PatternList and the same ops with [Pattern]
 data Pattern
@@ -477,7 +477,7 @@ sameAmount pra1 pra2 exp match =
 -- TODO haddock: the capture is always minBound??? this has to be an issue
 -- TODO: the minBound trick is to avoid other capture, NT: probably should introduce a capture for PatternList as well
 matchList ::
-  -- | from base 'Expression'
+  -- | from base 'TypedExpr'
   ExpressionMap ->
   -- | List of expressions
   [NodeID] ->
@@ -510,7 +510,7 @@ matchList mp ns (PListHole fs listCapture)
 type PowerValue = Int
 
 -- | A wrapper for different 'Map' that associate a capture (i.e hole identifier) to matched 'NodeID'. The function 'match' will
---   return this type if it succesfully matches a 'Expression' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
+--   return this type if it succesfully matches a 'TypedExpr' to a 'Pattern' by locating 'NodeID' that correspond to the holes in
 --   a pattern. For example, 'PHole' wraps a 'Int' identifier, so we need a 'Map' that associates those identifiers to 'NodeID'
 data Match = Match
   { -- | Associates 'PHole' identifiers to corresponding matched 'NodeID'
@@ -538,8 +538,8 @@ unionMatch match1 match2 =
     (rotateAmountCapturesMap match1 `union` rotateAmountCapturesMap match2)
 
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
--- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
---      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
+-- e.g: match (TypedExpr: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
+--      match (TypedExpr sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
 match :: RawExpr -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let catMatch = foldl unionMatch emptyMatch

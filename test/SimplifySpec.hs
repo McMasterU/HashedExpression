@@ -18,8 +18,8 @@ infix 1 `shouldSimplifyTo`
 
 shouldSimplifyTo ::
   (HasCallStack, Dimension d) =>
-  Expression d et ->
-  Expression d et ->
+  TypedExpr d et ->
+  TypedExpr d et ->
   IO ()
 shouldSimplifyTo exp1 exp2 = do
   prettify (simplify (asRawExpr exp1)) `shouldBe` prettify (simplify (asRawExpr exp2))

@@ -34,7 +34,7 @@ import Prelude hiding ((^))
 
 -------------------------------------------------------------------------------
 
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
+-- | Helper function that generalizes the construction of 'TypedExpr' combinators/operators by merging
 --   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
 --   provided via 'OperationOption'.
 apply ::
@@ -51,7 +51,7 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
     resNode = createNode option operands
     resID = hashNode (checkCollisionMap mergedMap) resNode
 
--- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
+-- | Transformation type, take a (unwrapped) 'TypedExpr' and return a transformed (unwrapped) 'TypedExpr'.
 --   Construct using the 'toTransformation' function
 type Transformation = RawExpr -> RawExpr
 
@@ -95,7 +95,7 @@ topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 -- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSortManyRoots ::
-  -- | Expression Map and root nodes
+  -- | TypedExpr Map and root nodes
   (ExpressionMap, [NodeID]) ->
   -- | list in topological order (independent to dependent)
   [NodeID]
@@ -223,7 +223,7 @@ fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
 extract :: ExpressionMap -> ((Int, Node) -> Maybe a) -> [a]
 extract mp collect = mapMaybe collect $ IM.toList mp
 
--- | Retrieves all 'Var' nodes in an (unwrapped) 'Expression'
+-- | Retrieves all 'Var' nodes in an (unwrapped) 'TypedExpr'
 varsWithNodeID :: ExpressionMap -> [(String, NodeID)]
 varsWithNodeID mp = extract
   mp

@@ -144,15 +144,15 @@ data DimSelector
 --   The length of the list matches the number of dimensions
 type RotateAmount = [Int]
 
--- | The bulk of an 'Expression' is a collection of 'Node' (with their dimensions), in
+-- | The bulk of an 'TypedExpr' is a collection of 'Node' (with their dimensions), in
 --   a Map indexed 'NodeID' (a generated hash value)
 type ExpressionMap = IntMap Node
 
--- | The internals of an 'Expression' are a collection of 'Op' with
+-- | The internals of an 'TypedExpr' are a collection of 'Op' with
 --   their dimensions
 type Node = (Shape, ElementType, Op)
 
--- | Expression
+-- | TypedExpr
 type RawExpr = (ExpressionMap, NodeID)
 
 -- |

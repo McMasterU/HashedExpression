@@ -49,7 +49,7 @@ import HashedExpression.Value
 import Prelude hiding ((**), (^))
 
 data ValueAssignment
-  = forall d et. Expression d et :-> Val
+  = forall d et. TypedExpr d et :-> Val
 
 mkValMap :: [ValueAssignment] -> ValMap
 mkValMap ss = Map.fromList $ mapMaybe f ss
@@ -62,7 +62,7 @@ mkValMap ss = Map.fromList $ mapMaybe f ss
         (mp, nID) = asRawExpr e
 
 data OptimizationProblem = OptimizationProblem
-  { objective :: Expression Scalar R,
+  { objective :: TypedExpr Scalar R,
     constraints :: [ConstraintStatement],
     values :: [ValueAssignment],
     workingDir :: String

@@ -6,8 +6,8 @@
 -- Stability   :  provisional
 -- Portability :  unportable
 --
--- This module contains functionality for printing an 'Expression' in a readable (i.e pretty) format. This can be very
--- useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
+-- This module contains functionality for printing an 'TypedExpr' in a readable (i.e pretty) format. This can be very
+-- useful for debugging as the pretty format is still a syntactically valid 'TypedExpr' that can be pasted into ghci
 module HashedExpression.Prettify
   ( prettify,
     asString,
@@ -29,7 +29,7 @@ import HashedExpression.Internal.Node
 showExp :: IsExpression e => e -> IO ()
 showExp = putStrLn . prettify
 
--- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'asString'
+-- | Visualize an 'TypedExpr' in a pretty format. If you wish to enter the result into ghci, use 'asString'
 prettify :: IsExpression e => e -> String
 prettify e =
   let (mp, n) = asRawExpr e
@@ -45,7 +45,7 @@ prettify e =
 showExpDebug :: IsExpression e => e -> IO ()
 showExpDebug = putStrLn . asString
 
--- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
+-- | Visualize an 'TypedExpr' in a pretty format. Generally, you can re-enter a pretty printed 'TypedExpr' into
 --   ghci as long as you define corresponding variable identifiers
 asString :: IsExpression e => e -> String
 asString e = T.unpack (hiddenPrettify True $ asRawExpr e)
@@ -63,8 +63,8 @@ debugPrint = T.unpack . hiddenPrettify False
 debugPrintExp :: IsExpression e => e -> String
 debugPrintExp = debugPrint . asRawExpr
 
--- | Print every entry (invididually) of an 'Expression'
--- showAllEntries :: forall d et. Expression d et -> IO ()
+-- | Print every entry (invididually) of an 'TypedExpr'
+-- showAllEntries :: forall d et. TypedExpr d et -> IO ()
 -- showAllEntries e = do
 --  putStrLn "--------------------------"
 --  putStrLn $ intercalate "\n" . map mkString $ allEntries e
@@ -72,7 +72,7 @@ debugPrintExp = debugPrint . asRawExpr
 --  where
 --    mkString (n, str) = show n ++ " --> " ++ str
 
--- | auxiliary function for computing pretty format of an 'Expression'
+-- | auxiliary function for computing pretty format of an 'TypedExpr'
 hiddenPrettify ::
   -- | retain syntactically valid (for use in ghci)
   Bool ->
