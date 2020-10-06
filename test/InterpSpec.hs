@@ -21,6 +21,18 @@ import Test.QuickCheck
 import Var
 import Prelude hiding ((**), (^))
 import qualified Prelude
+import HashedExpression.Internal.OperationSpec
+import HashedExpression.Internal
+
+-------------------------------------------------------------------------------
+unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
+unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
+
+unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
+unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
+
+unsafeRotate :: RotateAmount -> Expression d1 et1 -> Expression d2 et2
+unsafeRotate amount e = wrap $ apply (Unary (specRotate amount)) [unwrap e]
 
 -- |
 prop_RotateOneR1 :: SuiteOneR -> Bool

@@ -24,8 +24,7 @@ where
 import Data.Char (ord)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
-import Debug.Trace (traceShowId)
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 
 -- | hardcoded modulos used in hash function (i.e 'hashString')
 modulo :: Int

@@ -8,35 +8,20 @@
 module ProblemSpec where
 
 import Commons
-import Control.Applicative (liftA2)
-import Control.Concurrent
-import Control.Monad (forM_, replicateM, replicateM_, unless, when)
+import Control.Monad (replicateM)
 import Data.Array
-import Data.Complex (Complex (..))
-import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate, sort)
-import Data.List.Split (splitOn)
-import Data.Map.Strict (fromList)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import Debug.Trace (traceShowId)
-import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Internal
 import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
-import System.Process (readProcess, readProcessWithExitCode)
 import Test.HUnit
 import Test.Hspec
 import Test.QuickCheck
 import Var
 import Prelude hiding ((^))
-import qualified Prelude
 
 -- |
 prop_constructProblemNoConstraint :: SuiteScalarR -> Expectation

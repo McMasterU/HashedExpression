@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- |
--- Module      :  HashedExpression.Internal.Expression
+-- Module      :  HashedExpression.Internal.MonadExpression
 -- Copyright   :  (c) OCA 2020
 -- License     :  MIT (see the LICENSE file)
 -- Maintainer  :  anandc@mcmaster.ca

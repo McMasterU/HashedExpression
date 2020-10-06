@@ -15,35 +15,11 @@ module HashedExpression.Internal.Expression
   ( nat,
     IsElementType (..),
     Expression (..),
-
-    -- * Expression Element Types
-
-    -- | Each 'Node' in an 'Expression' is either an operator or an element. Elements
-    --   can be numeric values (i.e real or complex values), or a covector object
-    --   (used to perform exterior differentiation)
-    ElementType (..),
-
-    -- * Expression Dimensions
-
-    -- | The following types and classes are used to contrain and inquire about
-    --   vector dimensions of Expressions
     Dimension (..),
     Scalar,
     D1,
     D2,
     D3,
-    -- | The following classes define 'Expression' operators that can be overloaded to directly
-    --   support a variety of functionality; such as interpretation, pattern matching, differentiation, etc
-    PowerOp (..),
-    PiecewiseOp (..),
-    ScaleOp (..),
-    FTOp (..),
-    ComplexRealOp (..),
-    RotateOp (..),
-    InnerProductSpaceOp (..),
-    MatrixMulOp (..),
-    TransposeOp (..),
-    ProjectInjectOp (..),
     module HashedExpression.Internal.Base,
   )
 where
@@ -121,6 +97,10 @@ nat :: forall n. (KnownNat n) => Int
 nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- --------------------------------------------------------------------------------------------------------------------
+
+instance IsExpression (Expression d et) where 
+  asExpression (Expression nID mp) = (mp, nID)
+  wrapExpression (mp, nID) = Expression nID mp
 
 instance IsScalarReal (Expression Scalar R) where
   asScalarReal (Expression nID mp) = (mp, nID)

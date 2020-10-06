@@ -1,13 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 
-import CSimpleSpec (evaluateCodeC)
 import qualified CSimpleSpec
 import qualified CollisionSpec
-import qualified Data.IntMap as IM
-import Data.Map (fromList, union)
-import Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import qualified HashedExpression.Operation
 import qualified InterpSpec
 import qualified ProblemSpec
 import qualified ReverseDifferentiationSpec

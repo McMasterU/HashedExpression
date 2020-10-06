@@ -1,11 +1,5 @@
 module CollisionSpec where
 
-import Control.Monad (foldM, forM_, replicateM)
-import Control.Monad.HT (nest)
-import qualified Data.IntMap.Strict as IM
-import Data.List (intercalate, sort)
-import qualified Data.Set as Set
-import Test.HUnit (assertBool, assertEqual, (@=?))
 import Test.Hspec
 
 --makeDumbHash :: [Int] -> IO (CheckCollision -> Node -> NodeID)

@@ -1,6 +1,5 @@
 module Var where
 
-import Data.Set (Set, fromList)
 import HashedExpression.Internal.Expression
 import HashedExpression.Operation
 import Prelude hiding (const)

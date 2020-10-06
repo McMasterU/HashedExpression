@@ -213,7 +213,22 @@ infixl 8 ^
 
 -------------------------------------------------------------------------------
 
+-- | If the type corresponds to an expression
+--
+class IsExpression e where 
+  asExpression :: e -> (ExpressionMap, NodeID)
+  wrapExpression :: (ExpressionMap, NodeID) -> e
+
 -- | If the type corresponds to a scalar real expression
 --
-class IsScalarReal e where
+class IsExpression e => IsScalarReal e where
   asScalarReal :: e -> (ExpressionMap, NodeID)
+
+-------------------------------------------------------------------------------
+
+instance IsExpression (ExpressionMap, NodeID) where 
+  asExpression = id
+  wrapExpression = id
+
+instance IsScalarReal (ExpressionMap, NodeID) where 
+  asScalarReal = id

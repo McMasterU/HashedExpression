@@ -27,7 +27,6 @@ import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Prettify
@@ -142,49 +141,49 @@ infix 1 `between`, .>=, .<=, .==
 
 -- | The expression is greater than the given value
 (.>=) ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the lower bound
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.>=) exp = Lower (unwrap exp)
+(.>=) exp = Lower (asExpression exp)
 
 -- | The expression is less than the given value
 (.<=) ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the upper bound
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.<=) exp = Upper (unwrap exp)
+(.<=) exp = Upper (asExpression exp)
 
 -- | The expression is between two values
 between ::
-  (Dimension d) =>
+  IsExpression e =>
   -- | The constraint expression
-  Expression d R ->
+  e ->
   -- | The value of the lower and upper bounds
   (Val, Val) ->
   -- | The corresponding constraint statement
   ConstraintStatement
-between exp = Between (unwrap exp)
+between exp = Between (asExpression exp)
 
 -- | An equality constraint
 --
 --   Note: this is the same as setting the upper and lower bound to the same value
 (.==) ::
-  (Dimension d) =>
-  -- | The expression
-  Expression d R ->
+  IsExpression e =>
+  -- | The constraint expression
+  e ->
   -- | The value to set equal to the expression
   Val ->
   -- | The corresponding constraint statement
   ConstraintStatement
-(.==) exp val = Between (unwrap exp) (val, val)
+(.==) exp val = Between (asExpression exp) (val, val)
 
 -- | Extract the expression from the 'ConstraintStatement'
 getExpressionCS :: ConstraintStatement -> (ExpressionMap, NodeID)
@@ -281,10 +280,10 @@ paramsWithShape = mapMaybe collect . IM.toList . fst
     collect (nID, (shape, _, Param name)) = Just (name, shape)
     collect _ = Nothing
 
-constructProblemHelper :: Expression Scalar R -> Constraint -> ProblemConstructingM Problem
+constructProblemHelper :: IsScalarReal e => e -> Constraint -> ProblemConstructingM Problem
 constructProblemHelper obj (Constraint constraints) = do
-  let vs = concatMap varsWithShape $ unwrap obj : map getExpressionCS constraints
-  let ps = concatMap paramsWithShape $ unwrap obj : map getExpressionCS constraints
+  let vs = concatMap varsWithShape $ asScalarReal obj : map getExpressionCS constraints
+  let ps = concatMap paramsWithShape $ asScalarReal obj : map getExpressionCS constraints
   when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
     throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
@@ -303,14 +302,13 @@ constructProblemHelper obj (Constraint constraints) = do
         Just dID -> return dID
         _ -> introduceNode (shape, R, Const 0)
   -------------------------------------------------------------------------------
-  fID <- mergeToMain $ unwrap obj
+  fID <- mergeToMain $ asScalarReal obj
   fPartialDerivativeMap <- processF obj
   -------------------------------------------------------------------------------
   let processScalarConstraint :: (ExpressionMap, NodeID) -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
-      processScalarConstraint (mp, nID) = do
-        let (lb, ub) = getBound (mp, nID) scalarCS
-            exp = Expression @Scalar @R nID mp
-        gID <- mergeToMain $ unwrap exp
+      processScalarConstraint exp = do
+        let (lb, ub) = getBound exp scalarCS
+        gID <- mergeToMain $ exp
         mapHaha <- processF exp
         return (gID, mapHaha, (lb, ub))
   scalarConstraintsInfo <- mapM processScalarConstraint expScalarConstraints
@@ -353,11 +351,6 @@ constructProblemHelper obj (Constraint constraints) = do
       }
   where
     -------------------------------------------------------------------------------
-    checkConflictShape :: [(String, Shape)] -> ProblemConstructingM ()
-    checkConflictShape vs = case find (\ls -> length ls > 1) $ map nub $ groupOn fst . sortOn fst $ vs of
-      Just ((x, _) : _) -> throwError $ "Shape of " ++ show x ++ " is not consistent between objective and constraints"
-      _ -> return ()
-    -------------------------------------------------------------------------------
     checkConstraint :: ConstraintStatement -> ProblemConstructingM ()
     checkConstraint cs = do
       let (mp, n) = getExpressionCS cs
@@ -373,7 +366,7 @@ constructProblemHelper obj (Constraint constraints) = do
         _ -> throwError "Only scalar inequality and box constraint for variable are supported"
 
 -- | Construct a Problem from given objective function and constraints
-constructProblem :: Expression Scalar R -> Constraint -> Either String Problem
+constructProblem :: IsScalarReal e => e -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
   fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where

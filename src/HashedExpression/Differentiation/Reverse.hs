@@ -17,7 +17,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import HashedExpression.Differentiation.Reverse.State
 import HashedExpression.Internal
---import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
@@ -232,7 +231,7 @@ partialDerivativesMap scalarRealExp =
                 addDerivative y dY
               ([m, n], [_n]) -> do
                 -- mn n m
-                dX <- (coerceTo [m, 1] $ from dN) ** (coerceTo [1, n] $ from y)
+                dX <- coerceTo [m, 1] (from dN) ** coerceTo [1, n] (from y)
                 addDerivative x dX
                 dY <- transpose (from x) ** from dN
                 addDerivative y dY

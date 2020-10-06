@@ -32,12 +32,10 @@ import GHC.Exts (sortWith)
 import HashedExpression.Internal
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Pattern
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Utils
-import HashedExpression.Prettify
 import Prelude hiding ((**), (^))
 import qualified Prelude
 
@@ -72,8 +70,8 @@ simplifyUnwrapped = removeUnreachable . apply
                 ]
             )
 
-simplify :: forall d et. (Dimension d) => Expression d et -> Expression d et
-simplify = wrap . simplifyUnwrapped . unwrap
+simplify :: IsExpression e => e -> e
+simplify = wrapExpression . simplifyUnwrapped . asExpression
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]

@@ -58,16 +58,6 @@ vectorOfDifferent sz gen = foldM f [] [1 .. sz]
     f acc _ = (: acc) <$> gen `suchThat` (not . flip elem acc)
 
 -------------------------------------------------------------------------------
-unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
-unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
-
-unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
-unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
-
-unsafeRotate :: RotateAmount -> Expression d1 et1 -> Expression d2 et2
-unsafeRotate amount e = wrap $ apply (Unary (specRotate amount)) [unwrap e]
-
--------------------------------------------------------------------------------
 genDimSelector :: Int -> Gen DimSelector
 genDimSelector size = do
   let id = elements [0 .. size - 1]

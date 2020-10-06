@@ -1,21 +1,7 @@
 module ReverseDifferentiationSpec where
 
-import CSimpleSpec (evaluateCodeC)
-import Commons
-import Control.Applicative (liftA2)
-import Control.Monad (forM_)
-import qualified Data.IntMap.Strict as IM
-import Data.List (group, sort)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import Data.Tuple.Extra (thd3)
-import Debug.Trace (traceShow)
-import HashedExpression.Internal (removeUnreachable, unwrap)
-import Test.HUnit (assertBool)
 import Test.Hspec
 import Prelude hiding ((^))
-import qualified Prelude
 
 --sharedVariables :: ValMap -> ValMap -> [String]
 --sharedVariables mp1 mp2 = filter isVar $ Set.toList (Map.keysSet mp1 `Set.intersection` Map.keysSet mp2)

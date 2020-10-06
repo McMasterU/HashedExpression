@@ -5,24 +5,17 @@ module StructureSpec where
 
 import Commons
 import Control.Applicative (liftA2)
-import Control.Monad (replicateM_)
-import qualified Data.IntMap.Strict as IM
-import Data.List (group, sort)
-import Data.Maybe (fromJust)
+import Data.List (sort)
 import HashedExpression.Internal
   ( safeMerges,
     topologicalSort,
     topologicalSortManyRoots,
-    unwrap,
   )
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Operation hiding (product, sum)
-import qualified HashedExpression.Operation
 import Test.Hspec
 import Test.QuickCheck
 import Prelude hiding ((^))
-import qualified Prelude
 
 -- |
 noDuplicate :: (Eq a, Ord a) => [a] -> Bool

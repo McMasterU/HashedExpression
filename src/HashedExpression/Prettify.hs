@@ -10,7 +10,7 @@
 -- useful for debugging as the pretty format is still a syntactically valid 'Expression' that can be pasted into ghci
 module HashedExpression.Prettify
   ( prettify,
-    prettifyDebug,
+    asString,
     showExpDebug,
     showExp,
     hiddenPrettify,
@@ -19,44 +19,36 @@ module HashedExpression.Prettify
   )
 where
 
-import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
-import HashedExpression.Internal.Expression
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
-
-unwrap :: Expression d et -> (ExpressionMap, NodeID)
-unwrap (Expression n mp) = (mp, n)
-
-wrap :: (ExpressionMap, NodeID) -> Expression d et
-wrap = uncurry $ flip Expression
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout.
 --   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
-showExp :: Expression d et -> IO ()
+showExp :: IsExpression e => e -> IO ()
 showExp = putStrLn . prettify
 
--- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'prettifyDebug'
-prettify :: Expression d et -> String
-prettify e@(Expression n mp) =
-  let (shape, et, op) = retrieveNode n mp
+-- | Visualize an 'Expression' in a pretty format. If you wish to enter the result into ghci, use 'asString'
+prettify :: IsExpression e => e -> String
+prettify e =
+  let (mp, n) = asExpression e
+      (shape, et, _) = retrieveNode n mp
       dimensionStr
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
       typeName = " :: " ++ dimensionStr ++ show et
-   in T.unpack (hiddenPrettify False $ unwrap e) ++ typeName
+   in T.unpack (hiddenPrettify False $ asExpression e) ++ typeName
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
 --   ghci as long as you define corresponding variable identifiers
-showExpDebug :: Expression d et -> IO ()
-showExpDebug = putStrLn . prettifyDebug
+showExpDebug :: IsExpression e => e -> IO ()
+showExpDebug = putStrLn . asString
 
 -- | Visualize an 'Expression' in a pretty format. Generally, you can re-enter a pretty printed 'Expression' into
 --   ghci as long as you define corresponding variable identifiers
-prettifyDebug :: Expression d et -> String
-prettifyDebug e@(Expression n mp) =
-  let (shape, et, op) = retrieveNode n mp
-   in T.unpack (hiddenPrettify True $ unwrap e)
+asString :: IsExpression e => e -> String
+asString e = T.unpack (hiddenPrettify True $ asExpression e)
 
 -- |
 prettifyDimSelector :: DimSelector -> String
@@ -68,8 +60,8 @@ prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" +
 debugPrint :: (ExpressionMap, NodeID) -> String
 debugPrint = T.unpack . hiddenPrettify False
 
-debugPrintExp :: Expression d et -> String
-debugPrintExp = debugPrint . unwrap
+debugPrintExp :: IsExpression e => e -> String
+debugPrintExp = debugPrint . asExpression
 
 -- | Print every entry (invididually) of an 'Expression'
 -- showAllEntries :: forall d et. Expression d et -> IO ()
