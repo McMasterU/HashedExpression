@@ -1,6 +1,7 @@
 module SimplifySpec where
 
 import Commons
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp

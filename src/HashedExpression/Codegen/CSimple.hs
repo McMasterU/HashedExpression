@@ -19,13 +19,13 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import HashedExpression.Codegen ( indent, Code, Codegen(..) )
+import HashedExpression.Codegen (Code, Codegen (..), indent)
 import HashedExpression.Embed (fftUtils)
 import HashedExpression.Internal
-import HashedExpression.Internal.Base (ElementType (..), ExpressionMap, NodeID (..), Op (..), Shape )
+import HashedExpression.Internal.Base (ElementType (..), ExpressionMap, NodeID (..), Op (..), Shape)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
-import HashedExpression.Utils
 import HashedExpression.Problem
+import HashedExpression.Utils
 import HashedExpression.Value
 import System.FilePath
 import Prelude hiding ((!!))

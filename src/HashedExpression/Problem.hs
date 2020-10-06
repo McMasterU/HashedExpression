@@ -25,8 +25,8 @@ import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
-import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Prettify

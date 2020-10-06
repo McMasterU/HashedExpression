@@ -12,17 +12,18 @@ import Data.Map.Strict (fromList, union)
 import Data.Maybe (fromJust)
 import Debug.Trace (traceShowId)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-), type (<=))
+import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
+import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
-import HashedExpression.Operation 
+import HashedExpression.Operation
 import qualified HashedExpression.Operation
 import Test.Hspec
 import Test.QuickCheck
 import Var
 import Prelude hiding ((**), (^))
 import qualified Prelude
-import HashedExpression.Internal.OperationSpec
-import HashedExpression.Internal
 
 -------------------------------------------------------------------------------
 unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2

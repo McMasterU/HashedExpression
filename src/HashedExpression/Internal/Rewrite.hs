@@ -31,8 +31,8 @@ import Debug.Trace (traceShowId)
 import GHC.Exts (sortWith)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
-import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import Prelude hiding ((^))
 

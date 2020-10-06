@@ -16,6 +16,7 @@ import Data.Maybe (fromJust)
 import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Interp
 import HashedExpression.Operation
@@ -59,7 +60,7 @@ getValue2D name size = readVal2D size . fromJust . Map.lookup name
 
 solveProblem :: Problem -> ValMap -> IO (Map String String)
 solveProblem problem valMap = do
-  case generateProblemCode CSimpleConfig {output = OutputText, maxIteration = Nothing } problem valMap of
+  case generateProblemCode CSimpleConfig {output = OutputText, maxIteration = Nothing} problem valMap of
     -- TODO: refine this
     Right proceed -> do
       folderName <- generate $ vectorOf 10 $ elements ['A' .. 'Z']

@@ -6,28 +6,19 @@
 module Commons where
 
 import Control.Applicative (liftA2)
-import Control.Monad (foldM, forM)
+import Control.Monad (foldM)
 import Data.Array hiding (range)
 import Data.Complex (Complex (..), imagPart, realPart)
 import Data.Function ((&))
-import Data.Function.HT (nest)
 import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate, sort)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, mapMaybe)
-import Data.Proxy (Proxy (..))
-import Data.Set (Set, fromList, toList)
-import Data.Time (diffUTCTime, getCurrentTime)
-import Debug.Trace (traceShowId)
-import GHC.IO.Unsafe (unsafePerformIO)
-import GHC.TypeLits (KnownNat, Nat, type (+), type (-))
+import Data.Set (fromList, toList)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
-import qualified HashedExpression.Operation
 import HashedExpression.Value
 import Test.HUnit
 import Test.Hspec

@@ -20,6 +20,7 @@ import Data.Proxy
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((**), (^))

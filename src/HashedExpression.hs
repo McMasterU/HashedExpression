@@ -25,6 +25,7 @@ module HashedExpression
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
     module HashedExpression.Problem,
+    module HashedExpression.Internal.Base,
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
@@ -38,6 +39,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
+import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify

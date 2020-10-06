@@ -23,10 +23,11 @@ import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed
 import HashedExpression.Internal
-import HashedExpression.Internal.Expression hiding ((<.>))
+import HashedExpression.Internal.Base hiding ((<.>))
+import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
-import HashedExpression.Utils
 import HashedExpression.Interp
+import HashedExpression.Utils
 import HashedExpression.Value
 import System.FilePath
 import System.Process (readProcess, readProcessWithExitCode)

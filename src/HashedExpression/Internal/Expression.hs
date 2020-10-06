@@ -11,18 +11,7 @@
 --
 -- The @Expression@ data type is the core data structure of the HashedExpresion library. This module contains all necessary definitions for
 -- constructing the Expression type.
-module HashedExpression.Internal.Expression
-  ( nat,
-    IsElementType (..),
-    Expression (..),
-    Dimension (..),
-    Scalar,
-    D1,
-    D2,
-    D3,
-    module HashedExpression.Internal.Base,
-  )
-where
+module HashedExpression.Internal.Expression where
 
 import Data.Array
 import qualified Data.Complex as DC
@@ -98,7 +87,7 @@ nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
 -- --------------------------------------------------------------------------------------------------------------------
 
-instance IsExpression (Expression d et) where 
+instance IsExpression (Expression d et) where
   asExpression (Expression nID mp) = (mp, nID)
   wrapExpression (mp, nID) = Expression nID mp
 

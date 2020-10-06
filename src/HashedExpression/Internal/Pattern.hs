@@ -83,8 +83,8 @@ import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Debug.Trace (trace, traceShowId)
-import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Base
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Utils
