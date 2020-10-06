@@ -20,7 +20,6 @@
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
   ( module HashedExpression.Internal.Expression,
-    module HashedExpression.Operation,
     module HashedExpression.Internal.Simplify,
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
@@ -44,7 +43,7 @@ import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-import HashedExpression.Operation
+
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value

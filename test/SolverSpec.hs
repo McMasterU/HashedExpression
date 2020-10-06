@@ -19,7 +19,7 @@ import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Interp
-import HashedExpression.Operation
+
 import HashedExpression.Problem
 import HashedExpression.Value
 import System.FilePath hiding ((<.>))

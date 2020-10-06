@@ -5,7 +5,7 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-import HashedExpression.Operation hiding (product, sum)
+  hiding (product, sum)
 import HashedExpression.Prettify
 import Test.Hspec
 import Test.QuickCheck (property)

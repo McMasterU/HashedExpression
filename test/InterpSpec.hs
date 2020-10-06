@@ -17,8 +17,7 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
-import HashedExpression.Operation
-import qualified HashedExpression.Operation
+
 import Test.Hspec
 import Test.QuickCheck
 import Var

@@ -1,7 +1,7 @@
 module Var where
 
 import HashedExpression.Internal.Expression
-import HashedExpression.Operation
+
 import Prelude hiding (const)
 
 type Default1D = 10

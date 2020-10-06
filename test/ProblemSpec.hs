@@ -14,7 +14,7 @@ import qualified Data.Map.Strict as Map
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Expression
-import HashedExpression.Operation
+
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value

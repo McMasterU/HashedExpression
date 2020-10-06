@@ -58,10 +58,9 @@ Supported operations:
 - complex related: real, imag, conjugate, etc.
 - trigonometry, log, exponential, power.
 - rotation, projection (think of Python's slice notation, but with type-safety), and injection (reverse of projection)
-- piecewise function
+- piecewise function 
 - Fourier Transform, inverse Fourier Transform
 - dot product (inner product), matrix multiplication
-- For more, see: [src/HashedExpression/Operation.hs](src/HashedExpression/Operation.hs)
 
 ## Examples
 
