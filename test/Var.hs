@@ -1,6 +1,6 @@
 module Var where
 
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 
 import Prelude hiding (const)
 

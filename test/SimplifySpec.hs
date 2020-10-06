@@ -2,7 +2,7 @@ module SimplifySpec where
 
 import Commons
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
   hiding (product, sum)

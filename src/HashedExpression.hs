@@ -19,7 +19,7 @@
 -- the above code creates a simple HashedExpression using the
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
-  ( module HashedExpression.Internal.Expression,
+  ( module HashedExpression.Modeling.Typed,
     module HashedExpression.Internal.Simplify,
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
@@ -39,7 +39,7 @@ import Data.Maybe (mapMaybe)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp

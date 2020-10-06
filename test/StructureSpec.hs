@@ -11,7 +11,7 @@ import HashedExpression.Internal
     topologicalSort,
     topologicalSortManyRoots,
   )
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Node
 import Test.Hspec
 import Test.QuickCheck

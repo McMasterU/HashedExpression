@@ -24,7 +24,7 @@ import HashedExpression.Codegen.CSimple
 import HashedExpression.Embed
 import HashedExpression.Internal
 import HashedExpression.Internal.Base hiding ((<.>))
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Node
 import HashedExpression.Interp
 import HashedExpression.Utils

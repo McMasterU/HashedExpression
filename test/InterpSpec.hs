@@ -14,7 +14,7 @@ import Debug.Trace (traceShowId)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
 

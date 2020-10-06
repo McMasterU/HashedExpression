@@ -17,7 +17,7 @@ import GHC.IO.Exception (ExitCode (..))
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Interp
 
 import HashedExpression.Problem

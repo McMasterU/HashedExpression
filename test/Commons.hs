@@ -16,7 +16,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (fromList, toList)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
+import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Interp
 import HashedExpression.Value
