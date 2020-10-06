@@ -11,6 +11,7 @@
 -- Every 'NodeID' in a 'ExpressionMap' is computed using a generated hash value. This module contains all the funcitonality necessary to compute
 -- hash values and check for collisions. Currently, we use a String Hashing based algorithm for our hash function, for details see here
 --  https://cp-algorithms.com/string/string-hashing.html
+
 module HashedExpression.Internal.Hash
   ( hash,
     hashNode,
@@ -124,7 +125,6 @@ data HashOutcome
 
 type CheckCollision = Node -> Int -> HashOutcome
 
--- |
 -- | IsOk if doesn't collide with the provided expression map
 --   IsClash otherwise
 checkCollisionMap :: ExpressionMap -> CheckCollision
@@ -137,7 +137,7 @@ checkCollisionMap mp node nID =
 -- | IsOk if doesn't collide with any of provided expression map
 --   IsClash otherwise
 checkCollisionMaps :: [ExpressionMap] -> CheckCollision
-checkCollisionMaps [] node nID = IsOk nID
+checkCollisionMaps [] _ nID = IsOk nID
 checkCollisionMaps (mp : mps) node nID = case checkCollisionMap mp node nID of
   IsClash -> IsClash
   IsOk _ -> checkCollisionMaps mps node nID

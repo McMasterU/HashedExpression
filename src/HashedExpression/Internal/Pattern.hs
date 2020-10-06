@@ -76,21 +76,15 @@ module HashedExpression.Internal.Pattern
 where
 
 import Control.Monad.State.Strict
-import qualified Data.IntMap.Strict as IM
-import Data.List (foldl')
-import Data.List.HT (splitLast, viewR)
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
-import Debug.Trace (trace, traceShowId)
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Rewrite
 import HashedExpression.Utils
-import Prelude (Bool)
 import Prelude hiding ((^))
-import qualified Prelude
 
 -- --------------------------------------------------------------------------------------------------------------------
 
@@ -102,7 +96,7 @@ import qualified Prelude
 --   (provided via 'Pattern')
 type Substitution = (GuardedPattern, Pattern)
 
-fromSubstitution :: Substitution -> ((ExpressionMap, NodeID) -> Rewrite NodeID)
+fromSubstitution :: Substitution -> (Expr -> Rewrite NodeID)
 fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
   | Just match <- match exp pattern,
     condition exp match =
@@ -384,7 +378,7 @@ branches = PListHole id 2
 -- | Check if the match satisfy some properties so that rewrite can happen
 type Condition =
   -- | The matched expression
-  (ExpressionMap, NodeID) ->
+  Expr ->
   -- | The match
   Match ->
   -- | Whether this match satisfy the condition
@@ -546,7 +540,7 @@ unionMatch match1 match2 =
 -- | Match an expression with a pattern, return the map between capture hole to the actual node
 -- e.g: match (Expression: (a(3243) + b(32521)) (PatternNormal:(x(1) + y(2)) --> ({1 -> 3243, 2 -> 32521}, {})
 --      match (Expression sum(a(3243), b(32521), c(21321)) (PatternNormal:(sum(each(1))) --> ({}, {1 -> [3243, 32521, 21321]})
-match :: (ExpressionMap, NodeID) -> Pattern -> Maybe Match
+match :: Expr -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let catMatch = foldl unionMatch emptyMatch
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
@@ -562,7 +556,7 @@ match (mp, n) outerWH =
         (Const c, PConst whc)
           | c == whc -> Just emptyMatch
         (Sum args, PSum whs) -> recursiveAndCombine args whs
-        (Sum args, PSumList pl@(PListHole _ listCapture)) ->
+        (Sum args, PSumList pl) ->
           matchList mp args pl
         (Sum args, PSumRest listCapture ps)
           | length args > length ps,
@@ -576,7 +570,7 @@ match (mp, n) outerWH =
                     } ->
             Just $ unionMatch matchNormalParts matchListPart
         (Mul args, PMul whs) -> recursiveAndCombine args whs
-        (Mul args, PMulList pl@(PListHole _ listCapture)) ->
+        (Mul args, PMulList pl) ->
           matchList mp args pl
         (Mul args, PMulRest listCapture ps)
           | length args > (length ps),
@@ -678,14 +672,14 @@ buildFromPatternRotateAmount match pra =
       map negate (buildFromPatternRotateAmount match pra)
 
 buildFromPatternList ::
-  (ExpressionMap, NodeID) -> Match -> PatternList -> [Rewrite NodeID]
+  Expr -> Match -> PatternList -> [Rewrite NodeID]
 buildFromPatternList exp match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
     map (buildFromPattern exp match . turnToPattern fs) ns
   | otherwise =
     error "Capture not in the Map Capture [Int] which should never happens"
 
-buildFromPattern :: (ExpressionMap, NodeID) -> Match -> Pattern -> Rewrite NodeID
+buildFromPattern :: Expr -> Match -> Pattern -> Rewrite NodeID
 buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape originalN originalMp)
   where
     build :: Maybe Shape -> Pattern -> Rewrite NodeID

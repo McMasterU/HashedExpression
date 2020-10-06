@@ -11,7 +11,6 @@ module HashedExpression.Internal.MonadExpression where
 
 import Control.Monad.State.Strict
 import qualified Data.IntMap.Strict as IM
-import GHC.Stack (HasCallStack)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Hash

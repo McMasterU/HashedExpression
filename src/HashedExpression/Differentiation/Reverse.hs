@@ -10,8 +10,6 @@
 module HashedExpression.Differentiation.Reverse where
 
 import Control.Monad.State.Strict
-import qualified Data.IntMap.Strict as IM
-import Data.List (foldl')
 import Data.List.HT (removeEach)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

@@ -10,24 +10,8 @@
 module HashedExpression.Internal.Simplify (simplify, simplifyUnwrapped) where
 
 import Control.Monad.State.Strict
-import Data.Eq.HT (equating)
-import Data.Function.HT (nest)
-import qualified Data.IntMap.Strict as IM
-import qualified Data.IntSet as IS
-import Data.List
-  ( find,
-    foldl',
-    group,
-    groupBy,
-    intercalate,
-    partition,
-    sort,
-    sortBy,
-    sortOn,
-    transpose,
-  )
-import Data.List.Extra (firstJust, groupOn, groupSort)
-import qualified Data.Map.Strict as Map
+import Data.List (partition, sort)
+import Data.List.Extra (groupOn)
 import GHC.Exts (sortWith)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
@@ -39,7 +23,7 @@ import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
 
-simplifyUnwrapped :: (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+simplifyUnwrapped :: Expr -> Expr
 simplifyUnwrapped = removeUnreachable . apply
   where
     apply =

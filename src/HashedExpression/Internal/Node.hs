@@ -25,8 +25,6 @@ module HashedExpression.Internal.Node
 where
 
 import qualified Data.IntMap.Strict as IM
-import Data.List (sort)
-import Data.Tuple.Extra (fst3, snd3, thd3)
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
 
@@ -78,7 +76,7 @@ opTypeWeight node =
 sameOp :: HasCallStack => Op -> Op -> Bool
 sameOp node1 node2 = opTypeWeight node1 == opTypeWeight node2
 
--- | Retrieve the parameters (i.e 'Args') attached to a given 'Node'
+-- | Retrieve the operands IDs 
 opArgs :: Op -> Args
 opArgs node =
   case node of
@@ -200,7 +198,7 @@ retrieveShape (NodeID n) mp =
 
 -- | Retrieve the Op of an expression
 {-# INLINE expressionOp #-}
-expressionOp :: (ExpressionMap, NodeID) -> Op
+expressionOp :: Expr -> Op
 expressionOp (mp, NodeID n) =
   case IM.lookup n mp of
     Just (_, _, op) -> op

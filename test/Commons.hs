@@ -79,7 +79,7 @@ genValMapFor (Expression nID mp) = do
         )
   return $ Map.fromList vals
 
-primitiveRUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveRUntyped :: Shape -> Gen Expr
 primitiveRUntyped shape = do
   dbl <- genDouble
   name <- elements $ map pure ['a' .. 'z']
@@ -91,13 +91,13 @@ primitiveRUntyped shape = do
       fromNodeUnwrapped (shape, R, Const dbl)
     ]
 
-primitiveCUntyped :: Shape -> Gen (ExpressionMap, NodeID)
+primitiveCUntyped :: Shape -> Gen Expr
 primitiveCUntyped shape = do
   re <- primitiveRUntyped shape
   im <- primitiveRUntyped shape
   return $ apply (Binary specRealImag) [re, im]
 
-genExpUntyped :: Int -> Shape -> ElementType -> Gen (ExpressionMap, NodeID)
+genExpUntyped :: Int -> Shape -> ElementType -> Gen Expr
 genExpUntyped qc shape et
   | qc == 0 = case et of
     R -> primitiveRUntyped shape
@@ -267,7 +267,7 @@ instance Arbitrary ArbitraryExpresion where
       ]
 
 -- |
-getWrappedExp :: ArbitraryExpresion -> (ExpressionMap, NodeID)
+getWrappedExp :: ArbitraryExpresion -> Expr
 getWrappedExp (ArbitraryExpresion (Expression n mp)) = (mp, n)
 
 -------------------------------------------------------------------------------

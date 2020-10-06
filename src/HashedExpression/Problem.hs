@@ -126,11 +126,11 @@ inf = 1 / 0
 -- | The statement of a constraint, including an 'ExpressionMap' subexpressions, the root 'NodeID' and its value
 data ConstraintStatement
   = -- | A lower bound constraint
-    Lower (ExpressionMap, NodeID) Val
+    Lower Expr Val
   | -- | An upper bound constraint
-    Upper (ExpressionMap, NodeID) Val
+    Upper Expr Val
   | -- | A constraint with a lower and upper bound
-    Between (ExpressionMap, NodeID) (Val, Val)
+    Between Expr (Val, Val)
   deriving (Show, Eq, Ord)
 
 -- * Functions for creating 'ConstraintStatement's.
@@ -184,14 +184,14 @@ between exp = Between (asExpression exp)
 (.==) exp val = Between (asExpression exp) (val, val)
 
 -- | Extract the expression from the 'ConstraintStatement'
-getExpressionCS :: ConstraintStatement -> (ExpressionMap, NodeID)
+getExpressionCS :: ConstraintStatement -> Expr
 getExpressionCS cs =
   case cs of
     Lower exp _ -> exp
     Upper exp _ -> exp
     Between exp _ -> exp
 
-mapExpressionCS :: ((ExpressionMap, NodeID) -> (ExpressionMap, NodeID)) -> ConstraintStatement -> ConstraintStatement
+mapExpressionCS :: (Expr -> Expr) -> ConstraintStatement -> ConstraintStatement
 mapExpressionCS f cs =
   case cs of
     Lower exp v -> Lower (f exp) v
@@ -226,7 +226,7 @@ newtype Constraint = Constraint [ConstraintStatement]
 type ProblemConstructingM a = StateT ExpressionMap (Either String) a
 
 -------------------------------------------------------------------------------
-getBound :: (ExpressionMap, NodeID) -> [ConstraintStatement] -> (Double, Double)
+getBound :: Expr -> [ConstraintStatement] -> (Double, Double)
 getBound (mp, n) = foldl update (ninf, inf)
   where
     getNum val = case val of
@@ -252,20 +252,20 @@ toBoxConstraint cs = case cs of
     let Var name = retrieveOp n mp
      in BoxBetween name vals
 
-mergeToMain :: (ExpressionMap, NodeID) -> ProblemConstructingM NodeID
+mergeToMain :: Expr -> ProblemConstructingM NodeID
 mergeToMain (mp, nID) = do
   curMp <- get
   let (mergedMp, mergedNID) = safeMerge curMp (mp, nID)
   put mergedMp
   return mergedNID
 
-varsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+varsWithShape :: Expr -> [(String, Shape)]
 varsWithShape = mapMaybe collect . IM.toList . fst
   where
     collect (_, (shape, _, Var name)) = Just (name, shape)
     collect _ = Nothing
 
-paramsWithShape :: (ExpressionMap, NodeID) -> [(String, Shape)]
+paramsWithShape :: Expr -> [(String, Shape)]
 paramsWithShape = mapMaybe collect . IM.toList . fst
   where
     collect (_, (shape, _, Param name)) = Just (name, shape)
@@ -296,7 +296,7 @@ constructProblemHelper obj (Constraint constraints) = do
   fID <- mergeToMain $ asScalarReal obj
   fPartialDerivativeMap <- processF obj
   -------------------------------------------------------------------------------
-  let processScalarConstraint :: (ExpressionMap, NodeID) -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
+  let processScalarConstraint :: Expr -> ProblemConstructingM (NodeID, Map String NodeID, (Double, Double))
       processScalarConstraint exp = do
         let (lb, ub) = getBound exp scalarCS
         gID <- mergeToMain $ exp
@@ -354,12 +354,12 @@ constructProblemHelper obj (Constraint constraints) = do
           | not . all (compatible []) $ getValCS cs ->
             throwError "Scalar expression must be bounded by scalar value"
           | otherwise -> return ()
-        _ -> throwError "Only scalar inequality and box constraint for variable are supported"
+        _ -> throwError "Only scalar inequality and box constraint are supported"
 
 -- | Construct a Problem from given objective function and constraints
 constructProblem :: IsScalarReal e => e -> Constraint -> Either String Problem
 constructProblem objectiveFunction (Constraint cs) =
   fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
   where
-    simplifiedObjective = simplify objectiveFunction
+    simplifiedObjective = simplifyUnwrapped $ asExpression objectiveFunction
     simplifiedConstraint = Constraint $ map (mapExpressionCS simplifyUnwrapped) cs

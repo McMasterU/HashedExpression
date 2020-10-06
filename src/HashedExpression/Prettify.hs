@@ -57,7 +57,7 @@ prettifyDimSelector (Range start end 1) = show start ++ ":" ++ show end
 prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" ++ show n
 
 -- | same as 'prettify' without any overhead
-debugPrint :: (ExpressionMap, NodeID) -> String
+debugPrint :: Expr -> String
 debugPrint = T.unpack . hiddenPrettify False
 
 debugPrintExp :: IsExpression e => e -> String
@@ -77,7 +77,7 @@ hiddenPrettify ::
   -- | retain syntactically valid (for use in ghci)
   Bool ->
   -- | (unwrapped) expression to be prettified
-  (ExpressionMap, NodeID) ->
+  Expr ->
   -- | resulting "pretty" expression
   T.Text
 hiddenPrettify pastable (mp, n) =

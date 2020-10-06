@@ -40,10 +40,10 @@ import Prelude hiding ((^))
 apply ::
   -- | describes changes in 'Dimension' or 'ElementType'
   OperationSpec ->
-  -- | the operands (unwrapped 'Expression')
-  [(ExpressionMap, NodeID)] ->
-  -- | the resulting (unwrapped) 'Expression'
-  (ExpressionMap, NodeID)
+  -- | the operands 
+  [Expr] ->
+  -- | the resulting expression
+  Expr
 apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
   where
     (mergedMap, nIDs) = safeMerges exps
@@ -51,7 +51,6 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
     resNode = createNode option operands
     resID = hashNode (checkCollisionMap mergedMap) resNode
 
--------------------------------------------------------------------------------
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- * Expression Transformations
@@ -60,7 +59,7 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
 
 -- | Transformation type, take a (unwrapped) 'Expression' and return a transformed (unwrapped) 'Expression'.
 --   Construct using the 'toTransformation' function
-type Transformation = (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+type Transformation = Expr -> Expr
 
 -- | Remove unreachable nodes
 removeUnreachable :: Transformation
@@ -99,8 +98,8 @@ multipleTimes outK smp exp = go (outK - 1) exp (smp exp)
 -- | Topological sort the expression map, all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSort ::
-  -- | unwrapped 'Expression'
-  (ExpressionMap, NodeID) ->
+  -- | The expression
+  Expr ->
   -- | list in topological order (independent to dependent)
   [NodeID]
 topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
@@ -108,7 +107,7 @@ topologicalSort (mp, n) = topologicalSortManyRoots (mp, [n])
 -- | Topological sort the expression map (with multiple roots), all the dependencies will appear before the depended node, and all
 --   unreachable nodes will be ignored
 topologicalSortManyRoots ::
-  -- | many rooted unwrapped 'Expression'
+  -- | Expression Map and root nodes
   (ExpressionMap, [NodeID]) ->
   -- | list in topological order (independent to dependent)
   [NodeID]
@@ -173,16 +172,16 @@ safeMergeManyRoots accMp (mp, ns) =
    in (mergedMap, map (toTotal finalSub) ns)
 
 -- | Merge the second map into the first map, resolve hash collision if occur
-safeMerge :: ExpressionMap -> (ExpressionMap, NodeID) -> (ExpressionMap, NodeID)
+safeMerge :: ExpressionMap -> Expr -> Expr
 safeMerge accMp (mp, n) =
   let (resMp, [resN]) = safeMergeManyRoots accMp (mp, [n])
    in (resMp, resN)
 
-safeMerges :: [(ExpressionMap, NodeID)] -> (ExpressionMap, [NodeID])
+safeMerges :: [Expr] -> (ExpressionMap, [NodeID])
 safeMerges [] = (IM.empty, [])
 safeMerges ((mp, n) : xs) = foldl' f (mp, [n]) xs
   where
-    f :: (ExpressionMap, [NodeID]) -> (ExpressionMap, NodeID) -> (ExpressionMap, [NodeID])
+    f :: (ExpressionMap, [NodeID]) -> Expr -> (ExpressionMap, [NodeID])
     f (acc, accIds) (valMP, valNID) =
       let (mergedMap, nID) = safeMerge acc (valMP, valNID)
        in (mergedMap, accIds ++ [nID])
@@ -227,7 +226,7 @@ createNode spec args =
 -------------------------------------------------------------------------------
 
 -- | Create an unwrapped Expresion from a standalone 'Node'
-fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
+fromNodeUnwrapped :: Node -> Expr
 fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
   where
     checkCollision = checkCollisionMap IM.empty

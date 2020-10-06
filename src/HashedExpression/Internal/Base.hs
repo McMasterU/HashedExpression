@@ -13,7 +13,11 @@ import Data.IntMap.Strict (IntMap)
 import Data.Typeable (Typeable)
 import Prelude hiding ((**), (^))
 
-newtype NodeID = NodeID {unNodeID :: Int} deriving (Eq, Ord)
+-- | NodeID
+newtype NodeID = NodeID
+  { unNodeID :: Int
+  }
+  deriving (Eq, Ord)
 
 instance Show NodeID where
   show (NodeID nID) = show nID
@@ -148,6 +152,9 @@ type ExpressionMap = IntMap Node
 --   their dimensions
 type Node = (Shape, ElementType, Op)
 
+-- | Expression 
+type Expr = (ExpressionMap, NodeID)
+
 -- |
 --
 -- | Interface for power
@@ -215,18 +222,17 @@ infixl 8 ^
 
 -- | If the type corresponds to an expression
 class IsExpression e where
-  asExpression :: e -> (ExpressionMap, NodeID)
-  wrapExpression :: (ExpressionMap, NodeID) -> e
+  asExpression :: e -> Expr
+  wrapExpression :: Expr -> e
 
 -- | If the type corresponds to a scalar real expression
 class IsExpression e => IsScalarReal e where
-  asScalarReal :: e -> (ExpressionMap, NodeID)
+  asScalarReal :: e -> Expr
 
 -------------------------------------------------------------------------------
-
-instance IsExpression (ExpressionMap, NodeID) where
+instance IsExpression Expr where
   asExpression = id
   wrapExpression = id
 
-instance IsScalarReal (ExpressionMap, NodeID) where
+instance IsScalarReal Expr where
   asScalarReal = id
