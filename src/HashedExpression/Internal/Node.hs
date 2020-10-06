@@ -76,7 +76,7 @@ opTypeWeight node =
 sameOp :: HasCallStack => Op -> Op -> Bool
 sameOp node1 node2 = opTypeWeight node1 == opTypeWeight node2
 
--- | Retrieve the operands IDs 
+-- | Retrieve the operands IDs
 opArgs :: Op -> Args
 opArgs node =
   case node of

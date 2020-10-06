@@ -18,3 +18,12 @@ buildExpr :: ExprBuilder -> Expr
 buildExpr (Build exB) =
   let (nID, mp) = runState exB IM.empty
    in (mp, nID)
+
+instance Show ExprBuilder where
+  show = show . buildExpr
+
+instance Eq ExprBuilder where
+  e1 == e2 = (buildExpr e1) == (buildExpr e2)
+
+instance Ord ExprBuilder where
+  compare e1 e2 = compare (buildExpr e1) (buildExpr e2)

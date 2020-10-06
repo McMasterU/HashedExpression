@@ -11,7 +11,6 @@
 -- Every 'NodeID' in a 'ExpressionMap' is computed using a generated hash value. This module contains all the funcitonality necessary to compute
 -- hash values and check for collisions. Currently, we use a String Hashing based algorithm for our hash function, for details see here
 --  https://cp-algorithms.com/string/string-hashing.html
-
 module HashedExpression.Internal.Hash
   ( hash,
     hashNode,

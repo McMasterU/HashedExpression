@@ -23,7 +23,7 @@ shouldSimplifyTo ::
   IO ()
 shouldSimplifyTo exp1 exp2 = do
   prettify (simplify (asExpression exp1)) `shouldBe` prettify (simplify (asExpression exp2))
-  simplify (asExpression exp1)`shouldBe` simplify (asExpression exp2)
+  simplify (asExpression exp1) `shouldBe` simplify (asExpression exp2)
 
 prop_sameValueInterp :: XSuite -> Expectation
 prop_sameValueInterp (XSuite expr valMap) =
@@ -109,16 +109,3 @@ spec =
       rotate (0, 1) (rotate (2, -3) x2) `shouldSimplifyTo` rotate (2, -2) x2
       rotate (0, 0, 0) x3 `shouldSimplifyTo` x3
       rotate (2, 3, 4) (s *. y3) `shouldSimplifyTo` s *. rotate (2, 3, 4) y3
-    specify "more unit tests" $ do
-      x `shouldSimplifyTo` x
-      constant 1 / x `shouldSimplifyTo` x ^ (-1)
-      x + x `shouldSimplifyTo` constant 2 *. x
-      x - x `shouldSimplifyTo` constant 0
-      x * x `shouldSimplifyTo` x ^ 2
-      x / x `shouldSimplifyTo` constant 1
-      x + y `shouldSimplifyTo` x + y
-      x - y `shouldSimplifyTo` x - y
-      x * y `shouldSimplifyTo` x * y
-      x / y `shouldSimplifyTo` x * y ^ (-1)
-      (x * y) * (x * y) `shouldSimplifyTo` (x ^ 2) * (y ^ 2)
-      (x / y) * (x / y) `shouldSimplifyTo` (y ^ (-2)) * (x ^ 2)

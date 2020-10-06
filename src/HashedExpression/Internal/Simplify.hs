@@ -54,7 +54,6 @@ simplify = removeUnreachable . apply
                 ]
             )
 
-
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
 

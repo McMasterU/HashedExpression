@@ -32,7 +32,6 @@ import HashedExpression.Internal.Simplify
 import HashedExpression.Prettify
 import HashedExpression.Value
 
-
 -------------------------------------------------------------------------------
 
 -- | Representation of a variable in an optimization problem
@@ -111,7 +110,6 @@ instance Show Problem where
                 ++ ["∂/∂" ++ name ++ ": " ++ debugPrint (expressionMap, pID) | (name, pID) <- withVarName]
 
 -------------------------------------------------------------------------------
-
 
 -- | Negative infinity
 ninf :: Double

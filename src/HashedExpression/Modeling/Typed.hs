@@ -18,16 +18,13 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-))
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
+import HashedExpression.Internal.Builder
+import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((**), (^))
 
 -- |
-data Expression (d :: [Nat]) (et :: ElementType) = Expression
-  { -- | index to the topological root of ExpressionMap
-    exRootID :: NodeID,
-    -- | Map of all 'Node' indexable by 'NodeID'
-    exMap :: ExpressionMap
-  }
+newtype Expression (d :: [Nat]) (et :: ElementType) = Expression {extractBuilder :: ExprBuilder}
   deriving (Show, Eq, Ord)
 
 type role Expression nominal nominal
@@ -82,62 +79,20 @@ instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
 nat :: forall n. (KnownNat n) => Int
 nat = fromIntegral $ natVal (Proxy :: Proxy n)
 
--- --------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 
 instance IsExpression (Expression d et) where
-  asExpression (Expression nID mp) = (mp, nID)
-  wrapExpression (mp, nID) = Expression nID mp
+  asExpression = buildExpr . extractBuilder
 
 instance IsScalarReal (Expression Scalar R) where
-  asScalarReal (Expression nID mp) = (mp, nID)
+  asScalarReal = buildExpr . extractBuilder
 
--------------------------------------------------------------------------------
-applyUnary ::
-  HasCallStack =>
-  UnarySpec ->
-  -- | the operand
-  Expression d1 et1 ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyUnary spec e1 = wrapExpression . apply (Unary spec) $ [asExpression e1]
+-----------------------------------------------------------------------------------------------------------------------
+unary :: (ExprBuilder -> ExprBuilder) -> Expression d1 et1 -> Expression d2 et2
+unary f (Expression e) = Expression $ f e
 
-applyNary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  NarySpec ->
-  -- | the operands
-  [Expression d1 et1] ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyNary spec = wrapExpression . apply (Nary spec) . map asExpression
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression' and a fixed (binary) arity
-applyBinary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  BinarySpec ->
-  -- | the "left" operand
-  Expression d1 et1 ->
-  -- | the "right" operand
-  Expression d2 et2 ->
-  -- | the resulting 'Expression'
-  Expression d3 et3
-applyBinary spec e1 e2 = wrapExpression . apply (Binary spec) $ [asExpression e1, asExpression e2]
-
-applyConditionAry ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  ConditionarySpec ->
-  -- | the conditional/selector operand
-  Expression d et1 ->
-  -- | operands (branches) that could be selected
-  [Expression d et2] ->
-  -- | the resulting 'Expression'
-  Expression d et2
-applyConditionAry spec e branches =
-  wrapExpression . apply (ConditionAry spec) $ asExpression e : map asExpression branches
+binary :: (ExprBuilder -> ExprBuilder -> ExprBuilder) -> Expression d1 et1 -> Expression d2 et2 -> Expression d3 et3
+binary f (Expression e1) (Expression e2) = Expression $ f e1 e2
 
 -- | Converts a double-precision floating-point number to a real-number expression with dimension constraint `d`
 --
@@ -145,109 +100,82 @@ applyConditionAry spec e branches =
 --    (fromDouble 15) :: Expression Scalar R
 -- @
 fromDouble :: forall d. Dimension d => Double -> Expression d R
-fromDouble value = fromNode (toShape @d, R, Const value)
-
--- | Create an Expression from a standalone 'Node'
-fromNode :: Node -> Expression d et
-fromNode = wrapExpression . fromNodeUnwrapped
+fromDouble value = Expression $ introduceNode (toShape @d, R, Const value)
 
 instance (Dimension d) => PowerOp (Expression d et) Int where
   (^) :: Expression d et -> Int -> Expression d et
-  (^) e1 x = applyUnary (specPower x) e1
+  (^) e x = unary (^ x) e
 
--- | Basic operations on Num class expressions with dimension constraint `d`
+-- | Basic operations on Num class
 instance Dimension d => Num (Expression d R) where
-  e1 + e2 = applyNary specSum [e1, e2]
-  e1 * e2 = applyNary specMul [e1, e2]
-  negate = applyUnary specNeg
+  (+) = binary (+)
+  (-) = binary (-)
+  (*) = binary (*)
+  negate = unary negate
   fromInteger val = fromDouble $ fromIntegral val
-  abs = error "TODO: abs"
-  signum = error "Not applicable to tensor"
+  abs = error "TODO"
+  signum = error "Not applicable"
 
--- | Define division operation and representation for real-number fractional expressions with dimension constraint `d`
---
--- @
---    let e1 = (fromRational 11) :: Expression Scalar R
---    let e2 = (fromRational 12) :: Expression Scalar R
---    e1 / e2
--- @
+-- | Basic operations on Fractional class
 instance Dimension d => Fractional (Expression d R) where
-  e1 / e2 = e1 * e2 ^ (-1)
+  (/) = binary (/)
   fromRational r = fromDouble $ fromRational r
 
--- | Represent common functions for real-number floating-point expressions with dimension constraint `d`
---
--- @
---    let val = (fromDouble 1.2345) :: Expression Scalar R
---    `function` val
--- @
+-- | Basic operations on Floating class
 instance Dimension d => Floating (Expression d R) where
   pi = fromDouble pi
-  sqrt = applyUnary specSqrt
-  exp = applyUnary specExp
-  log = applyUnary specLog
-  sin = applyUnary specSin
-  cos = applyUnary specCos
-  tan = applyUnary specTan
-  asin = applyUnary specAsin
-  acos = applyUnary specAcos
-  atan = applyUnary specAtan
-  sinh = applyUnary specSinh
-  cosh = applyUnary specCosh
-  tanh = applyUnary specTanh
-  asinh = applyUnary specAsinh
-  acosh = applyUnary specAcosh
-  atanh = applyUnary specAtanh
+  sqrt = unary sqrt
+  exp = unary exp
+  log = unary log
+  sin = unary sin
+  cos = unary cos
+  tan = unary tan
+  asin = unary asin
+  acos = unary acos
+  atan = unary atan
+  sinh = unary sinh
+  cosh = unary cosh
+  tanh = unary tanh
+  asinh = unary asinh
+  acosh = unary acosh
+  atanh = unary atanh
 
--- | Basic operations on complex-number expressions with dimension constraint `d`
---
--- @
---     let e1 = ((fromDouble 10) +: fromIntegral 1) :: Expression Scalar C
---     let e2 = ((fromDouble 15) +: fromIntegral 3) :: Expression Scalar C
---     e1 `binary operation` e2
---     `unary operation` e1
--- @
+-- | Basic operations on class Num
 instance Dimension d => Num (Expression d C) where
-  e1 + e2 = applyNary specSum [e1, e2]
-  e1 * e2 = applyNary specMul [e1, e2]
-  negate = applyUnary specNeg
+  (+) = binary (+)
+  (*) = binary (*)
+  negate = unary negate
   fromInteger val = fromIntegral val +: 0
   abs = error "TODO: abs"
   signum = error "Not applicable"
 
--- | Define division operation and transformation to complex fractional expression from rational real number with dimension constraint `d`
---
--- @
---     let e1 = ((fromRational 10) +: fromIntegral 1) :: Expression Scalar C
---     let e2 = ((fromRational 15) +: fromIntegral 3) :: Expression Scalar C
---     e1 / e2
--- @
+-- | Basic operations on class Fractional
 instance Dimension d => Fractional (Expression d C) where
-  e1 / e2 = e1 * e2 ^ (-1)
+  (/) = binary (/)
   fromRational r = fromDouble (fromRational r) +: 0
 
 -- | Scale in vector space
 instance ScaleOp (Expression Scalar R) (Expression d et) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et
-  scale = applyBinary specScale
+  scale = binary scale
 
 instance ScaleOp (Expression Scalar C) (Expression d C) where
   scale :: Expression Scalar s -> Expression d et -> Expression d et
-  scale = applyBinary specScale
+  scale = binary scale
 
 instance (Dimension d) => ComplexRealOp (Expression d R) (Expression d C) where
   (+:) :: Expression d R -> Expression d R -> Expression d C
-  (+:) = applyBinary specRealImag
+  (+:) = binary (+:)
   xRe :: Expression d C -> Expression d R
-  xRe = applyUnary specRealPart
+  xRe = unary xRe
   xIm :: Expression d C -> Expression d R
-  xIm = applyUnary specImagPart
+  xIm = unary xIm
   conjugate :: Expression d C -> Expression d C
-  conjugate = applyUnary specConjugate
+  conjugate = unary conjugate
 
 instance InnerProductSpaceOp (Expression d et) (Expression Scalar et) where
   (<.>) :: Expression d s -> Expression d et -> Expression Scalar et
-  (<.>) = applyBinary specInnerProd
+  (<.>) = binary (<.>)
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
@@ -294,28 +222,29 @@ sumElements expr = expr <.> 1
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
 instance (Dimension d) => PiecewiseOp (Expression d R) (Expression d et) where
   piecewise :: HasCallStack => [Double] -> Expression d R -> [Expression d et] -> Expression d et
-  piecewise marks conditionExp branchExps = applyConditionAry (specPiecewise marks) conditionExp branchExps
+  piecewise marks conditionExp branchExps =
+    Expression $ piecewise marks (extractBuilder conditionExp) (map extractBuilder branchExps)
 
 -- Fourier transform on complex expression
 instance (Dimension d) => FTOp (Expression d C) (Expression d C) where
   ft :: Expression d C -> Expression d C
-  ft = applyUnary specFT
+  ft = unary ft
 
   ift :: Expression d C -> Expression d C
-  ift = applyUnary specIFT
+  ift = unary ift
 
 -- |
 instance (KnownNat n) => RotateOp Int (Expression (D1 n) et) where
   rotate :: Int -> Expression (D1 n) et -> Expression (D1 n) et
-  rotate x = applyUnary (specRotate [x])
+  rotate x = unary (rotate [x])
 
 instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (Expression (D2 m n) et) where
   rotate :: (Int, Int) -> Expression (D2 m n) et -> Expression (D2 m n) et
-  rotate (x, y) = applyUnary (specRotate [x, y])
+  rotate (x, y) = unary (rotate [x, y])
 
 instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (Expression (D3 m n p) et) where
   rotate :: (Int, Int, Int) -> Expression (D3 m n p) et -> Expression (D3 m n p) et
-  rotate (x, y, z) = applyUnary (specRotate [x, y, z])
+  rotate (x, y, z) = unary (rotate [x, y, z])
 
 -------------------------------------------------------------------------------
 type x < y = (CmpNat x y ~ 'LT)
@@ -338,8 +267,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy i) (Expression (D1 n) et) (Expression Scalar et)
   where
-  project _ = applyUnary (specProject [At $ nat @i])
-  inject _ = applyBinary (specInject [At $ nat @i])
+  project _ = unary (project [At $ nat @i])
+  inject _ = binary (inject [At $ nat @i])
 
 instance
   ( (KnownNat start, KnownNat end, KnownNat step),
@@ -349,8 +278,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy '(start, end, step)) (Expression (D1 n) et) (Expression (D1 res) et)
   where
-  project _ = applyUnary (specProject [Range (nat @start) (nat @end) (nat @step)])
-  inject _ = applyBinary (specInject [Range (nat @start) (nat @end) (nat @step)])
+  project _ = unary (project [Range (nat @start) (nat @end) (nat @step)])
+  inject _ = binary (inject [Range (nat @start) (nat @end) (nat @step)])
 
 instance
   ( KnownNat m,
@@ -360,8 +289,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy i, Proxy j) (Expression (D2 m n) et) (Expression Scalar et)
   where
-  project _ = applyUnary (specProject [At (nat @i), At (nat @j)])
-  inject _ = applyBinary (specInject [At (nat @i), At (nat @j)])
+  project _ = unary (project [At (nat @i), At (nat @j)])
+  inject _ = binary (inject [At (nat @i), At (nat @j)])
 
 instance
   ( KnownNat m,
@@ -373,8 +302,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (Expression (D2 m n) et) (Expression (D1 resM) et)
   where
-  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
-  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
+  project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
+  inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
 
 instance
   ( KnownNat m,
@@ -386,8 +315,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (Expression (D2 m n) et) (Expression (D1 resN) et)
   where
-  project _ = applyUnary (specProject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
-  inject _ = applyBinary (specInject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
+  project _ = unary (project [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = binary (inject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
 
 instance
   ( KnownNat m,
@@ -401,8 +330,8 @@ instance
   ) =>
   ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (Expression (D2 m n) et) (Expression (D2 resM resN) et)
   where
-  project _ = applyUnary (specProject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
-  inject _ = applyBinary (specInject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
+  project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
+  inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
 
 -- TODO: 3D
 
@@ -412,25 +341,19 @@ instance
   (KnownNat m, KnownNat n, KnownNat p) =>
   MatrixMulOp (Expression (D2 m n) et) (Expression (D2 n p) et) (Expression (D2 m p) et)
   where
-  (**) = applyBinary specMatMul
+  (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
   MatrixMulOp (Expression (D2 m n) et) (Expression (D1 n) et) (Expression (D1 m) et)
   where
-  (**) = applyBinary specMatMul
+  (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
   TransposeOp (Expression (D2 m n) et) (Expression (D2 n m) et)
   where
-  transpose = applyUnary specTranspose
-
--- instance
---   (KnownNat m) =>
---   TransposeOp (Expression (D1 m) et) (Expression (D2 1 m) et)
---   where
---   transpose = applyUnary specTranspose
+  transpose = unary transpose
 
 -------------------------------------------------------------------------------
 
@@ -447,13 +370,13 @@ ranges = Proxy
 
 -- | General version of creating variables, parameters, constants
 gvariable :: forall d. Dimension d => String -> Expression d R
-gvariable name = fromNode (toShape @d, R, Var name)
+gvariable name = Expression $ introduceNode (toShape @d, R, Var name)
 
 gparam :: forall d. Dimension d => String -> Expression d R
-gparam name = fromNode (toShape @d, R, Param name)
+gparam name = Expression $ introduceNode (toShape @d, R, Param name)
 
 gconstant :: forall d. Dimension d => Double -> Expression d R
-gconstant value = fromNode (toShape @d, R, Const value)
+gconstant value = Expression $ introduceNode (toShape @d, R, Const value)
 
 ---- | Auxiliary for creating variables
 --

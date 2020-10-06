@@ -39,11 +39,10 @@ import Data.Maybe (mapMaybe)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Internal.Base
-import HashedExpression.Modeling.Typed
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-
+import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
@@ -55,10 +54,12 @@ data ValueAssignment
 mkValMap :: [ValueAssignment] -> ValMap
 mkValMap ss = Map.fromList $ mapMaybe f ss
   where
-    f (Expression nID mp :-> val)
+    f (e :-> val)
       | (_, _, Var name) <- retrieveNode nID mp = Just (name, val)
       | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
       | otherwise = Nothing
+      where
+        (mp, nID) = asExpression e
 
 data OptimizationProblem = OptimizationProblem
   { objective :: Expression Scalar R,

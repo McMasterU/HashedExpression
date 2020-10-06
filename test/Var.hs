@@ -1,7 +1,6 @@
 module Var where
 
 import HashedExpression.Modeling.Typed
-
 import Prelude hiding (const)
 
 type Default1D = 10

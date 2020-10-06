@@ -152,7 +152,7 @@ type ExpressionMap = IntMap Node
 --   their dimensions
 type Node = (Shape, ElementType, Op)
 
--- | Expression 
+-- | Expression
 type Expr = (ExpressionMap, NodeID)
 
 -- |
@@ -223,7 +223,6 @@ infixl 8 ^
 -- | If the type corresponds to an expression
 class IsExpression e where
   asExpression :: e -> Expr
-  wrapExpression :: Expr -> e
 
 -- | If the type corresponds to a scalar real expression
 class IsExpression e => IsScalarReal e where
@@ -232,7 +231,6 @@ class IsExpression e => IsScalarReal e where
 -------------------------------------------------------------------------------
 instance IsExpression Expr where
   asExpression = id
-  wrapExpression = id
 
 instance IsScalarReal Expr where
   asScalarReal = id

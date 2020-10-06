@@ -46,7 +46,7 @@ makeValidBoxConstraint (name, shape) =
       val2 <- V1D . listArray (0, size - 1) <$> generate (vectorOf size arbitrary)
       generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
     [size1, size2] -> do
-      let x = fromNodeUnwrapped (shape, R, Var name)      
+      let x = fromNodeUnwrapped (shape, R, Var name)
       val1 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
       val2 <- V2D . listArray ((0, 0), (size1 - 1, size2 - 1)) <$> generate (vectorOf (size1 * size2) arbitrary)
       generate $ elements [x .<= val1, x .>= val2, x `between` (val1, val2)]
@@ -66,8 +66,9 @@ varNodesWithShape mp = map (\(name, shape, _) -> (name, shape)) $ varNodes mp
 
 -- |
 prop_constructProblemBoxConstraint :: Expression Scalar R -> Expectation
-prop_constructProblemBoxConstraint exp = do
-  let vs = varNodesWithShape (exMap exp)
+prop_constructProblemBoxConstraint e = do
+  let exp = asExpression e
+  let vs = varNodesWithShape $ fst exp
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
   let constraints = Constraint sampled
@@ -92,8 +93,9 @@ makeValidScalarConstraint = do
 
 -- |
 prop_constructProblemScalarConstraints :: Expression Scalar R -> Expectation
-prop_constructProblemScalarConstraints exp = do
-  let vs = varNodesWithShape (exMap exp)
+prop_constructProblemScalarConstraints e = do
+  let exp = asExpression e
+  let vs = varNodesWithShape $ fst exp
   bcs <- mapM makeValidBoxConstraint vs
   sampled <- generate $ sublistOf bcs
   numScalarConstraint <- generate $ elements [2 .. 4]
@@ -114,7 +116,7 @@ prop_constructProblemScalarConstraints exp = do
           assertBool "Empty constraint ?" $ not (null sConstraints)
           mapM_ isOk sConstraints
 
--- | List of hand-written problems and the expected result 
+-- | List of hand-written problems and the expected result
 problemsRepo :: [(Either String Problem, Bool)]
 problemsRepo =
   [ ( let [x, y, z, t] = map (variable2D @128 @128) ["x", "y", "z", "t"]
