@@ -219,7 +219,7 @@ genExpUntyped qc shape et
      in oneof $ commonPossibilities ++ specificShapePossibilities ++ specificElementTypePosibilities
 
 genExp :: forall d et. (Dimension d, IsElementType et) => Int -> Gen (Expression d et)
-genExp size = wrap <$> genExpUntyped size (toShape @d) (toElementType @et)
+genExp size = wrapExpression <$> genExpUntyped size (toShape @d) (toElementType @et)
 
 -------------------------------------------------------------------------------
 instance (Dimension d, IsElementType et) => Arbitrary (Expression d et) where

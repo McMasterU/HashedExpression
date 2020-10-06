@@ -29,20 +29,11 @@ import Data.STRef.Strict
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
 import HashedExpression.Internal.Base
-import HashedExpression.Internal.Expression
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
 import HashedExpression.Prettify
 import Prelude hiding ((^))
-
--- | Unwrap 'Expression' to a 'ExpressionMap' and root 'NodeID'
-unwrap :: Expression d et -> (ExpressionMap, NodeID)
-unwrap (Expression n mp) = (mp, n)
-
--- | Wrap a 'ExpressionMap' and root 'NodeID' into an "Expression" type
-wrap :: (ExpressionMap, NodeID) -> Expression d et
-wrap = uncurry $ flip Expression
 
 -------------------------------------------------------------------------------
 
@@ -62,53 +53,6 @@ apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
     operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
     resNode = createNode option operands
     resID = hashNode (checkCollisionMap mergedMap) resNode
-
-applyUnary ::
-  HasCallStack =>
-  UnarySpec ->
-  -- | the operand
-  Expression d1 et1 ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyUnary spec e1 = wrap . apply (Unary spec) $ [unwrap e1]
-
-applyNary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  NarySpec ->
-  -- | the operands
-  [Expression d1 et1] ->
-  -- | the resulting 'Expression'
-  Expression d2 et2
-applyNary spec = wrap . apply (Nary spec) . map unwrap
-
--- | Helper function that generalizes the construction of 'Expression' combinators/operators by merging
---   a two 'Expression' operands using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'. Functionally the same as the 'apply' with automatic wrapping / unwrapping
---   of 'Expression' and a fixed (binary) arity
-applyBinary ::
-  HasCallStack =>
-  -- | describes changes in 'Dimension' or 'ElementType'
-  BinarySpec ->
-  -- | the "left" operand
-  Expression d1 et1 ->
-  -- | the "right" operand
-  Expression d2 et2 ->
-  -- | the resulting 'Expression'
-  Expression d3 et3
-applyBinary spec e1 e2 = wrap . apply (Binary spec) $ [unwrap e1, unwrap e2]
-
-applyConditionAry ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  ConditionarySpec ->
-  -- | the conditional/selector operand
-  Expression d et1 ->
-  -- | operands (branches) that could be selected
-  [Expression d et2] ->
-  -- | the resulting 'Expression'
-  Expression d et2
-applyConditionAry spec e branches =
-  wrap . apply (ConditionAry spec) $ unwrap e : map unwrap branches
 
 -------------------------------------------------------------------------------
 -- --------------------------------------------------------------------------------------------------------------------
@@ -207,15 +151,6 @@ topologicalSortManyRoots (mp, ns) = map NodeID $ filter (/= -1) . UA.elems $ top
           unless isMarked $ dfs n
         return order
 
--- | Retrieves all 'Var' nodes in an 'Expression'
-expressionVarNodes :: (Dimension d) => Expression d et -> [(String, NodeID)]
-expressionVarNodes (Expression n mp) = mapMaybe collect ns
-  where
-    ns = topologicalSort (mp, n)
-    collect nId
-      | Var varName <- retrieveOp nId mp = Just (varName, nId)
-      | otherwise = Nothing
-
 toTotal :: Map NodeID NodeID -> (NodeID -> NodeID)
 toTotal mp nID = case Map.lookup nID mp of
   Just other -> other
@@ -294,16 +229,12 @@ createNode spec args =
 
 -------------------------------------------------------------------------------
 
--- | Create an Expression from a standalone 'Node'
-fromNode :: Node -> Expression d et
-fromNode node = Expression (NodeID h) (IM.insert h node IM.empty)
+-- | Create an unwrapped Expresion from a standalone 'Node'
+fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
+fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
   where
     checkCollision = checkCollisionMap IM.empty
     h = hashNode checkCollision node
-
--- | Create an unwrapped Expresion from a standalone 'Node'
-fromNodeUnwrapped :: Node -> (ExpressionMap, NodeID)
-fromNodeUnwrapped = unwrap . fromNode
 
 extract :: ExpressionMap -> ((Int, Node) -> Maybe a) -> [a]
 extract mp collect = mapMaybe collect $ IM.toList mp
@@ -346,13 +277,3 @@ nodeIDs :: ExpressionMap -> [NodeID]
 nodeIDs = map NodeID . IM.keys
 
 -------------------------------------------------------------------------------
-
--- | All the entries of the expression
-allEntries :: Expression d et -> [(NodeID, String)]
-allEntries (Expression n mp) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp
-
--- | Print every entry (individually) of an 'Expression', in a format that (in general) you should be able to enter into ghci
-allEntriesDebug :: (ExpressionMap, NodeID) -> [(NodeID, String)]
-allEntriesDebug (mp, n) =
-  zip (nodeIDs mp) . map (T.unpack . hiddenPrettify False . (mp,)) $ nodeIDs mp

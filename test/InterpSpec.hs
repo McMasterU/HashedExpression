@@ -27,13 +27,13 @@ import qualified Prelude
 
 -------------------------------------------------------------------------------
 unsafeProject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2
-unsafeProject ds e = wrap $ apply (Unary (specProject ds)) [unwrap e]
+unsafeProject ds e = wrapExpression $ apply (Unary (specProject ds)) [asExpression e]
 
 unsafeInject :: [DimSelector] -> Expression d1 et1 -> Expression d2 et2 -> Expression d2 et2
-unsafeInject ds sub base = wrap $ apply (Binary (specInject ds)) [unwrap sub, unwrap base]
+unsafeInject ds sub base = wrapExpression $ apply (Binary (specInject ds)) [asExpression sub, asExpression base]
 
 unsafeRotate :: RotateAmount -> Expression d1 et1 -> Expression d2 et2
-unsafeRotate amount e = wrap $ apply (Unary (specRotate amount)) [unwrap e]
+unsafeRotate amount e = wrapExpression $ apply (Unary (specRotate amount)) [asExpression e]
 
 -- |
 prop_RotateOneR1 :: SuiteOneR -> Bool

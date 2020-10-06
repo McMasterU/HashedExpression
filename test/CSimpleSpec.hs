@@ -66,7 +66,7 @@ singleExpressionCProgram valMap expr =
           ++ fromCCode releaseMemory
       )
   where
-    (mp, n) = unwrap expr
+    (mp, n) = asExpression expr
     bound = product (retrieveShape n mp)
     et = retrieveElementType n mp
     codegen@CSimpleCodegen {..} = initCodegen CSimpleConfig {output = OutputText, maxIteration = Nothing} mp []
