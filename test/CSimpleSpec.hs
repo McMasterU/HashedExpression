@@ -52,7 +52,7 @@ singleExpressionCProgram valMap e =
     ++ scoped
       ( initMemory
           ++ fromCCode assigningValues
-          ++ codes
+          ++ [codes]
           ++ fromCCode printValue
           ++ fromCCode releaseMemory
       )

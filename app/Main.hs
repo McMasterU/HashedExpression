@@ -5,7 +5,7 @@ module Main where
 
 import Examples.Brain
 import Examples.LinearRegression
-import Examples.LogisticRegression ()
+import Examples.LogisticRegression 
 import Examples.NeuralNetwork
 
 main :: IO ()
