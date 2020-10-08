@@ -41,8 +41,6 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
- - easyplot-1.0
- - string-interpolate-0.2.0.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 74db002d588048a45d6f8a8cb03c1e51990f7430e8b434be036ba97846d12a64
+-- hash: 92f0b897f6a115130bf72f975aabf8cd2742cefc5b47938a44409d316a8e15b2
 
 name:           HashedExpression
 version:        0.0.8
@@ -59,11 +59,8 @@ library
   build-depends:
       array
     , base
-    , binary
-    , bytestring
     , containers
     , deepseq
-    , easyplot
     , extra
     , file-embed
     , filepath
@@ -91,11 +88,8 @@ executable HashedExpression-exe
       HashedExpression
     , array
     , base
-    , binary
-    , bytestring
     , containers
     , deepseq
-    , easyplot
     , extra
     , file-embed
     , filepath
@@ -133,11 +127,8 @@ test-suite HashedExpression-test
     , QuickCheck
     , array
     , base
-    , binary
-    , bytestring
     , containers
     , deepseq
-    , easyplot
     , extra
     , file-embed
     , filepath
@@ -145,7 +136,6 @@ test-suite HashedExpression-test
     , mtl
     , process
     , split
-    , string-interpolate
     , text
     , time
     , utility-ht
