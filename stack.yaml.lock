@@ -3,21 +3,7 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: easyplot-1.0@sha256:3fec6ccf425b370ab668eb342bc4cd92777880653e27a982db7b225fd007cb2b,1936
-    pantry-tree:
-      size: 219
-      sha256: a5de94b54a51732bf70a601fca8c905fe074ecf870ea573db36d53a3bbb282f4
-  original:
-    hackage: easyplot-1.0
-- completed:
-    hackage: string-interpolate-0.2.0.0@sha256:a96f7e744f49d795887236319f74b2797fe2cdaadf2d5c4b06845d7a6ba4dbff,2527
-    pantry-tree:
-      size: 616
-      sha256: 4160533ceb37446c054689513054d67093aed5bb1651011d9506dd579c815722
-  original:
-    hackage: string-interpolate-0.2.0.0
+packages: []
 snapshots:
 - completed:
     size: 492027
