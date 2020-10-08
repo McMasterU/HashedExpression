@@ -563,10 +563,8 @@ instance Codegen CSimpleConfig where
               cSimpleTemplate
       TIO.writeFile (folder </> "problem.c") codes
     where
-      -- params
       params :: [String]
       params = map fst $ paramsWithNodeID expressionMap
-      -- value nodes
       varsAndParams :: [(String, NodeID)]
       varsAndParams = sortOn fst $ varsWithNodeID expressionMap ++ paramsWithNodeID expressionMap
       -------------------------------------------------------------------------------
