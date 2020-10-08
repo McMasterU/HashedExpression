@@ -16,6 +16,7 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.Hash
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.OperationSpec
+import Prelude hiding ((^))
 
 -- |
 class (Monad m) => MonadExpression m where
@@ -63,10 +64,7 @@ instance (MonadExpression m) => Num (m NodeID) where
     perform (Nary specMul) [x, y]
 
 instance (MonadExpression m) => Fractional (m NodeID) where
-  (/) operand1 operand2 = do
-    x <- operand1
-    y <- operand2
-    perform (Binary specDiv) [x, y]
+  (/) operand1 operand2 = operand1 * (operand2 ^ (-1))
 
   fromRational r = error "N/A"
 
