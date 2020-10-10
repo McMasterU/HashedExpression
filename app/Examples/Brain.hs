@@ -3,6 +3,7 @@ module Examples.Brain where
 import HashedExpression
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
+import HashedExpression.Modeling.Typed
 
 brain_reconstructFromMRI :: OptimizationProblem
 brain_reconstructFromMRI =

@@ -33,6 +33,7 @@ import HashedExpression.Internal.OperationSpec
 import Prelude hiding ((^))
 
 -------------------------------------------------------------------------------
+
 -- | Transformation type, take a (unwrapped) 'TypedExpr' and return a transformed (unwrapped) 'TypedExpr'.
 --   Construct using the 'toTransformation' function
 type Transformation = RawExpr -> RawExpr

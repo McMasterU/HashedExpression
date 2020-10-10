@@ -3,8 +3,9 @@ module Examples.LogisticRegression where
 import HashedExpression
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
+import HashedExpression.Modeling.Typed
 
-sigmoid :: (Dimension d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 ex2_logisticRegression :: OptimizationProblem

@@ -145,12 +145,10 @@ data DimSelector
 type RotateAmount = [Int]
 
 -- | Expression lookup table: Nodes indexed by their hash value
---   
 type ExpressionMap = IntMap Node
 
--- | Each Node consists of its shape, element type and operator 
+-- | Each Node consists of its shape, element type and operator
 --   (with indices of operands)
---   
 type Node = (Shape, ElementType, Op)
 
 -- | RawExpr
