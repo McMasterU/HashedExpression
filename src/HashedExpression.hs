@@ -23,7 +23,6 @@ module HashedExpression
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
     module HashedExpression.Problem,
-    module HashedExpression.Internal.Base,
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
