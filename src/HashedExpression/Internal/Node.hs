@@ -10,19 +10,7 @@
 --
 -- This module contains a variety of helper functions for working with the 'Node' type, including stuff like finding the ElementType of a
 -- Node, returning a Node's arguments, returning a Node's shape, etc
-module HashedExpression.Internal.Node
-  ( opTypeWeight,
-    sameOp,
-    opArgs,
-    retrieveElementType,
-    retrieveNode,
-    retrieveOp,
-    retrieveShape,
-    expressionOp,
-    mapOp,
-    mapNode,
-  )
-where
+module HashedExpression.Internal.Node where
 
 import qualified Data.IntMap.Strict as IM
 import GHC.Stack (HasCallStack)
@@ -196,10 +184,11 @@ retrieveShape (NodeID n) mp =
     Just (shape, _, _) -> shape
     _ -> error "expression not in map"
 
--- | Retrieve the Op of an expression
-{-# INLINE expressionOp #-}
-expressionOp :: RawExpr -> Op
-expressionOp (mp, NodeID n) =
-  case IM.lookup n mp of
-    Just (_, _, op) -> op
-    _ -> error "expression not in map"
+getShape :: HasCallStack => IsExpression e => e -> Shape
+getShape e = let (mp, nID) = asRawExpr e in retrieveShape nID mp
+
+getElementType :: HasCallStack => IsExpression e => e -> ElementType
+getElementType e = let (mp, nID) = asRawExpr e in retrieveElementType nID mp
+
+getOp :: HasCallStack => IsExpression e => e -> Op
+getOp e = let (mp, nID) = asRawExpr e in retrieveOp nID mp

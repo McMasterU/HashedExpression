@@ -17,7 +17,7 @@ import Prelude hiding ((^))
 infix 1 `shouldSimplifyTo`
 
 shouldSimplifyTo ::
-  (HasCallStack, Dimension d) =>
+  (HasCallStack, IsShape d) =>
   TypedExpr d et ->
   TypedExpr d et ->
   IO ()

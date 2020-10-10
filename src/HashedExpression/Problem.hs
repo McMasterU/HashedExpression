@@ -12,17 +12,14 @@
 -- for solving with your c code solver of choice
 module HashedExpression.Problem where
 
-import Control.Monad (forM_)
 import Control.Monad.Except (throwError)
 import Control.Monad.State.Strict
 import qualified Data.IntMap as IM
-import Data.List (find, groupBy, intercalate, nub, partition, sortBy, sortOn)
-import Data.List.Extra (firstJust, groupOn)
+import Data.List (intercalate, partition)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (fromJust, fromMaybe, mapMaybe)
+import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import Debug.Trace (traceShowId)
 import HashedExpression.Differentiation.Reverse
 import HashedExpression.Internal
 import HashedExpression.Internal.Base

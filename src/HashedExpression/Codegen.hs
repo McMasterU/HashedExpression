@@ -10,19 +10,17 @@
 -- (like 'HashedExpression.Codegen.CSimple'), which will provide a corresponding instance for the 'Codegen' class
 module HashedExpression.Codegen where
 
-import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
-import HashedExpression.Internal.Node
 import HashedExpression.Problem
-import HashedExpression.Value
+import HashedExpression.Value ( ValMap )
 
 -- | Each element is a line of code
 type Code = [Text]
 
 -- | The type class for code generating
 class Codegen configs where
-  generateProblemCode :: configs -> Problem -> ValMap -> Either String (String -> IO ())
+  generateProblemCode :: configs -> Problem -> ValMap -> Either String (FilePath -> IO ())
 
 -- | Indent `n` space each line of code
 indent ::

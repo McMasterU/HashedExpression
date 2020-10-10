@@ -3,6 +3,7 @@ module Examples.LinearRegression where
 import HashedExpression
 import System.FilePath ((</>))
 import Prelude hiding ((^), (**))
+import HashedExpression.Modeling.Typed
 
 ex1_linearRegression :: OptimizationProblem
 ex1_linearRegression =
