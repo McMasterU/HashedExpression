@@ -63,13 +63,13 @@ type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
 
 -- | Use to constrain 'TypedExpr' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class Dimension (d :: [Nat]) where
+class IsShape (d :: [Nat]) where
   toShape :: Shape
 
-instance Dimension '[] where
+instance IsShape '[] where
   toShape = []
 
-instance (KnownNat x, Dimension xs) => Dimension (x ': xs) where
+instance (KnownNat x, IsShape xs) => IsShape (x ': xs) where
   toShape = (nat @x) : toShape @xs
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
@@ -97,15 +97,15 @@ binary f (TypedExpr e1) (TypedExpr e2) = TypedExpr $ f e1 e2
 -- @
 --    (fromDouble 15) :: TypedExpr Scalar R
 -- @
-fromDouble :: forall d. Dimension d => Double -> TypedExpr d R
+fromDouble :: forall d. IsShape d => Double -> TypedExpr d R
 fromDouble value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
-instance (Dimension d) => PowerOp (TypedExpr d et) Int where
+instance (IsShape d) => PowerOp (TypedExpr d et) Int where
   (^) :: TypedExpr d et -> Int -> TypedExpr d et
   (^) e x = unary (^ x) e
 
 -- | Basic operations on Num class
-instance Dimension d => Num (TypedExpr d R) where
+instance IsShape d => Num (TypedExpr d R) where
   (+) = binary (+)
   (-) = binary (-)
   (*) = binary (*)
@@ -115,12 +115,12 @@ instance Dimension d => Num (TypedExpr d R) where
   signum = error "Not applicable"
 
 -- | Basic operations on Fractional class
-instance Dimension d => Fractional (TypedExpr d R) where
+instance IsShape d => Fractional (TypedExpr d R) where
   (/) = binary (/)
   fromRational r = fromDouble $ fromRational r
 
 -- | Basic operations on Floating class
-instance Dimension d => Floating (TypedExpr d R) where
+instance IsShape d => Floating (TypedExpr d R) where
   pi = fromDouble pi
   sqrt = unary sqrt
   exp = unary exp
@@ -139,7 +139,7 @@ instance Dimension d => Floating (TypedExpr d R) where
   atanh = unary atanh
 
 -- | Basic operations on class Num
-instance Dimension d => Num (TypedExpr d C) where
+instance IsShape d => Num (TypedExpr d C) where
   (+) = binary (+)
   (*) = binary (*)
   negate = unary negate
@@ -148,7 +148,7 @@ instance Dimension d => Num (TypedExpr d C) where
   signum = error "Not applicable"
 
 -- | Basic operations on class Fractional
-instance Dimension d => Fractional (TypedExpr d C) where
+instance IsShape d => Fractional (TypedExpr d C) where
   (/) = binary (/)
   fromRational r = fromDouble (fromRational r) +: 0
 
@@ -161,7 +161,7 @@ instance ScaleOp (TypedExpr Scalar C) (TypedExpr d C) where
   scale :: TypedExpr Scalar s -> TypedExpr d et -> TypedExpr d et
   scale = binary scale
 
-instance (Dimension d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
+instance (IsShape d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
   (+:) :: TypedExpr d R -> TypedExpr d R -> TypedExpr d C
   (+:) = binary (+:)
   xRe :: TypedExpr d C -> TypedExpr d R
@@ -177,19 +177,19 @@ instance InnerProductSpaceOp (TypedExpr d et) (TypedExpr Scalar et) where
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
-huber :: forall d. (Dimension d) => Double -> TypedExpr d R -> TypedExpr d R
+huber :: forall d. (IsShape d) => Double -> TypedExpr d R -> TypedExpr d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     inner = constant 0.5 *. (e * e)
-    outerLeft = constant (- delta) *. e - constant (delta * delta / 2) *. 1
-    outerRight = constant delta *. e - constant (delta * delta / 2) *. 1
+    outerLeft = constant (- delta) *. e - fromDouble (delta * delta / 2)
+    outerRight = constant delta *. e - fromDouble (delta * delta / 2)
 
 -- | Norm 2 uses inner product space
-norm2 :: (Dimension d) => TypedExpr d R -> TypedExpr Scalar R
+norm2 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 ---- | Norm 1
-norm1 :: (Dimension d) => TypedExpr d R -> TypedExpr Scalar R
+norm1 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Norm 2 square interface
@@ -197,34 +197,32 @@ class Norm2SquareOp a b | a -> b where
   norm2square :: a -> b
 
 -- | Norm 2 square of real expression
-instance (Dimension d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
+instance (IsShape d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d R -> TypedExpr Scalar R
   norm2square exp = exp <.> exp
 
 -- | Norm 2 square of complex expression
-instance (Dimension d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
+instance (IsShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d C -> TypedExpr Scalar R
   norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
 
 -- | Outlier-sensitive error measure using huber loss
-huberNorm :: (Dimension d) => Double -> TypedExpr d R -> TypedExpr Scalar R
+huberNorm :: (IsShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
 huberNorm alpha = sumElements . huber alpha
 
--- | Discrete fourier transform
---
 -- | Sum elements of a `d`-dimensional vector
-sumElements :: forall d. (Dimension d) => TypedExpr d R -> TypedExpr Scalar R
+sumElements :: forall d. (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
 sumElements expr = expr <.> 1
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance (Dimension d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
+instance (IsShape d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
   piecewise :: HasCallStack => [Double] -> TypedExpr d R -> [TypedExpr d et] -> TypedExpr d et
   piecewise marks conditionExp branchExps =
     TypedExpr $ piecewise marks (extractBuilder conditionExp) (map extractBuilder branchExps)
 
 -- Fourier transform on complex expression
-instance (Dimension d) => FTOp (TypedExpr d C) (TypedExpr d C) where
+instance (IsShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
   ft :: TypedExpr d C -> TypedExpr d C
   ft = unary ft
 
@@ -367,13 +365,13 @@ ranges = Proxy
 -------------------------------------------------------------------------------
 
 -- | General version of creating variables, parameters, constants
-gvariable :: forall d. Dimension d => String -> TypedExpr d R
+gvariable :: forall d. IsShape d => String -> TypedExpr d R
 gvariable name = TypedExpr $ introduceNode (toShape @d, R, Var name)
 
-gparam :: forall d. Dimension d => String -> TypedExpr d R
+gparam :: forall d. IsShape d => String -> TypedExpr d R
 gparam name = TypedExpr $ introduceNode (toShape @d, R, Param name)
 
-gconstant :: forall d. Dimension d => Double -> TypedExpr d R
+gconstant :: forall d. IsShape d => Double -> TypedExpr d R
 gconstant value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
 ---- | Auxiliary for creating variables

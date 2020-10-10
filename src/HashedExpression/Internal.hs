@@ -34,23 +34,6 @@ import Prelude hiding ((^))
 
 -------------------------------------------------------------------------------
 
--- | Helper function that generalizes the construction of 'TypedExpr' combinators/operators by merging
---   a list of 'ExpressionMap' (operands) using context about the resulting 'Dimension' and 'ElementType'
---   provided via 'OperationOption'.
-apply ::
-  -- | describes changes in 'Dimension' or 'ElementType'
-  OperationSpec ->
-  -- | the operands
-  [RawExpr] ->
-  -- | the resulting expression
-  RawExpr
-apply option exps = (IM.insert resID resNode mergedMap, NodeID resID)
-  where
-    (mergedMap, nIDs) = safeMerges exps
-    operands = zip nIDs $ map (`retrieveNode` mergedMap) nIDs
-    resNode = createNode option operands
-    resID = hashNode (checkCollisionMap mergedMap) resNode
-
 -- | Transformation type, take a (unwrapped) 'TypedExpr' and return a transformed (unwrapped) 'TypedExpr'.
 --   Construct using the 'toTransformation' function
 type Transformation = RawExpr -> RawExpr

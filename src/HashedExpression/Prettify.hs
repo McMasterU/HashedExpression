@@ -87,23 +87,11 @@ hiddenPrettify pastable (mp, n) =
       innerPrettify = hiddenPrettify pastable . (mp,)
       shapeSignature
         | pastable = ""
-        | otherwise =
-          case shape of
-            [] -> ""
-            [x] -> T.concat ["[", T.pack . show $ x, "]"]
-            [x, y] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]"]
-            [x, y, z] -> T.concat ["[", T.pack . show $ x, "]", "[", T.pack . show $ y, "]", "[", T.pack . show $ z, "]"]
-            _ -> error "TODO: not yet support more than 3D"
+        | otherwise = "[" <> (T.intercalate ", " $ map (T.pack . show) $ shape) <> "]"
    in case node of
         Var name -> T.pack name
         Param name -> T.pack name
-        Const val
-          | pastable ->
-            case shape of
-              [] -> T.concat ["const ", wrapParentheses . T.pack . show $ val]
-              [x] -> T.concat ["const1d ", T.pack . show $ x, " ", wrapParentheses . T.pack . show $ val]
-              _ -> T.pack $ show val
-          | otherwise -> T.concat [T.pack . show $ val, shapeSignature]
+        Const val -> T.concat [T.pack . show $ val, shapeSignature]
         _ ->
           wrapParentheses $
             case node of

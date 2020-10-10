@@ -19,12 +19,11 @@
 -- the above code creates a simple HashedExpression using the
 -- 'variable' constructor method and taking advantage of the 'Num' class instance
 module HashedExpression
-  ( module HashedExpression.Modeling.Typed,
-    module HashedExpression.Internal.Simplify,
+  ( module HashedExpression.Internal.Simplify,
     module HashedExpression.Prettify,
     module HashedExpression.Interp,
-    module HashedExpression.Problem,
     module HashedExpression.Internal.Base,
+    module HashedExpression.Problem,
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
@@ -42,14 +41,13 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
-import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
 import Prelude hiding ((**), (^))
 
 data ValueAssignment
-  = forall d et. TypedExpr d et :-> Val
+  = forall e. IsExpression e => e :-> Val
 
 mkValMap :: [ValueAssignment] -> ValMap
 mkValMap ss = Map.fromList $ mapMaybe f ss
@@ -61,8 +59,10 @@ mkValMap ss = Map.fromList $ mapMaybe f ss
       where
         (mp, nID) = asRawExpr e
 
-data OptimizationProblem = OptimizationProblem
-  { objective :: TypedExpr Scalar R,
+data OptimizationProblem = forall e.
+  IsScalarReal e =>
+  OptimizationProblem
+  { objective :: e,
     constraints :: [ConstraintStatement],
     values :: [ValueAssignment],
     workingDir :: String

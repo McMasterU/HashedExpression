@@ -14,13 +14,13 @@ import Control.Monad (forM_, when)
 import Data.List (find, foldl', partition, sortOn)
 import Data.List.HT (viewR)
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import HashedExpression.Codegen (Code, Codegen (..), indent)
-import HashedExpression.Embed (fftUtils)
+import HashedExpression.Embed
 import HashedExpression.Internal
 import HashedExpression.Internal.Base (ElementType (..), ExpressionMap, NodeID (..), Op (..), Shape)
 import HashedExpression.Internal.Node (retrieveElementType, retrieveNode, retrieveOp, retrieveShape)
@@ -67,6 +67,9 @@ data CCode
   | Empty
   | Scoped [CCode]
   | Printf [Text]
+
+codeCToText :: CCode -> Text
+codeCToText = T.intercalate "\n" . fromCCode
 
 fromCCode :: CCode -> Code
 fromCCode c = case c of
@@ -166,12 +169,11 @@ initCodegen config mp variableIDs =
               AddressComplex i -> "ptr_c[" <> tt i <> offset <> "]"
 
 ---------------------------------------------------------------------------------
-evaluating :: CSimpleCodegen -> [NodeID] -> Code
+evaluating :: CSimpleCodegen -> [NodeID] -> Text
 evaluating CSimpleCodegen {..} rootIDs =
-  concatMap (fromCCode . genCode) $ topologicalSortManyRoots (cExpressionMap, rootIDs)
+  codeCToText $ Scoped $ map genCode $ topologicalSortManyRoots (cExpressionMap, rootIDs)
   where
     shapeOf nID = retrieveShape nID cExpressionMap
-    elementTypeOf nID = retrieveElementType nID cExpressionMap
     addressOf :: NodeID -> Text
     addressOf nID = case cAddress nID of
       AddressReal i -> "(ptr + " <> tt i <> ")"
@@ -246,16 +248,16 @@ evaluating CSimpleCodegen {..} rootIDs =
             Piecewise marks condition branches ->
               let m : ms = marks
                   Just (b : bs, lst) = viewR branches
-                  elseifEach (m, b) =
+                  elseifEach mark branch =
                     elseif_
-                      ((condition !! i) <> " <= " <> tt m)
-                      [(n !! i) := (b !! i)]
+                      ((condition !! i) <> " <= " <> tt mark)
+                      [(n !! i) := (branch !! i)]
                in for i (len n) $
                     [ if_
                         ((condition !! i) <> " <= " <> tt m)
                         [(n !! i) := (b !! i)]
                     ]
-                      ++ map elseifEach (zip ms bs)
+                      ++ zipWith elseifEach ms bs
                       ++ [ else_ [(n !! i) := (lst !! i)]
                          ]
             Rotate [amount] arg ->
@@ -431,57 +433,140 @@ instance Codegen CSimpleConfig where
   generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap
     | Just errorMsg <- checkError = Left errorMsg
     | otherwise = Right $ \folder -> do
+      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
-      let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
-      -- Write values
+      -- 1. Values
       forM_ (Map.toList valMap) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
           let str = T.unwords . map tt . valElems $ val
           TIO.writeFile (folder </> var <.> "txt") str
-      -- Write box constraints
+      -- 2. Box constraints
       forM_ boxConstraints $ \c -> case c of
         BoxLower var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_lb.txt"))
         BoxUpper var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_ub.txt"))
         BoxBetween var (val1, val2) -> do
           when (valueFromHaskell val1) $ writeVal val1 (folder </> (var <> "_lb.txt"))
           when (valueFromHaskell val2) $ writeVal val2 (folder </> (var <> "_ub.txt"))
-      -- Write code
+      let auxMap = Map.fromList $ map (\var -> (varName var, var)) variables
+          variableByName name = fromJust $ Map.lookup name auxMap
+      let codegen@CSimpleCodegen {..} = initCodegen cf expressionMap (map nodeId variables)
+          getShape nID = retrieveShape nID cExpressionMap
+          addressReal nID = let AddressReal res = cAddress nID in res
+          -------------------------------------------------------------------------------------------------
+          numHigherOrderVariables = length variables
+          varStartOffset = addressReal . nodeId . head $ variables
+          numScalarConstraints = length scalarConstraints
+          varNames = map varName variables
+          varSizes = map (product . getShape . nodeId) variables
+          numActualVariables = sum varSizes
+          varNameWithStatingPosition = Map.fromList $ zip varNames $ take (length varSizes) $ scanl (+) 0 varSizes
+          startingPositionByName name = fromJust $ Map.lookup name varNameWithStatingPosition
+          varOffsets = map (addressReal . nodeId) variables
+          partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
+          objectiveOffset = addressReal objectiveId
+          scalarConstraintOffsets = map (addressReal . constraintValueId) scalarConstraints
+          scalarConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) scalarConstraints
+          readBounds =
+            let readUpperBoundCode name val =
+                  generateReadValuesCode
+                    ((name <> "_ub"), product . getShape . nodeId . variableByName $ name)
+                    ("upper_bound + " <> show (startingPositionByName name))
+                    val
+                readLowerBoundCode name val =
+                  generateReadValuesCode
+                    ((name <> "_lb"), product . getShape . nodeId . variableByName $ name)
+                    ("lower_bound + " <> show (startingPositionByName name))
+                    val
+                readBoundCodeEach cnt =
+                  case cnt of
+                    BoxUpper name val -> readUpperBoundCode name val
+                    BoxLower name val -> readLowerBoundCode name val
+                    BoxBetween name (val1, val2) ->
+                      readLowerBoundCode name val1
+                        <> "\n"
+                        <> readUpperBoundCode name val2
+             in T.intercalate "\n" $ map readBoundCodeEach boxConstraints
+          readBoundScalarConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] scalarConstraints
+            where
+              readBoundEach :: (Int, ScalarConstraint) -> Text
+              readBoundEach (i, cs) =
+                T.intercalate
+                  "\n"
+                  [ "sc_lower_bound[" <> tt i <> "] = " <> d2s (constraintLowerBound cs) <> ";",
+                    "sc_upper_bound[" <> tt i <> "] = " <> d2s (constraintUpperBound cs) <> ";"
+                  ]
+          readValCode (name, nId)
+            | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
+            | otherwise =
+              renderTemplate
+                ( [ ("name", tt name),
+                    ("size", tt $ product shape),
+                    ("offset", tt offset)
+                  ]
+                )
+                randomizeValueTemplate
+            where
+              offset = addressReal nId
+              shape = retrieveShape nId expressionMap
+          readValues = T.intercalate "\n" $ map readValCode varsAndParams
+          writeResultCode :: Variable -> Text
+          writeResultCode var
+            | output == OutputHDF5 =
+              renderTemplate
+                [ ("name", tt $ varName var),
+                  ("filePath", tt $ varName var <> "_out.h5"),
+                  ("address", "ptr + " <> (tt . addressReal . nodeId $ var)),
+                  ("shapeLength", tt . length . getShape . nodeId $ var),
+                  ("shape", T.intercalate ", " $ map tt . getShape . nodeId $ var)
+                ]
+                writeHDF5Template
+            | output == OutputText =
+              renderTemplate
+                [ ("name", tt $ varName var),
+                  ("filePath", tt $ varName var <> "_out.txt"),
+                  ("address", "ptr + " <> (tt . addressReal . nodeId $ var)),
+                  ("size", tt . product . getShape . nodeId $ var)
+                ]
+                writeTXTTemplate
+          writeResult = T.intercalate "\n" $ map writeResultCode variables
       let codes =
-            concat
-              [ defineStuffs,
-                constraintCodes,
-                readValsCodes,
-                writeResultCodes,
-                evaluatingCodes,
-                evaluateObjectiveCodes,
-                evaluatePartialDerivativesCodes,
-                evaluateScalarConstraintsCodes,
-                evaluateScalarConstraintsJacobianCodes
+            renderTemplate
+              [ ("fftUtils", if containsFTNode cExpressionMap then tt $ fftUtils else ""),
+                ("numHigherOrderVariables", tt numHigherOrderVariables),
+                ("numActualVariables", tt numActualVariables),
+                ("totalDoubles", tt totalReal),
+                ("totalComplexes", tt totalComplex),
+                ("varStartOffset", tt varStartOffset),
+                ("maxNumIterations", tt $ fromMaybe 0 maxIteration),
+                ("numScalarConstraints", tt numScalarConstraints),
+                ("varNames", T.intercalate ", " $ map ttq varNames),
+                ("varSizes", T.intercalate ", " $ map tt varSizes),
+                ("varOffsets", T.intercalate ", " $ map tt varOffsets),
+                ("partialDerivativeOffsets", T.intercalate ", " $ map tt partialDerivativeOffsets),
+                ("objectiveOffset", tt objectiveOffset),
+                ("scalarConstraintOffsets", T.intercalate ", " $ map tt scalarConstraintOffsets),
+                ( "scalarConstraintPartialDerivativeOffsets",
+                  T.intercalate ", " $
+                    map (\xs -> "{" <> (T.intercalate ", " $ map tt xs) <> "}") scalarConstraintPartialDerivativeOffsets
+                ),
+                ("readBounds", readBounds),
+                ("readBoundScalarConstraints", tt readBoundScalarConstraints),
+                ("readValues", readValues),
+                ("writeResult", writeResult),
+                ("evaluatePartialDerivativesAndObjective", evaluating codegen $ objectiveId : map partialDerivativeId variables),
+                ("evaluateObjective", evaluating codegen $ [objectiveId]),
+                ("evaluatePartialDerivatives", evaluating codegen (map partialDerivativeId variables)),
+                ("evaluateScalarConstraints", evaluating codegen (map constraintValueId scalarConstraints)),
+                ("evaluateScalarConstraintsJacobian", evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
               ]
-      TIO.writeFile (folder </> "problem.c") $ T.intercalate "\n" codes
+              cSimpleTemplate
+      TIO.writeFile (folder </> "problem.c") codes
     where
-      addressReal nID = let AddressReal res = cAddress nID in res
-      -------------------------------------------------------------------------------
-      -- variables
-      vars :: [String]
-      vars = map varName variables
-      -- params
       params :: [String]
       params = map fst $ paramsWithNodeID expressionMap
-      -- value nodes
       varsAndParams :: [(String, NodeID)]
       varsAndParams = sortOn fst $ varsWithNodeID expressionMap ++ paramsWithNodeID expressionMap
-      -- get shape of a variable
-      variableShape :: String -> Shape
-      variableShape name =
-        let nId = case find ((== name) . varName) variables of
-              Just var -> nodeId var
-              _ -> error "not a variable but you're getting it's shape"
-         in retrieveShape nId expressionMap
-      -------------------------------------------------------------------------------
-      variableSizes :: [Int]
-      variableSizes = map (product . variableShape . varName) variables
       -------------------------------------------------------------------------------
       checkError :: Maybe String
       checkError
@@ -490,181 +575,9 @@ instance Codegen CSimpleConfig where
           let isOk (var, nId)
                 | Just val <- Map.lookup var valMap = compatible (retrieveShape nId expressionMap) val
                 | otherwise = True,
-          Just (var, shape) <- find (not . isOk) varsAndParams =
-          Just $ "variable " ++ var ++ "is of shape " ++ show shape ++ " but the value provided is not"
+          Just (name, shape) <- find (not . isOk) varsAndParams =
+          Just $ name ++ "is of shape " ++ show shape ++ " but the value provided is not"
         | otherwise = Nothing
-      -------------------------------------------------------------------------------
-      codegen@CSimpleCodegen {..} = initCodegen cf expressionMap (map nodeId variables)
-      variableOffsets = map (addressReal . nodeId) variables
-      partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
-      objectiveOffset = addressReal objectiveId
-      -- For both variables and values
-      readValCodeEach (name, nId)
-        | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
-        | otherwise =
-          Scoped
-            [ Printf ["Init value for " <> tt name <> " is not provided, generate random init for " <> tt name <> " ...\\n"],
-              for "i" (product shape) $
-                [("ptr[" <> tt offset <> "+ i]") := "0.2 * (double) rand() / RAND_MAX"]
-            ]
-        where
-          offset = addressReal nId
-          shape = retrieveShape nId expressionMap
-      -------------------------------------------------------------------------------
-      writeResultCodeEach :: Variable -> CCode
-      writeResultCodeEach variable
-        | output == OutputHDF5 =
-          Scoped
-            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.h5...\\n"],
-              Statement "hid_t file, space, dset",
-              ("hsize_t dims[" <> tt (length shape) <> "]") := ("{" <> T.intercalate ", " (map tt shape) <> "}"),
-              "file" := (fun "H5Fcreate" [ttq $ name <> "_out.h5", "H5F_ACC_TRUNC", "H5P_DEFAULT", "H5P_DEFAULT"]),
-              "space" := (fun "H5Screate_simple" [tt $ length shape, "dims", "NULL"]),
-              "dset" := (fun "H5Dcreate" ["file", ttq name, "H5T_IEEE_F64LE", "space", "H5P_DEFAULT", "H5P_DEFAULT", "H5P_DEFAULT"]),
-              Statement (fun "H5Dwrite" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", "ptr + " <> tt offset]),
-              Statement "H5Dclose(dset)",
-              Statement "H5Sclose(space)",
-              Statement "H5Fclose(file)"
-            ]
-        | output == OutputText =
-          Scoped $
-            [ Printf ["Writing " <> tt name <> " to " <> tt name <> "_out.txt...\\n"],
-              Statement "FILE *file",
-              "file" := (fun "fopen" [ttq $ name <> "_out.txt", ttq "w"]),
-              for "i" (product shape) $
-                [ Statement (fun "fprintf" ["file", ttq "%f", "ptr[" <> tt offset <> " + i]"]),
-                  if_ ("i + 1 < " <> tt (product shape)) $
-                    [ Statement (fun "fprintf" ["file", ttq " "])
-                    ]
-                ],
-              Statement "fclose(file)"
-            ]
-        where
-          nId = nodeId variable
-          name = varName variable
-          offset = addressReal nId
-          shape = retrieveShape nId expressionMap
-      -------------------------------------------------------------------------------
-      defineStuffs :: Code
-      defineStuffs =
-        [ "#include <math.h>",
-          "#include <stdio.h>",
-          "#include <stdlib.h>",
-          "#include <time.h>",
-          "#include \"hdf5.h\"",
-          "#include <complex.h>",
-          if containsFTNode expressionMap
-            then tt fftUtils
-            else "",
-          "// number of (higher dimensional) variables ",
-          "#define NUM_VARIABLES " <> tt (length variables),
-          "// number of scalar variables (because each higher dimensional var is a grid of scalar variables)",
-          "#define NUM_ACTUAL_VARIABLES " <> tt (sum variableSizes),
-          "#define MEMORY_NUM_DOUBLES " <> tt totalReal,
-          "#define MEMORY_NUM_COMPLEX_DOUBLES " <> tt totalComplex,
-          "// all the actual double variables are allocated",
-          "// one after another, starts from here",
-          "#define VARS_START_OFFSET " <> tt (addressReal (nodeId . head $ variables)),
-          "#define MAX_NUM_ITERATIONS " <> tt (fromMaybe 0 maxIteration),
-          "const char* var_name[NUM_VARIABLES] = {" <> (T.intercalate ", " . map (ttq . varName) $ variables) <> "};",
-          "const int var_size[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableSizes) <> "};",
-          "const int var_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ variableOffsets) <> "};",
-          "const int partial_derivative_offset[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ partialDerivativeOffsets) <> "};",
-          "const int objective_offset = " <> tt objectiveOffset <> ";",
-          "double ptr[" <> tt totalReal <> "];",
-          "complex double ptr_c[" <> tt totalComplex <> "];"
-        ]
-      -------------------------------------------------------------------------------
-      constraintCodes =
-        let varPosition = take (length variableSizes) $ scanl (+) 0 variableSizes
-            varWithPos = zip vars varPosition
-            getPos name = snd . fromMaybe (error "get starting position variable") . find ((== name) . fst) $ varWithPos
-            readUpperBoundCode name val =
-              fromCCode $
-                generateReadValuesCode
-                  ((name ++ "_ub"), product $ variableShape name)
-                  ("upper_bound + " ++ show (getPos name))
-                  val
-            readLowerBoundCode name val =
-              fromCCode $
-                generateReadValuesCode
-                  ((name ++ "_lb"), (product $ variableShape name))
-                  ("lower_bound + " ++ show (getPos name))
-                  val
-            readBounds =
-              let readBoundCodeEach cnt =
-                    case cnt of
-                      BoxUpper name val -> readUpperBoundCode name val
-                      BoxLower name val -> readLowerBoundCode name val
-                      BoxBetween name (val1, val2) -> readLowerBoundCode name val1 ++ readUpperBoundCode name val2
-               in concatMap readBoundCodeEach boxConstraints
-            scalarConstraintDefineStuffs =
-              [ "#define NUM_SCALAR_CONSTRAINT " <> tt (length scalarConstraints),
-                "double sc_lower_bound[NUM_SCALAR_CONSTRAINT];",
-                "double sc_upper_bound[NUM_SCALAR_CONSTRAINT];",
-                "const int sc_offset[NUM_SCALAR_CONSTRAINT] = {"
-                  <> (T.intercalate "," . map (tt . addressReal . constraintValueId) $ scalarConstraints)
-                  <> "};",
-                "",
-                "const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES] = {"
-                  <> T.intercalate
-                    ", "
-                    [ "{" <> T.intercalate "," (map (tt . addressReal) . constraintPartialDerivatives $ sc) <> "}"
-                      | sc <- scalarConstraints
-                    ]
-                  <> "};"
-              ]
-            readBoundScalarConstraints =
-              [ "sc_lower_bound[" <> tt i <> "] = " <> d2s val <> ";"
-                | (i, val) <- zip [0 :: Int ..] $ map constraintLowerBound scalarConstraints
-              ]
-                <> [ "sc_upper_bound[" <> tt i <> "] = " <> d2s val <> ";"
-                     | (i, val) <- zip [0 :: Int ..] $ map constraintUpperBound scalarConstraints
-                   ]
-         in [ "const int bound_pos[NUM_VARIABLES] = {" <> (T.intercalate ", " . map tt $ varPosition) <> "};",
-              "double lower_bound[NUM_ACTUAL_VARIABLES];",
-              "double upper_bound[NUM_ACTUAL_VARIABLES];"
-            ]
-              ++ scalarConstraintDefineStuffs
-              ++ [ "void read_bounds() {", --
-                   "  for (int i = 0; i < NUM_ACTUAL_VARIABLES; i++) {",
-                   "    lower_bound[i] = -INFINITY;",
-                   "    upper_bound[i] = INFINITY;",
-                   "  }"
-                 ]
-              ++ indent 2 readBounds
-              ++ indent 2 readBoundScalarConstraints --
-              ++ ["}"]
-      -------------------------------------------------------------------------------
-      readValsCodes =
-        ["void read_values() {"]
-          ++ ["  srand(time(NULL));"] --
-          ++ scoped (concatMap (fromCCode . readValCodeEach) varsAndParams)
-          ++ ["}"] --
-          -------------------------------------------------------------------------------
-      writeResultCodes =
-        ["void write_result()"]
-          ++ scoped (concatMap (fromCCode . writeResultCodeEach) variables)
-      -------------------------------------------------------------------------------
-      evaluatingCodes =
-        ["void evaluate_partial_derivatives_and_objective()"]
-          ++ scoped (evaluating codegen $ objectiveId : map partialDerivativeId variables)
-      -------------------------------------------------------------------------------
-      evaluateObjectiveCodes =
-        ["void evaluate_objective()"]
-          ++ scoped (evaluating codegen [objectiveId])
-      -------------------------------------------------------------------------------
-      evaluatePartialDerivativesCodes =
-        ["void evaluate_partial_derivatives()"]
-          ++ scoped (evaluating codegen (map partialDerivativeId variables))
-      -------------------------------------------------------------------------------
-      evaluateScalarConstraintsCodes =
-        ["void evaluate_scalar_constraints()"]
-          ++ scoped (evaluating codegen (map constraintValueId scalarConstraints))
-      -------------------------------------------------------------------------------
-      evaluateScalarConstraintsJacobianCodes =
-        ["void evaluate_scalar_constraints_jacobian()"]
-          ++ scoped (evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
 
 -------------------------------------------------------------------------------
 
@@ -678,36 +591,35 @@ toShapeString shape
 
 -------------------------------------------------------------------------------
 
-generateReadValuesCode :: (String, Int) -> String -> Val -> CCode
+generateReadValuesCode :: (String, Int) -> String -> Val -> Text
 generateReadValuesCode (name, size) address val =
   case val of
-    VScalar value -> Scoped [("*(" <> tt address <> ")") := (tt value)]
+    VScalar value -> codeCToText $ Scoped [("*(" <> tt address <> ")") := tt value]
     V1D _ -> readFileText (tt name <> ".txt")
     V2D _ -> readFileText (tt name <> ".txt")
     V3D _ -> readFileText (tt name <> ".txt")
     VFile (TXT filePath) -> readFileText $ tt filePath
     VFile (HDF5 filePath dataset) -> readFileHD5 (tt filePath) (tt dataset)
     VNum value ->
-      for "i" size $
-        [ ("*(" <> tt address <> " + i)") := (tt value)
-        ]
+      codeCToText $
+        for "i" size $
+          [ ("*(" <> tt address <> " + i)") := tt value
+          ]
   where
     readFileText filePath =
-      Scoped
-        [ Printf ["Reading " <> tt name <> " from text file " <> filePath <> " ...\\n"],
-          "FILE *fp" := (fun "fopen" [ttq filePath, ttq "r"]),
-          for "i" size $
-            [ Statement (fun "fscanf" ["fp", ttq "%lf", tt address <> " + i"])
-            ],
-          Statement (fun "fclose" ["fp"])
+      renderTemplate
+        [ ("name", tt name),
+          ("filePath", filePath),
+          ("size", tt size),
+          ("address", tt address)
         ]
+        readTXTTemplate
     readFileHD5 filePath dataset =
-      Scoped
-        [ Printf ["Reading " <> tt name <> " from HDF5 file in dataset " <> dataset <> " from " <> filePath <> " ...\\n"],
-          Statement "hid_t file, dset",
-          "file" := (fun "H5Fopen" [ttq filePath, "H5F_ACC_RDONLY", "H5P_DEFAULT"]),
-          "dset" := (fun "H5Dopen" ["file", ttq dataset, "H5P_DEFAULT"]),
-          Statement (fun "H5Dread" ["dset", "H5T_NATIVE_DOUBLE", "H5S_ALL", "H5S_ALL", "H5P_DEFAULT", tt address]),
-          Statement "H5Fclose (file)",
-          Statement "H5Dclose (dset)"
+      renderTemplate
+        [ ("name", tt name),
+          ("filePath", filePath),
+          ("size", tt size),
+          ("address", tt address),
+          ("dataset", dataset)
         ]
+        readHDF5Template
