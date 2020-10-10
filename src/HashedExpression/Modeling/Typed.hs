@@ -181,8 +181,8 @@ huber :: forall d. (Dimension d) => Double -> TypedExpr d R -> TypedExpr d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     inner = constant 0.5 *. (e * e)
-    outerLeft = constant (- delta) *. e - constant (delta * delta / 2) *. 1
-    outerRight = constant delta *. e - constant (delta * delta / 2) *. 1
+    outerLeft = constant (- delta) *. e - fromDouble (delta * delta / 2)
+    outerRight = constant delta *. e - fromDouble (delta * delta / 2)
 
 -- | Norm 2 uses inner product space
 norm2 :: (Dimension d) => TypedExpr d R -> TypedExpr Scalar R
@@ -210,8 +210,6 @@ instance (Dimension d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) whe
 huberNorm :: (Dimension d) => Double -> TypedExpr d R -> TypedExpr Scalar R
 huberNorm alpha = sumElements . huber alpha
 
--- | Discrete fourier transform
---
 -- | Sum elements of a `d`-dimensional vector
 sumElements :: forall d. (Dimension d) => TypedExpr d R -> TypedExpr Scalar R
 sumElements expr = expr <.> 1
