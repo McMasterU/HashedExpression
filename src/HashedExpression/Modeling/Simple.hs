@@ -12,7 +12,11 @@ instance IsExpression Expr where
   asRawExpr = buildExpr
 
 instance IsScalarReal Expr where
-  asScalarRealRawExpr = buildExpr
+  asScalarRealRawExpr e
+    | getShape expr == [] && getElementType expr == R = expr
+    | otherwise = error "not a scalar real expression"
+    where
+      expr = buildExpr e
 
 variable :: Shape -> String -> Expr
 variable shape name = introduceNode (shape, R, Var name)
