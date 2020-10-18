@@ -17,7 +17,7 @@ prependColumn ::
   (Injectable 0 (m - 1) m m, Injectable 1 n n (n + 1)) =>
   Double ->
   TypedExpr '[m, n] R ->
-  TypedExpr (D2 m (n + 1)) R
+  TypedExpr '[m, n + 1] R
 prependColumn v exp = inject (range @0 @(m - 1), range @1 @n) exp (constant2D @m @(n + 1) v)
 
 ex4_neuralNetwork :: OptimizationProblem

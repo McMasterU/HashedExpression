@@ -6,7 +6,7 @@ import GHC.TypeLits (KnownNat, Nat, Symbol, type (+))
 import HashedExpression.Internal.Base (ElementType (..), IsExpression (..), IsScalarReal (..))
 import qualified HashedExpression.Internal.Base as Base
 import HashedExpression.Internal.Builder (ExprBuilder, buildExpr)
-import HashedExpression.Modeling.Typed (D1, Scalar)
+import HashedExpression.Modeling.Typed (Scalar)
 import HashedExpression.Modeling.Unit.Types
 
 --------------------------------------------------------------------------------

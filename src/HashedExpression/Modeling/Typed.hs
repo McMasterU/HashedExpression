@@ -55,12 +55,6 @@ instance IsElementType C where
 -- | Type-level encoding of shapes
 type Scalar = '[]
 
-type D1 (n :: Nat) = '[n]
-
-type D2 (m :: Nat) (n :: Nat) = '[m, n]
-
-type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
-
 -- | Use to constrain 'TypedExpr' dimensions at the type level. The size of each dimension in a vector can be specified
 --   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
 class IsShape (d :: [Nat]) where
