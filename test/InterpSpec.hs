@@ -152,15 +152,15 @@ prop_ExpScalar_4 (Suite exp1 valMap1) (IntB a) =
   (eval valMap1 exp1 /= VR 0)
     ==> (eval valMap1 (exp1 ^ (- a)) `shouldApprox` eval valMap1 (1 / (exp1 ^ a)))
 
-prop_TransposeTwice :: forall m n et. (IsElementType et, KnownNat m, KnownNat n) => Suite (D2 m n) et -> Expectation
+prop_TransposeTwice :: forall m n et. (IsElementType et, KnownNat m, KnownNat n) => Suite '[m, n] et -> Expectation
 prop_TransposeTwice (Suite exp valMap) =
   eval valMap (transpose (transpose exp)) `shouldApprox` eval valMap exp
 
 prop_TransposeMatrixMultiplication ::
   forall m n p et.
   (IsElementType et, KnownNat m, KnownNat n, KnownNat p) =>
-  Suite (D2 m n) et ->
-  Suite (D2 n p) et ->
+  Suite '[m, n] et ->
+  Suite '[n, p] et ->
   Expectation
 prop_TransposeMatrixMultiplication (Suite exp1 valMap1) (Suite exp2 valMap2) =
   eval valMap (transpose $ exp1 ** exp2) `shouldApprox` eval valMap (transpose exp2 ** transpose exp1)
@@ -175,9 +175,9 @@ prop_MatrixMultplicationAssociative ::
     KnownNat p,
     KnownNat q
   ) =>
-  Suite (D2 m n) et ->
-  Suite (D2 n p) et ->
-  Suite (D2 p q) et ->
+  Suite '[m, n] et ->
+  Suite '[n, p] et ->
+  Suite '[p, q] et ->
   Expectation
 prop_MatrixMultplicationAssociative (Suite a valMap1) (Suite b valMap2) (Suite c valMap3) =
   eval valMap ((a ** b) ** c) `shouldApprox` eval valMap (a ** (b ** c))

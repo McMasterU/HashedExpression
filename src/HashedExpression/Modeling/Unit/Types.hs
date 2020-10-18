@@ -52,13 +52,13 @@ infixl 7 |*|, |/|
 type family (a :: Unit) |*| (b :: Unit) :: Unit where
   Unitless |*| d = d
   d |*| Unitless = d
-  ( 'Unit l m t i th n j) |*| ( 'Unit l' m' t' i' th' n' j') =
+  ('Unit l m t i th n j) |*| ('Unit l' m' t' i' th' n' j') =
     'Unit (l + l') (m + m') (t + t') (i + i') (th + th') (n + n') (j + j')
 
 type family (a :: Unit) |/| (b :: Unit) :: Unit where
   d |/| Unitless = d
   d |/| d = Unitless
-  ( 'Unit l m t i th n j) |/| ( 'Unit l' m' t' i' th' n' j') =
+  ('Unit l m t i th n j) |/| ('Unit l' m' t' i' th' n' j') =
     'Unit (l - l') (m - m') (t - t') (i - i') (th - th') (n - n') (j - j')
 
 type Recip (d :: Unit) = Unitless |/| d
@@ -67,7 +67,7 @@ type family (d :: Unit) |^| (x :: TypeInt) where
   Unitless |^| _ = Unitless
   _ |^| 'Zero = Unitless
   d |^| 'Pos1 = d
-  ( 'Unit l m t i th n j) |^| x =
+  ('Unit l m t i th n j) |^| x =
     'Unit (l I.* x) (m I.* x) (t I.* x) (i I.* x) (th I.* x) (n I.* x) (j I.* x)
 
 --------------------------------------------------------------------------------

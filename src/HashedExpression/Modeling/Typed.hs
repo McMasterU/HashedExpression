@@ -230,16 +230,16 @@ instance (IsShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
   ift = unary ift
 
 -- |
-instance (KnownNat n) => RotateOp Int (TypedExpr (D1 n) et) where
-  rotate :: Int -> TypedExpr (D1 n) et -> TypedExpr (D1 n) et
+instance (KnownNat n) => RotateOp Int (TypedExpr '[n] et) where
+  rotate :: Int -> TypedExpr '[n] et -> TypedExpr '[n] et
   rotate x = unary (rotate [x])
 
-instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (TypedExpr (D2 m n) et) where
-  rotate :: (Int, Int) -> TypedExpr (D2 m n) et -> TypedExpr (D2 m n) et
+instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (TypedExpr '[m, n] et) where
+  rotate :: (Int, Int) -> TypedExpr '[m, n] et -> TypedExpr '[m, n] et
   rotate (x, y) = unary (rotate [x, y])
 
-instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (TypedExpr (D3 m n p) et) where
-  rotate :: (Int, Int, Int) -> TypedExpr (D3 m n p) et -> TypedExpr (D3 m n p) et
+instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (TypedExpr '[m, n, p] et) where
+  rotate :: (Int, Int, Int) -> TypedExpr '[m, n, p] et -> TypedExpr '[m, n, p] et
   rotate (x, y, z) = unary (rotate [x, y, z])
 
 -------------------------------------------------------------------------------
@@ -261,7 +261,7 @@ instance
     KnownNat n,
     i < n
   ) =>
-  ProjectInjectOp (Proxy i) (TypedExpr (D1 n) et) (TypedExpr Scalar et)
+  ProjectInjectOp (Proxy i) (TypedExpr '[n] et) (TypedExpr Scalar et)
   where
   project _ = unary (project [At $ nat @i])
   inject _ = binary (inject [At $ nat @i])
@@ -272,7 +272,7 @@ instance
     (start < n, end < n, 0 < step),
     res ~ Size start end step n
   ) =>
-  ProjectInjectOp (Proxy '(start, end, step)) (TypedExpr (D1 n) et) (TypedExpr (D1 res) et)
+  ProjectInjectOp (Proxy '(start, end, step)) (TypedExpr '[n] et) (TypedExpr '[res] et)
   where
   project _ = unary (project [Range (nat @start) (nat @end) (nat @step)])
   inject _ = binary (inject [Range (nat @start) (nat @end) (nat @step)])
@@ -283,7 +283,7 @@ instance
     (KnownNat i, i < m),
     (KnownNat j, j < n)
   ) =>
-  ProjectInjectOp (Proxy i, Proxy j) (TypedExpr (D2 m n) et) (TypedExpr Scalar et)
+  ProjectInjectOp (Proxy i, Proxy j) (TypedExpr '[m, n] et) (TypedExpr Scalar et)
   where
   project _ = unary (project [At (nat @i), At (nat @j)])
   inject _ = binary (inject [At (nat @i), At (nat @j)])
@@ -296,7 +296,7 @@ instance
     (startM < m, endM < m, 0 < stepM),
     resM ~ Size startM endM stepM m
   ) =>
-  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (TypedExpr (D2 m n) et) (TypedExpr (D1 resM) et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (TypedExpr '[m, n] et) (TypedExpr '[resM] et)
   where
   project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
   inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
@@ -309,7 +309,7 @@ instance
     (startN < n, endN < n, 0 < stepN),
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (TypedExpr (D2 m n) et) (TypedExpr (D1 resN) et)
+  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (TypedExpr '[m, n] et) (TypedExpr '[resN] et)
   where
   project _ = unary (project [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
   inject _ = binary (inject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
@@ -324,7 +324,7 @@ instance
     resM ~ Size startM endM stepM m,
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (TypedExpr (D2 m n) et) (TypedExpr (D2 resM resN) et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (TypedExpr '[m, n] et) (TypedExpr '[resM, resN] et)
   where
   project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
   inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
@@ -335,19 +335,19 @@ instance
 
 instance
   (KnownNat m, KnownNat n, KnownNat p) =>
-  MatrixMulOp (TypedExpr (D2 m n) et) (TypedExpr (D2 n p) et) (TypedExpr (D2 m p) et)
+  MatrixMulOp (TypedExpr '[m, n] et) (TypedExpr '[n, p] et) (TypedExpr '[m, p] et)
   where
   (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
-  MatrixMulOp (TypedExpr (D2 m n) et) (TypedExpr (D1 n) et) (TypedExpr (D1 m) et)
+  MatrixMulOp (TypedExpr '[m, n] et) (TypedExpr '[n] et) (TypedExpr '[m] et)
   where
   (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
-  TransposeOp (TypedExpr (D2 m n) et) (TypedExpr (D2 n m) et)
+  TransposeOp (TypedExpr '[m, n] et) (TypedExpr '[n, m] et)
   where
   transpose = unary transpose
 
@@ -385,14 +385,14 @@ gconstant value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 variable :: String -> TypedExpr Scalar R
 variable = gvariable @Scalar
 
-variable1D :: forall n. (KnownNat n) => String -> TypedExpr (D1 n) R
-variable1D = gvariable @(D1 n)
+variable1D :: forall n. (KnownNat n) => String -> TypedExpr '[n] R
+variable1D = gvariable @'[n]
 
-variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr (D2 m n) R
-variable2D = gvariable @(D2 m n)
+variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr '[m, n] R
+variable2D = gvariable @'[m, n]
 
-variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr (D3 m n p) R
-variable3D = gvariable @(D3 m n p)
+variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr '[m, n, p] R
+variable3D = gvariable @'[m, n, p]
 
 --
 -- @
@@ -404,14 +404,14 @@ variable3D = gvariable @(D3 m n p)
 constant :: Double -> TypedExpr Scalar R
 constant = gconstant @Scalar
 
-constant1D :: forall n. (KnownNat n) => Double -> TypedExpr (D1 n) R
-constant1D = gconstant @(D1 n)
+constant1D :: forall n. (KnownNat n) => Double -> TypedExpr '[n] R
+constant1D = gconstant @'[n]
 
-constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> TypedExpr (D2 m n) R
-constant2D = gconstant @(D2 m n)
+constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> TypedExpr '[m, n] R
+constant2D = gconstant @'[m, n]
 
-constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> TypedExpr (D3 m n p) R
-constant3D = gconstant @(D3 m n p)
+constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> TypedExpr '[m, n, p] R
+constant3D = gconstant @'[m, n, p]
 
 ---- | Auxiliary for creating parameters
 --
@@ -424,11 +424,11 @@ constant3D = gconstant @(D3 m n p)
 param :: String -> TypedExpr Scalar R
 param = gparam @Scalar
 
-param1D :: forall n. (KnownNat n) => String -> TypedExpr (D1 n) R
-param1D = gparam @(D1 n)
+param1D :: forall n. (KnownNat n) => String -> TypedExpr '[n] R
+param1D = gparam @'[n]
 
-param2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr (D2 m n) R
-param2D = gparam @(D2 m n)
+param2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr '[m, n] R
+param2D = gparam @'[m, n]
 
-param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr (D3 m n p) R
-param3D = gparam @(D3 m n p)
+param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr '[m, n, p] R
+param3D = gparam @'[m, n, p]

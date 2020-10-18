@@ -13,7 +13,7 @@ module HashedExpression.Codegen where
 import Data.Text (Text)
 import qualified Data.Text as T
 import HashedExpression.Problem
-import HashedExpression.Value ( ValMap )
+import HashedExpression.Value (ValMap)
 
 -- | Each element is a line of code
 type Code = [Text]

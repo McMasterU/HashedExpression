@@ -225,13 +225,13 @@ type SuiteScalarR = Suite Scalar R
 
 type SuiteScalarC = Suite Scalar C
 
-type SuiteOneR = Suite (D1 Default1D) R
+type SuiteOneR = Suite '[Default1D] R
 
-type SuiteOneC = Suite (D1 Default1D) C
+type SuiteOneC = Suite '[Default1D] C
 
-type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
+type SuiteTwoR = Suite '[Default2D1, Default2D2] R
 
-type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
+type SuiteTwoC = Suite '[Default2D1, Default2D2] C
 
 -------------------------------------------------------------------------------
 newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: RawExpr}

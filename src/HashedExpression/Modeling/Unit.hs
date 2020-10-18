@@ -45,7 +45,7 @@ instance IsScalarReal (UnitExpr frame domainUnit unit Scalar R) where
 constant :: Double -> UnitExpr frame domainUnits unit Scalar R
 constant = undefined
 
-constant1D :: (KnownNat n) => Double -> UnitExpr frame domainUnits unit (D1 n) R
+constant1D :: (KnownNat n) => Double -> UnitExpr frame domainUnits unit '[n] R
 constant1D = undefined
 
 dft1D ::
