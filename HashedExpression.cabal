@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 179d1de5a60a861a60ff185ccee6109c108cee539c220cea1712d3eb8201e370
+-- hash: b1aadcaf60d0b0050f5af6319523ee6af1288e0da9ce79a10ebeed3f7fcabe81
 
 name:           HashedExpression
 version:        0.0.9
@@ -47,6 +47,7 @@ library
       HashedExpression.Modeling.Simple
       HashedExpression.Modeling.Typed
       HashedExpression.Modeling.Unit
+      HashedExpression.Modeling.Unit.Types
       HashedExpression.Prettify
       HashedExpression.Problem
       HashedExpression.Utils
@@ -65,6 +66,7 @@ library
     , file-embed
     , filepath
     , mtl
+    , numtype-dk
     , process
     , split
     , text
@@ -95,6 +97,7 @@ executable HashedExpression-exe
     , filepath
     , hspec
     , mtl
+    , numtype-dk
     , process
     , split
     , text
@@ -134,6 +137,7 @@ test-suite HashedExpression-test
     , filepath
     , hspec
     , mtl
+    , numtype-dk
     , process
     , split
     , text

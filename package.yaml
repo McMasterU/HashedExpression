@@ -30,6 +30,8 @@ dependencies:
   - mtl
   - filepath
   - file-embed
+  - numtype-dk
+
 
 extra-source-files:
   - ChangeLog.md
