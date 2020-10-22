@@ -2,9 +2,36 @@
 
 module HashedExpression.Modeling.Unit.Types where
 
-import GHC.TypeLits (Nat)
+import qualified GHC.TypeNats as N
+import GHC.TypeNats (Nat)
 import Numeric.NumType.DK.Integers (TypeInt (..), type (+), type (-))
 import qualified Numeric.NumType.DK.Integers as I
+
+type family IfThenElse (c :: Bool) (a :: k) (b :: k) where
+  IfThenElse True a _ = a
+  IfThenElse False _ b = b  
+
+data MyInt = Pos Nat | Neg Nat
+
+type family Normalize (x :: MyInt) where
+  Normalize (Pos 0) = Pos 0
+  Normalize (Neg 0) = Pos 0
+  Normalize x = x
+
+type family (|+|) (x :: MyInt) (y :: MyInt) where
+  (|+|) (Pos x) (Pos y) = Normalize (Pos (x N.+ y))
+  (|+|) (Neg x) (Neg y) = Normalize (Neg (x N.+ y))
+  (|+|) (Pos x) (Neg y) = Normalize (IfThenElse (x N.<=? y) (Neg (y N.- x)) (Pos (x N.- y)))
+  (|+|) (Neg x) (Pos y) = Normalize (IfThenElse (x N.<=? y) (Neg (y N.- x)) (Pos (x N.- y)))
+
+type family (|*|) (x :: MyInt) (y :: MyInt) where
+  (|*|) (Pos x) (Pos y) = Normalize (Pos (x N.* y))
+  (|*|) (Neg x) (Neg y) = Normalize (Pos (x N.* y))
+  (|*|) (Pos x) (Neg y) = Normalize (Neg (x N.* y))
+  (|*|) (Neg x) (Pos y) = Normalize (Neg (x N.* y))
+
+
+
 
 -- type family NEG (n :: Nat) :: TypeInt where
 --   NEG 0 = Zero
@@ -56,8 +83,6 @@ data Unit
       UMole -- (amount of substance, mol - mole)
       UCandela -- (luminous intensity, cd - candela)
 
-data IntT = Pos Nat | Neg Nat
-
 type Unitless =
   'Unit
     ('Meter Zero)
@@ -69,33 +94,33 @@ type Unitless =
     ('Candela Zero)
 
 --------------------------------------------------------------------------------
-infixr 8 |^|
+infixr 8 :^ 
 
-infixl 7 |*|, |/|
+infixl 7 :*, :/ 
 
-type family (a :: Unit) |*| (b :: Unit) :: Unit where
-  Unitless |*| d = d
-  d |*| Unitless = d
+type family (a :: Unit) :* (b :: Unit) :: Unit where
+  Unitless :* d = d
+  d :* Unitless = d
   ( 'Unit ('Meter l) ('Kilogram m) ('Second t) ('Ampere i) ('Kevin th) 
             ('Mole n) ('Candela j))
-    |*| ( 'Unit ('Meter l') ('Kilogram m') 
+    :* ( 'Unit ('Meter l') ('Kilogram m') 
             ('Second t') ('Ampere i') ('Kevin th') ('Mole n') ('Candela j')) =
     'Unit ('Meter (l + l')) ('Kilogram (m + m')) ('Second (t + t')) 
             ('Ampere (i + i')) ('Kevin (th + th')) ('Mole (n + n')) ('Candela (j + j'))
 
-type family (a :: Unit) |/| (b :: Unit) :: Unit where
-  d |/| Unitless = d
-  d |/| d = Unitless
-  ( 'Unit ('Meter l) ('Kilogram m) ('Second t) ('Ampere i) ('Kevin th) ('Mole n) ('Candela j)) |/| ( 'Unit ('Meter l') ('Kilogram m') ('Second t') ('Ampere i') ('Kevin th') ('Mole n') ('Candela j')) =
+type family (a :: Unit)  :/ (b :: Unit) :: Unit where
+  d  :/ Unitless = d
+  d  :/ d = Unitless
+  ( 'Unit ('Meter l) ('Kilogram m) ('Second t) ('Ampere i) ('Kevin th) ('Mole n) ('Candela j))  :/ ( 'Unit ('Meter l') ('Kilogram m') ('Second t') ('Ampere i') ('Kevin th') ('Mole n') ('Candela j')) =
     'Unit ('Meter (l - l')) ('Kilogram (m - m')) ('Second (t - t')) ('Ampere (i - i')) ('Kevin (th - th')) ('Mole (n - n')) ('Candela (j - j'))
 
-type Recip (d :: Unit) = Unitless |/| d
+type Recip (d :: Unit) = Unitless  :/ d
 
-type family (d :: Unit) |^| (x :: TypeInt) where
-  Unitless |^| _ = Unitless
-  _ |^| 'Zero = Unitless
-  d |^| 'Pos1 = d
-  ( 'Unit ('Meter l) ('Kilogram m) ('Second t) ('Ampere i) ('Kevin th) ('Mole n) ('Candela j)) |^| x =
+type family (d :: Unit)  :^ (x :: TypeInt) where
+  Unitless  :^ _ = Unitless
+  _  :^ 'Zero = Unitless
+  d  :^ 'Pos1 = d
+  ( 'Unit ('Meter l) ('Kilogram m) ('Second t) ('Ampere i) ('Kevin th) ('Mole n) ('Candela j))  :^ x =
     'Unit ('Meter (l I.* x)) ('Kilogram (m I.* x)) ('Second (t I.* x)) ('Ampere (i I.* x)) 
         ('Kevin (th I.* x)) ('Mole (n I.* x)) ('Candela (j I.* x))
 
