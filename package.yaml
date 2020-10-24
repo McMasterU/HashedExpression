@@ -63,6 +63,7 @@ default-extensions:
   - RecordWildCards
   - LambdaCase
   - PolyKinds
+  - TypeOperators
 
 library:
   source-dirs:
