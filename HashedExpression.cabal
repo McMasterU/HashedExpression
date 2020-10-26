@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7260d22961d2de079958cc7fab7af2f0c157e5d450cac09c43aba2ae15520ebb
+-- hash: 4917059d4c504182bd983e5ed47c3a6f19b916a0a8a03765addee61e72e7f4a7
 
 name:           HashedExpression
 version:        0.0.9
@@ -47,6 +47,7 @@ library
       HashedExpression.Modeling.Simple
       HashedExpression.Modeling.Typed
       HashedExpression.Modeling.Unit
+      HashedExpression.Modeling.Unit.Common
       HashedExpression.Modeling.Unit.SI
       HashedExpression.Modeling.Unit.TypeInt
       HashedExpression.Prettify
@@ -57,7 +58,7 @@ library
       Paths_HashedExpression
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds TypeOperators
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   build-depends:
       array
     , base
@@ -67,7 +68,6 @@ library
     , file-embed
     , filepath
     , mtl
-    , numtype-dk
     , process
     , split
     , text
@@ -85,7 +85,7 @@ executable HashedExpression-exe
       Paths_HashedExpression
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds TypeOperators
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HashedExpression
@@ -98,7 +98,6 @@ executable HashedExpression-exe
     , filepath
     , hspec
     , mtl
-    , numtype-dk
     , process
     , split
     , text
@@ -123,7 +122,7 @@ test-suite HashedExpression-test
       Paths_HashedExpression
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds TypeOperators
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit
@@ -138,7 +137,6 @@ test-suite HashedExpression-test
     , filepath
     , hspec
     , mtl
-    , numtype-dk
     , process
     , split
     , text

@@ -30,7 +30,6 @@ dependencies:
   - mtl
   - filepath
   - file-embed
-  - numtype-dk
 
 
 extra-source-files:
@@ -63,7 +62,9 @@ default-extensions:
   - RecordWildCards
   - LambdaCase
   - PolyKinds
+  - NoStarIsType
   - TypeOperators
+  - ConstraintKinds
 
 library:
   source-dirs:

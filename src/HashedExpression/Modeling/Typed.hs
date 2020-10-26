@@ -48,15 +48,13 @@ instance IsElementType C where
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- * TypedExpr Dimensions
+-- * TypedExpr shape
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Type-level encoding of shapes
 type Scalar = '[]
 
--- | Use to constrain 'TypedExpr' dimensions at the type level. The size of each dimension in a vector can be specified
---   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
 class IsShape (d :: [Nat]) where
   toShape :: Shape
 
@@ -86,11 +84,6 @@ unary f (TypedExpr e) = TypedExpr $ f e
 binary :: (ExprBuilder -> ExprBuilder -> ExprBuilder) -> TypedExpr d1 et1 -> TypedExpr d2 et2 -> TypedExpr d3 et3
 binary f (TypedExpr e1) (TypedExpr e2) = TypedExpr $ f e1 e2
 
--- | Converts a double-precision floating-point number to a real-number expression with dimension constraint `d`
---
--- @
---    (fromDouble 15) :: TypedExpr Scalar R
--- @
 fromDouble :: forall d. IsShape d => Double -> TypedExpr d R
 fromDouble value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
@@ -204,7 +197,7 @@ instance (IsShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
 huberNorm :: (IsShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
 huberNorm alpha = sumElements . huber alpha
 
--- | Sum elements of a `d`-dimensional vector
+-- | Sum elements 
 sumElements :: forall d. (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
 sumElements expr = expr <.> 1
 
