@@ -105,7 +105,7 @@ Taken from [exercise 2](https://github.com/nsoojin/coursera-ml-py/tree/master/ma
 Model is in [app/Examples/LogisticRegression.hs](app/Examples/LogisticRegression.hs), data & plotting script is in [examples/LogisticRegression](examples/LogisticRegression)
 
 ```haskell
-sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 ex2_logisticRegression :: OptimizationProblem
@@ -182,7 +182,7 @@ Taken from [exercise 4](https://github.com/nsoojin/coursera-ml-py/tree/master/ma
 Model is in [app/Examples/NeuralNetwork.hs](app/Examples/NeuralNetwork.hs), data & plotting script is in [examples/NeuralNetwork](examples/NeuralNetwork)
 
 ```haskell
-sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 prependColumn ::

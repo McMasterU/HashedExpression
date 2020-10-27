@@ -1,7 +1,7 @@
 module HashedExpression.Modeling.Unit.Common where
 
 import Data.Kind (Constraint)
-import GHC.TypeLits (ErrorMessage, TypeError)
+import GHC.TypeLits (ErrorMessage (ShowType, Text, (:<>:)), Symbol, TypeError)
 import GHC.TypeNats (Nat)
 import qualified GHC.TypeNats as N
 
@@ -25,9 +25,15 @@ type family ListLength (xs :: [a]) :: Nat where
 --------------------------------------------------------------------------------
 --  Utilities for natural number
 
-infix 4 ==?
+type family GCD (a :: Nat) (b :: Nat) :: Nat where
+  GCD 0 a = a
+  GCD a 0 = a
+  GCD a b = GCD b (a `N.Mod` b)
 
-type (a :: Nat) ==? (b :: Nat) = IsEQ (N.CmpNat a b)
+type family PrintNats (x :: [Nat]) :: ErrorMessage where
+  PrintNats '[] = Text ""
+  PrintNats '[s] = ShowType s
+  PrintNats (s ': ss) = ShowType s :<>: Text ", " :<>: PrintNats ss
 
 --------------------------------------------------------------------------------
 --  Utilities for boolean
@@ -37,6 +43,18 @@ type family And (a :: Bool) (b :: Bool) :: Bool where
   And _ _ = False
 
 infixl 3 `And`
+
+--------------------------------------------------------------------------------
+--  Utilities for ErrorMessage
+type family RemoveEmpty (a :: [ErrorMessage]) :: [ErrorMessage] where
+  RemoveEmpty '[] = '[]
+  RemoveEmpty (Text "" ': xs) = RemoveEmpty xs
+  RemoveEmpty (x ': xs) = x ': RemoveEmpty xs
+
+type family Intercalate (x :: Symbol) (ys :: [ErrorMessage]) :: ErrorMessage where
+  Intercalate _ '[] = Text ""
+  Intercalate _ '[y] = y
+  Intercalate x (y ': ys) = y :<>: Text x :<>: Intercalate x ys
 
 --------------------------------------------------------------------------------
 --  Utilities for constraint programming

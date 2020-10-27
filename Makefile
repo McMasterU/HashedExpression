@@ -1,5 +1,5 @@
 
-FORMAT=ormolu --mode inplace -o -XTypeApplications -o -XTemplateHaskellQuotes
+FORMAT=ormolu --mode inplace -o -XTypeApplications -o -XTemplateHaskellQuotes -o -XNoStarIsType
 
 doc:
 	stack haddock --haddock-arguments "--odir=docs/"

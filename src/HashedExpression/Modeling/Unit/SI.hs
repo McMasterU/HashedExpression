@@ -3,6 +3,7 @@
 module HashedExpression.Modeling.Unit.SI where
 
 import Data.Kind (Constraint)
+import Data.Type.Equality (type (==))
 import GHC.TypeLits (ErrorMessage (..))
 import HashedExpression.Modeling.Unit.Common
 import HashedExpression.Modeling.Unit.TypeInt (EqTypeInt, TypeInt (..))
@@ -13,6 +14,7 @@ newtype UMeter = M TypeInt
 type family PrintMeter (m :: UMeter) where
   PrintMeter (M (Positive 0)) = Text ""
   PrintMeter (M (Negative 0)) = Text ""
+  PrintMeter (M (Positive 1)) = Text "m"
   PrintMeter (M (Positive a)) = Text "m^" :<>: ShowType a
   PrintMeter (M (Negative a)) = Text "m^(-" :<>: ShowType a :<>: Text ")"
 
@@ -21,6 +23,7 @@ newtype UKilogram = Kg TypeInt
 type family PrintKilogram (m :: UKilogram) where
   PrintKilogram (Kg (Positive 0)) = Text ""
   PrintKilogram (Kg (Negative 0)) = Text ""
+  PrintKilogram (Kg (Positive 1)) = Text "kg"
   PrintKilogram (Kg (Positive a)) = Text "kg^" :<>: ShowType a
   PrintKilogram (Kg (Negative a)) = Text "kg^(-" :<>: ShowType a :<>: Text ")"
 
@@ -29,6 +32,7 @@ newtype USecond = S TypeInt
 type family PrintSecond (m :: USecond) where
   PrintSecond (S (Positive 0)) = Text ""
   PrintSecond (S (Negative 0)) = Text ""
+  PrintSecond (S (Positive 1)) = Text "s"
   PrintSecond (S (Positive a)) = Text "s^" :<>: ShowType a
   PrintSecond (S (Negative a)) = Text "s^(-" :<>: ShowType a :<>: Text ")"
 
@@ -37,6 +41,7 @@ newtype UAmpere = A TypeInt
 type family PrintAmpere (m :: UAmpere) where
   PrintAmpere (A (Positive 0)) = Text ""
   PrintAmpere (A (Negative 0)) = Text ""
+  PrintAmpere (A (Positive 1)) = Text "A"
   PrintAmpere (A (Positive a)) = Text "A^" :<>: ShowType a
   PrintAmpere (A (Negative a)) = Text "A^(-" :<>: ShowType a :<>: Text ")"
 
@@ -45,6 +50,7 @@ newtype UKevin = K TypeInt
 type family PrintKevin (m :: UKevin) where
   PrintKevin (K (Positive 0)) = Text ""
   PrintKevin (K (Negative 0)) = Text ""
+  PrintKevin (K (Positive 1)) = Text "K"
   PrintKevin (K (Positive a)) = Text "K^" :<>: ShowType a
   PrintKevin (K (Negative a)) = Text "K^(-" :<>: ShowType a :<>: Text ")"
 
@@ -53,6 +59,7 @@ newtype UMole = Mol TypeInt
 type family PrintMole (m :: UMole) where
   PrintMole (Mol (Positive 0)) = Text ""
   PrintMole (Mol (Negative 0)) = Text ""
+  PrintMole (Mol (Positive 1)) = Text "mol"
   PrintMole (Mol (Positive a)) = Text "mol^" :<>: ShowType a
   PrintMole (Mol (Negative a)) = Text "mol^(-" :<>: ShowType a :<>: Text ")"
 
@@ -61,6 +68,7 @@ newtype UCandela = Cd TypeInt
 type family PrintCandela (m :: UCandela) where
   PrintCandela (Cd (Positive 0)) = Text ""
   PrintCandela (Cd (Negative 0)) = Text ""
+  PrintCandela (Cd (Positive 1)) = Text "Cd"
   PrintCandela (Cd (Positive a)) = Text "Cd^" :<>: ShowType a
   PrintCandela (Cd (Negative a)) = Text "Cd^(-" :<>: ShowType a :<>: Text ")"
 
@@ -76,23 +84,16 @@ data Unit
 
 type family PrintUnit (m :: Unit) where
   PrintUnit Unitless = Text "unitless"
-  PrintUnit ( 'Unit m kg s a k mol cd) =
-    PrintMeter m
-      :<>: Text "*"
-      :<>: PrintKilogram kg
-      :<>: Text "*"
-      :<>: PrintSecond s
-      :<>: Text "*"
-      :<>: PrintAmpere a
-      :<>: Text "*"
-      :<>: PrintKevin k
-      :<>: Text "*"
-      :<>: PrintMole mol
-      :<>: Text "*"
-      :<>: PrintCandela cd
+  PrintUnit ('Unit m kg s a k mol cd) =
+    Intercalate "*" (RemoveEmpty ('[PrintMeter m, PrintKilogram kg, PrintSecond s, PrintAmpere a, PrintKevin k, PrintMole mol, PrintCandela cd]))
+
+type family PrintUnits (x :: [Unit]) :: ErrorMessage where
+  PrintUnits '[] = Text ""
+  PrintUnits '[s] = PrintUnit s
+  PrintUnits (s ': ss) = PrintUnit s :<>: Text ", " :<>: PrintUnits ss
 
 type family EqUnit (unit1 :: Unit) (unit2 :: Unit) :: Bool where
-  EqUnit (UNIT ( 'M l) ( 'Kg m) ( 'S t) ( 'A i) ( 'K th) ( 'Mol n) ( 'Cd j)) (UNIT ( 'M l') ( 'Kg m') ( 'S t') ( 'A i') ( 'K th') ( 'Mol n') ( 'Cd j')) =
+  EqUnit (UNIT ('M l) ('Kg m) ('S t) ('A i) ('K th) ('Mol n) ('Cd j)) (UNIT ('M l') ('Kg m') ('S t') ('A i') ('K th') ('Mol n') ('Cd j')) =
     (EqTypeInt l l')
       `And` (EqTypeInt m m')
       `And` (EqTypeInt t t')
@@ -109,13 +110,13 @@ type family SameUnit (unit1 :: Unit) (unit2 :: Unit) :: Constraint where
 
 type Unitless =
   'Unit
-    ( 'M (Positive 0))
-    ( 'Kg (Positive 0))
-    ( 'S (Positive 0))
-    ( 'A (Positive 0))
-    ( 'K (Positive 0))
-    ( 'Mol (Positive 0))
-    ( 'Cd (Positive 0))
+    ('M (Positive 0))
+    ('Kg (Positive 0))
+    ('S (Positive 0))
+    ('A (Positive 0))
+    ('K (Positive 0))
+    ('Mol (Positive 0))
+    ('Cd (Positive 0))
 
 type UNIT = 'Unit
 
@@ -175,18 +176,18 @@ type family (d :: Unit) ^ (x :: TypeInt) :: Unit where
 type Zero = Positive 0
 
 --------------------------------------------------------------------------------
-type Meter = 'Unit ( 'M (Positive 1)) ( 'Kg Zero) ( 'S Zero) ( 'A Zero) ( 'K Zero) ( 'Mol Zero) ( 'Cd Zero)
+type Meter = 'Unit ('M (Positive 1)) ('Kg Zero) ('S Zero) ('A Zero) ('K Zero) ('Mol Zero) ('Cd Zero)
 
 type Metre = Meter
 
-type Kilogram = 'Unit ( 'M Zero) ( 'Kg (Positive 1)) ( 'S Zero) ( 'A Zero) ( 'K Zero) ( 'Mol Zero) ( 'Cd Zero)
+type Kilogram = 'Unit ('M Zero) ('Kg (Positive 1)) ('S Zero) ('A Zero) ('K Zero) ('Mol Zero) ('Cd Zero)
 
-type Second = 'Unit ( 'M Zero) ( 'Kg Zero) ( 'S (Positive 1)) ( 'A Zero) ( 'K Zero) ( 'Mol Zero) ( 'Cd Zero)
+type Second = 'Unit ('M Zero) ('Kg Zero) ('S (Positive 1)) ('A Zero) ('K Zero) ('Mol Zero) ('Cd Zero)
 
-type Ampere = 'Unit ( 'M Zero) ( 'Kg Zero) ( 'S Zero) ( 'A (Positive 1)) ( 'K Zero) ( 'Mol Zero) ( 'Cd Zero)
+type Ampere = 'Unit ('M Zero) ('Kg Zero) ('S Zero) ('A (Positive 1)) ('K Zero) ('Mol Zero) ('Cd Zero)
 
-type Kevin = 'Unit ( 'M Zero) ( 'Kg Zero) ( 'S Zero) ( 'A Zero) ( 'K (Positive 1)) ( 'Mol Zero) ( 'Cd Zero)
+type Kevin = 'Unit ('M Zero) ('Kg Zero) ('S Zero) ('A Zero) ('K (Positive 1)) ('Mol Zero) ('Cd Zero)
 
-type Mole = 'Unit ( 'M Zero) ( 'Kg Zero) ( 'S Zero) ( 'A Zero) ( 'K Zero) ( 'Mol (Positive 1)) ( 'Cd Zero)
+type Mole = 'Unit ('M Zero) ('Kg Zero) ('S Zero) ('A Zero) ('K Zero) ('Mol (Positive 1)) ('Cd Zero)
 
-type Candela = 'Unit ( 'M Zero) ( 'Kg Zero) ( 'S Zero) ( 'A Zero) ( 'K Zero) ( 'Mol Zero) ( 'Cd (Positive 1))
+type Candela = 'Unit ('M Zero) ('Kg Zero) ('S Zero) ('A Zero) ('K Zero) ('Mol Zero) ('Cd (Positive 1))

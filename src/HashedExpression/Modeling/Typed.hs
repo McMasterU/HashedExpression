@@ -55,13 +55,13 @@ instance IsElementType C where
 -- | Type-level encoding of shapes
 type Scalar = '[]
 
-class IsShape (d :: [Nat]) where
+class ToShape d where
   toShape :: Shape
 
-instance IsShape '[] where
+instance ToShape '[] where
   toShape = []
 
-instance (KnownNat x, IsShape xs) => IsShape (x ': xs) where
+instance (KnownNat x, ToShape xs) => ToShape (x ': xs) where
   toShape = (nat @x) : toShape @xs
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
@@ -84,15 +84,15 @@ unary f (TypedExpr e) = TypedExpr $ f e
 binary :: (ExprBuilder -> ExprBuilder -> ExprBuilder) -> TypedExpr d1 et1 -> TypedExpr d2 et2 -> TypedExpr d3 et3
 binary f (TypedExpr e1) (TypedExpr e2) = TypedExpr $ f e1 e2
 
-fromDouble :: forall d. IsShape d => Double -> TypedExpr d R
+fromDouble :: forall d. ToShape d => Double -> TypedExpr d R
 fromDouble value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
-instance (IsShape d) => PowerOp (TypedExpr d et) Int where
+instance (ToShape d) => PowerOp (TypedExpr d et) Int where
   (^) :: TypedExpr d et -> Int -> TypedExpr d et
   (^) e x = unary (^ x) e
 
 -- | Basic operations on Num class
-instance IsShape d => Num (TypedExpr d R) where
+instance ToShape d => Num (TypedExpr d R) where
   (+) = binary (+)
   (-) = binary (-)
   (*) = binary (*)
@@ -102,12 +102,12 @@ instance IsShape d => Num (TypedExpr d R) where
   signum = error "Not applicable"
 
 -- | Basic operations on Fractional class
-instance IsShape d => Fractional (TypedExpr d R) where
+instance ToShape d => Fractional (TypedExpr d R) where
   (/) = binary (/)
   fromRational r = fromDouble $ fromRational r
 
 -- | Basic operations on Floating class
-instance IsShape d => Floating (TypedExpr d R) where
+instance ToShape d => Floating (TypedExpr d R) where
   pi = fromDouble pi
   sqrt = unary sqrt
   exp = unary exp
@@ -126,7 +126,7 @@ instance IsShape d => Floating (TypedExpr d R) where
   atanh = unary atanh
 
 -- | Basic operations on class Num
-instance IsShape d => Num (TypedExpr d C) where
+instance ToShape d => Num (TypedExpr d C) where
   (+) = binary (+)
   (*) = binary (*)
   negate = unary negate
@@ -135,7 +135,7 @@ instance IsShape d => Num (TypedExpr d C) where
   signum = error "Not applicable"
 
 -- | Basic operations on class Fractional
-instance IsShape d => Fractional (TypedExpr d C) where
+instance ToShape d => Fractional (TypedExpr d C) where
   (/) = binary (/)
   fromRational r = fromDouble (fromRational r) +: 0
 
@@ -148,7 +148,7 @@ instance ScaleOp (TypedExpr Scalar C) (TypedExpr d C) where
   scale :: TypedExpr Scalar s -> TypedExpr d et -> TypedExpr d et
   scale = binary scale
 
-instance (IsShape d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
+instance (ToShape d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
   (+:) :: TypedExpr d R -> TypedExpr d R -> TypedExpr d C
   (+:) = binary (+:)
   xRe :: TypedExpr d C -> TypedExpr d R
@@ -164,7 +164,7 @@ instance InnerProductSpaceOp (TypedExpr d et) (TypedExpr Scalar et) where
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
-huber :: forall d. (IsShape d) => Double -> TypedExpr d R -> TypedExpr d R
+huber :: forall d. (ToShape d) => Double -> TypedExpr d R -> TypedExpr d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     inner = constant 0.5 *. (e * e)
@@ -172,11 +172,11 @@ huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
     outerRight = constant delta *. e - fromDouble (delta * delta / 2)
 
 -- | Norm 2 uses inner product space
-norm2 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+norm2 :: (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 ---- | Norm 1
-norm1 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+norm1 :: (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Norm 2 square interface
@@ -184,32 +184,32 @@ class Norm2SquareOp a b | a -> b where
   norm2square :: a -> b
 
 -- | Norm 2 square of real expression
-instance (IsShape d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
+instance (ToShape d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d R -> TypedExpr Scalar R
   norm2square exp = exp <.> exp
 
 -- | Norm 2 square of complex expression
-instance (IsShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
+instance (ToShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d C -> TypedExpr Scalar R
   norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
 
 -- | Outlier-sensitive error measure using huber loss
-huberNorm :: (IsShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
+huberNorm :: (ToShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
 huberNorm alpha = sumElements . huber alpha
 
--- | Sum elements 
-sumElements :: forall d. (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+-- | Sum elements
+sumElements :: forall d. (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 sumElements expr = expr <.> 1
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance (IsShape d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
+instance (ToShape d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
   piecewise :: HasCallStack => [Double] -> TypedExpr d R -> [TypedExpr d et] -> TypedExpr d et
   piecewise marks conditionExp branchExps =
     TypedExpr $ piecewise marks (extractBuilder conditionExp) (map extractBuilder branchExps)
 
 -- Fourier transform on complex expression
-instance (IsShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
+instance (ToShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
   ft :: TypedExpr d C -> TypedExpr d C
   ft = unary ft
 
@@ -352,13 +352,13 @@ ranges = Proxy
 -------------------------------------------------------------------------------
 
 -- | General version of creating variables, parameters, constants
-gvariable :: forall d. IsShape d => String -> TypedExpr d R
+gvariable :: forall d. ToShape d => String -> TypedExpr d R
 gvariable name = TypedExpr $ introduceNode (toShape @d, R, Var name)
 
-gparam :: forall d. IsShape d => String -> TypedExpr d R
+gparam :: forall d. ToShape d => String -> TypedExpr d R
 gparam name = TypedExpr $ introduceNode (toShape @d, R, Param name)
 
-gconstant :: forall d. IsShape d => Double -> TypedExpr d R
+gconstant :: forall d. ToShape d => Double -> TypedExpr d R
 gconstant value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
 ---- | Auxiliary for creating variables

@@ -9,7 +9,7 @@ import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
 import HashedExpression.Modeling.Typed
 
-sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 prependColumn ::
