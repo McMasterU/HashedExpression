@@ -202,11 +202,11 @@ genExpUntyped qc shape et
                 ]
      in oneof $ commonPossibilities ++ specificShapePossibilities ++ specificElementTypePosibilities
 
-genExp :: forall d et. (IsShape d, IsElementType et) => Int -> Gen (TypedExpr d et)
+genExp :: forall d et. (ToShape d, IsElementType et) => Int -> Gen (TypedExpr d et)
 genExp size = TypedExpr <$> genExpUntyped size (toShape @d) (toElementType @et)
 
 -------------------------------------------------------------------------------
-instance (IsShape d, IsElementType et) => Arbitrary (TypedExpr d et) where
+instance (ToShape d, IsElementType et) => Arbitrary (TypedExpr d et) where
   arbitrary = sized genExp
 
 -------------------------------------------------------------------------------
@@ -214,7 +214,7 @@ data Suite d et
   = Suite (TypedExpr d et) ValMap
   deriving (Show)
 
-instance (IsShape d, IsElementType et) => Arbitrary (Suite d et) where
+instance (ToShape d, IsElementType et) => Arbitrary (Suite d et) where
   arbitrary = do
     exp <- arbitrary
     valMap <- genValMapFor (fst $ asRawExpr exp)
@@ -225,13 +225,13 @@ type SuiteScalarR = Suite Scalar R
 
 type SuiteScalarC = Suite Scalar C
 
-type SuiteOneR = Suite (D1 Default1D) R
+type SuiteOneR = Suite '[Default1D] R
 
-type SuiteOneC = Suite (D1 Default1D) C
+type SuiteOneC = Suite '[Default1D] C
 
-type SuiteTwoR = Suite (D2 Default2D1 Default2D2) R
+type SuiteTwoR = Suite '[Default2D1, Default2D2] R
 
-type SuiteTwoC = Suite (D2 Default2D1 Default2D2) C
+type SuiteTwoC = Suite '[Default2D1, Default2D2] C
 
 -------------------------------------------------------------------------------
 newtype ArbitraryExpr = ArbitraryExpr {unArbitraryExpr :: RawExpr}

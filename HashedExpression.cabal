@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 179d1de5a60a861a60ff185ccee6109c108cee539c220cea1712d3eb8201e370
+-- hash: 4917059d4c504182bd983e5ed47c3a6f19b916a0a8a03765addee61e72e7f4a7
 
 name:           HashedExpression
 version:        0.0.9
@@ -47,6 +47,9 @@ library
       HashedExpression.Modeling.Simple
       HashedExpression.Modeling.Typed
       HashedExpression.Modeling.Unit
+      HashedExpression.Modeling.Unit.Common
+      HashedExpression.Modeling.Unit.SI
+      HashedExpression.Modeling.Unit.TypeInt
       HashedExpression.Prettify
       HashedExpression.Problem
       HashedExpression.Utils
@@ -55,7 +58,7 @@ library
       Paths_HashedExpression
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   build-depends:
       array
     , base
@@ -82,7 +85,7 @@ executable HashedExpression-exe
       Paths_HashedExpression
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HashedExpression
@@ -119,7 +122,7 @@ test-suite HashedExpression-test
       Paths_HashedExpression
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds
+  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit

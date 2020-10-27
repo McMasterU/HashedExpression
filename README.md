@@ -11,14 +11,14 @@ Type-safe modelling DSL, symbolic transformation, and code generation for solvin
     λ> let x = variable1D @10 "x"
     λ> let y = variable1D @9 "y"
     λ> :t x
-    x :: TypedExpr (D1 10) 'R
+    x :: TypedExpr '[10] 'R
     λ> :t y
-    y :: TypedExpr (D1 9) 'R
+    y :: TypedExpr '[9] 'R
     λ> x + y
     <interactive>:5:5: error:
         • Couldn't match type ‘9’ with ‘10’
-          Expected type: TypedExpr (D1 10) 'R
-            Actual type: TypedExpr (D1 9) 'R
+          Expected type: TypedExpr '[10] 'R
+            Actual type: TypedExpr '[9] 'R
         • In the second argument of ‘(+)’, namely ‘y’
           In the expression: x + y
           In an equation for ‘it’: it = x + y
@@ -32,12 +32,12 @@ Type-safe modelling DSL, symbolic transformation, and code generation for solvin
     c :: TypedExpr '[10, 10] 'C
     λ> let z = variable2D @10 @10 "z"
     λ> :t z
-    z :: TypedExpr (D2 10 10) 'R
+    z :: TypedExpr '[10, 10] 'R
     λ> z + c
     
     <interactive>:13:5: error:
         • Couldn't match type ‘'C’ with ‘'R’
-          Expected type: TypedExpr (D2 10 10) 'R
+          Expected type: TypedExpr '[10, 10] 'R
             Actual type: TypedExpr '[10, 10] 'C
           Type synonyms expanded:
           Expected type: TypedExpr '[10, 10] 'R
@@ -105,7 +105,7 @@ Taken from [exercise 2](https://github.com/nsoojin/coursera-ml-py/tree/master/ma
 Model is in [app/Examples/LogisticRegression.hs](app/Examples/LogisticRegression.hs), data & plotting script is in [examples/LogisticRegression](examples/LogisticRegression)
 
 ```haskell
-sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 ex2_logisticRegression :: OptimizationProblem
@@ -182,14 +182,14 @@ Taken from [exercise 4](https://github.com/nsoojin/coursera-ml-py/tree/master/ma
 Model is in [app/Examples/NeuralNetwork.hs](app/Examples/NeuralNetwork.hs), data & plotting script is in [examples/NeuralNetwork](examples/NeuralNetwork)
 
 ```haskell
-sigmoid :: (IsShape d) => TypedExpr d R -> TypedExpr d R
+sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
 
 prependColumn ::
   forall m n.
   (Injectable 0 (m - 1) m m, Injectable 1 n n (n + 1)) =>
   Double ->
-  TypedExpr (D2 m n) R ->
+  TypedExpr '[m, n] R ->
   TypedExpr (D2 m (n + 1)) R
 prependColumn v exp = inject (range @0 @(m - 1), range @1 @n) exp (constant2D @m @(n + 1) v)
 

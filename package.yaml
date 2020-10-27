@@ -31,6 +31,7 @@ dependencies:
   - filepath
   - file-embed
 
+
 extra-source-files:
   - ChangeLog.md
 
@@ -61,6 +62,9 @@ default-extensions:
   - RecordWildCards
   - LambdaCase
   - PolyKinds
+  - NoStarIsType
+  - TypeOperators
+  - ConstraintKinds
 
 library:
   source-dirs:

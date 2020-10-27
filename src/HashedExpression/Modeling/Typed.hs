@@ -48,28 +48,20 @@ instance IsElementType C where
 
 -- --------------------------------------------------------------------------------------------------------------------
 
--- * TypedExpr Dimensions
+-- * TypedExpr shape
 
 -- --------------------------------------------------------------------------------------------------------------------
 
 -- | Type-level encoding of shapes
 type Scalar = '[]
 
-type D1 (n :: Nat) = '[n]
-
-type D2 (m :: Nat) (n :: Nat) = '[m, n]
-
-type D3 (m :: Nat) (n :: Nat) (p :: Nat) = '[m, n, p]
-
--- | Use to constrain 'TypedExpr' dimensions at the type level. The size of each dimension in a vector can be specified
---   using a 'KnownNat', for vectors of n-dimensions use an n-sized tuple
-class IsShape (d :: [Nat]) where
+class ToShape d where
   toShape :: Shape
 
-instance IsShape '[] where
+instance ToShape '[] where
   toShape = []
 
-instance (KnownNat x, IsShape xs) => IsShape (x ': xs) where
+instance (KnownNat x, ToShape xs) => ToShape (x ': xs) where
   toShape = (nat @x) : toShape @xs
 
 -- | Helper function, wrapper over 'natVal' from 'GHC.TypeLits' that automaticaly converts resulting value
@@ -92,20 +84,15 @@ unary f (TypedExpr e) = TypedExpr $ f e
 binary :: (ExprBuilder -> ExprBuilder -> ExprBuilder) -> TypedExpr d1 et1 -> TypedExpr d2 et2 -> TypedExpr d3 et3
 binary f (TypedExpr e1) (TypedExpr e2) = TypedExpr $ f e1 e2
 
--- | Converts a double-precision floating-point number to a real-number expression with dimension constraint `d`
---
--- @
---    (fromDouble 15) :: TypedExpr Scalar R
--- @
-fromDouble :: forall d. IsShape d => Double -> TypedExpr d R
+fromDouble :: forall d. ToShape d => Double -> TypedExpr d R
 fromDouble value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
-instance (IsShape d) => PowerOp (TypedExpr d et) Int where
+instance (ToShape d) => PowerOp (TypedExpr d et) Int where
   (^) :: TypedExpr d et -> Int -> TypedExpr d et
   (^) e x = unary (^ x) e
 
 -- | Basic operations on Num class
-instance IsShape d => Num (TypedExpr d R) where
+instance ToShape d => Num (TypedExpr d R) where
   (+) = binary (+)
   (-) = binary (-)
   (*) = binary (*)
@@ -115,12 +102,12 @@ instance IsShape d => Num (TypedExpr d R) where
   signum = error "Not applicable"
 
 -- | Basic operations on Fractional class
-instance IsShape d => Fractional (TypedExpr d R) where
+instance ToShape d => Fractional (TypedExpr d R) where
   (/) = binary (/)
   fromRational r = fromDouble $ fromRational r
 
 -- | Basic operations on Floating class
-instance IsShape d => Floating (TypedExpr d R) where
+instance ToShape d => Floating (TypedExpr d R) where
   pi = fromDouble pi
   sqrt = unary sqrt
   exp = unary exp
@@ -139,7 +126,7 @@ instance IsShape d => Floating (TypedExpr d R) where
   atanh = unary atanh
 
 -- | Basic operations on class Num
-instance IsShape d => Num (TypedExpr d C) where
+instance ToShape d => Num (TypedExpr d C) where
   (+) = binary (+)
   (*) = binary (*)
   negate = unary negate
@@ -148,7 +135,7 @@ instance IsShape d => Num (TypedExpr d C) where
   signum = error "Not applicable"
 
 -- | Basic operations on class Fractional
-instance IsShape d => Fractional (TypedExpr d C) where
+instance ToShape d => Fractional (TypedExpr d C) where
   (/) = binary (/)
   fromRational r = fromDouble (fromRational r) +: 0
 
@@ -161,7 +148,7 @@ instance ScaleOp (TypedExpr Scalar C) (TypedExpr d C) where
   scale :: TypedExpr Scalar s -> TypedExpr d et -> TypedExpr d et
   scale = binary scale
 
-instance (IsShape d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
+instance (ToShape d) => ComplexRealOp (TypedExpr d R) (TypedExpr d C) where
   (+:) :: TypedExpr d R -> TypedExpr d R -> TypedExpr d C
   (+:) = binary (+:)
   xRe :: TypedExpr d C -> TypedExpr d R
@@ -177,7 +164,7 @@ instance InnerProductSpaceOp (TypedExpr d et) (TypedExpr Scalar et) where
 
 -- | Huber loss: https://en.wikipedia.org/wiki/Huber_loss.
 -- Piecewise loss function where the loss algorithm chosen depends on delta
-huber :: forall d. (IsShape d) => Double -> TypedExpr d R -> TypedExpr d R
+huber :: forall d. (ToShape d) => Double -> TypedExpr d R -> TypedExpr d R
 huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
   where
     inner = constant 0.5 *. (e * e)
@@ -185,11 +172,11 @@ huber delta e = piecewise [- delta, delta] e [outerLeft, inner, outerRight]
     outerRight = constant delta *. e - fromDouble (delta * delta / 2)
 
 -- | Norm 2 uses inner product space
-norm2 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+norm2 :: (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm2 expr = sqrt (expr <.> expr)
 
 ---- | Norm 1
-norm1 :: (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+norm1 :: (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 norm1 expr = sumElements (sqrt (expr * expr))
 
 -- | Norm 2 square interface
@@ -197,32 +184,32 @@ class Norm2SquareOp a b | a -> b where
   norm2square :: a -> b
 
 -- | Norm 2 square of real expression
-instance (IsShape d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
+instance (ToShape d) => Norm2SquareOp (TypedExpr d R) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d R -> TypedExpr Scalar R
   norm2square exp = exp <.> exp
 
 -- | Norm 2 square of complex expression
-instance (IsShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
+instance (ToShape d) => Norm2SquareOp (TypedExpr d C) (TypedExpr Scalar R) where
   norm2square :: TypedExpr d C -> TypedExpr Scalar R
   norm2square exp = (xRe exp <.> xRe exp) + (xIm exp <.> xIm exp)
 
 -- | Outlier-sensitive error measure using huber loss
-huberNorm :: (IsShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
+huberNorm :: (ToShape d) => Double -> TypedExpr d R -> TypedExpr Scalar R
 huberNorm alpha = sumElements . huber alpha
 
--- | Sum elements of a `d`-dimensional vector
-sumElements :: forall d. (IsShape d) => TypedExpr d R -> TypedExpr Scalar R
+-- | Sum elements
+sumElements :: forall d. (ToShape d) => TypedExpr d R -> TypedExpr Scalar R
 sumElements expr = expr <.> 1
 
 -- | Piecewise, with a condition expression and branch expressions
 -- This is element corresponding, so condition and all branches should have the same dimension and shape
-instance (IsShape d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
+instance (ToShape d) => PiecewiseOp (TypedExpr d R) (TypedExpr d et) where
   piecewise :: HasCallStack => [Double] -> TypedExpr d R -> [TypedExpr d et] -> TypedExpr d et
   piecewise marks conditionExp branchExps =
     TypedExpr $ piecewise marks (extractBuilder conditionExp) (map extractBuilder branchExps)
 
 -- Fourier transform on complex expression
-instance (IsShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
+instance (ToShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
   ft :: TypedExpr d C -> TypedExpr d C
   ft = unary ft
 
@@ -230,16 +217,16 @@ instance (IsShape d) => FTOp (TypedExpr d C) (TypedExpr d C) where
   ift = unary ift
 
 -- |
-instance (KnownNat n) => RotateOp Int (TypedExpr (D1 n) et) where
-  rotate :: Int -> TypedExpr (D1 n) et -> TypedExpr (D1 n) et
+instance (KnownNat n) => RotateOp Int (TypedExpr '[n] et) where
+  rotate :: Int -> TypedExpr '[n] et -> TypedExpr '[n] et
   rotate x = unary (rotate [x])
 
-instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (TypedExpr (D2 m n) et) where
-  rotate :: (Int, Int) -> TypedExpr (D2 m n) et -> TypedExpr (D2 m n) et
+instance (KnownNat m, KnownNat n) => RotateOp (Int, Int) (TypedExpr '[m, n] et) where
+  rotate :: (Int, Int) -> TypedExpr '[m, n] et -> TypedExpr '[m, n] et
   rotate (x, y) = unary (rotate [x, y])
 
-instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (TypedExpr (D3 m n p) et) where
-  rotate :: (Int, Int, Int) -> TypedExpr (D3 m n p) et -> TypedExpr (D3 m n p) et
+instance (KnownNat m, KnownNat n, KnownNat p) => RotateOp (Int, Int, Int) (TypedExpr '[m, n, p] et) where
+  rotate :: (Int, Int, Int) -> TypedExpr '[m, n, p] et -> TypedExpr '[m, n, p] et
   rotate (x, y, z) = unary (rotate [x, y, z])
 
 -------------------------------------------------------------------------------
@@ -261,7 +248,7 @@ instance
     KnownNat n,
     i < n
   ) =>
-  ProjectInjectOp (Proxy i) (TypedExpr (D1 n) et) (TypedExpr Scalar et)
+  ProjectInjectOp (Proxy i) (TypedExpr '[n] et) (TypedExpr Scalar et)
   where
   project _ = unary (project [At $ nat @i])
   inject _ = binary (inject [At $ nat @i])
@@ -272,7 +259,7 @@ instance
     (start < n, end < n, 0 < step),
     res ~ Size start end step n
   ) =>
-  ProjectInjectOp (Proxy '(start, end, step)) (TypedExpr (D1 n) et) (TypedExpr (D1 res) et)
+  ProjectInjectOp (Proxy '(start, end, step)) (TypedExpr '[n] et) (TypedExpr '[res] et)
   where
   project _ = unary (project [Range (nat @start) (nat @end) (nat @step)])
   inject _ = binary (inject [Range (nat @start) (nat @end) (nat @step)])
@@ -283,7 +270,7 @@ instance
     (KnownNat i, i < m),
     (KnownNat j, j < n)
   ) =>
-  ProjectInjectOp (Proxy i, Proxy j) (TypedExpr (D2 m n) et) (TypedExpr Scalar et)
+  ProjectInjectOp (Proxy i, Proxy j) (TypedExpr '[m, n] et) (TypedExpr Scalar et)
   where
   project _ = unary (project [At (nat @i), At (nat @j)])
   inject _ = binary (inject [At (nat @i), At (nat @j)])
@@ -296,7 +283,7 @@ instance
     (startM < m, endM < m, 0 < stepM),
     resM ~ Size startM endM stepM m
   ) =>
-  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (TypedExpr (D2 m n) et) (TypedExpr (D1 resM) et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy j) (TypedExpr '[m, n] et) (TypedExpr '[resM] et)
   where
   project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
   inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), At (nat @j)])
@@ -309,7 +296,7 @@ instance
     (startN < n, endN < n, 0 < stepN),
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (TypedExpr (D2 m n) et) (TypedExpr (D1 resN) et)
+  ProjectInjectOp (Proxy i, Proxy '(startN, endN, stepN)) (TypedExpr '[m, n] et) (TypedExpr '[resN] et)
   where
   project _ = unary (project [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
   inject _ = binary (inject [At (nat @i), Range (nat @startN) (nat @endN) (nat @stepN)])
@@ -324,7 +311,7 @@ instance
     resM ~ Size startM endM stepM m,
     resN ~ Size startN endN stepN n
   ) =>
-  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (TypedExpr (D2 m n) et) (TypedExpr (D2 resM resN) et)
+  ProjectInjectOp (Proxy '(startM, endM, stepM), Proxy '(startN, endN, stepN)) (TypedExpr '[m, n] et) (TypedExpr '[resM, resN] et)
   where
   project _ = unary (project [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
   inject _ = binary (inject [Range (nat @startM) (nat @endM) (nat @stepM), Range (nat @startN) (nat @endN) (nat @stepN)])
@@ -335,19 +322,19 @@ instance
 
 instance
   (KnownNat m, KnownNat n, KnownNat p) =>
-  MatrixMulOp (TypedExpr (D2 m n) et) (TypedExpr (D2 n p) et) (TypedExpr (D2 m p) et)
+  MatrixMulOp (TypedExpr '[m, n] et) (TypedExpr '[n, p] et) (TypedExpr '[m, p] et)
   where
   (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
-  MatrixMulOp (TypedExpr (D2 m n) et) (TypedExpr (D1 n) et) (TypedExpr (D1 m) et)
+  MatrixMulOp (TypedExpr '[m, n] et) (TypedExpr '[n] et) (TypedExpr '[m] et)
   where
   (**) = binary (**)
 
 instance
   (KnownNat m, KnownNat n) =>
-  TransposeOp (TypedExpr (D2 m n) et) (TypedExpr (D2 n m) et)
+  TransposeOp (TypedExpr '[m, n] et) (TypedExpr '[n, m] et)
   where
   transpose = unary transpose
 
@@ -365,13 +352,13 @@ ranges = Proxy
 -------------------------------------------------------------------------------
 
 -- | General version of creating variables, parameters, constants
-gvariable :: forall d. IsShape d => String -> TypedExpr d R
+gvariable :: forall d. ToShape d => String -> TypedExpr d R
 gvariable name = TypedExpr $ introduceNode (toShape @d, R, Var name)
 
-gparam :: forall d. IsShape d => String -> TypedExpr d R
+gparam :: forall d. ToShape d => String -> TypedExpr d R
 gparam name = TypedExpr $ introduceNode (toShape @d, R, Param name)
 
-gconstant :: forall d. IsShape d => Double -> TypedExpr d R
+gconstant :: forall d. ToShape d => Double -> TypedExpr d R
 gconstant value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 
 ---- | Auxiliary for creating variables
@@ -385,14 +372,14 @@ gconstant value = TypedExpr $ introduceNode (toShape @d, R, Const value)
 variable :: String -> TypedExpr Scalar R
 variable = gvariable @Scalar
 
-variable1D :: forall n. (KnownNat n) => String -> TypedExpr (D1 n) R
-variable1D = gvariable @(D1 n)
+variable1D :: forall n. (KnownNat n) => String -> TypedExpr '[n] R
+variable1D = gvariable @'[n]
 
-variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr (D2 m n) R
-variable2D = gvariable @(D2 m n)
+variable2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr '[m, n] R
+variable2D = gvariable @'[m, n]
 
-variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr (D3 m n p) R
-variable3D = gvariable @(D3 m n p)
+variable3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr '[m, n, p] R
+variable3D = gvariable @'[m, n, p]
 
 --
 -- @
@@ -404,14 +391,14 @@ variable3D = gvariable @(D3 m n p)
 constant :: Double -> TypedExpr Scalar R
 constant = gconstant @Scalar
 
-constant1D :: forall n. (KnownNat n) => Double -> TypedExpr (D1 n) R
-constant1D = gconstant @(D1 n)
+constant1D :: forall n. (KnownNat n) => Double -> TypedExpr '[n] R
+constant1D = gconstant @'[n]
 
-constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> TypedExpr (D2 m n) R
-constant2D = gconstant @(D2 m n)
+constant2D :: forall m n. (KnownNat m, KnownNat n) => Double -> TypedExpr '[m, n] R
+constant2D = gconstant @'[m, n]
 
-constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> TypedExpr (D3 m n p) R
-constant3D = gconstant @(D3 m n p)
+constant3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => Double -> TypedExpr '[m, n, p] R
+constant3D = gconstant @'[m, n, p]
 
 ---- | Auxiliary for creating parameters
 --
@@ -424,11 +411,11 @@ constant3D = gconstant @(D3 m n p)
 param :: String -> TypedExpr Scalar R
 param = gparam @Scalar
 
-param1D :: forall n. (KnownNat n) => String -> TypedExpr (D1 n) R
-param1D = gparam @(D1 n)
+param1D :: forall n. (KnownNat n) => String -> TypedExpr '[n] R
+param1D = gparam @'[n]
 
-param2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr (D2 m n) R
-param2D = gparam @(D2 m n)
+param2D :: forall m n. (KnownNat m, KnownNat n) => String -> TypedExpr '[m, n] R
+param2D = gparam @'[m, n]
 
-param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr (D3 m n p) R
-param3D = gparam @(D3 m n p)
+param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr '[m, n, p] R
+param3D = gparam @'[m, n, p]
