@@ -1,9 +1,9 @@
 module Examples.LogisticRegression where
 
 import HashedExpression
+import HashedExpression.Modeling.Typed
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
-import HashedExpression.Modeling.Typed
 
 sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
@@ -26,9 +26,12 @@ ex2_logisticRegression =
           values =
             [ x :-> VFile (TXT "x_expanded.txt"),
               y :-> VFile (TXT "y.txt")
-            ],
-          workingDir = "examples" </> "LogisticRegression"
+            ]
         }
 
 ex2 :: IO ()
-ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText, maxIteration = Nothing}
+ex2 =
+  proceed
+    ex2_logisticRegression
+    CSimpleConfig {output = OutputText, maxIteration = Nothing}
+    ("examples" </> "LogisticRegression")

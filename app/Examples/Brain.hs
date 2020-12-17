@@ -1,9 +1,9 @@
 module Examples.Brain where
 
 import HashedExpression
+import HashedExpression.Modeling.Typed
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
-import HashedExpression.Modeling.Typed
 
 brain_reconstructFromMRI :: OptimizationProblem
 brain_reconstructFromMRI =
@@ -26,9 +26,12 @@ brain_reconstructFromMRI =
             [ im :-> VFile (HDF5 "kspace.h5" "im"),
               re :-> VFile (HDF5 "kspace.h5" "re"),
               mask :-> VFile (HDF5 "mask.h5" "mask")
-            ],
-          workingDir = "examples" </> "Brain"
+            ]
         }
 
 brain :: IO ()
-brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5, maxIteration = Nothing}
+brain =
+  proceed
+    brain_reconstructFromMRI
+    CSimpleConfig {output = OutputHDF5, maxIteration = Nothing}
+    ("examples" </> "Brain")

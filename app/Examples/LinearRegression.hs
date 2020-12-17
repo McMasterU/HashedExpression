@@ -18,9 +18,8 @@ ex1_linearRegression =
           values =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
-            ],
-          workingDir = "examples" </> "LinearRegression"
+            ]
         }
 
 ex1 :: IO ()
-ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText, maxIteration = Nothing}
+ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText, maxIteration = Nothing} ("examples" </> "LinearRegression")

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- |
 -- Module      :  HashedExpression.Codegen.CSimple
 -- Copyright   :  (c) OCA 2020
@@ -500,11 +502,10 @@ instance Codegen CSimpleConfig where
             | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
             | otherwise =
               renderTemplate
-                ( [ ("name", tt name),
-                    ("size", tt $ product shape),
-                    ("offset", tt offset)
-                  ]
-                )
+                [ ("name", tt name),
+                  ("size", tt $ product shape),
+                  ("offset", tt offset)
+                ]
                 randomizeValueTemplate
             where
               offset = addressReal nId
@@ -548,7 +549,7 @@ instance Codegen CSimpleConfig where
                 ("scalarConstraintOffsets", T.intercalate ", " $ map tt scalarConstraintOffsets),
                 ( "scalarConstraintPartialDerivativeOffsets",
                   T.intercalate ", " $
-                    map (\xs -> "{" <> (T.intercalate ", " $ map tt xs) <> "}") scalarConstraintPartialDerivativeOffsets
+                    map (\xs -> "{" <> T.intercalate ", " (map tt xs) <> "}") scalarConstraintPartialDerivativeOffsets
                 ),
                 ("readBounds", readBounds),
                 ("readBoundScalarConstraints", tt readBoundScalarConstraints),

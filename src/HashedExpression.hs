@@ -46,9 +46,6 @@ import HashedExpression.Problem
 import HashedExpression.Value
 import Prelude hiding ((**), (^))
 
-data ValueAssignment
-  = forall e. IsExpression e => e :-> Val
-
 mkValMap :: [ValueAssignment] -> ValMap
 mkValMap ss = Map.fromList $ mapMaybe f ss
   where
@@ -59,20 +56,20 @@ mkValMap ss = Map.fromList $ mapMaybe f ss
       where
         (mp, nID) = asRawExpr e
 
-data OptimizationProblem = forall e.
-  IsScalarReal e =>
-  OptimizationProblem
-  { objective :: e,
-    constraints :: [ConstraintStatement],
-    values :: [ValueAssignment],
-    workingDir :: String
-  }
-
-proceed :: Codegen codegen => OptimizationProblem -> codegen -> IO ()
-proceed OptimizationProblem {..} codegen = do
-  case constructProblem objective (Constraint constraints) of
-    Right problem ->
-      case generateProblemCode codegen problem (mkValMap values) of
-        Right ok -> ok workingDir
-        Left reason -> putStrLn reason
-    Left reason -> putStrLn reason
+proceed ::
+  Codegen codegen =>
+  -- | the optimization problem to solve
+  OptimizationProblem ->
+  -- | code generator
+  codegen ->
+  -- | working directory
+  FilePath ->
+  IO ()
+proceed OptimizationProblem {..} codegen workingDir = case constructProblemAndGenCode of
+  Right ok -> ok workingDir
+  Left reason -> putStrLn reason
+  where
+    constructProblemAndGenCode :: Either String (FilePath -> IO ())
+    constructProblemAndGenCode = do
+      problem <- constructProblem objective (Constraint constraints)
+      generateProblemCode codegen problem (mkValMap values)

@@ -32,7 +32,7 @@ data DataFile
     HDF5 FilePath Dataset
   deriving (Eq, Show, Ord)
 
--- | A value in a Symphony problem.
+-- | A value
 data Val
   = -- | Constant scalar double value
     VScalar Double

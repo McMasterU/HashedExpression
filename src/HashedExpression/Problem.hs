@@ -30,6 +30,15 @@ import HashedExpression.Prettify
 import HashedExpression.Value
 
 -------------------------------------------------------------------------------
+data ValueAssignment = forall e. IsExpression e => e :-> Val
+
+data OptimizationProblem = forall e.
+  IsScalarReal e =>
+  OptimizationProblem
+  { objective :: e,
+    constraints :: [ConstraintStatement],
+    values :: [ValueAssignment]
+  }
 
 -- | Representation of a variable in an optimization problem
 data Variable = Variable

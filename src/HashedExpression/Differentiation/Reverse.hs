@@ -56,7 +56,7 @@ partialDerivativesMap scalarRealExp =
               addDerivative x dX
           Mul args -> do
             forM_ (removeEach args) $ \(x, rest) -> do
-              productRest <- perform (Nary specMul) rest
+              productRest <- product_ $ map from rest
               case et of
                 R -> do
                   dX <- from dN * from productRest
