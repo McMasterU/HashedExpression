@@ -30,15 +30,6 @@ import HashedExpression.Prettify
 import HashedExpression.Value
 
 -------------------------------------------------------------------------------
-data ValueAssignment = forall e. IsExpression e => e :-> Val
-
-data OptimizationProblem = forall e.
-  IsScalarReal e =>
-  OptimizationProblem
-  { objective :: e,
-    constraints :: [ConstraintStatement],
-    values :: [ValueAssignment]
-  }
 
 -- | Representation of a variable in an optimization problem
 data Variable = Variable
@@ -136,6 +127,9 @@ data ConstraintStatement
   | -- | A constraint with a lower and upper bound
     Between RawExpr (Val, Val)
   deriving (Show, Eq, Ord)
+
+data NewConstraint
+  = NewConstraintBox String String
 
 -- * Functions for creating 'ConstraintStatement's.
 

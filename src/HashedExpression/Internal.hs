@@ -208,29 +208,24 @@ extract mp collect = mapMaybe collect $ IM.toList mp
 
 -- | Retrieves all 'Var' nodes in an (unwrapped) 'TypedExpr'
 varsWithNodeID :: ExpressionMap -> [(String, NodeID)]
-varsWithNodeID mp = extract
-  mp
-  \case
-    (nId, (_, _, Var name)) -> Just (name, NodeID nId)
-    _ -> Nothing
+varsWithNodeID mp = extract mp \case
+  (nId, (_, _, Var name)) -> Just (name, NodeID nId)
+  _ -> Nothing
 
 paramsWithNodeID :: ExpressionMap -> [(String, NodeID)]
-paramsWithNodeID mp = extract mp $
-  \case
-    (nId, (_, _, Param name)) -> Just (name, NodeID nId)
-    _ -> Nothing
+paramsWithNodeID mp = extract mp $ \case
+  (nId, (_, _, Param name)) -> Just (name, NodeID nId)
+  _ -> Nothing
 
 varNodes :: ExpressionMap -> [(String, Shape, NodeID)]
-varNodes mp = extract mp $
-  \case
-    (nID, (shape, _, Var varName)) -> Just (varName, shape, NodeID nID)
-    _ -> Nothing
+varNodes mp = extract mp $ \case
+  (nID, (shape, _, Var varName)) -> Just (varName, shape, NodeID nID)
+  _ -> Nothing
 
 paramNodes :: ExpressionMap -> [(String, Shape, NodeID)]
-paramNodes mp = extract mp $
-  \case
-    (nID, (shape, _, Param varName)) -> Just (varName, shape, NodeID nID)
-    _ -> Nothing
+paramNodes mp = extract mp $ \case
+  (nID, (shape, _, Param varName)) -> Just (varName, shape, NodeID nID)
+  _ -> Nothing
 
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation
 containsFTNode :: ExpressionMap -> Bool
