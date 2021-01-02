@@ -174,6 +174,23 @@ mergeToMain (mp, nID) = do
   return mergedNID
 
 --------------------------------------------------------------------------------
+
+-- | Construct a Problem from given objective function and constraints
+constructProblem :: IsScalarReal e => e -> [ConstraintDecl] -> Either String Problem
+constructProblem objectiveFunction cs =
+  fst <$> runStateT (constructProblemHelper simplifiedObjective simplifiedConstraint) IM.empty
+  where
+    simplifiedObjective = simplify $ asRawExpr objectiveFunction
+    simplifiedConstraint =
+      cs
+        & map
+          ( \case
+              GeneralUpperDecl e ub -> GeneralUpperDecl (simplify e) ub
+              GeneralLowerDecl e lb -> GeneralLowerDecl (simplify e) lb
+              GeneralEqualDecl e eb -> GeneralEqualDecl (simplify e) eb
+          )
+
+--------------------------------------------------------------------------------
 constructProblemHelper :: IsScalarReal e => e -> [ConstraintDecl] -> ProblemConstructingM Problem
 constructProblemHelper objective constraints = do
   let generalConstraintDecls :: [(RawExpr, (Double, Double))]
