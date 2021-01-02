@@ -10,14 +10,14 @@
 
 #define M 10
 
-#define WORKING_SPACE ((2 * M + 5) * (NUM_ACTUAL_VARIABLES + 1) + 12 * M * M + 12 * M)
+#define WORKING_SPACE ((2 * M + 5) * (NUM_VARIABLES + 1) + 12 * M * M + 12 * M)
 
-extern const char* var_name[NUM_VARIABLES];
-extern const int var_num_dim[NUM_VARIABLES];
-extern const int var_shape[NUM_VARIABLES][3];
-extern const int var_size[NUM_VARIABLES];
-extern const int var_offset[NUM_VARIABLES];
-extern const int partial_derivative_offset[NUM_VARIABLES];
+extern const char* var_name[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_num_dim[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_shape[NUM_HIGH_DIMENSIONAL_VARIABLES][3];
+extern const int var_size[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int partial_derivative_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
 extern const int objective_offset;
 
 extern double ptr[MEMORY_NUM_DOUBLES];
@@ -42,19 +42,19 @@ int main() {
     static integer *csave=&csaveValue;
 
     // f - objective, g - gradient
-    static double f, g[NUM_ACTUAL_VARIABLES];
+    static double f, g[NUM_VARIABLES];
     static double* x = ptr + VARS_START_OFFSET;
     // l - lower bound, u - upper bound
     // nbd(i)= 0 if x(i) is unbounded,
     //         1 if x(i) has only a lower bound,
     //         2 if x(i) has both lower and upper bounds, and
     //         3 if x(i) has only an upper bound.
-    static double l[NUM_ACTUAL_VARIABLES], u[NUM_ACTUAL_VARIABLES];
-    static integer nbd[NUM_ACTUAL_VARIABLES];
+    static double l[NUM_VARIABLES], u[NUM_VARIABLES];
+    static integer nbd[NUM_VARIABLES];
 
     // m - number of gradient vectors use to approximate hessian
     // n - number of variables
-    static integer m = M, n = NUM_ACTUAL_VARIABLES;
+    static integer m = M, n = NUM_VARIABLES;
 
     // wa - working space
     // the size is at least (2mmax + 5)nmax + 12mmax^2 + 12mmax.
@@ -62,7 +62,7 @@ int main() {
 
     // iwa is an INTEGER  array of length 3nmax used as
     //   workspace. DON'T TOUCH
-    static integer iwa[3 * NUM_ACTUAL_VARIABLES + 5];
+    static integer iwa[3 * NUM_VARIABLES + 5];
 
 
     // MARK - STOPPING CRITERIA
@@ -107,7 +107,7 @@ int main() {
     read_bounds();
 
     // bounds
-    for (i = 0; i < NUM_ACTUAL_VARIABLES; i++) {
+    for (i = 0; i < NUM_VARIABLES; i++) {
       l[i] = lower_bound[i];
       u[i] = upper_bound[i];
       if (lower_bound[i] == -INFINITY && upper_bound[i] == INFINITY) {
@@ -138,7 +138,7 @@ L111:
         evaluate_partial_derivatives_and_objective();
 
         int cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             g[cnt] = ptr[partial_derivative_offset[i] + j];
             cnt++;

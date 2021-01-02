@@ -8,12 +8,12 @@
 
 #define oo 10000000
 
-extern const char* var_name[NUM_VARIABLES];
-extern const int var_num_dim[NUM_VARIABLES];
-extern const int var_shape[NUM_VARIABLES][3];
-extern const int var_size[NUM_VARIABLES];
-extern const int var_offset[NUM_VARIABLES];
-extern const int partial_derivative_offset[NUM_VARIABLES];
+extern const char* var_name[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_num_dim[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_shape[NUM_HIGH_DIMENSIONAL_VARIABLES][3];
+extern const int var_size[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int partial_derivative_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
 extern const int objective_offset;
 extern double ptr[MEM_SIZE];
 
@@ -33,7 +33,7 @@ double random_in(double min, double max) {
 
 bool any_partial_derivative_NaN() {
   int i, j;
-  for (i = 0; i < NUM_VARIABLES; i++) {
+  for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
     for (j = 0; j < var_size[i]; j++) {
       if (isnan(ptr[partial_derivative_offset[i] + j])) {
         return true;
@@ -48,7 +48,7 @@ int main() {
   srand(time(NULL));
   int i, j, cnt;
   int total_variable_size = 0;
-  for (i = 0; i < NUM_VARIABLES; i++) {
+  for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
     total_variable_size = total_variable_size + var_size[i];
   }
 
@@ -60,7 +60,7 @@ int main() {
 
   while (true) {
     // initialize optimizing variables
-    for (i = 0; i < NUM_VARIABLES; i++) {
+    for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
       for (j = 0; j < var_size[i]; j++) {
         ptr[var_offset[i] + j] = random_in(0, 1);
       }
@@ -73,7 +73,7 @@ int main() {
     while (iter < MAX_ITER) {
       // save the state of all variables
       cnt = 0;
-      for (i = 0; i < NUM_VARIABLES; i++) {
+      for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
         for (j = 0; j < var_size[i]; j++) {
           var_temp[cnt] = ptr[var_offset[i] + j];
           grad_temp[cnt] = ptr[partial_derivative_offset[i] + j];
@@ -84,7 +84,7 @@ int main() {
       // fx
       double fx = ptr[objective_offset];
       double minus_dot_grad = 0;
-      for (i = 0; i < NUM_VARIABLES; i++) {
+      for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
         for (j = 0; j < var_size[i]; j++) {
           minus_dot_grad = minus_dot_grad - (ptr[partial_derivative_offset[i] + j] * ptr[partial_derivative_offset[i] + j]);
         }
@@ -96,7 +96,7 @@ int main() {
       // after while, x still the same
       while (t > 0) {
         cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             ptr[var_offset[i] + j] -= t * grad_temp[cnt];
             cnt++;
@@ -106,7 +106,7 @@ int main() {
 
 
         cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             ptr[var_offset[i] + j] = var_temp[cnt];
             cnt++;
@@ -127,7 +127,7 @@ int main() {
       while (t > 0 && any_partial_derivative_NaN()) {
         t = t / 2;
         cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             var_temp[cnt] = ptr[var_offset[i] + j];
             cnt++;
@@ -135,7 +135,7 @@ int main() {
         }
 
         cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             ptr[var_offset[i] + j] -= t * grad_temp[cnt];
             cnt++;
@@ -143,7 +143,7 @@ int main() {
         }
         evaluate_partial_derivatives_and_objective();
         cnt = 0;
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             ptr[var_offset[i] + j] = var_temp[cnt];
             cnt++;
@@ -160,7 +160,7 @@ int main() {
       double max_step = 0;
       // OK now we have a good t, let's update
       cnt = 0;
-      for (i = 0; i < NUM_VARIABLES; i++) {
+      for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
         for (j = 0; j < var_size[i]; j++) {
           double step = -t * grad_temp[cnt];
           ptr[var_offset[i] + j] += step;
@@ -189,7 +189,7 @@ int main() {
       printf("Writing result to output.txt...\n");
       FILE *fp = fopen("output.txt", "w");
       if (fp) {
-        for (i = 0; i < NUM_VARIABLES; i++) {
+        for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
           for (j = 0; j < var_size[i]; j++) {
             fprintf(fp, "%f ", ptr[var_offset[i] + j]);
           }

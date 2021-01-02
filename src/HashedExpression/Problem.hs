@@ -147,11 +147,6 @@ constructProblemHelper objective constraints = do
   when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
     throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
-  -- forM_ constraints checkConstraint
-  -- let (boxCS, scalarCS) = partition isBoxConstraint constraints
-  -- let boxConstraints = map toBoxConstraint boxCS
-  -- let expScalarConstraints = Set.toList . Set.fromList . map getExpressionCS $ scalarCS
-  -------------------------------------------------------------------------------
   let processF f = do
         fID <- mergeToMain f
         curMp <- get
@@ -217,20 +212,3 @@ constructProblemHelper objective constraints = do
         boxConstraints = boxConstraints,
         generalConstraints = generalConstraints
       }
-
--- where
---   -------------------------------------------------------------------------------
---   checkConstraint :: ConstraintDecl -> ProblemConstructingM ()
---   checkConstraint cs = return ()
-
--- let (mp, n) = getExpressionCS cs
--- case retrieveNode n mp of
---   (shape, _, Var var) -- if it is a var, then should be box constraint
---     | not . all (compatible shape) $ getValCS cs ->
---       throwError $ "Bound for " ++ var ++ " is not in the right shape"
---     | otherwise -> return ()
---   ([], _, _)
---     | not . all (compatible []) $ getValCS cs ->
---       throwError "Scalar expression must be bounded by scalar value"
---     | otherwise -> return ()
---   _ -> throwError "Only scalar inequality and box constraint are supported"

@@ -13,26 +13,26 @@
 #include "problem.c"
 
 /* problem.c Declarations */
-extern const char* var_name[NUM_VARIABLES];
-extern const int var_num_dim[NUM_VARIABLES];
-/* extern const int var_shape[NUM_VARIABLES][3]; */
-extern const int var_size[NUM_VARIABLES];
-extern const int var_offset[NUM_VARIABLES];
-extern const int partial_derivative_offset[NUM_VARIABLES];
+extern const char* var_name[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_num_dim[NUM_HIGH_DIMENSIONAL_VARIABLES];
+/* extern const int var_shape[NUM_HIGH_DIMENSIONAL_VARIABLES][3]; */
+extern const int var_size[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int var_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern const int partial_derivative_offset[NUM_HIGH_DIMENSIONAL_VARIABLES];
 extern const int objective_offset;
 
 extern double ptr[MEMORY_NUM_DOUBLES];
 extern complex double ptr_c[MEMORY_NUM_COMPLEX_DOUBLES];
 
-extern const int bound_pos[NUM_VARIABLES];
-extern double lower_bound[NUM_ACTUAL_VARIABLES];
-extern double upper_bound[NUM_ACTUAL_VARIABLES];
+extern const int bound_pos[NUM_HIGH_DIMENSIONAL_VARIABLES];
+extern double lower_bound[NUM_VARIABLES];
+extern double upper_bound[NUM_VARIABLES];
 
-extern double sc_lower_bound[NUM_SCALAR_CONSTRAINT];
-extern double sc_upper_bound[NUM_SCALAR_CONSTRAINT];
-extern const int sc_offset[NUM_SCALAR_CONSTRAINT];
+extern double sc_lower_bound[NUM_GENERAL_CONSTRAINT];
+extern double sc_upper_bound[NUM_GENERAL_CONSTRAINT];
+extern const int sc_offset[NUM_GENERAL_CONSTRAINT];
 
-extern const int sc_partial_derivative_offset[NUM_SCALAR_CONSTRAINT][NUM_VARIABLES];
+extern const int sc_partial_derivative_offset[NUM_GENERAL_CONSTRAINT][NUM_HIGH_DIMENSIONAL_VARIABLES];
 
 extern void read_values();
 extern void read_bounds();
@@ -136,15 +136,15 @@ int main()
   // TODO remove unnecessary declerations above
 
   /* set number of variables and constraints */
-   n = NUM_ACTUAL_VARIABLES; m = NUM_SCALAR_CONSTRAINT;
+   n = NUM_VARIABLES; m = NUM_GENERAL_CONSTRAINT;
 
    /* initializes bounds for variables and constraints
       (lower_bound,upper_bound,sc_lower_bound,sc_upper_bound) */
    read_bounds();
 
    /* set the number of nonzeros in the Jacobian and Hessian */
-   nele_jac = NUM_ACTUAL_VARIABLES*NUM_SCALAR_CONSTRAINT;  // TODO use sparse jacobian?
-   nele_hess = NUM_ACTUAL_VARIABLES*NUM_ACTUAL_VARIABLES; // TODO use sparse hessian?
+   nele_jac = NUM_VARIABLES*NUM_GENERAL_CONSTRAINT;  // TODO use sparse jacobian?
+   nele_hess = NUM_VARIABLES*NUM_VARIABLES; // TODO use sparse hessian?
 
    /* set the indexing style to C-style (start counting of rows and column indices at 0) */
    index_style = 0;
@@ -173,9 +173,9 @@ int main()
    x = ptr + VARS_START_OFFSET;
 
    /* allocate space to store the bound multipliers at the solution */
-   mult_g = (Number*) malloc(sizeof(Number) * NUM_SCALAR_CONSTRAINT);
-   mult_x_L = (Number*) malloc(sizeof(Number) * NUM_ACTUAL_VARIABLES);
-   mult_x_U = (Number*) malloc(sizeof(Number) * NUM_ACTUAL_VARIABLES);
+   mult_g = (Number*) malloc(sizeof(Number) * NUM_GENERAL_CONSTRAINT);
+   mult_x_L = (Number*) malloc(sizeof(Number) * NUM_VARIABLES);
+   mult_x_U = (Number*) malloc(sizeof(Number) * NUM_VARIABLES);
 
    /* Set the callback method for intermediate user-control.
     * This is not required, just gives you some intermediate control in
@@ -193,22 +193,22 @@ int main()
    if( status == Solve_Succeeded )
    {
       printf("\n\nSolution of the primal variables, x\n");
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
+      for( i = 0; i < NUM_VARIABLES; i++ )
       {
          printf("x[%d] = %e\n", i, x[i]);
       }
 
       printf("\n\nSolution of the constraint multipliers, lambda\n");
-      for( i = 0; i < NUM_SCALAR_CONSTRAINT; i++ )
+      for( i = 0; i < NUM_GENERAL_CONSTRAINT; i++ )
       {
          printf("lambda[%d] = %e\n", i, mult_g[i]);
       }
       printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
+      for( i = 0; i < NUM_VARIABLES; i++ )
       {
          printf("z_L[%d] = %e\n", i, mult_x_L[i]);
       }
-      for( i = 0; i < NUM_ACTUAL_VARIABLES; i++ )
+      for( i = 0; i < NUM_VARIABLES; i++ )
       {
          printf("z_U[%d] = %e\n", i, mult_x_U[i]);
       }
@@ -240,7 +240,7 @@ Bool eval_f(
    UserDataPtr _
 )
 {
-  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_VARIABLES);
   evaluate_objective();
   *obj_value = ptr[objective_offset];
 
@@ -255,7 +255,7 @@ Bool eval_grad_f(
    UserDataPtr _
 )
 {
-  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_VARIABLES);
   evaluate_partial_derivatives();
 
   /* copy partial derivatives from shared memory into grad_f
@@ -263,7 +263,7 @@ Bool eval_grad_f(
    *       sequentially in memory
    */
   int acc = 0; int i;
-  for (i = 0; i < NUM_VARIABLES; i++) {
+  for (i = 0; i < NUM_HIGH_DIMENSIONAL_VARIABLES; i++) {
     memcpy(grad_f + acc, ptr + partial_derivative_offset[i], sizeof(Number) * var_size[i]);
     acc += var_size[i];
   }
@@ -280,13 +280,13 @@ Bool eval_g(
    UserDataPtr _
 )
 {
-  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
+  memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_VARIABLES);
   evaluate_scalar_constraints();
 
   // TODO scalar constraints are always ... scalars right?
   //      like each constraint always evaluates to a single double?
   int i;
-  for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
+  for (i = 0; i < NUM_GENERAL_CONSTRAINT; i++) {
     g[i] = ptr[sc_offset[i]];
   }
   return TRUE;
@@ -313,21 +313,21 @@ Bool eval_jac_g(
        */
      int i;
      for (i = 0; i < nele_jac; i++) {
-       iRow[i] = i / NUM_ACTUAL_VARIABLES;
-       jCol[i] = i % NUM_ACTUAL_VARIABLES;
+       iRow[i] = i / NUM_VARIABLES;
+       jCol[i] = i % NUM_VARIABLES;
      }
    }
    else
    {
      /* evaluate jacobian of the constraints */
-     memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_ACTUAL_VARIABLES);
+     memcpy(ptr + VARS_START_OFFSET, x, sizeof(Number) * NUM_VARIABLES);
      evaluate_scalar_constraints_jacobian();
 
      /* return the values of the jacobian of the constraints */
      /* FIXME does accumulation ever cause a bad access? */
      int i, j, acc = 0;
-     for (i = 0; i < NUM_SCALAR_CONSTRAINT; i++) {
-       for (j = 0; j < NUM_VARIABLES; j++) {
+     for (i = 0; i < NUM_GENERAL_CONSTRAINT; i++) {
+       for (j = 0; j < NUM_HIGH_DIMENSIONAL_VARIABLES; j++) {
          memcpy(values + acc, ptr + sc_partial_derivative_offset[i][j], sizeof(Number) * var_size[j]);
          acc += var_size[j];
        }

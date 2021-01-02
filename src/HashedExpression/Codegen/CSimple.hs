@@ -464,19 +464,19 @@ instance Codegen CSimpleConfig where
           getShape nID = retrieveShape nID cExpressionMap
           addressReal nID = let AddressReal res = cAddress nID in res
           -------------------------------------------------------------------------------------------------
-          numHigherOrderVariables = length variables
+          numHighDimensionalVariables = length variables
           varStartOffset = addressReal . nodeId . head $ variables
-          numScalarConstraints = length generalConstraints
+          numGeneralConstraints = length generalConstraints
           varNames = map varName variables
           varSizes = map (product . getShape . nodeId) variables
-          numActualVariables = sum varSizes
+          numVariables = sum varSizes
           varNameWithStatingPosition = Map.fromList $ zip varNames $ take (length varSizes) $ scanl (+) 0 varSizes
           startingPositionByName name = fromJust $ Map.lookup name varNameWithStatingPosition
           varOffsets = map (addressReal . nodeId) variables
           partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
           objectiveOffset = addressReal objectiveId
-          scalarConstraintOffsets = map (addressReal . constraintValueId) generalConstraints
-          scalarConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) generalConstraints
+          generalConstraintOffsets = map (addressReal . constraintValueId) generalConstraints
+          generalConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) generalConstraints
           readBounds =
             let readUpperBoundCode name boundId =
                   generateReadValuesCode
@@ -493,7 +493,7 @@ instance Codegen CSimpleConfig where
                     BoxUpper name boundId -> readUpperBoundCode name boundId
                     BoxLower name boundId -> readLowerBoundCode name boundId
              in T.intercalate "\n" $ map readBoundCodeEach boxConstraints
-          readBoundScalarConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] generalConstraints
+          readBoundGeneralConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] generalConstraints
             where
               readBoundEach :: (Int, GeneralConstraint) -> Text
               readBoundEach (i, cs) =
@@ -538,25 +538,25 @@ instance Codegen CSimpleConfig where
       let codes =
             renderTemplate
               [ ("fftUtils", if containsFTNode cExpressionMap then tt $ fftUtils else ""),
-                ("numHigherOrderVariables", tt numHigherOrderVariables),
-                ("numActualVariables", tt numActualVariables),
+                ("numHighDimensionalVariables", tt numHighDimensionalVariables),
+                ("numVariables", tt numVariables),
                 ("totalDoubles", tt totalReal),
                 ("totalComplexes", tt totalComplex),
                 ("varStartOffset", tt varStartOffset),
                 ("maxNumIterations", tt $ fromMaybe 0 maxIteration),
-                ("numScalarConstraints", tt numScalarConstraints),
+                ("numGeneralConstraints", tt numGeneralConstraints),
                 ("varNames", T.intercalate ", " $ map ttq varNames),
                 ("varSizes", T.intercalate ", " $ map tt varSizes),
                 ("varOffsets", T.intercalate ", " $ map tt varOffsets),
                 ("partialDerivativeOffsets", T.intercalate ", " $ map tt partialDerivativeOffsets),
                 ("objectiveOffset", tt objectiveOffset),
-                ("scalarConstraintOffsets", T.intercalate ", " $ map tt scalarConstraintOffsets),
-                ( "scalarConstraintPartialDerivativeOffsets",
+                ("generalConstraintOffsets", T.intercalate ", " $ map tt generalConstraintOffsets),
+                ( "generalConstraintPartialDerivativeOffsets",
                   T.intercalate ", " $
-                    map (\xs -> "{" <> T.intercalate ", " (map tt xs) <> "}") scalarConstraintPartialDerivativeOffsets
+                    map (\xs -> "{" <> T.intercalate ", " (map tt xs) <> "}") generalConstraintPartialDerivativeOffsets
                 ),
                 ("readBounds", readBounds),
-                ("readBoundScalarConstraints", tt readBoundScalarConstraints),
+                ("readBoundGeneralConstraints", tt readBoundGeneralConstraints),
                 ("readValues", readValues),
                 ("writeResult", writeResult),
                 ("evaluatePartialDerivativesAndObjective", evaluating codegen $ objectiveId : map partialDerivativeId variables),
