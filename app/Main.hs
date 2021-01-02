@@ -9,4 +9,4 @@ import Examples.LogisticRegression
 import Examples.NeuralNetwork
 
 main :: IO ()
-main = ex4
+main = brain 
