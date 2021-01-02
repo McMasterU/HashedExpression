@@ -467,7 +467,7 @@ generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap = do
         -------------------------------------------------------------------------------------------------
         numHigherOrderVariables = length variables
         varStartOffset = addressReal . nodeId . head $ variables
-        numScalarConstraints = length scalarConstraints
+        numScalarConstraints = length generalConstraints
         varNames = map varName variables
         varSizes = map (product . getShape . nodeId) variables
         numActualVariables = sum varSizes
@@ -476,8 +476,8 @@ generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap = do
         varOffsets = map (addressReal . nodeId) variables
         partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
         objectiveOffset = addressReal objectiveId
-        scalarConstraintOffsets = map (addressReal . constraintValueId) scalarConstraints
-        scalarConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) scalarConstraints
+        scalarConstraintOffsets = map (addressReal . constraintValueId) generalConstraints
+        scalarConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) generalConstraints
         readBounds =
           let readUpperBoundCode name boundId =
                 generateReadValuesCode
@@ -494,9 +494,9 @@ generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap = do
                   BoxUpper name boundId -> readUpperBoundCode name boundId
                   BoxLower name boundId -> readLowerBoundCode name boundId
            in T.intercalate "\n" $ map readBoundCodeEach boxConstraints
-        readBoundScalarConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] scalarConstraints
+        readBoundScalarConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] generalConstraints
           where
-            readBoundEach :: (Int, ScalarConstraint) -> Text
+            readBoundEach :: (Int, GeneralConstraint) -> Text
             readBoundEach (i, cs) =
               T.intercalate
                 "\n"
@@ -563,8 +563,8 @@ generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap = do
               ("evaluatePartialDerivativesAndObjective", evaluating codegen $ objectiveId : map partialDerivativeId variables),
               ("evaluateObjective", evaluating codegen $ [objectiveId]),
               ("evaluatePartialDerivatives", evaluating codegen (map partialDerivativeId variables)),
-              ("evaluateScalarConstraints", evaluating codegen (map constraintValueId scalarConstraints)),
-              ("evaluateScalarConstraintsJacobian", evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
+              ("evaluateScalarConstraints", evaluating codegen (map constraintValueId generalConstraints)),
+              ("evaluateScalarConstraintsJacobian", evaluating codegen (concatMap constraintPartialDerivatives generalConstraints))
             ]
             cSimpleTemplate
     TIO.writeFile (folder </> "problem.c") codes

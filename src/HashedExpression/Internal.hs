@@ -196,7 +196,7 @@ createNode spec args =
 
 -------------------------------------------------------------------------------
 
--- | Create an unwrapped Expresion from a standalone 'Node'
+-- TODO: remove this
 fromNodeUnwrapped :: Node -> RawExpr
 fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
   where
@@ -225,6 +225,16 @@ varNodes mp = extract mp $ \case
 paramNodes :: ExpressionMap -> [(String, Shape, NodeID)]
 paramNodes mp = extract mp $ \case
   (nID, (shape, _, Param varName)) -> Just (varName, shape, NodeID nID)
+  _ -> Nothing
+
+varsWithShape :: ExpressionMap -> [(String, Shape)]
+varsWithShape mp = extract mp $ \case
+  (_, (shape, _, Var name)) -> Just (name, shape)
+  _ -> Nothing
+
+paramsWithShape :: ExpressionMap -> [(String, Shape)]
+paramsWithShape mp = extract mp $ \case
+  (_, (shape, _, Param name)) -> Just (name, shape)
   _ -> Nothing
 
 -- | Predicate determining if a 'ExpressionMap' contains a FT operation

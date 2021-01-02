@@ -257,22 +257,10 @@ mergeToMain (mp, nID) = do
   put mergedMp
   return mergedNID
 
-varsWithShape :: RawExpr -> [(String, Shape)]
-varsWithShape = mapMaybe collect . IM.toList . fst
-  where
-    collect (_, (shape, _, Var name)) = Just (name, shape)
-    collect _ = Nothing
-
-paramsWithShape :: RawExpr -> [(String, Shape)]
-paramsWithShape = mapMaybe collect . IM.toList . fst
-  where
-    collect (_, (shape, _, Param name)) = Just (name, shape)
-    collect _ = Nothing
-
 constructProblemHelper :: IsScalarReal e => e -> Constraint -> ProblemConstructingM Problem
 constructProblemHelper obj (Constraint constraints) = do
-  let vs = concatMap varsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
-  let ps = concatMap paramsWithShape $ asScalarRealRawExpr obj : map getExpressionCS constraints
+  let vs = concatMap (varsWithShape . fst) $ asScalarRealRawExpr obj : map getExpressionCS constraints
+  let ps = concatMap (paramsWithShape . fst) $ asScalarRealRawExpr obj : map getExpressionCS constraints
   when (Set.intersection (Set.fromList $ map fst vs) (Set.fromList $ map fst ps) /= Set.empty) $
     throwError "Variable and parameter must be of different name"
   -------------------------------------------------------------------------------
