@@ -19,6 +19,10 @@ def plot_image(data):
 
 plt.ion()
 
+print('Real part acquired by MRI...')
+bound = read_hdf5("bound.h5", "lb")
+plot_image(bound)
+input('Program paused. Press ENTER to continue')
 
 print('Real part acquired by MRI...')
 re = read_hdf5("kspace.h5", "re")
@@ -28,6 +32,11 @@ input('Program paused. Press ENTER to continue')
 print('Imaginary part acquired by MRI...')
 im = read_hdf5("kspace.h5", "im")
 plot_image(np.log(np.abs(im) + 1e-10))
+input('Program paused. Press ENTER to continue')
+
+print('Mask...')
+mask = read_hdf5("mask.h5", "mask")
+plot_image(mask)
 input('Program paused. Press ENTER to continue')
 
 print('Naively reconstruct by taking inverse Fourier Transform...')

@@ -47,8 +47,9 @@ import HashedExpression.Interp
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
-import Prelude hiding ((**), (^))
+import HashedExpression.Modeling.Typed
 
+import Prelude hiding ((**), (^))
 
 proceed ::
   Codegen codegen =>
@@ -67,3 +68,4 @@ proceed OptimizationProblem {..} codegen workingDir = case constructProblemAndGe
     constructProblemAndGenCode = do
       problem <- constructProblem objective constraints
       generateProblemCode codegen problem (mkValMap values)
+

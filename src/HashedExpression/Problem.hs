@@ -35,7 +35,6 @@ import HashedExpression.Modeling.Typed (TypedExpr)
 import HashedExpression.Prettify
 import HashedExpression.Value
 
-
 -------------------------------------------------------------------------------
 
 -- | Representation of a variable in an optimization problem
