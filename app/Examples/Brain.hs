@@ -17,9 +17,7 @@ brainReconstructFromMRI =
       re = param2D @128 @128 "re"
       mask = param2D @128 @128 "mask"
       -- regularization
-      regularization =
-        norm2square (rotate (0, 1) x - x)
-          + norm2square (rotate (1, 0) x - x)
+      regularization = norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x)
       lambda = 3000
    in OptimizationProblem
         { objective =

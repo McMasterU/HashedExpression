@@ -1,7 +1,7 @@
 # HashedExpression 
 [![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/m/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
 
-Type-safe modelling DSL, symbolic transformation, and code generation for solving optimization problems.
+Haskell-embeded Algebraic Modeling Language with type-safety, symbolic transformation and C-code generation 
 
 
 ## Features
@@ -86,12 +86,8 @@ ex1_linearRegression =
           values =
             [ x :-> VFile (TXT "x.txt"),
               y :-> VFile (TXT "y.txt")
-            ],
-          workingDir = "examples" </> "LinearRegression"
+            ]
         }
-
-ex1 :: IO ()
-ex1 = proceed ex1_linearRegression CSimpleConfig {output = OutputText}
 ```
 (`(*.)` is scaling )
 
@@ -126,12 +122,8 @@ ex2_logisticRegression =
           values =
             [ x :-> VFile (TXT "x_expanded.txt"),
               y :-> VFile (TXT "y.txt")
-            ],
-          workingDir = "examples" </> "LogisticRegression"
+            ]
         }
-
-ex2 :: IO ()
-ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
 ```
 
 ( `(**)` is matrix multiplication, `(<.>)` is dot product, `project (range @1 @27, at @0) theta` is the typed version of `theta[1:27,0]` )
@@ -144,33 +136,36 @@ ex2 = proceed ex2_logisticRegression CSimpleConfig {output = OutputText}
 Model is in [app/Examples/Brain.hs](app/Examples/Brain.hs), data is in [examples/Brain](examples/Brain)
 
 ```haskell
-brain_reconstructFromMRI :: OptimizationProblem
-brain_reconstructFromMRI =
+brainReconstructFromMRI :: OptimizationProblem
+brainReconstructFromMRI =
   let -- variables
       x = variable2D @128 @128 "x"
+      --- bound
+      xLowerBound = bound2D @128 @128 "x_lb"
+      xUpperBound = bound2D @128 @128 "x_ub"
       -- parameters
       im = param2D @128 @128 "im"
       re = param2D @128 @128 "re"
       mask = param2D @128 @128 "mask"
       -- regularization
+      regularization = norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x)
       lambda = 3000
-      regularization = lambda * (norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x))
    in OptimizationProblem
-        { objective = norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im))) + regularization,
+        { objective =
+            norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im)))
+              + lambda * regularization,
           constraints =
-            [ x .<= VFile (HDF5 "bound.h5" "ub"),
-              x .>= VFile (HDF5 "bound.h5" "lb")
+            [ x .<= xUpperBound,
+              x .>= xLowerBound
             ],
           values =
             [ im :-> VFile (HDF5 "kspace.h5" "im"),
               re :-> VFile (HDF5 "kspace.h5" "re"),
-              mask :-> VFile (HDF5 "mask.h5" "mask")
-            ],
-          workingDir = "examples" </> "Brain"
+              mask :-> VFile (HDF5 "mask.h5" "mask"),
+              xLowerBound :-> VFile (HDF5 "bound.h5" "lb"),
+              xUpperBound :-> VFile (HDF5 "bound.h5" "ub")
+            ]
         }
-
-brain :: IO ()
-brain = proceed brain_reconstructFromMRI CSimpleConfig {output = OutputHDF5}
 ```
 
 <img src="docs/images/brain_before.png" width="450px"/>
@@ -190,7 +185,7 @@ prependColumn ::
   (Injectable 0 (m - 1) m m, Injectable 1 n n (n + 1)) =>
   Double ->
   TypedExpr '[m, n] R ->
-  TypedExpr (D2 m (n + 1)) R
+  TypedExpr '[m, n + 1] R
 prependColumn v exp = inject (range @0 @(m - 1), range @1 @n) exp (constant2D @m @(n + 1) v)
 
 ex4_neuralNetwork :: OptimizationProblem
@@ -216,12 +211,8 @@ ex4_neuralNetwork =
           values =
             [ x :-> VFile (HDF5 "data.h5" "x"),
               y :-> VFile (HDF5 "data.h5" "y")
-            ],
-          workingDir = "examples" </> "NeuralNetwork"
+            ]
         }
-
-ex4 :: IO ()
-ex4 = proceed ex4_neuralNetwork CSimpleConfig {output = OutputHDF5, maxIteration = Just 400}
 ```
 
 <img src="docs/images/nn_before.png" width="450px"/>
