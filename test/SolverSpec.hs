@@ -81,7 +81,7 @@ prop_Rosenbrock a b =
     let x = variable "x"
         y = variable "y"
     let obj = (constant a - x) ^ 2 + constant b * (y - x ^ 2) ^ 2
-    case constructProblem obj (Constraint []) of
+    case constructProblem obj [] of
       Right p -> do
         res <- solveProblem p Map.empty
         let xGot = getValueScalar "x" res
@@ -96,7 +96,7 @@ spec =
     specify "Simple paraboloid" $ do
       let x = variable1D @10 "x"
       let obj = (x - 10) <.> (x - 10)
-      case constructProblem obj (Constraint []) of
+      case constructProblem obj [] of
         Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue1D "x" 10 res
@@ -105,7 +105,7 @@ spec =
     specify "Entropy" $ do
       let x = variable2D @5 @5 "x"
       let obj = (x * log x) <.> 1
-      case constructProblem obj (Constraint []) of
+      case constructProblem obj [] of
         Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue2D "x" (5, 5) res
@@ -117,7 +117,7 @@ spec =
       let a = param1D @10 "a"
       let b = param1D @10 "b"
       let obj = norm2square (ft (x +: y) - (a +: b))
-      case constructProblem obj (Constraint []) of
+      case constructProblem obj [] of
         Right p -> do
           valA <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
           valB <- listArray (0, 9) <$> generate (vectorOf 10 arbitrary)
@@ -135,7 +135,7 @@ spec =
       let evenX = project (ranges @0 @18 @2) x
       let oddX = project (ranges @1 @19 @2) x
       let obj = 100 * norm2square (evenX ^ 2 - oddX) + norm2square (evenX - 1)
-      case constructProblem obj (Constraint []) of
+      case constructProblem obj [] of
         Right p -> do
           res <- solveProblem p Map.empty
           let xGot = getValue1D "x" 20 res

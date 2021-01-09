@@ -5,9 +5,9 @@ module Examples.NeuralNetwork where
 import Data.Function ((&))
 import GHC.TypeLits (KnownNat, type (+), type (-))
 import HashedExpression
+import HashedExpression.Modeling.Typed
 import System.FilePath ((</>))
 import Prelude hiding ((**), (^))
-import HashedExpression.Modeling.Typed
 
 sigmoid :: (ToShape d) => TypedExpr d R -> TypedExpr d R
 sigmoid x = 1.0 / (1.0 + exp (- x))
@@ -43,9 +43,12 @@ ex4_neuralNetwork =
           values =
             [ x :-> VFile (HDF5 "data.h5" "x"),
               y :-> VFile (HDF5 "data.h5" "y")
-            ],
-          workingDir = "examples" </> "NeuralNetwork"
+            ]
         }
 
 ex4 :: IO ()
-ex4 = proceed ex4_neuralNetwork CSimpleConfig {output = OutputHDF5, maxIteration = Just 400}
+ex4 =
+  proceed
+    ex4_neuralNetwork
+    CSimpleConfig {output = OutputHDF5, maxIteration = Just 400}
+    ("examples" </> "NeuralNetwork")

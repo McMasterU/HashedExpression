@@ -24,6 +24,7 @@ module HashedExpression
     module HashedExpression.Interp,
     module HashedExpression.Internal.Base,
     module HashedExpression.Problem,
+    module HashedExpression.Interface,
     module HashedExpression.Value,
     module HashedExpression.Codegen,
     module HashedExpression.Codegen.CSimple,
@@ -35,8 +36,10 @@ where
 
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import GHC.TypeLits (KnownNat, Nat)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
+import HashedExpression.Interface
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
@@ -44,35 +47,25 @@ import HashedExpression.Interp
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
+import HashedExpression.Modeling.Typed
+
 import Prelude hiding ((**), (^))
 
-data ValueAssignment
-  = forall e. IsExpression e => e :-> Val
-
-mkValMap :: [ValueAssignment] -> ValMap
-mkValMap ss = Map.fromList $ mapMaybe f ss
+proceed ::
+  Codegen codegen =>
+  -- | the optimization problem to solve
+  OptimizationProblem ->
+  -- | code generator
+  codegen ->
+  -- | working directory
+  FilePath ->
+  IO ()
+proceed OptimizationProblem {..} codegen workingDir = case constructProblemAndGenCode of
+  Right ok -> ok workingDir
+  Left reason -> putStrLn reason
   where
-    f (e :-> val)
-      | (_, _, Var name) <- retrieveNode nID mp = Just (name, val)
-      | (_, _, Param name) <- retrieveNode nID mp = Just (name, val)
-      | otherwise = Nothing
-      where
-        (mp, nID) = asRawExpr e
+    constructProblemAndGenCode :: Either String (FilePath -> IO ())
+    constructProblemAndGenCode = do
+      problem <- constructProblem objective constraints
+      generateProblemCode codegen problem (mkValMap values)
 
-data OptimizationProblem = forall e.
-  IsScalarReal e =>
-  OptimizationProblem
-  { objective :: e,
-    constraints :: [ConstraintStatement],
-    values :: [ValueAssignment],
-    workingDir :: String
-  }
-
-proceed :: Codegen codegen => OptimizationProblem -> codegen -> IO ()
-proceed OptimizationProblem {..} codegen = do
-  case constructProblem objective (Constraint constraints) of
-    Right problem ->
-      case generateProblemCode codegen problem (mkValMap values) of
-        Right ok -> ok workingDir
-        Left reason -> putStrLn reason
-    Left reason -> putStrLn reason

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- |
 -- Module      :  HashedExpression.Codegen.CSimple
 -- Copyright   :  (c) OCA 2020
@@ -11,6 +13,7 @@
 module HashedExpression.Codegen.CSimple where
 
 import Control.Monad (forM_, when)
+import Control.Monad.Except (MonadError (throwError))
 import Data.List (find, foldl', partition, sortOn)
 import Data.List.HT (viewR)
 import qualified Data.Map as Map
@@ -41,10 +44,12 @@ data CSimpleConfig = CSimpleConfig
   }
   deriving (Eq, Show)
 
--- | Offset w.r.t "ptr"
+type Offset = Int
+
+-- | Offset w.r.t "ptr" (real) and "ptr_c" (complex)
 data Address
-  = AddressReal Int
-  | AddressComplex Int
+  = AddressReal Offset
+  | AddressComplex Offset
 
 -- | e.g: i, j, k
 type Index = Text
@@ -176,11 +181,10 @@ evaluating CSimpleCodegen {..} rootIDs =
     shapeOf nID = retrieveShape nID cExpressionMap
     addressOf :: NodeID -> Text
     addressOf nID = case cAddress nID of
-      AddressReal i -> "(ptr + " <> tt i <> ")"
-      AddressComplex i -> "(ptr_c + " <> tt i <> ")"
+      AddressReal offset -> "(ptr + " <> tt offset <> ")"
+      AddressComplex offset -> "(ptr_c + " <> tt offset <> ")"
     [i, j, k, nooffset] = ["i", "j", "k", "0"]
     len nID = product (retrieveShape nID cExpressionMap)
-    --    complexAt arg i = "(" <> (arg `reAt` i) <> " + " <> (arg `imAt` i) <> " * I)"
     genCode :: NodeID -> CCode
     genCode n =
       let (shape, et, op) = retrieveNode n cExpressionMap
@@ -426,70 +430,72 @@ evaluating CSimpleCodegen {..} rootIDs =
             Coerce {} -> Empty
             node -> error $ "Not implemented " ++ show node
 
---
 ---------------------------------------------------------------------------------
 instance Codegen CSimpleConfig where
   generateProblemCode :: CSimpleConfig -> Problem -> ValMap -> Either String (String -> IO ())
-  generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap
-    | Just errorMsg <- checkError = Left errorMsg
-    | otherwise = Right $ \folder -> do
+  generateProblemCode cf@CSimpleConfig {..} Problem {..} valMap = do
+    let params :: [String]
+        params = map fst $ paramsWithNodeID expressionMap
+    let varsAndParams :: [(String, NodeID)]
+        varsAndParams = sortOn fst $ varsWithNodeID expressionMap ++ paramsWithNodeID expressionMap
+    -------------------------------------------------------------------------------
+    let checkError :: Either String ()
+        checkError
+          | Just name <- find (not . (`Map.member` valMap)) params = throwError $ "No value provided for " ++ name
+          | otherwise,
+            let isOk (var, nId)
+                  | Just val <- Map.lookup var valMap = compatible (retrieveShape nId expressionMap) val
+                  | otherwise = True,
+            Just (name, shape) <- find (not . isOk) varsAndParams =
+            throwError $ name ++ "is of shape " ++ show shape ++ " but the value provided is not"
+          | otherwise = return ()
+    checkError
+    return $ \folder -> do
       let writeVal val filePath = TIO.writeFile filePath $ T.unwords . map tt . valElems $ val
       -- If the value is not from file, write all the values into
       -- text files so C code can read them
-      -- 1. Values
       forM_ (Map.toList valMap) $ \(var, val) -> do
         when (valueFromHaskell val) $ do
           let str = T.unwords . map tt . valElems $ val
           TIO.writeFile (folder </> var <.> "txt") str
-      -- 2. Box constraints
-      forM_ boxConstraints $ \c -> case c of
-        BoxLower var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_lb.txt"))
-        BoxUpper var val -> when (valueFromHaskell val) $ writeVal val (folder </> (var <> "_ub.txt"))
-        BoxBetween var (val1, val2) -> do
-          when (valueFromHaskell val1) $ writeVal val1 (folder </> (var <> "_lb.txt"))
-          when (valueFromHaskell val2) $ writeVal val2 (folder </> (var <> "_ub.txt"))
       let auxMap = Map.fromList $ map (\var -> (varName var, var)) variables
           variableByName name = fromJust $ Map.lookup name auxMap
       let codegen@CSimpleCodegen {..} = initCodegen cf expressionMap (map nodeId variables)
           getShape nID = retrieveShape nID cExpressionMap
           addressReal nID = let AddressReal res = cAddress nID in res
           -------------------------------------------------------------------------------------------------
-          numHigherOrderVariables = length variables
+          numHighDimensionalVariables = length variables
           varStartOffset = addressReal . nodeId . head $ variables
-          numScalarConstraints = length scalarConstraints
+          numGeneralConstraints = length generalConstraints
           varNames = map varName variables
           varSizes = map (product . getShape . nodeId) variables
-          numActualVariables = sum varSizes
+          numVariables = sum varSizes
           varNameWithStatingPosition = Map.fromList $ zip varNames $ take (length varSizes) $ scanl (+) 0 varSizes
           startingPositionByName name = fromJust $ Map.lookup name varNameWithStatingPosition
           varOffsets = map (addressReal . nodeId) variables
           partialDerivativeOffsets = map (addressReal . partialDerivativeId) variables
           objectiveOffset = addressReal objectiveId
-          scalarConstraintOffsets = map (addressReal . constraintValueId) scalarConstraints
-          scalarConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) scalarConstraints
+          generalConstraintOffsets = map (addressReal . constraintValueId) generalConstraints
+          generalConstraintPartialDerivativeOffsets = map (map addressReal . constraintPartialDerivatives) generalConstraints
           readBounds =
-            let readUpperBoundCode name val =
+            let readUpperBoundCode name boundId =
                   generateReadValuesCode
-                    ((name <> "_ub"), product . getShape . nodeId . variableByName $ name)
+                    (boundId, product . getShape . nodeId . variableByName $ name)
                     ("upper_bound + " <> show (startingPositionByName name))
-                    val
-                readLowerBoundCode name val =
+                    (fromJust $ Map.lookup boundId valMap) -- TODO
+                readLowerBoundCode name boundId =
                   generateReadValuesCode
-                    ((name <> "_lb"), product . getShape . nodeId . variableByName $ name)
+                    (boundId, product . getShape . nodeId . variableByName $ name)
                     ("lower_bound + " <> show (startingPositionByName name))
-                    val
+                    (fromJust $ Map.lookup boundId valMap)
                 readBoundCodeEach cnt =
                   case cnt of
-                    BoxUpper name val -> readUpperBoundCode name val
-                    BoxLower name val -> readLowerBoundCode name val
-                    BoxBetween name (val1, val2) ->
-                      readLowerBoundCode name val1
-                        <> "\n"
-                        <> readUpperBoundCode name val2
+                    BoxUpper name boundId -> readUpperBoundCode name boundId
+                    BoxLower name boundId -> readLowerBoundCode name boundId
              in T.intercalate "\n" $ map readBoundCodeEach boxConstraints
-          readBoundScalarConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] scalarConstraints
+          readBoundGeneralConstraints = T.intercalate "\n" $ map readBoundEach $ zip [0 ..] generalConstraints
             where
-              readBoundEach :: (Int, ScalarConstraint) -> Text
+              readBoundEach :: (Int, GeneralConstraint) -> Text
               readBoundEach (i, cs) =
                 T.intercalate
                   "\n"
@@ -500,11 +506,10 @@ instance Codegen CSimpleConfig where
             | Just val <- Map.lookup name valMap = generateReadValuesCode (name, product shape) ("ptr + " ++ show offset) val
             | otherwise =
               renderTemplate
-                ( [ ("name", tt name),
-                    ("size", tt $ product shape),
-                    ("offset", tt offset)
-                  ]
-                )
+                [ ("name", tt name),
+                  ("size", tt $ product shape),
+                  ("offset", tt offset)
+                ]
                 randomizeValueTemplate
             where
               offset = addressReal nId
@@ -533,61 +538,35 @@ instance Codegen CSimpleConfig where
       let codes =
             renderTemplate
               [ ("fftUtils", if containsFTNode cExpressionMap then tt $ fftUtils else ""),
-                ("numHigherOrderVariables", tt numHigherOrderVariables),
-                ("numActualVariables", tt numActualVariables),
+                ("numHighDimensionalVariables", tt numHighDimensionalVariables),
+                ("numVariables", tt numVariables),
                 ("totalDoubles", tt totalReal),
                 ("totalComplexes", tt totalComplex),
                 ("varStartOffset", tt varStartOffset),
                 ("maxNumIterations", tt $ fromMaybe 0 maxIteration),
-                ("numScalarConstraints", tt numScalarConstraints),
+                ("numGeneralConstraints", tt numGeneralConstraints),
                 ("varNames", T.intercalate ", " $ map ttq varNames),
                 ("varSizes", T.intercalate ", " $ map tt varSizes),
                 ("varOffsets", T.intercalate ", " $ map tt varOffsets),
                 ("partialDerivativeOffsets", T.intercalate ", " $ map tt partialDerivativeOffsets),
                 ("objectiveOffset", tt objectiveOffset),
-                ("scalarConstraintOffsets", T.intercalate ", " $ map tt scalarConstraintOffsets),
-                ( "scalarConstraintPartialDerivativeOffsets",
+                ("generalConstraintOffsets", T.intercalate ", " $ map tt generalConstraintOffsets),
+                ( "generalConstraintPartialDerivativeOffsets",
                   T.intercalate ", " $
-                    map (\xs -> "{" <> (T.intercalate ", " $ map tt xs) <> "}") scalarConstraintPartialDerivativeOffsets
+                    map (\xs -> "{" <> T.intercalate ", " (map tt xs) <> "}") generalConstraintPartialDerivativeOffsets
                 ),
                 ("readBounds", readBounds),
-                ("readBoundScalarConstraints", tt readBoundScalarConstraints),
+                ("readBoundGeneralConstraints", tt readBoundGeneralConstraints),
                 ("readValues", readValues),
                 ("writeResult", writeResult),
                 ("evaluatePartialDerivativesAndObjective", evaluating codegen $ objectiveId : map partialDerivativeId variables),
                 ("evaluateObjective", evaluating codegen $ [objectiveId]),
                 ("evaluatePartialDerivatives", evaluating codegen (map partialDerivativeId variables)),
-                ("evaluateScalarConstraints", evaluating codegen (map constraintValueId scalarConstraints)),
-                ("evaluateScalarConstraintsJacobian", evaluating codegen (concatMap constraintPartialDerivatives scalarConstraints))
+                ("evaluateScalarConstraints", evaluating codegen (map constraintValueId generalConstraints)),
+                ("evaluateScalarConstraintsJacobian", evaluating codegen (concatMap constraintPartialDerivatives generalConstraints))
               ]
               cSimpleTemplate
       TIO.writeFile (folder </> "problem.c") codes
-    where
-      params :: [String]
-      params = map fst $ paramsWithNodeID expressionMap
-      varsAndParams :: [(String, NodeID)]
-      varsAndParams = sortOn fst $ varsWithNodeID expressionMap ++ paramsWithNodeID expressionMap
-      -------------------------------------------------------------------------------
-      checkError :: Maybe String
-      checkError
-        | Just name <- find (not . (`Map.member` valMap)) params = Just $ "No value provided for " ++ name
-        | otherwise,
-          let isOk (var, nId)
-                | Just val <- Map.lookup var valMap = compatible (retrieveShape nId expressionMap) val
-                | otherwise = True,
-          Just (name, shape) <- find (not . isOk) varsAndParams =
-          Just $ name ++ "is of shape " ++ show shape ++ " but the value provided is not"
-        | otherwise = Nothing
-
--------------------------------------------------------------------------------
-
-toShapeString :: Shape -> T.Text
-toShapeString shape
-  | length shape < 3 =
-    "{"
-      <> (T.intercalate ", " . map tt $ shape <> replicate (3 - length shape) 1)
-      <> "}"
-  | otherwise = "{" <> (T.intercalate ", " . map tt $ shape) <> "}"
 
 -------------------------------------------------------------------------------
 

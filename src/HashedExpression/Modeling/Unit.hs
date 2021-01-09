@@ -140,7 +140,7 @@ instance (KnownNat n, ToShape ds) => ToShape ((D n sampleStep domainUnit) ': ds)
 type D = 'Dimension
 
 --------------------------------------------------------------------------------
-data
+newtype
   UnitExpr
     (ds :: [Dimension])
     (rangeUnit :: RangeUnit)
