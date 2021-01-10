@@ -30,6 +30,7 @@ dependencies:
   - mtl
   - filepath
   - file-embed
+  - graphviz
 
 
 extra-source-files:

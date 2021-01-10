@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9d0766922c44fc23016fa53343138e21016edc5091f5bb2d2141d69eccd6972c
+-- hash: 3cad02a20371f1c29da1aa03ac56f234cdb930ccc2c6d2dfe6520d3edc1d47f9
 
 name:           HashedExpression
 version:        0.0.9
@@ -32,7 +32,6 @@ library
       HashedExpression.Codegen.CSimple
       HashedExpression.Differentiation.Reverse
       HashedExpression.Differentiation.Reverse.State
-      HashedExpression.Dot
       HashedExpression.Embed
       HashedExpression.Interface
       HashedExpression.Internal
@@ -69,6 +68,7 @@ library
     , extra
     , file-embed
     , filepath
+    , graphviz
     , mtl
     , process
     , split
@@ -98,6 +98,7 @@ executable HashedExpression-exe
     , extra
     , file-embed
     , filepath
+    , graphviz
     , hspec
     , mtl
     , process
@@ -137,6 +138,7 @@ test-suite HashedExpression-test
     , extra
     , file-embed
     , filepath
+    , graphviz
     , hspec
     , mtl
     , process

@@ -2,7 +2,6 @@ module HashedExpression.Internal.Rewrite
   ( Rewrite,
     Modification,
     chainModifications,
-    toTransformation,
     toRecursiveTransformation,
     runRewrite,
     just,
@@ -17,20 +16,23 @@ import Control.Monad.State.Strict
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Tuple (swap)
 import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import Prelude hiding ((^))
 
+--------------------------------------------------------------------------------
 newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a} deriving (Functor, Applicative, Monad)
 
-runRewrite :: Rewrite NodeID -> RawExpr -> RawExpr
-runRewrite (Rewrite rw) exp =
-  let (nID, newMP) = runState rw (fst exp)
-   in (newMP, nID)
+runRewrite :: Rewrite NodeID -> ExpressionMap -> RawExpr
+runRewrite (Rewrite rw) mp = swap $ runState rw mp
+
+--------------------------------------------------------------------------------
 
 type Modification = RawExpr -> Rewrite NodeID
+
 
 chainModifications :: [Modification] -> Modification
 chainModifications rewrite expr = foldM f (snd expr) rewrite
@@ -39,9 +41,6 @@ chainModifications rewrite expr = foldM f (snd expr) rewrite
     f nID rewrite = do
       curM <- getContextMap
       rewrite (curM, nID)
-
-toTransformation :: Modification -> Transformation
-toTransformation modify exp = runRewrite (modify exp) exp
 
 toRecursiveTransformation ::
   Modification ->

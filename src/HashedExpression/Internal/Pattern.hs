@@ -12,24 +12,6 @@
 -- Traditional pattern matching on a 'TypedExpr' is difficult because 'Node' arguments are in hashed form, use this
 -- data type to perform a special kind of pattern matching that you can use to build a 'Substitution' and subsequently a
 -- 'Transformation', for example
---
---   * Create Patterns
---
---  @
---   x = map PHole 1
---   one = PConst 1.0
---  @
---   * Create a Substitution
---
---  @
---   substitution = x * one |.~~> x
---  @
---
---   * Create a Transformation
---
---  @
---   import HashedExpression.Internal
---   toTransformation $ toRecursive Reorder $ fromSubstitution substitution
 --  @
 module HashedExpression.Internal.Pattern
   ( -- * Substitution
@@ -412,13 +394,13 @@ allTheSame pl@(PListHole _ listCapture) exp match
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isScalar :: Pattern -> Condition
 isScalar p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
    in retrieveShape pNodeID mp == []
 
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isConst :: Pattern -> Condition
 isConst p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
    in case retrieveOp pNodeID mp of
         Const _ -> True
         _ -> False
@@ -430,13 +412,13 @@ isNotConst p exp match = not $ isConst p exp match
 -- | Returns True iff the 'Pattern' captured has a Real (i.e 'R') 'ElementType'
 isReal :: Pattern -> Condition
 isReal p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
    in retrieveElementType pNodeID mp == R
 
 -- | Returns True iff the 'Pattern' captured has a Complex (i.e 'C') 'ElementType'
 isComplex :: Pattern -> Condition
 isComplex p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
    in retrieveElementType pNodeID mp == C
 
 -- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
@@ -444,7 +426,7 @@ sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
     getET p =
-      let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) exp
+      let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
        in retrieveElementType pNodeID mp
 
 -- | Returns True iff the 'PatternRotateAmount' captured has a value of 0

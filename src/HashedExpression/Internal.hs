@@ -34,8 +34,7 @@ import Prelude hiding ((^))
 
 -------------------------------------------------------------------------------
 
--- | Transformation type, take a (unwrapped) 'TypedExpr' and return a transformed (unwrapped) 'TypedExpr'.
---   Construct using the 'toTransformation' function
+-- | Transformation.
 type Transformation = RawExpr -> RawExpr
 
 -- | Remove unreachable nodes
@@ -196,17 +195,9 @@ createNode spec args =
 
 -------------------------------------------------------------------------------
 
--- TODO: remove this
-fromNodeUnwrapped :: Node -> RawExpr
-fromNodeUnwrapped node = (IM.insert h node IM.empty, NodeID h)
-  where
-    checkCollision = checkCollisionMap IM.empty
-    h = hashNode checkCollision node
-
 extract :: ExpressionMap -> ((Int, Node) -> Maybe a) -> [a]
 extract mp collect = mapMaybe collect $ IM.toList mp
 
--- | Retrieves all 'Var' nodes in an (unwrapped) 'TypedExpr'
 varsWithNodeID :: ExpressionMap -> [(String, NodeID)]
 varsWithNodeID mp = extract mp \case
   (nId, (_, _, Var name)) -> Just (name, NodeID nId)
