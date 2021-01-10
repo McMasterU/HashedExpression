@@ -8,28 +8,159 @@
 --
 -- This module contains functionality for printing an 'TypedExpr' in a readable (i.e pretty) format. This can be very
 -- useful for debugging as the pretty format is still a syntactically valid 'TypedExpr' that can be pasted into ghci
-module HashedExpression.Prettify
-  ( prettify,
-    asString,
-    showExpDebug,
-    showExp,
-    hiddenPrettify,
-    debugPrint,
-    debugPrintExp,
-  )
-where
+module HashedExpression.Prettify where
 
+import Data.Function ((&))
+import qualified Data.GraphViz as GV
+import qualified Data.IntMap.Strict as IM
 import Data.List (intercalate)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
+import HashedExpression.Problem
+
+--------------------------------------------------------------------------------
+instance GV.PrintDot NodeID where
+  unqtDot (NodeID nID) = GV.unqtDot nID
+
+--------------------------------------------------------------------------------
+class HasExpressionMap t where
+  getExpressionMap :: t -> ExpressionMap
+
+-- instance IsExpression e => HasExpressionMap e where
+--   getExpressionMap = fst . asRawExpr
+
+instance HasExpressionMap ExpressionMap where
+  getExpressionMap = id
+
+instance HasExpressionMap Problem where
+  getExpressionMap = expressionMap
+
+--------------------------------------------------------------------------------
+
+data PrintMode = PrintText | PrintLatex
+
+data DotGraphMode = ShowOp | ShowFullExpr
+
+--------------------------------------------------------------------------------
+
+toDotCode :: HasExpressionMap t => DotGraphMode -> t -> String
+toDotCode dotGraphMode = LT.unpack . GV.printDotGraph . toDotGraph' dotGraphMode . getExpressionMap
+
+toDotCodeProblem :: DotGraphMode -> Problem -> String
+toDotCodeProblem mode problem =
+  let stmts = GV.graphStatements $ toDotGraph' mode $ expressionMap problem
+      fExtraID = NodeID (-1)
+      partials =
+        problem
+          & variables
+          & zip (map NodeID [-2, -3 ..])
+          & map (\(extraID, Variable {..}) -> (extraID, varName, partialDerivativeId))
+
+      dotGraph =
+        GV.DotGraph
+          False
+          True
+          Nothing
+          GV.DotStmts
+            { attrStmts = GV.attrStmts stmts,
+              subGraphs = GV.subGraphs stmts,
+              nodeStmts =
+                GV.nodeStmts stmts
+                  ++ [GV.DotNode fExtraID [GV.toLabel "f"]]
+                  ++ map
+                    ( \(extraID, varName, _) ->
+                        GV.DotNode extraID [GV.toLabel $ "\\frac{\\partial{f}}{\\partial{" <> varName <> "}}"]
+                    )
+                    partials,
+              edgeStmts =
+                GV.edgeStmts stmts
+                  ++ [GV.DotEdge (objectiveId problem) fExtraID []]
+                  ++ map
+                    ( \(extraID, _, partialDerivativeId) ->
+                        GV.DotEdge partialDerivativeId extraID []
+                    )
+                    partials
+            }
+   in LT.unpack . GV.printDotGraph $ dotGraph
+
+toDotGraph' :: DotGraphMode -> ExpressionMap -> GV.DotGraph NodeID
+toDotGraph' dotGraphMode mp =
+  GV.DotGraph
+    { strictGraph = False,
+      directedGraph = True,
+      graphID = Nothing,
+      graphStatements =
+        GV.DotStmts
+          { attrStmts = [],
+            subGraphs = [],
+            nodeStmts =
+              mp
+                & IM.toList
+                & map
+                  ( \(nID, (_, _, op)) -> case dotGraphMode of
+                      ShowFullExpr -> GV.DotNode (NodeID nID) [GV.toLabel $ prettify' PrintLatex mp (NodeID nID)]
+                      ShowOp ->
+                        GV.DotNode
+                          (NodeID nID)
+                          [ GV.toLabel $ case op of
+                              Var name -> name
+                              Param name -> name
+                              Const val -> show val
+                              Sum {} -> "Sum"
+                              Mul {} -> "Mul"
+                              Power x _ -> "Power " <> show x
+                              Neg {} -> "Neg"
+                              Scale {} -> "Scale"
+                              Div {} -> "Div"
+                              Sqrt {} -> "Sqrt"
+                              Sin {} -> "Sin"
+                              Cos {} -> "Cos"
+                              Tan {} -> "Tan"
+                              Exp {} -> "Exp"
+                              Log {} -> "Log"
+                              Sinh {} -> "Sinh"
+                              Cosh {} -> "Cosh"
+                              Tanh {} -> "Tanh"
+                              Asin {} -> "Asin"
+                              Acos {} -> "Acos"
+                              Atan {} -> "Atan"
+                              Asinh {} -> "Asinh"
+                              Acosh {} -> "Acosh"
+                              Atanh {} -> "Atanh"
+                              RealImag {} -> "RealImag"
+                              RealPart {} -> "RealPart"
+                              ImagPart {} -> "ImagPart"
+                              Conjugate {} -> "Conjugate"
+                              InnerProd {} -> "InnerProd"
+                              Piecewise {} -> "Piecewise"
+                              Rotate {} -> "Rotate"
+                              FT {} -> "FT"
+                              IFT {} -> "IFT"
+                              Project {} -> "Project"
+                              Inject {} -> "Inject"
+                              MatMul {} -> "MatMul"
+                              Transpose {} -> "Transpose"
+                              Coerce {} -> "Coerce"
+                          ]
+                  ),
+            edgeStmts =
+              mp
+                & IM.toList
+                & concatMap
+                  ( \(nID, (_, _, op)) ->
+                      opArgs op
+                        & map (\argID -> GV.DotEdge argID (NodeID nID) [])
+                  )
+          }
+    }
 
 -- | Automatically print a prettified expression (using 'prettify') to stdout.
---   If you wish to If you wish to enter the resulting pretty expression back into ghci, use 'showExpDebug'
 showExp :: IsExpression e => e -> IO ()
 showExp = putStrLn . prettify
 
--- | Visualize an 'TypedExpr' in a pretty format. If you wish to enter the result into ghci, use 'asString'
+-- |
 prettify :: IsExpression e => e -> String
 prettify e =
   let (mp, n) = asRawExpr e
@@ -38,17 +169,7 @@ prettify e =
         | null shape = ""
         | otherwise = "(" ++ intercalate ", " (map show shape) ++ ") "
       typeName = " :: " ++ dimensionStr ++ show et
-   in T.unpack (hiddenPrettify False $ asRawExpr e) ++ typeName
-
--- | Automatically print a prettified expression (using 'prettify') to stdout. Generally, you can enter the result into
---   ghci as long as you define corresponding variable identifiers
-showExpDebug :: IsExpression e => e -> IO ()
-showExpDebug = putStrLn . asString
-
--- | Visualize an 'TypedExpr' in a pretty format. Generally, you can re-enter a pretty printed 'TypedExpr' into
---   ghci as long as you define corresponding variable identifiers
-asString :: IsExpression e => e -> String
-asString e = T.unpack (hiddenPrettify True $ asRawExpr e)
+   in T.unpack (prettify' PrintText mp n) ++ typeName
 
 -- |
 prettifyDimSelector :: DimSelector -> String
@@ -56,98 +177,73 @@ prettifyDimSelector (At i) = show i
 prettifyDimSelector (Range start end 1) = show start ++ ":" ++ show end
 prettifyDimSelector (Range start end n) = show start ++ ":" ++ show end ++ ":" ++ show n
 
--- | same as 'prettify' without any overhead
-debugPrint :: RawExpr -> String
-debugPrint = T.unpack . hiddenPrettify False
-
-debugPrintExp :: IsExpression e => e -> String
-debugPrintExp = debugPrint . asRawExpr
-
--- | Print every entry (invididually) of an 'TypedExpr'
--- showAllEntries :: forall d et. TypedExpr d et -> IO ()
--- showAllEntries e = do
---  putStrLn "--------------------------"
---  putStrLn $ intercalate "\n" . map mkString $ allEntries e
---  putStrLn "--------------------------"
---  where
---    mkString (n, str) = show n ++ " --> " ++ str
+-- |
+prettifyAll :: PrintMode -> ExpressionMap -> [(NodeID, String)]
+prettifyAll printMode mp =
+  mp
+    & IM.keys
+    & map NodeID
+    & map (\nID -> (nID, T.unpack $ prettify' printMode mp nID))
 
 -- | auxiliary function for computing pretty format of an 'TypedExpr'
-hiddenPrettify ::
-  -- | retain syntactically valid (for use in ghci)
-  Bool ->
-  -- | (unwrapped) expression to be prettified
-  RawExpr ->
-  -- | resulting "pretty" expression
-  T.Text
-hiddenPrettify pastable (mp, n) =
+prettify' :: PrintMode -> ExpressionMap -> NodeID -> T.Text
+prettify' printMode mp n =
   let shape = retrieveShape n mp
       wrapParentheses x = T.concat ["(", x, ")"]
       node = retrieveOp n mp
-      innerPrettify = hiddenPrettify pastable . (mp,)
-      shapeSignature
-        | pastable = ""
-        | otherwise = "[" <> (T.intercalate ", " $ map (T.pack . show) $ shape) <> "]"
+      innerPrettify = wrapParentheses . prettify' printMode mp
    in case node of
         Var name -> T.pack name
         Param name -> T.pack name
-        Const val -> T.concat [T.pack . show $ val, shapeSignature]
-        _ ->
-          wrapParentheses $
-            case node of
-              Sum args
-                | pastable -> T.concat ["sum [", T.intercalate ", " . map innerPrettify $ args, "]"]
-                | otherwise -> T.intercalate "+" . map innerPrettify $ args
-              Mul args
-                | pastable -> T.concat ["prod [", T.intercalate ", " . map innerPrettify $ args, "]"]
-                | otherwise -> T.intercalate "*" . map innerPrettify $ args
-              Neg arg
-                | pastable -> T.concat ["negate", wrapParentheses $ innerPrettify arg]
-                | otherwise -> T.concat ["-", wrapParentheses $ innerPrettify arg]
-              Scale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
-              Div arg1 arg2 -> T.concat [innerPrettify arg1, "/", innerPrettify arg2]
-              Sqrt arg -> T.concat ["sqrt", wrapParentheses $ innerPrettify arg]
-              Sin arg -> T.concat ["sin", wrapParentheses $ innerPrettify arg]
-              Cos arg -> T.concat ["cos", wrapParentheses $ innerPrettify arg]
-              Tan arg -> T.concat ["tan", wrapParentheses $ innerPrettify arg]
-              Exp arg -> T.concat ["exp", wrapParentheses $ innerPrettify arg]
-              Log arg -> T.concat ["log", wrapParentheses $ innerPrettify arg]
-              Sinh arg -> T.concat ["sinh", wrapParentheses $ innerPrettify arg]
-              Cosh arg -> T.concat ["cosh", wrapParentheses $ innerPrettify arg]
-              Tanh arg -> T.concat ["tanh", wrapParentheses $ innerPrettify arg]
-              Asin arg -> T.concat ["asin", wrapParentheses $ innerPrettify arg]
-              Acos arg -> T.concat ["acos", wrapParentheses $ innerPrettify arg]
-              Atan arg -> T.concat ["atan", wrapParentheses $ innerPrettify arg]
-              Asinh arg -> T.concat ["asinh", wrapParentheses $ innerPrettify arg]
-              Acosh arg -> T.concat ["acosh", wrapParentheses $ innerPrettify arg]
-              Atanh arg -> T.concat ["atanh", wrapParentheses $ innerPrettify arg]
-              RealImag arg1 arg2 -> T.concat [innerPrettify arg1, "+:", innerPrettify arg2]
-              RealPart arg -> T.concat ["Re", wrapParentheses $ innerPrettify arg]
-              ImagPart arg -> T.concat ["Im", wrapParentheses $ innerPrettify arg]
-              Conjugate arg -> T.concat ["conjugate", wrapParentheses $ innerPrettify arg]
-              InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
-              Piecewise marks conditionArg branches ->
-                let printBranches = T.intercalate ", " . map innerPrettify $ branches
-                 in T.concat ["piecewise ", T.pack . show $ marks, " ", innerPrettify conditionArg, " [", printBranches, "]"]
-              Rotate amount arg -> T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]
-              Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
-              FT arg -> T.concat ["FT", wrapParentheses $ innerPrettify arg]
-              IFT arg -> T.concat ["IFT", wrapParentheses $ innerPrettify arg]
-              Project ss arg ->
-                T.concat
-                  [ wrapParentheses $ innerPrettify arg,
-                    "[",
-                    T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
-                    "]"
-                  ]
-              Inject ss sub base ->
-                T.concat
-                  [ wrapParentheses $ innerPrettify sub,
-                    " inject into ",
-                    wrapParentheses $ innerPrettify base,
-                    "[",
-                    T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
-                    "]"
-                  ]
-              MatMul arg1 arg2 -> T.concat [innerPrettify arg1, "**", innerPrettify arg2]
-              Transpose arg -> T.concat ["transpose", wrapParentheses $ innerPrettify arg]
+        Const val -> T.pack . show $ val
+        Coerce _ arg -> prettify' printMode mp arg
+        Sum args -> T.intercalate "+" . map innerPrettify $ args
+        Mul args -> T.intercalate "*" . map innerPrettify $ args
+        Neg arg -> T.concat ["-", innerPrettify arg]
+        Scale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
+        Div arg1 arg2 -> T.concat [innerPrettify arg1, "/", innerPrettify arg2]
+        Sqrt arg -> T.concat ["sqrt", innerPrettify arg]
+        Sin arg -> T.concat ["sin", innerPrettify arg]
+        Cos arg -> T.concat ["cos", innerPrettify arg]
+        Tan arg -> T.concat ["tan", innerPrettify arg]
+        Exp arg -> T.concat ["exp", innerPrettify arg]
+        Log arg -> T.concat ["log", innerPrettify arg]
+        Sinh arg -> T.concat ["sinh", innerPrettify arg]
+        Cosh arg -> T.concat ["cosh", innerPrettify arg]
+        Tanh arg -> T.concat ["tanh", innerPrettify arg]
+        Asin arg -> T.concat ["asin", innerPrettify arg]
+        Acos arg -> T.concat ["acos", innerPrettify arg]
+        Atan arg -> T.concat ["atan", innerPrettify arg]
+        Asinh arg -> T.concat ["asinh", innerPrettify arg]
+        Acosh arg -> T.concat ["acosh", innerPrettify arg]
+        Atanh arg -> T.concat ["atanh", innerPrettify arg]
+        RealImag arg1 arg2 -> T.concat [innerPrettify arg1, "+", innerPrettify arg2, "*i"]
+        RealPart arg -> T.concat ["Re", innerPrettify arg]
+        ImagPart arg -> T.concat ["Im", innerPrettify arg]
+        Conjugate arg -> T.concat ["conjugate", innerPrettify arg]
+        InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
+        Piecewise marks conditionArg branches ->
+          let printBranches = T.intercalate ", " . map innerPrettify $ branches
+           in T.concat ["piecewise ", T.pack . show $ marks, " ", innerPrettify conditionArg, " [", printBranches, "]"]
+        Rotate amount arg -> T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]
+        Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
+        FT arg -> T.concat ["FT", innerPrettify arg]
+        IFT arg -> T.concat ["IFT", innerPrettify arg]
+        Project ss arg ->
+          T.concat
+            [ innerPrettify arg,
+              "[",
+              T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
+              "]"
+            ]
+        Inject ss sub base ->
+          T.concat
+            [ innerPrettify sub,
+              " inject into ",
+              innerPrettify base,
+              "[",
+              T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
+              "]"
+            ]
+        MatMul arg1 arg2 -> T.concat [innerPrettify arg1, "**", innerPrettify arg2]
+        Transpose arg -> T.concat ["transpose", innerPrettify arg]

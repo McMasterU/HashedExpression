@@ -28,7 +28,6 @@ import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Modeling.Typed
-import HashedExpression.Prettify
 import HashedExpression.Value
 
 --------------------------------------------------------------------------------
@@ -70,11 +69,11 @@ instance BoundedBy (TypedExpr d R) (Bound d) where
   expr .<= (Bound b) =
     case getOp expr of
       Var name -> BoxUpperDecl name b
-      _ -> error $ "Left hand side of box constraint must be a variable, found: " <> prettify expr
+      _ -> error $ "Left hand side of box constraint must be a variable"
   expr .>= (Bound b) =
     case getOp expr of
       Var name -> BoxLowerDecl name b
-      _ -> error $ "Left hand side of box constraint must be a variable, found: " <> prettify expr
+      _ -> error $ "Left hand side of box constraint must be a variable"
   expr .== _ = error "Found equality box constraint, consider using parameter instead"
 
 --------------------------------------------------------------------------------
@@ -88,13 +87,13 @@ instance IsIdentifier RawExpr where
   getIdentifier expr
     | Var name <- getOp expr = name
     | Param name <- getOp expr = name
-    | otherwise = error $ "Must be a variable, parameter or bound identifier, found: " <> prettify expr
+    | otherwise = error $ "Must be a variable, parameter or bound identifier, found"
 
 instance IsIdentifier (TypedExpr d R) where
   getIdentifier expr
     | Var name <- getOp expr = name
     | Param name <- getOp expr = name
-    | otherwise = error $ "Must be a variable, parameter or bound identifier, found: " <> prettify expr
+    | otherwise = error $ "Must be a variable, parameter or bound identifier, found"
 
 instance IsIdentifier (Bound d) where
   getIdentifier (Bound name) = name

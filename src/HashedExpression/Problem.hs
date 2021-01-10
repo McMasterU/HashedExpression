@@ -32,7 +32,6 @@ import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Modeling.Typed (TypedExpr)
-import HashedExpression.Prettify
 import HashedExpression.Value
 
 -------------------------------------------------------------------------------
