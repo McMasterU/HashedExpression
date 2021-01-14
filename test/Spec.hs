@@ -14,8 +14,9 @@ import Prelude hiding ((^))
 
 main :: IO ()
 main = do
-  hspecWith defaultConfig {configQuickCheckMaxDiscardRatio = Just 100, configQuickCheckMaxSuccess = Just 100} $ do
+  hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 2000} $ do
     describe "SimplifySpec" SimplifySpec.spec
+  hspecWith defaultConfig {configQuickCheckMaxDiscardRatio = Just 100, configQuickCheckMaxSuccess = Just 100} $ do
     describe "CollisionSpec" CollisionSpec.spec
     describe "ProblemSpec" ProblemSpec.spec
     describe "InterpSpec" InterpSpec.spec
