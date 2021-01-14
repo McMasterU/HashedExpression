@@ -19,6 +19,7 @@ import qualified Data.Text.Lazy as LT
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
 import HashedExpression.Problem
+import HashedExpression.Utils (ToText (tt))
 
 --------------------------------------------------------------------------------
 instance GV.PrintDot NodeID where
@@ -28,8 +29,8 @@ instance GV.PrintDot NodeID where
 class HasExpressionMap t where
   getExpressionMap :: t -> ExpressionMap
 
--- instance IsExpression e => HasExpressionMap e where
---   getExpressionMap = fst . asRawExpr
+instance IsExpression e => HasExpressionMap e where
+  getExpressionMap = fst . asRawExpr
 
 instance HasExpressionMap ExpressionMap where
   getExpressionMap = id
@@ -41,9 +42,18 @@ instance HasExpressionMap Problem where
 
 data PrintMode = PrintText | PrintLatex
 
-data DotGraphMode = ShowOp | ShowFullExpr
+data DotGraphMode = ShowOp | ShowFullExpr | ShowFullExprWithID
 
 --------------------------------------------------------------------------------
+
+textLabel :: T.Text -> GV.Attribute
+textLabel = GV.textLabel . LT.pack . T.unpack
+
+buildLine :: [T.Text] -> T.Text
+buildLine xs = T.intercalate "\n" xs
+
+inTextTag :: T.Text -> T.Text
+inTextTag tx = "\\text{" <> tx <> "}"
 
 toDotCode :: HasExpressionMap t => DotGraphMode -> t -> String
 toDotCode dotGraphMode = LT.unpack . GV.printDotGraph . toDotGraph' dotGraphMode . getExpressionMap
@@ -101,6 +111,12 @@ toDotGraph' dotGraphMode mp =
                 & map
                   ( \(nID, (_, _, op)) -> case dotGraphMode of
                       ShowFullExpr -> GV.DotNode (NodeID nID) [GV.toLabel $ prettify' PrintLatex mp (NodeID nID)]
+                      ShowFullExprWithID ->
+                        GV.DotNode
+                          (NodeID nID)
+                          [ textLabel $
+                              buildLine [prettify' PrintLatex mp (NodeID nID), inTextTag $ tt nID, inTextTag $ tt (show op)]
+                          ]
                       ShowOp ->
                         GV.DotNode
                           (NodeID nID)
