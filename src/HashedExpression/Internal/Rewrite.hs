@@ -1,18 +1,21 @@
 module HashedExpression.Internal.Rewrite
   ( Rewrite,
-    Modification,
-    chainModifications,
-    toRecursiveTransformation,
     runRewrite,
     just,
     sum_,
     product_,
     const_,
     num_,
+    matchNode,
+    matchOp,
+    withExpressionMap,
+    Modification,
+    toRecursiveTransformation,
   )
 where
 
 import Control.Monad.State.Strict
+import Data.Function ((&))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -31,22 +34,22 @@ runRewrite (Rewrite rw) mp = swap $ runState rw mp
 
 --------------------------------------------------------------------------------
 
-type Modification = RawExpr -> Rewrite NodeID
+type Modification = NodeID -> Rewrite NodeID
 
+matchNode :: NodeID -> (Node -> Rewrite a) -> Rewrite a
+matchNode nID f = getContextMap >>= (f . retrieveNode nID)
 
-chainModifications :: [Modification] -> Modification
-chainModifications rewrite expr = foldM f (snd expr) rewrite
-  where
-    f :: NodeID -> Modification -> Rewrite NodeID
-    f nID rewrite = do
-      curM <- getContextMap
-      rewrite (curM, nID)
+matchOp :: NodeID -> (Op -> Rewrite a) -> Rewrite a
+matchOp nID f = getContextMap >>= (f . retrieveOp nID)
+
+withExpressionMap :: (ExpressionMap -> Rewrite a) -> Rewrite a
+withExpressionMap f = getContextMap >>= f
 
 toRecursiveTransformation ::
   Modification ->
-  -- | resulting rule applied to every 'Node'
+  -- | resulting rule applied to every 'Node' bottom-up
   Transformation
-toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ Map.lookup headN finalSub)
+toRecursiveTransformation rewrite exp@(mp, headN) = (finalMap, fromJust $ Map.lookup headN finalSub)
   where
     -------------------------------------------------------------------------------
     topoOrder :: [NodeID]
@@ -58,8 +61,7 @@ toRecursiveTransformation smp exp@(mp, headN) = (finalMap, fromJust $ Map.lookup
       let oldNode = retrieveNode nID curMp
           newNode = mapNode (toTotal sub) oldNode
       cID <- if newNode == oldNode then pure nID else introduceNode newNode
-      updatedMp <- getContextMap
-      appliedRuleNodeID <- smp (updatedMp, cID)
+      appliedRuleNodeID <- rewrite cID
       return $ Map.insert nID appliedRuleNodeID sub
     (finalSub, finalMap) = runState (unRewrite (foldM f Map.empty topoOrder)) mp
 

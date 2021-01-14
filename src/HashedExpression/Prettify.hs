@@ -188,16 +188,15 @@ prettifyAll printMode mp =
 -- | auxiliary function for computing pretty format of an 'TypedExpr'
 prettify' :: PrintMode -> ExpressionMap -> NodeID -> T.Text
 prettify' printMode mp n =
-  let shape = retrieveShape n mp
-      wrapParentheses x = T.concat ["(", x, ")"]
-      node = retrieveOp n mp
+  let wrapParentheses x = T.concat ["(", x, ")"]
       innerPrettify = wrapParentheses . prettify' printMode mp
-   in case node of
+      innerPrettifyNoParen = prettify' printMode mp
+   in case retrieveOp n mp of
         Var name -> T.pack name
         Param name -> T.pack name
         Const val -> T.pack . show $ val
-        Coerce _ arg -> prettify' printMode mp arg
-        Sum args -> T.intercalate "+" . map innerPrettify $ args
+        Coerce _ arg -> innerPrettifyNoParen arg
+        Sum args -> T.intercalate "+" . map innerPrettifyNoParen $ args
         Mul args -> T.intercalate "*" . map innerPrettify $ args
         Neg arg -> T.concat ["-", innerPrettify arg]
         Scale arg1 arg2 -> T.concat [innerPrettify arg1, "*.", innerPrettify arg2]
@@ -223,7 +222,7 @@ prettify' printMode mp n =
         Conjugate arg -> T.concat ["conjugate", innerPrettify arg]
         InnerProd arg1 arg2 -> T.concat [innerPrettify arg1, "<.>", innerPrettify arg2]
         Piecewise marks conditionArg branches ->
-          let printBranches = T.intercalate ", " . map innerPrettify $ branches
+          let printBranches = T.intercalate ", " . map innerPrettifyNoParen $ branches
            in T.concat ["piecewise ", T.pack . show $ marks, " ", innerPrettify conditionArg, " [", printBranches, "]"]
         Rotate amount arg -> T.concat ["rotate", T.pack . show $ amount, innerPrettify arg]
         Power x arg -> T.concat [innerPrettify arg, "^", T.pack $ show x]
@@ -238,8 +237,9 @@ prettify' printMode mp n =
             ]
         Inject ss sub base ->
           T.concat
-            [ innerPrettify sub,
-              " inject into ",
+            [ "inject(",
+              innerPrettify sub,
+              ", ",
               innerPrettify base,
               "[",
               T.intercalate "," (map (T.pack . prettifyDimSelector) ss),
