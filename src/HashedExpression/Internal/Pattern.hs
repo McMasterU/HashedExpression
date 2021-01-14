@@ -82,7 +82,7 @@ fromSubstitution :: Substitution -> Modification
 fromSubstitution pt@(GP pattern condition, replacementPattern) n = withExpressionMap $ \mp ->
   let exp = (mp, n)
    in case match exp pattern of
-        Just match | condition exp match -> buildFromPattern exp match replacementPattern
+        Just match | condition exp match -> buildFromPattern (Just $ getShape exp) match replacementPattern
         _ -> return n
 
 -- | Create a 'Substitution' that matches a 'Pattern' (automatically converting into a 'GuardedPattern' that's always true) and
@@ -394,13 +394,13 @@ allTheSame pl@(PListHole _ listCapture) exp match
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isScalar :: Pattern -> Condition
 isScalar p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
    in retrieveShape pNodeID mp == []
 
 -- | Returns True iff the 'Pattern' capture is a 'Scalar'
 isConst :: Pattern -> Condition
 isConst p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
    in case retrieveOp pNodeID mp of
         Const _ -> True
         _ -> False
@@ -412,13 +412,13 @@ isNotConst p exp match = not $ isConst p exp match
 -- | Returns True iff the 'Pattern' captured has a Real (i.e 'R') 'ElementType'
 isReal :: Pattern -> Condition
 isReal p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
    in retrieveElementType pNodeID mp == R
 
 -- | Returns True iff the 'Pattern' captured has a Complex (i.e 'C') 'ElementType'
 isComplex :: Pattern -> Condition
 isComplex p exp match =
-  let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
+  let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
    in retrieveElementType pNodeID mp == C
 
 -- | Returns True iff all the 'Pattern' captures have a the same 'ElementType'
@@ -426,7 +426,7 @@ sameElementType :: [Pattern] -> Condition
 sameElementType ps exp match = allEqual . map getET $ ps
   where
     getET p =
-      let (mp, pNodeID) = runRewrite (buildFromPattern exp match p) $ fst exp
+      let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
        in retrieveElementType pNodeID mp
 
 -- | Returns True iff the 'PatternRotateAmount' captured has a value of 0
@@ -654,15 +654,15 @@ buildFromPatternRotateAmount match pra =
       map negate (buildFromPatternRotateAmount match pra)
 
 buildFromPatternList ::
-  RawExpr -> Match -> PatternList -> [Rewrite NodeID]
-buildFromPatternList exp match (PListHole fs listCapture)
+  Maybe Shape -> Match -> PatternList -> [Rewrite NodeID]
+buildFromPatternList inferredShape match (PListHole fs listCapture)
   | Just ns <- Map.lookup listCapture (listCapturesMap match) =
-    map (buildFromPattern exp match . turnToPattern fs) ns
+    map (buildFromPattern inferredShape match . turnToPattern fs) ns
   | otherwise =
     error "Capture not in the Map Capture [Int] which should never happens"
 
-buildFromPattern :: RawExpr -> Match -> Pattern -> Rewrite NodeID
-buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape originalN originalMp)
+buildFromPattern :: Maybe Shape -> Match -> Pattern -> Rewrite NodeID
+buildFromPattern inferredShape match = build inferredShape
   where
     build :: Maybe Shape -> Pattern -> Rewrite NodeID
     build inferredShape pattern =
@@ -673,14 +673,14 @@ buildFromPattern (originalMp, originalN) match = build (Just $ retrieveShape ori
             just nId
           | otherwise ->
             error "Capture not in the Map Capture Int which should never happen"
-        PHead pl -> head $ buildFromPatternList (originalMp, originalN) match pl
+        PHead pl -> head $ buildFromPatternList inferredShape match pl
         PConst val -> case inferredShape of
           Just shape -> const_ shape val
           _ -> error "Can't infer shape of the constant"
         PSumList ptl ->
-          sum_ . buildFromPatternList (originalMp, originalN) match $ ptl
+          sum_ . buildFromPatternList inferredShape match $ ptl
         PMulList ptl ->
-          product_ . buildFromPatternList (originalMp, originalN) match $ ptl
+          product_ . buildFromPatternList inferredShape match $ ptl
         PSum sps -> sum_ . map (build inferredShape) $ sps
         PMul sps -> product_ . map (build inferredShape) $ sps
         PNeg sp -> - build inferredShape sp
