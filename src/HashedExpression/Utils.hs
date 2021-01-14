@@ -20,15 +20,11 @@ import HashedExpression.Internal.Node
 import Prelude hiding ((^))
 import qualified Prelude
 
--- | Forward pipe operator in Elm
+-- | Forward pipe operator
 (|>) :: a -> (a -> b) -> b
 (|>) = (&)
 
 infixl 1 |>
-
--- | Chain a list of endomorphisms to a endomorphism
-chain :: [a -> a] -> a -> a
-chain = flip $ foldl (|>)
 
 -- |
 measureTime :: IO a -> IO ()

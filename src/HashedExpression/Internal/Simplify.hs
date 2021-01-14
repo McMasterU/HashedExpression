@@ -9,6 +9,7 @@
 -- Simplifying expressions
 module HashedExpression.Internal.Simplify (simplify) where
 
+import Control.Monad.HT (chain)
 import Control.Monad.State.Strict
 import Data.List (partition, sort)
 import Data.List.Extra (groupOn)
@@ -27,17 +28,17 @@ simplify :: RawExpr -> RawExpr
 simplify = removeUnreachable . apply
   where
     apply =
-      multipleTimes 1000 . toRecursiveTransformation . chainModifications $
-        [ zeroOneSumProdRules,
-          collapseSumProdRules,
-          flattenSumProdRules,
-          groupConstantsRules,
-          combineTermsRules,
-          combineTermsRulesProd,
-          evaluateIfPossibleRules,
-          normalizeRotateRules,
-          negativeZeroRules,
-          reorderOperands
+      multipleTimes 1000 . toRecursiveTransformation . chain $
+        [ zeroOneSumProdRules1,
+          collapseSumProdRules1,
+          flattenSumProdRules1,
+          groupConstantsRules1,
+          combineTermsRules1,
+          combineTermsRulesProd1,
+          evaluateIfPossibleRules1,
+          normalizeRotateRules1,
+          negativeZeroRules1,
+          reorderOperands1
         ]
           ++ map
             fromSubstitution
@@ -176,8 +177,8 @@ rotateRules =
 
 -- | Identity and zero laws for 'Sum' and 'Mul'.
 --   This includes removing the unnecessary ones from a multiplication or zeroes from an addition.
-zeroOneSumProdRules :: Modification
-zeroOneSumProdRules exp@(mp, n) =
+zeroOneSumProdRules1 :: Modification
+zeroOneSumProdRules1 n = withExpressionMap $ \mp ->
   case retrieveOp n mp of
     Sum ns
       -- if the sumP has any zero, remove them
@@ -197,20 +198,19 @@ zeroOneSumProdRules exp@(mp, n) =
 -- | Rules for collapsing 'Sum' and 'Mul'
 --
 --   For example, if a sumP or product consists of only one entry, it can be extracted.
-collapseSumProdRules :: Modification
-collapseSumProdRules exp@(mp, n) =
-  case retrieveOp n mp of
-    Sum [nID] -> just nID
-    Mul [nID] -> just nID
-    _ -> just n
+collapseSumProdRules1 :: Modification
+collapseSumProdRules1 nID = matchOp nID $ \case
+  Sum [operandID] -> just operandID
+  Mul [operandID] -> just operandID
+  _ -> just nID
 
 -- | Rules for flattening 'Sum' and 'Mul'.
 --
 --   For example, if sumP or product contains sub-sum or sub-product, flatten them out. This is analogous to the `concat`
 --   function on lists.
-flattenSumProdRules :: Modification
-flattenSumProdRules exp@(mp, n) =
-  case retrieveOp n mp of
+flattenSumProdRules1 :: Modification
+flattenSumProdRules1 nID = withExpressionMap $ \mp ->
+  case retrieveOp nID mp of
     Sum ns ->
       -- if the sumP contains any sumP, just flatten them out
       -- sum(x, sum(y, z), sum(t, u, v)) = sum(x, y, z, t, u, v)
@@ -219,12 +219,12 @@ flattenSumProdRules exp@(mp, n) =
       -- if the prod contains any prod, just flatten them out
       -- product(x, product(y, z), product(t, u, v)) = product(x, y, z, t, u, v)
       product_ . map just . concatMap (pullProdOperands mp) $ ns
-    _ -> just n
+    _ -> just nID
 
 -- | Rules for grouping constants
 --   If there is more than one constant in a sumP or a product, group them together to reduce complexity.
-groupConstantsRules :: Modification
-groupConstantsRules exp@(mp, n) =
+groupConstantsRules1 :: Modification
+groupConstantsRules1 n = withExpressionMap $ \mp ->
   let shape = retrieveShape n mp
    in case retrieveOp n mp of
         Sum ns
@@ -245,105 +245,102 @@ groupConstantsRules exp@(mp, n) =
 --   * Sum [x,(-1) *. x,y] -> Sum [y]
 --   * Sum [2 *. x, (-1) *. x,y] -> Sum [x,y]
 --   * Sum [x,x,y] -> Sum [2 *. x,y]
-combineTermsRules :: Modification
-combineTermsRules exp@(mp, n)
-  | Sum ns <- retrieveOp n mp =
-    sum_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
-  | otherwise = just n
-  where
-    count nId
-      | Scale scalerN scaleeN <- retrieveOp nId mp,
-        Const val <- retrieveOp scalerN mp =
-        (scaleeN, val)
-      | Neg negateeN <- retrieveOp nId mp = (negateeN, -1)
-      | otherwise = (nId, 1)
-    combine xs = (fst $ head xs, sum $ map snd xs)
-    build :: (NodeID, Double) -> Rewrite NodeID
-    build (nId, val)
-      | val == 1 = just nId
-      | otherwise = num_ val *. just nId
+combineTermsRules1 :: Modification
+combineTermsRules1 n = withExpressionMap $ \mp ->
+  let count nId
+        | Scale scalerN scaleeN <- retrieveOp nId mp,
+          Const val <- retrieveOp scalerN mp =
+          (scaleeN, val)
+        | Neg negateeN <- retrieveOp nId mp = (negateeN, -1)
+        | otherwise = (nId, 1)
+      combine xs = (fst $ head xs, sum $ map snd xs)
+      build :: (NodeID, Double) -> Rewrite NodeID
+      build (nId, val)
+        | val == 1 = just nId
+        | otherwise = num_ val *. just nId
+   in case retrieveOp n mp of
+        Sum ns ->
+          sum_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
+        _ -> just n
 
 -- | Rules for combining and reducing the numbers of terms in 'Mul'
 --   This includes the following scenarios:
 --   * Mul(x^(-1) * x,y) -> y
 --   * Mul(x,x,y) -> Mul(x^2,y)
-combineTermsRulesProd :: Modification
-combineTermsRulesProd exp@(mp, n)
-  | Mul ns <- retrieveOp n mp =
-    product_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
-  | otherwise = just n
-  where
-    count nId
-      | Power value arg <- retrieveOp nId mp = (arg, value)
-      | otherwise = (nId, 1)
-    combine xs = (fst $ head xs, sum $ map snd xs)
-    build (nId, val)
-      | val == 1 = just nId
-      | otherwise = just nId ^ val
+combineTermsRulesProd1 :: Modification
+combineTermsRulesProd1 n = withExpressionMap $ \mp ->
+  let count nId
+        | Power value arg <- retrieveOp nId mp = (arg, value)
+        | otherwise = (nId, 1)
+      combine xs = (fst $ head xs, sum $ map snd xs)
+      build (nId, val)
+        | val == 1 = just nId
+        | otherwise = just nId ^ val
+   in case retrieveOp n mp of
+        Mul ns ->
+          product_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
+        _ -> just n
 
 -- | Rules that are applied in specific scenarios if possible
 --
 --   For instance, we can combine constants in 'Sum' and 'Mul' using regular Haskell arithmetic.
-evaluateIfPossibleRules :: Modification
-evaluateIfPossibleRules exp@(mp, n) =
-  case (retrieveElementType n mp, node, pulledVals) of
-    (R, Sum _, Just vals) -> res $ sum vals
-    (R, Mul _, Just vals) -> res $ product vals
-    (R, Scale _ _, Just [val1, val2]) -> res $ val1 * val2
-    (R, Neg _, Just [val])
-      | val /= 0 -> res (- val)
-      | otherwise -> res 0
-    (R, Power x _, Just [val]) -> res $ val Prelude.** fromIntegral x
-    (R, InnerProd arg1 arg2, Just [val1, val2]) ->
-      res $ val1 * val2 * (fromIntegral . product $ retrieveShape arg1 mp)
-    (R, Rotate _ _, Just [val]) -> res val
-    -- TODO: sin, sos, ...
-    _ -> just n
-  where
-    (shape, _, node) = retrieveNode n mp
-    getVal nId
-      | Const val <- retrieveOp nId mp = Just val
-      | otherwise = Nothing
-    pulledVals = mapM getVal . opArgs $ node
-    res = const_ shape
+evaluateIfPossibleRules1 :: Modification
+evaluateIfPossibleRules1 n = withExpressionMap $ \mp ->
+  let (shape, _, op) = retrieveNode n mp
+      getVal nId
+        | Const val <- retrieveOp nId mp = Just val
+        | otherwise = Nothing
+      pulledVals = mapM getVal . opArgs $ op
+      res = const_ shape
+   in case (retrieveElementType n mp, op, pulledVals) of
+        (R, Sum _, Just vals) -> res $ sum vals
+        (R, Mul _, Just vals) -> res $ product vals
+        (R, Scale _ _, Just [val1, val2]) -> res $ val1 * val2
+        (R, Neg _, Just [val])
+          | val /= 0 -> res (- val)
+          | otherwise -> res 0
+        (R, Power x _, Just [val]) -> res $ val Prelude.** fromIntegral x
+        (R, InnerProd arg1 arg2, Just [val1, val2]) ->
+          res $ val1 * val2 * (fromIntegral . product $ retrieveShape arg1 mp)
+        (R, Rotate _ _, Just [val]) -> res val
+        -- TODO: sin, sos, ...
+        _ -> just n
 
 -- | Rules to normalize rotations
 --
 --   This ensures that rotateAmount in each direction always lie within (0, dim - 1)
-normalizeRotateRules :: Modification
-normalizeRotateRules exp@(mp, n)
-  | (shape, _, Rotate amount arg) <- retrieveNode n mp = rotate (zipWith mod amount shape) $ just arg
-  | otherwise = just n
+normalizeRotateRules1 :: Modification
+normalizeRotateRules1 n = matchNode n $ \case
+  (shape, _, Rotate amount arg) -> rotate (zipWith mod amount shape) $ just arg
+  _ -> just n
 
 -- | Rules for negative zeroes
 --
 --   This is to avoid having `Const (-0.0)` show up, which is considered different than `Const (0.0)`.
 --   Thus, instead we convert those to `Const (0.0)`.
-negativeZeroRules :: Modification
-negativeZeroRules exp@(mp, n)
-  | (shape, _, Const val) <- retrieveNode n mp,
-    val == 0.0 || val == (-0.0) =
-    const_ shape 0
-  | otherwise = just n
+negativeZeroRules1 :: Modification
+negativeZeroRules1 n = matchNode n $ \case
+  (shape, _, Const val) | (val == 0.0 || val == (-0.0)) -> const_ shape 0
+  _ -> just n
 
 -- | Re-order operands in associative-commutative operators like Sum or Mul
 -- or commutative binary like InnerProd for real
-reorderOperands :: Modification
-reorderOperands exp@(mp, n)
-  | Sum operands <- retrieveOp n mp,
-    let sortedOperands = sortOperands operands,
-    sortedOperands /= operands =
-    sum_ (map just sortedOperands)
-  | Mul operands <- retrieveOp n mp,
-    let sortedOperands = sortOperands operands,
-    sortedOperands /= operands =
-    product_ (map just sortedOperands)
-  | InnerProd o1 o2 <- retrieveOp n mp,
-    retrieveElementType n mp == R,
-    let [s1, s2] = sortOperands [o1, o2],
-    [s1, s2] /= [o1, o2] =
-    just s1 <.> just s2
-  | otherwise = just n
-  where
-    weight nID = opTypeWeight $ retrieveOp nID mp
-    sortOperands os = concatMap sort . groupOn weight . sortWith weight $ os
+reorderOperands1 :: Modification
+reorderOperands1 n = withExpressionMap $ \mp ->
+  let weight nID = opTypeWeight $ retrieveOp nID mp
+      sortOperands os = concatMap sort . groupOn weight . sortWith weight $ os
+   in case retrieveOp n mp of
+        Sum operands
+          | let sortedOperands = sortOperands operands,
+            sortedOperands /= operands ->
+            sum_ (map just sortedOperands)
+        Mul operands
+          | let sortedOperands = sortOperands operands,
+            sortedOperands /= operands ->
+            product_ (map just sortedOperands)
+        InnerProd o1 o2
+          | retrieveElementType n mp == R,
+            let [s1, s2] = sortOperands [o1, o2],
+            [s1, s2] /= [o1, o2] ->
+            just s1 <.> just s2
+        _ -> just n

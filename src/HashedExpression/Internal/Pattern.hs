@@ -78,12 +78,12 @@ import Prelude hiding ((^))
 --   (provided via 'Pattern')
 type Substitution = (GuardedPattern, Pattern)
 
-fromSubstitution :: Substitution -> (RawExpr -> Rewrite NodeID)
-fromSubstitution pt@(GP pattern condition, replacementPattern) exp@(mp, n)
-  | Just match <- match exp pattern,
-    condition exp match =
-    buildFromPattern exp match replacementPattern
-  | otherwise = return n
+fromSubstitution :: Substitution -> Modification
+fromSubstitution pt@(GP pattern condition, replacementPattern) n = withExpressionMap $ \mp ->
+  let exp = (mp, n)
+   in case match exp pattern of
+        Just match | condition exp match -> buildFromPattern exp match replacementPattern
+        _ -> return n
 
 -- | Create a 'Substitution' that matches a 'Pattern' (automatically converting into a 'GuardedPattern' that's always true) and
 --   replaces it with another 'Pattern'
