@@ -17,8 +17,8 @@ ex6_svm =
       alphaLB = bound2D @863 @1 "alphaLB"
    in OptimizationProblem
         { objective =
-            sumElements alpha
-              - (1 / 2) * sumElements ((alpha ** transpose alpha) * km * (y ** transpose y)),
+            (1 / 2) * sumElements ((alpha ** transpose alpha) * km * (y ** transpose y))
+              - sumElements alpha,
           constraints =
             [ (alpha <.> y) .== 0.0,
               alpha .>= alphaLB

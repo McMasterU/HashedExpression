@@ -195,23 +195,23 @@ int main()
       printf("\n\nSolution of the primal variables, x\n");
       for( i = 0; i < NUM_VARIABLES; i++ )
       {
-         printf("x[%d] = %e\n", i, x[i]);
+         printf("x[%d] = %f\n", i, x[i]);
       }
 
-      printf("\n\nSolution of the constraint multipliers, lambda\n");
-      for( i = 0; i < NUM_GENERAL_CONSTRAINT; i++ )
-      {
-         printf("lambda[%d] = %e\n", i, mult_g[i]);
-      }
-      printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-      for( i = 0; i < NUM_VARIABLES; i++ )
-      {
-         printf("z_L[%d] = %e\n", i, mult_x_L[i]);
-      }
-      for( i = 0; i < NUM_VARIABLES; i++ )
-      {
-         printf("z_U[%d] = %e\n", i, mult_x_U[i]);
-      }
+      // printf("\n\nSolution of the constraint multipliers, lambda\n");
+      // for( i = 0; i < NUM_GENERAL_CONSTRAINT; i++ )
+      // {
+      //    printf("lambda[%d] = %e\n", i, mult_g[i]);
+      // }
+      // printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
+      // for( i = 0; i < NUM_VARIABLES; i++ )
+      // {
+      //    printf("z_L[%d] = %e\n", i, mult_x_L[i]);
+      // }
+      // for( i = 0; i < NUM_VARIABLES; i++ )
+      // {
+      //    printf("z_U[%d] = %e\n", i, mult_x_U[i]);
+      // }
 
       printf("\n\nObjective value\nf(x*) = %e\n", obj);
       write_result();
