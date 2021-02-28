@@ -144,6 +144,6 @@ checkCollisionMaps (mp : mps) node nID = case checkCollisionMap mp node nID of
 -- |
 hashNode :: CheckCollision -> Node -> Int
 hashNode checkCollision node =
-  case dropWhile (== IsClash) . map (checkCollision node . hash node) $ [0 .. 1000] of
+  case dropWhile (== IsClash) . map (checkCollision node . hash node) $ [0 .. ] of
     (IsOk h : _) -> h
     _ -> error "hashNode everything clashed!"

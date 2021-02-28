@@ -60,15 +60,15 @@ type family SameSampleStep (x :: SampleStep) (y :: SampleStep) :: Constraint whe
 --     (SameUnitSampleStep unitStep1 unitStep2, SameUnitSampleSteps rest1 rest2)
 
 --------------------------------------------------------------------------------
--- data [Dimension] = [Dimension] [(Unit, SampleStep)]
+-- data [Sampling] = [Sampling] [(Unit, SampleStep)]
 
--- type FRAME = '[Dimension]
+-- type FRAME = '[Sampling]
 
--- type family SameFrame (f1 :: [Dimension]) (f2 :: [Dimension]) :: Constraint where
---   SameFrame ( '[Dimension] unitSteps1) ( '[Dimension] unitSteps2) =
+-- type family SameFrame (f1 :: [Sampling]) (f2 :: [Sampling]) :: Constraint where
+--   SameFrame ( '[Sampling] unitSteps1) ( '[Sampling] unitSteps2) =
 --     (SameUnitSampleSteps unitSteps1 unitSteps2)
 
--- type family FrameDimensionLength (ds :: [Dimension]) :: Nat where
+-- type family FrameDimensionLength (ds :: [Sampling]) :: Nat where
 --   FrameDimensionLength (FRAME frameUnits) = ListLength frameUnits
 
 -- data FrameDimensionOfLength = FrameDimensionOfLength Nat
@@ -81,49 +81,49 @@ type DomainUnit = Unit
 
 type NumSamples = Nat
 
-data Dimension = Dimension NumSamples SampleStep DomainUnit
+data Sampling = D NumSamples SampleStep DomainUnit
 
 type RangeUnit = Unit
 
-type family NumsSamplesDimensions (ds :: [Dimension]) :: [NumSamples] where
+type family NumsSamplesDimensions (ds :: [Sampling]) :: [NumSamples] where
   NumsSamplesDimensions '[] = '[]
   NumsSamplesDimensions ((D n _ _) ': ds) = n ': NumsSamplesDimensions ds
 
-type family SampleStepsDimensions (ds :: [Dimension]) :: [SampleStep] where
+type family SampleStepsDimensions (ds :: [Sampling]) :: [SampleStep] where
   SampleStepsDimensions '[] = '[]
   SampleStepsDimensions ((D _ ss _) ': ds) = ss ': SampleStepsDimensions ds
 
-type family DomainUnitsDimensions (ds :: [Dimension]) :: [DomainUnit] where
+type family DomainUnitsDimensions (ds :: [Sampling]) :: [DomainUnit] where
   DomainUnitsDimensions '[] = '[]
   DomainUnitsDimensions ((D _ _ u) ': ds) = u ': DomainUnitsDimensions ds
 
-type family EqDimension (x :: Dimension) (y :: Dimension) :: Bool where
+type family EqDimension (x :: Sampling) (y :: Sampling) :: Bool where
   EqDimension (D n1 sampleStep1 domainUnit1) (D n2 sampleStep2 domainUnit2) =
     (n1 == n2)
       `And` (EqSampleStep sampleStep1 sampleStep2)
       `And` (EqUnit domainUnit1 domainUnit2)
 
-type family PrintDimension (x :: Dimension) where
+type family PrintDimension (x :: Sampling) where
   PrintDimension (D n sampleStep domainUnit) =
     Text ""
       :$$: (Text "Number of samples: " :<>: ShowType n)
       :$$: (Text "Sample step: " :<>: PrintSampleStep sampleStep)
       :$$: (Text "Domain unit: " :<>: PrintUnit domainUnit)
 
-type family EqDimensions (x :: [Dimension]) (y :: [Dimension]) :: Bool where
+type family EqDimensions (x :: [Sampling]) (y :: [Sampling]) :: Bool where
   EqDimensions '[] '[] = True
   EqDimensions _ '[] = False
   EqDimensions '[] _ = False
   EqDimensions (x ': xs) (y ': ys) = EqDimension x y `And` EqDimensions xs ys
 
-type family PrintDimensions (xs :: [Dimension]) where
+type family PrintDimensions (xs :: [Sampling]) where
   PrintDimensions '[] = Text "Dimensionless"
   PrintDimensions ds =
     (Text "Numbers of samples: " :<>: Text "[" :<>: (PrintNats (NumsSamplesDimensions ds))) :<>: Text "]"
       :$$: (Text "Sample steps: " :<>: Text "[" :<>: (PrintSampleSteps (SampleStepsDimensions ds))) :<>: Text "]"
       :$$: (Text "Domain units: " :<>: Text "[" :<>: (PrintUnits (DomainUnitsDimensions ds))) :<>: Text "]"
 
-type family SameDimensions (xs :: [Dimension]) (ys :: [Dimension]) :: Constraint where
+type family SameDimensions (xs :: [Sampling]) (ys :: [Sampling]) :: Constraint where
   SameDimensions xs ys =
     Unless
       (EqDimensions xs ys)
@@ -137,12 +137,10 @@ type Dimensionless = '[]
 instance (KnownNat n, ToShape ds) => ToShape ((D n sampleStep domainUnit) ': ds) where
   toShape = (nat @n) : toShape @ds
 
-type D = 'Dimension
-
 --------------------------------------------------------------------------------
 newtype
   UnitExpr
-    (ds :: [Dimension])
+    (ds :: [Sampling])
     (rangeUnit :: RangeUnit)
     (et :: ElementType)
   = UnitExpr ExprBuilder
@@ -175,6 +173,15 @@ gconstant ::
   Double ->
   UnitExpr ds unit R
 gconstant val = UnitExpr $ introduceNode (toShape @ds, R, Const val)
+
+variable1D :: String -> UnitExpr ds unit R
+variable1D = undefined
+
+x = variable1D @'[D 10 (1 :/ 2000) Meter] @Kilogram "x"
+
+y = variable1D @'[D 10 (1 :/ 2000) Meter] @Kilogram "y"
+
+z = dft $ (x +: y)
 
 constant :: forall unit. Double -> UnitExpr Dimensionless unit R
 constant = gconstant @Dimensionless @unit
@@ -218,12 +225,11 @@ constant2D = gconstant @'[d1, d2] @unit
 (+:) = binary (Base.+:)
 
 -- instance ComplexRealOp ()
--- (*) ::
---   SameFrame frame1 frame2 =>
---   UnitExpr frame1 unit1 shape et ->
---   UnitExpr frame2 unit2 shape et ->
---   UnitExpr frame1 (unit1 U.* unit2) shape et
--- (*) = binary (P.*)
+(*) ::
+  UnitExpr frame1 unit1 et ->
+  UnitExpr frame2 unit2 et ->
+  UnitExpr frame1 (unit1 U.:*: unit2) et
+(*) = binary (P.*)
 
 -- (/) ::
 --   SameFrame frame1 frame2 =>
@@ -238,12 +244,12 @@ type family DFTSampleStep (originalSampleStep :: SampleStep) (numSamples :: Nat)
 type family IDFTSampleStep (dftSampleStep :: SampleStep) (numSamples :: Nat) :: SampleStep where
   IDFTSampleStep (a :/: b) n = b :/ (a N.* n)
 
-type family DFTDimensions (ds :: [Dimension]) :: [Dimension] where
+type family DFTDimensions (ds :: [Sampling]) :: [Sampling] where
   DFTDimensions '[] = '[]
   DFTDimensions ((D n sampleStep domainUnit) ': ds) =
     (D n (DFTSampleStep sampleStep n) (Recip domainUnit)) ': DFTDimensions ds
 
-type family IDFTDimensions (ds :: [Dimension]) :: [Dimension] where
+type family IDFTDimensions (ds :: [Sampling]) :: [Sampling] where
   IDFTDimensions '[] = '[]
   IDFTDimensions ((D n sampleStep domainUnit) ': ds) =
     (D n (DFTSampleStep sampleStep n) (Recip domainUnit)) ': IDFTDimensions ds

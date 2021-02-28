@@ -13,12 +13,15 @@
 -- constructing the TypedExpr type.
 module HashedExpression.Modeling.Typed where
 
+import Data.Kind (Constraint)
 import Data.Proxy
+import Data.Type.Equality (type (==))
 import GHC.Stack (HasCallStack)
-import GHC.TypeLits (CmpNat, Div, KnownNat, Mod, Nat, natVal, type (+), type (-))
+import GHC.TypeLits (CmpNat, Div, ErrorMessage (..), KnownNat, Mod, Nat, TypeError, natVal, type (+), type (-), type (<=))
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.Builder
 import HashedExpression.Internal.MonadExpression
+import HashedExpression.Modeling.Unit.Common (IfThenElse)
 import Prelude hiding ((**), (^))
 
 -- |
@@ -419,3 +422,128 @@ param2D = gparam @'[m, n]
 
 param3D :: forall m n p. (KnownNat m, KnownNat n, KnownNat p) => String -> TypedExpr '[m, n, p] R
 param3D = gparam @'[m, n, p]
+
+-- type family AdditionSpec (t1 :: ([Nat], ElementType)) (t2 :: ([Nat], ElementType)) :: ([Nat], ElementType) where
+--   AdditionSpec '(sh1, et1) '(sh2, et2) =
+--     IfThenElse
+--       (sh1 == sh2)
+--       '(sh1, et1)
+--       ( TypeError
+--           ( Text "Can't add expression of shape "
+--               :$$: ShowType sh1
+--               :$$: Text "with expression of shape "
+--               :$$: ShowType sh2
+--           )
+--       )
+
+-- addition ::
+--   ('(resultSh, resultET) ~ AdditionSpec '(sh1, et1) '(sh2, et2)) =>
+--   TypedExpr sh1 et1 ->
+--   TypedExpr sh2 et2 ->
+--   TypedExpr resultSh resultET
+-- addition = undefined
+
+-- x = variable2D @10 @10 "x"
+
+-- y = variable2D @20 @10 "y"
+
+-- z = x + y
+
+-- data Selector
+--   = All
+--   | Range Nat Nat
+--   | At Nat
+
+class Satisfied
+
+instance Satisfied 
+
+type family Scalable (etScalar :: ElementType) (etVector :: ElementType) :: Constraint where
+  Scalable R e = Satisfied
+  Scalable C C = Satisfied
+  Scalable C R = TypeError (Text "Scale a real vector by a complex scalar is not allowed")
+
+-- ss ::
+--   (Scalable etScalar etVector) =>
+--   TypedExpr Scalar etScalar ->
+--   TypedExpr sh etVector ->
+--   TypedExpr sh etVector
+-- ss = undefined
+
+-- x = variable2D @10 @10 "x" -- TypedExpr '[10, 10] R
+-- y = variable2D @10 @10 "y" -- TypedExpr '[10, 10] R
+-- s1 = variable "s1" -- TypedExpr Scalar R
+-- s2 = variable "s1" -- TypedExpr Scalar R
+-- s = s1 +: s2  -- TypedExpr Scalar C
+-- z = s1 *. (x +: y) -- OK, result: TypedExpr '[10, 10] C
+-- z2 = s `ss` x -- Type Error
+
+data Selector
+  = SAll
+  | SRange Nat Nat Nat
+  | SAt Nat
+
+type family Require (conditions :: [(Bool, ErrorMessage)]) (val :: k) :: k where
+  Require '[] val = val
+  Require ('(condition, errorMessage) : cs) val =
+    IfThenElse condition (Require cs val) (TypeError errorMessage)
+
+type family ProjectionShape (inputShape :: [Nat]) (selectors :: [Selector]) :: [Nat] where
+  ProjectionShape '[] '[] = '[]
+  ProjectionShape '[] _ = TypeError (Text "Shape and selector dimensions mismatch")
+  ProjectionShape _ '[] = TypeError (Text "Shape and selector dimensions mismatch")
+  ProjectionShape (n : ns) (SAll : ss) = n : ProjectionShape ns ss
+  ProjectionShape (n : ns) (SAt pos : ss) =
+    Require
+      '[ '( CmpNat pos n == LT,
+            Text "Invalid index " :<>: ShowType pos
+              :<>: Text ", must be in range (0, "
+              :<>: ShowType n
+              :<>: Text ")"
+          )
+       ]
+      (ProjectionShape ns ss)
+  ProjectionShape (n : ns) (SRange start end step : ss) =
+    Require
+      '[ '( CmpNat start n == LT,
+            Text "Invalid start index "
+              :<>: ShowType start
+              :<>: Text ", must be in range (0, "
+              :<>: ShowType n
+              :<>: Text ")"
+          ),
+         '( CmpNat end n == LT,
+            Text "Invalid end index "
+              :<>: ShowType end
+              :<>: Text ", must be in range (0, "
+              :<>: ShowType n
+              :<>: Text ")"
+          ),
+         '(CmpNat 0 step == LT, Text "Step must be positive")
+       ]
+      ((((n + end - start) `Mod` n) `Div` step + 1) : ProjectionShape ns ss)
+
+type family IsSelectors (selectors :: [Selector]) where
+  IsSelectors _ = Satisfied 
+
+project1 :: IsSelectors selectors =>
+  TypedExpr inputShape et ->
+  TypedExpr (ProjectionShape inputShape selectors) et
+project1 = undefined
+
+
+
+-- xall = Proxy @SAll
+
+-- xrange :: (KnownNat from, KnownNat to) => Proxy (SRange from to 1)
+-- xrange = Proxy
+
+-- xat :: (KnownNat i) => Proxy (SAt i)
+-- xat = Proxy
+
+-- x = variable2D @20 @30 "x"
+
+-- y = project1 @'[SRange 10 30 1, SRange 1 5 1] x
+
+-- z = project1 @'[SRange 0 35 1, SRange 1 2 1] x
+
