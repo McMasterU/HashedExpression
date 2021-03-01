@@ -162,8 +162,8 @@ int main()
 
    /* Set ipopt options.
     */
-   AddIpoptNumOption(nlp, "tol", 1e-7);  // TODO adjust me?
-   AddIpoptStrOption(nlp, "mu_strategy", "adaptive"); // TODO does this help?
+  //  AddIpoptNumOption(nlp, "tol", 1e-7);  // TODO adjust me?
+   AddIpoptStrOption(nlp, "mu_strategy", "monotone"); // TODO does this help?
    AddIpoptStrOption(nlp, "hessian_approximation","limited-memory"); // TODO add option to turn off/on?
 
    /* Initialize variables and parameters */

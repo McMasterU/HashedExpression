@@ -23,12 +23,12 @@ def gaussian_kernel(x1, x2, sigma):
 
     return sim
 
-data = scio.loadmat('ex6data2.mat')
+data = scio.loadmat('ex6data1.mat')
 X = data['X']
 y = data['y'].flatten()
 
 
-# print(X.shape, y.shape)
+print(X.shape, y.shape)
 m = y.size
 
 
@@ -38,14 +38,14 @@ km = np.zeros((m, m))
 
 for i in range(m):
   for j in range(m):
-    km[i][j] = gaussian_kernel(X[i], X[j], 2)
+    km[i][j] = np.sum(X[i] * X[j])
 
 y = y + (1 - y) * (-1)
-print(y)
 
 hf = h5py.File('data.h5', 'w')
 hf.create_dataset('km', data=km)
 hf.create_dataset('y',data=y.reshape((m, 1)))
+hf.create_dataset('alpha', data=np.ones((m, 1)))
 hf.create_dataset('alphaLB', data=np.zeros((m, 1)))
 hf.create_dataset('x',data=X)
 hf.close()
