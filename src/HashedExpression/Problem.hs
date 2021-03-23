@@ -164,7 +164,7 @@ constructProblemHelper objective constraints = do
       & mapM
         ( \(g, (lb, ub)) -> do
             (gID, gPartialDerivativeMap) <- processF g
-            return (gID, gPartialDerivativeMap, ub, lb)
+            return (gID, gPartialDerivativeMap, lb, ub)
         )
   -------------------------------------------------------------------------------
   variableNodes <- varNodes <$> get
