@@ -10,39 +10,40 @@ import Examples.LinearRegression
 import Examples.LogisticRegression
 import Examples.NeuralNetwork
 import HashedExpression
+import HashedExpression.Differentiation.Reverse
 import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import Prelude hiding ((^))
 
-f =
-  let y = variable "y"
-      x = variable2D @10 @10 "x"
-      z = y *. x
-      t = y *. x
-   in z + t
+-- f =
+--   let y = variable "y"
+--       x = variable2D @10 @10 "x"
+--       z = y *. x
+--       t = y *. x
+--    in z + t
 
-main :: IO ()
-main = do
-  -- let x = variable2D @128 @128 "x"
-  --     --- bound
-  --     xLowerBound = bound2D @128 @128 "x_lb"
-  --     xUpperBound = bound2D @128 @128 "x_ub"
-  --     -- parameters
-  --     im = param2D @128 @128 "im"
-  --     re = param2D @128 @128 "re"
-  --     mask = param2D @128 @128 "mask"
-  --     -- regularization
-  --     regularization = norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x)
-  --     lambda = 3000
-  --     objective =
-  --           norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im)))
-  --             + lambda * regularization
-  let y = variable "y"
-      x = variable2D @10 @10 "x"
-      z = y *. x
-      t = y *. x
-      f = z + t
-  print f
+-- main :: IO ()
+-- main = do
+-- let x = variable2D @128 @128 "x"
+--     --- bound
+--     xLowerBound = bound2D @128 @128 "x_lb"
+--     xUpperBound = bound2D @128 @128 "x_ub"
+--     -- parameters
+--     im = param2D @128 @128 "im"
+--     re = param2D @128 @128 "re"
+--     mask = param2D @128 @128 "mask"
+--     -- regularization
+--     regularization = norm2square (rotate (0, 1) x - x) + norm2square (rotate (1, 0) x - x)
+--     lambda = 3000
+--     objective =
+--           norm2square ((mask +: 0) * (ft (x +: 0) - (re +: im)))
+--             + lambda * regularization
+-- let y = variable "y"
+--     x = variable2D @10 @10 "x"
+--     z = y *. x
+--     t = y *. x
+--     f = z + t
+-- print f
 
 -- let gr1 = fst $ asRawExpr objective
 -- let gr2 = fst $ asRawExpr z
@@ -66,3 +67,15 @@ main = do
 -- let exp = x * (x + y) * log (x + y)
 -- -- print exp
 -- writeFile "haha.dot" $ toDotCode ShowFullExpr $ x * (x + y) * log (x + y)
+
+main :: IO ()
+main = do
+  let [x, y] = map variable ["x", "y"]
+  let f = x * (2 * x + 1) + y ^ 2
+  case brainReconstructFromMRI of
+    OptimizationProblem {..} ->
+      case constructProblem objective constraints of
+        Right problem -> writeFile "haha.dot" $ toDotCodeProblem ShowOp problem
+
+-- let (res, _) = partialDerivativesMap f
+-- writeFile "haha.dot" $ toDotCodeMp ShowOp $ res

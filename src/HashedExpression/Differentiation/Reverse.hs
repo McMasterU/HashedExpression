@@ -41,7 +41,7 @@ partialDerivativesMap scalarRealExp =
               -- Sum all the derivative parts incurred by its parents
               case derivativeParts of
                 Just [d] -> from d
-                Just ds -> perform (Nary specSum) ds
+                Just ds -> sum_ $ map from ds
         curMp <- gets contextMap
         let (shape, et, op) = retrieveNode nID curMp
         let one = introduceNode (shape, R, Const 1)

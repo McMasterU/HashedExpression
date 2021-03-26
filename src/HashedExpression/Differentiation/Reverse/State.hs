@@ -37,6 +37,17 @@ data ComputeDState = ComputeDState
 -- |
 addDerivative :: NodeID -> NodeID -> ComputeReverseM ()
 addDerivative x dx = modify' $ \s -> s {cumulativeDerivatives = Map.insertWith (++) x [dx] (cumulativeDerivatives s)}
+-- addDerivative :: NodeID -> NodeID -> ComputeReverseM ()
+-- addDerivative x dx =
+--   ComputeReverseM $
+--     modify' $ \s ->
+--       s
+--         { cumulativeDerivatives =
+--             Map.insertWith (++) x [dx] (cumulativeDerivatives s)
+--         }
+
+-- finalizeVariableDerivative :: 
+
 
 -- |
 setPartialDerivative :: (Map String NodeID -> Map String NodeID) -> ComputeReverseM ()
@@ -44,6 +55,8 @@ setPartialDerivative f = modify' $ \s -> s {partialDerivativeMap = f (partialDer
 
 -- |
 type ComputeReverseM a = State ComputeDState a
+
+newtype CA a = CA (State ComputeDState a)
 
 instance MonadExpression (State ComputeDState) where
   introduceNode node = do

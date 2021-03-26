@@ -27,10 +27,16 @@ import HashedExpression.Internal.Node
 import Prelude hiding ((^))
 
 --------------------------------------------------------------------------------
-newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a} deriving (Functor, Applicative, Monad)
+newtype Rewrite a = Rewrite {unRewrite :: State ExpressionMap a}
+  deriving (Functor, Applicative, Monad)
 
 runRewrite :: Rewrite NodeID -> ExpressionMap -> RawExpr
 runRewrite (Rewrite rw) mp = swap $ runState rw mp
+
+runModification :: Modification -> RawExpr -> RawExpr
+runModification mod (mp, nID) =
+  let Rewrite rw = mod nID
+   in swap $ runState rw mp
 
 --------------------------------------------------------------------------------
 

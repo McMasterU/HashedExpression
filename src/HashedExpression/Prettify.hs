@@ -58,6 +58,9 @@ inTextTag tx = "\\text{" <> tx <> "}"
 toDotCode :: HasExpressionMap t => DotGraphMode -> t -> String
 toDotCode dotGraphMode = LT.unpack . GV.printDotGraph . toDotGraph' dotGraphMode . getExpressionMap
 
+toDotCodeMp :: DotGraphMode -> ExpressionMap -> String
+toDotCodeMp dotGraphMode = LT.unpack . GV.printDotGraph . toDotGraph' dotGraphMode
+
 toDotCodeProblem :: DotGraphMode -> Problem -> String
 toDotCodeProblem mode problem =
   let stmts = GV.graphStatements $ toDotGraph' mode $ expressionMap problem

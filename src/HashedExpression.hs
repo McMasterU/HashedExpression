@@ -36,7 +36,8 @@ where
 
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import GHC.TypeLits (KnownNat, Nat)
+import GHC.TypeLits (KnownNat, Mod, Nat, type (+), type (-))
+import GHC.TypeNats (CmpNat)
 import HashedExpression.Codegen
 import HashedExpression.Codegen.CSimple
 import HashedExpression.Interface
@@ -44,11 +45,10 @@ import HashedExpression.Internal.Base
 import HashedExpression.Internal.Node
 import HashedExpression.Internal.Simplify
 import HashedExpression.Interp
+import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
 import HashedExpression.Problem
 import HashedExpression.Value
-import HashedExpression.Modeling.Typed
-
 import Prelude hiding ((**), (^))
 
 proceed ::
@@ -69,3 +69,27 @@ proceed OptimizationProblem {..} codegen workingDir = case constructProblemAndGe
       problem <- constructProblem objective constraints
       generateProblemCode codegen problem (mkValMap values)
 
+problem :: (KnownNat n) => OptimizationProblem
+problem =
+  let x = variable1D @10 "x"
+      y = project1 @'[SRange 1 9 1] x
+      z = project1 @'[SRange 0 8 1] x
+      t = y + z
+   in undefined
+
+problem1 ::
+  forall n.
+  ( KnownNat n,
+    0 < n,
+    (n - 2) < n,
+    KnownNat ((n + (n - 2)) `Mod` n + 1),
+    ProjectionShape '[n] '[ 'SRange 1 (n - 1) 1]
+      ~ ProjectionShape '[n] '[ 'SRange 0 (n - 2) 1]
+  ) =>
+  OptimizationProblem
+problem1 =
+  let x = variable1D @n "x"
+      y = project1 @'[SRange 1 (n - 1) 1] x
+      z = project1 @'[SRange 0 (n - 2) 1] x
+      t = y + z
+   in undefined
