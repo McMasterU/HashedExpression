@@ -35,7 +35,7 @@ import Prelude hiding ((!!))
 
 -------------------------------------------------------------------------------
 
-data DataOutput = OutputText | OutputHDF5 deriving (Eq, Show)
+data DataOutput = OutputText | OutputHDF5 | OutputCSV deriving (Eq, Show)
 
 -- | Generate simple C code
 data CSimpleConfig = CSimpleConfig
@@ -534,7 +534,21 @@ instance Codegen CSimpleConfig where
                   ("size", tt . product . getShape . nodeId $ var)
                 ]
                 writeTXTTemplate
-          writeResult = T.intercalate "\n" $ map writeResultCode variables
+            | output == OutputCSV =
+              renderTemplate
+                [ ("name", tt $ varName var),
+                  ("filePath", tt "ipopt_out.csv"),
+                  ("address", "ptr + " <> (tt . addressReal . nodeId $ var)),
+                  ("size", tt . product . getShape . nodeId $ var)
+                ]
+                writeCSVTemplate
+          writeResult = T.intercalate "\n" $
+                          ["FILE *file = fopen(\"ipopt_out.csv\",\"w\");"
+                          ,"time_t time_struct = time(NULL);"
+                          ,"char *time_string = ctime(&time_struct);"
+                          ,"fprintf(file,\"# Generated: %s\",time_string);"
+                          ,"fclose(file);"]
+                          ++ map writeResultCode variables
       let codes =
             renderTemplate
               [ ("fftUtils", if containsFTNode cExpressionMap then tt $ fftUtils else ""),

@@ -28,6 +28,9 @@ readHDF5Template = $(embedStringFile "embed/readHDF5.c")
 writeTXTTemplate :: T.Text
 writeTXTTemplate = $(embedStringFile "embed/writeTXT.c")
 
+writeCSVTemplate :: T.Text
+writeCSVTemplate = $(embedStringFile "embed/writeCSV.c")
+
 writeHDF5Template :: T.Text
 writeHDF5Template = $(embedStringFile "embed/writeHDF5.c")
 
