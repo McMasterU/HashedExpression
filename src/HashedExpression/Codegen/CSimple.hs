@@ -537,13 +537,13 @@ instance Codegen CSimpleConfig where
             | output == OutputCSV =
               renderTemplate
                 [ ("name", tt $ varName var),
-                  ("filePath", tt "ipopt_out.csv"),
+                  ("filePath", tt "data_out.csv"),
                   ("address", "ptr + " <> (tt . addressReal . nodeId $ var)),
                   ("size", tt . product . getShape . nodeId $ var)
                 ]
                 writeCSVTemplate
           writeResult = T.intercalate "\n" $
-                          ["FILE *file = fopen(\"ipopt_out.csv\",\"w\");"
+                          ["FILE *file = fopen(\"data_out.csv\",\"w\");"
                           ,"time_t time_struct = time(NULL);"
                           ,"char *time_string = ctime(&time_struct);"
                           ,"fprintf(file,\"# Generated: %s\",time_string);"
