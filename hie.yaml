@@ -3,7 +3,22 @@ cradle:
     - path: "./src"
       component: "HashedExpression:lib"
 
-    - path: "./app"
+    - path: "./app/Main.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples/Brain.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples/LinearRegression.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples/LogisticRegression.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Examples/NeuralNetwork.hs"
+      component: "HashedExpression:exe:HashedExpression-exe"
+
+    - path: "./app/Paths_HashedExpression.hs"
       component: "HashedExpression:exe:HashedExpression-exe"
 
     - path: "./test"
