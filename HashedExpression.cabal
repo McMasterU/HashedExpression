@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3cad02a20371f1c29da1aa03ac56f234cdb930ccc2c6d2dfe6520d3edc1d47f9
+-- hash: 0c51ad0b88e7ffff97148aeab8c4a185a8853b1276d4813b43526208ccc019b5
 
 name:           HashedExpression
 version:        0.0.9
@@ -59,7 +59,35 @@ library
       Paths_HashedExpression
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
+  default-extensions:
+      OverloadedStrings
+      GADTs
+      OverloadedStrings
+      FlexibleContexts
+      FlexibleInstances
+      TypeFamilies
+      TypeApplications
+      StandaloneDeriving
+      TypeSynonymInstances
+      FunctionalDependencies
+      AllowAmbiguousTypes
+      RoleAnnotations
+      UndecidableInstances
+      ExtendedDefaultRules
+      MultiParamTypeClasses
+      TemplateHaskell
+      QuasiQuotes
+      ScopedTypeVariables
+      TupleSections
+      GeneralisedNewtypeDeriving
+      DataKinds
+      InstanceSigs
+      RecordWildCards
+      LambdaCase
+      PolyKinds
+      NoStarIsType
+      TypeOperators
+      ConstraintKinds
   build-depends:
       array
     , base
@@ -87,7 +115,35 @@ executable HashedExpression-exe
       Paths_HashedExpression
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
+  default-extensions:
+      OverloadedStrings
+      GADTs
+      OverloadedStrings
+      FlexibleContexts
+      FlexibleInstances
+      TypeFamilies
+      TypeApplications
+      StandaloneDeriving
+      TypeSynonymInstances
+      FunctionalDependencies
+      AllowAmbiguousTypes
+      RoleAnnotations
+      UndecidableInstances
+      ExtendedDefaultRules
+      MultiParamTypeClasses
+      TemplateHaskell
+      QuasiQuotes
+      ScopedTypeVariables
+      TupleSections
+      GeneralisedNewtypeDeriving
+      DataKinds
+      InstanceSigs
+      RecordWildCards
+      LambdaCase
+      PolyKinds
+      NoStarIsType
+      TypeOperators
+      ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HashedExpression
@@ -125,7 +181,35 @@ test-suite HashedExpression-test
       Paths_HashedExpression
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings GADTs OverloadedStrings FlexibleContexts FlexibleInstances TypeFamilies TypeApplications StandaloneDeriving TypeSynonymInstances FunctionalDependencies AllowAmbiguousTypes RoleAnnotations UndecidableInstances ExtendedDefaultRules MultiParamTypeClasses TemplateHaskell QuasiQuotes ScopedTypeVariables TupleSections GeneralisedNewtypeDeriving DataKinds InstanceSigs RecordWildCards LambdaCase PolyKinds NoStarIsType TypeOperators ConstraintKinds
+  default-extensions:
+      OverloadedStrings
+      GADTs
+      OverloadedStrings
+      FlexibleContexts
+      FlexibleInstances
+      TypeFamilies
+      TypeApplications
+      StandaloneDeriving
+      TypeSynonymInstances
+      FunctionalDependencies
+      AllowAmbiguousTypes
+      RoleAnnotations
+      UndecidableInstances
+      ExtendedDefaultRules
+      MultiParamTypeClasses
+      TemplateHaskell
+      QuasiQuotes
+      ScopedTypeVariables
+      TupleSections
+      GeneralisedNewtypeDeriving
+      DataKinds
+      InstanceSigs
+      RecordWildCards
+      LambdaCase
+      PolyKinds
+      NoStarIsType
+      TypeOperators
+      ConstraintKinds
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit
