@@ -1,12 +1,14 @@
 # HashedExpression 
-[![wercker status](https://app.wercker.com/status/fce29884fa47e4258f62240000f1e368/m/master "wercker status")](https://app.wercker.com/project/byKey/fce29884fa47e4258f62240000f1e368)
 
-Haskell-embeded Algebraic Modeling Language with type-safety, symbolic transformation and C-code generation 
+Haskell-embeded Algebraic Modeling Language: solving mathematical optimization with type-safety, symbolic transformation and C-code generation.
 
+Further reading: [Type-safe Modeling for Optimization](https://macsphere.mcmaster.ca/handle/11375/26691)
+
+## 
 
 ## Features
-- A type-safe, correct-by-construction APIs to model optimization problems, empowered by Haskell's phantom-type and type-level programming.
-    - For example, adding 2 expressions with mismatched shape or element type (**R** or C) will result in type error will result in type error:
+- A type-safe, correct-by-construction APIs to model optimization problems using type-level programming.
+    - For example, adding 2 expressions with mismatched shape or element type (**R** or **C**) will result in type error will result in type error:
     ```haskell
     λ> let x = variable1D @10 "x"
     λ> let y = variable1D @9 "y"
@@ -50,9 +52,7 @@ Haskell-embeded Algebraic Modeling Language with type-safety, symbolic transform
 - Automatically simplify expressions and compute derivatives, identify common subexpressions.
     - We represent expressions symbolically. Expressions are hashed and indexed in a common lookup table, thus allows for identifying common subexpressions.
     - Derivatives are computed by reverse accumulation method.
-- Generate code which can be feed to optimization solvers (such as LBFGS, LBFGS-B, Ipopt, see [solvers](solvers)).
-    - Currently, we have a code generator that produce C99 code. 
-    - Since code generation is decoupled from all other steps, we could easily provide other generators. A version of SIMD C is WIP, and later a GPU version.
+- Generate code which can be compiled with optimization solvers (such as LBFGS, LBFGS-B, Ipopt, see [solvers](solvers)).
 
 Supported operations:
 - basic algebraic operations: addition, multiplication, etc.
