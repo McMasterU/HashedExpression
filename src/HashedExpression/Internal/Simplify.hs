@@ -159,7 +159,8 @@ exponentRules =
 -- | Miscellaneous rules
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |.~~> (-1 :: Pattern) *. x,
+  [ negate x |. isScalar x ~~> (-1 :: Pattern) * x,
+    negate x |. isNot (isScalar x) ~~> (-1 :: Pattern) *. x,
     (x ^ alpha) ^ beta |.~~> x ^ (alpha * beta)
   ]
 
