@@ -236,6 +236,12 @@ groupConstantsRules n = withExpressionMap $ \mp ->
         Mul ns
           | Just (_, cs) <- pullConstants mp ns,
             rest@(x : _) <- filter (not . isConstant mp) ns,
+            True <- all (== []) $ retrieveShapes rest mp,
+            let scalar = num_ . product $ cs ->
+            scalar * product_ (map just rest)
+        Mul ns -- TODO: Figure out how to deal with a product list that are not scalars
+          | Just (_, cs) <- pullConstants mp ns,
+            rest@(x : _) <- filter (not . isConstant mp) ns,
             let scalar = num_ . product $ cs ->
             scalar *. product_ (map just rest)
         _ -> just n
