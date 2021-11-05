@@ -257,7 +257,9 @@ combineTermsRules n = withExpressionMap $ \mp ->
       build :: (NodeID, Double) -> Rewrite NodeID
       build (nId, val)
         | val == 1 = just nId
-        | otherwise = num_ val *. just nId
+        | otherwise = case pullConstant mp nId of
+            Just ([], _) -> num_ val * just nId
+            _ -> num_ val *. just nId
    in case retrieveOp n mp of
         Sum ns ->
           sum_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
