@@ -184,6 +184,7 @@ retrieveShape (NodeID n) mp =
     Just (shape, _, _) -> shape
     _ -> error "expression not in map"
 
+{-# INLINE retrieveShapes #-}
 retrieveShapes :: HasCallStack => [NodeID] -> ExpressionMap -> [Shape]
 retrieveShapes nodeIDs mp = map (flip retrieveShape mp) nodeIDs
 

@@ -23,6 +23,7 @@ import HashedExpression.Internal.Rewrite
 import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
+import Data.GraphViz.Parsing (onlyBool)
 
 simplify :: RawExpr -> RawExpr
 simplify = removeUnreachable . apply
@@ -33,6 +34,7 @@ simplify = removeUnreachable . apply
           collapseSumProdRules,
           flattenSumProdRules,
           groupConstantsRules,
+          combineMulTermsRules,
           combineTermsRules,
           combineTermsRulesProd,
           evaluateIfPossibleRules,
@@ -246,6 +248,30 @@ groupConstantsRules n = withExpressionMap $ \mp ->
             scalar *. product_ (map just rest)
         _ -> just n
 
+-- | Rules for combining and reducing the number of constant product terms in 'Sum'
+--
+-- This rule is identical to the one below, however here we are only
+-- concerned with the inner Muls. This is necessary because we differentiate
+-- between dot products (*.) and scalar products in Mul.
+combineMulTermsRules :: Modification
+combineMulTermsRules n = withExpressionMap $ \mp ->
+  let factorConst nId
+        | Mul (c:args) <- retrieveOp nId mp,
+          Const val <- retrieveOp c mp =
+          (args, val)
+        | otherwise = ([nId], 1)
+      combine xs = (fst $ head xs, sum $ map snd xs)
+      constructMul ns
+        | null ns = error "combineMulTermsRules: empty list"
+        | length ns == 1 = just $ head ns
+        | otherwise = product_ $ map just ns
+      build (nId, val)
+        | val == 1 = constructMul nId
+        | otherwise = num_ val * constructMul nId
+  in case retrieveOp n mp of
+    Sum ns ->
+      sum_ . map (build . combine) . groupOn fst . sortWith fst . map factorConst $ ns
+    _ -> just n
 -- | Rules for combining and reducing the number of terms in 'Sum'
 --
 --   This includes the following scenarios:
