@@ -176,6 +176,10 @@ retrieveElementType (NodeID n) mp =
     Just (_, et, _) -> et
     _ -> error "expression not in map"
 
+{-# INLINE retrieveElementTypes #-}
+retrieveElementTypes :: HasCallStack => [NodeID] -> ExpressionMap -> [ElementType]
+retrieveElementTypes nodeIDs mp = map (`retrieveElementType` mp) nodeIDs
+
 -- | Retrieve the 'Shape' of a 'Node' from it's base 'ExpressionMap' and 'NodeID'
 {-# INLINE retrieveShape #-}
 retrieveShape :: HasCallStack => NodeID -> ExpressionMap -> Shape
@@ -186,7 +190,7 @@ retrieveShape (NodeID n) mp =
 
 {-# INLINE retrieveShapes #-}
 retrieveShapes :: HasCallStack => [NodeID] -> ExpressionMap -> [Shape]
-retrieveShapes nodeIDs mp = map (flip retrieveShape mp) nodeIDs
+retrieveShapes nodeIDs mp = map (`retrieveShape` mp) nodeIDs
 
 getShape :: HasCallStack => IsExpression e => e -> Shape
 getShape e = let (mp, nID) = asRawExpr e in retrieveShape nID mp

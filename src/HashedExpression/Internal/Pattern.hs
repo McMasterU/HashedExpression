@@ -31,6 +31,7 @@ module HashedExpression.Internal.Pattern
     SumRestOp (..),
     restOfProduct,
     restOfSum,
+    __,
 
     -- * PatternList
     PatternList (..),
@@ -144,6 +145,8 @@ data Pattern
     PMulList PatternList
   | -- | constant
     PConst Double
+  | -- | don't care what we match on
+    PWildCard
   | -- | summation operator
     PSum [Pattern]
   | -- | multiplication operator
@@ -198,7 +201,7 @@ data Pattern
     PPiecewise Pattern PatternList
   | -- | a hole that is the rest of a multiplication
     PMulRest Capture [Pattern]
-  | -- | a hole taht is the rest of a summation
+  | -- | a hole that is the rest of a summation
     PSumRest Capture [Pattern]
   | -- | pattern that has a power operator with a 'PatternPower' applied to it
     PPower Pattern PatternPower
@@ -230,6 +233,10 @@ data PatternRotateAmount
 
 -- | 'Pattern' holes are identified uniquely by a Capture id
 type Capture = Int
+
+-- | Wildcard pattern operand
+__ :: Pattern
+__ = PWildCard
 
 -- | Predefined hole for capturing the tail of a product (with hardcoded 'Capture' id 239)
 restOfProduct :: Pattern
@@ -397,7 +404,7 @@ isScalar p exp match =
   let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
    in retrieveShape pNodeID mp == []
 
--- | Returns True iff the 'Pattern' capture is a 'Scalar'
+-- | Returns True iff the 'Pattern' capture is a 'Const'
 isConst :: Pattern -> Condition
 isConst p exp match =
   let (mp, pNodeID) = runRewrite (buildFromPattern Nothing match p) $ fst exp
@@ -525,10 +532,14 @@ unionMatch match1 match2 =
 match :: RawExpr -> Pattern -> Maybe Match
 match (mp, n) outerWH =
   let catMatch = foldl unionMatch emptyMatch
+      -- LMD: Due to the existence of wildcards in pattern matches,
+      -- we cannot assume that two lists of unequal length will fail a
+      -- pattern match.
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
       recursiveAndCombine args whs
-        | length args == length whs,
-          let subMatches = zipWith match (map (mp,) args) whs,
+        | let (pats, _wildcarded) = span (\case PWildCard -> False; _ -> True) whs,
+          length args >= length pats,
+          let subMatches = zipWith match (map (mp,) $ take (length pats) args) pats,
           all isJust subMatches =
           Just . catMatch . catMaybes $ subMatches
         | otherwise = Nothing

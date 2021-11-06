@@ -34,6 +34,7 @@ simplify = removeUnreachable . apply
           collapseSumProdRules,
           flattenSumProdRules,
           groupConstantsRules,
+          flattenSumProdRules, -- Reapply flattening here to factor out Mul terms
           combineMulTermsRules,
           combineTermsRules,
           combineTermsRulesProd,
@@ -86,14 +87,16 @@ toMultiplyIfPossible =
 -- | Rules with zero and one
 --
 --   This includes basic rules such as identity and zero of multiplication and identity of addition.
+--   We also pattern match on constants in multiplication and sum lists
 zeroOneRules :: [Substitution]
 zeroOneRules =
   [ one *. x |.~~> x,
     one * x |.~~> x,
+    one * restOfProduct |.~~> restOfProduct,
     x * one |.~~> x,
     x ^ 0 |.~~> one,
     x ^ 1 |.~~> x,
-    zero * x |.~~> zero,
+    zero * __ |.~~> zero,
     x * zero |.~~> zero,
     zero *. x |. isReal x ~~> zero,
     zero *. x |. isComplex x ~~> zero +: zero,
@@ -101,6 +104,7 @@ zeroOneRules =
     one *. x |.~~> x,
     x + zero |.~~> x,
     zero + x |.~~> x,
+    zero + restOfSum |.~~> restOfSum,
     x <.> zero |.~~> zero,
     zero <.> x |.~~> zero
   ]
