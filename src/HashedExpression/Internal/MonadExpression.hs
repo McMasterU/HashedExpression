@@ -62,7 +62,8 @@ instance (MonadExpression m) => Num (m NodeID) where
     x <- operand1
     y <- operand2
     perform (Nary specMul) [x, y]
-
+  fromInteger :: Integer -> m NodeID
+  fromInteger = const_ [] . fromIntegral
 instance (MonadExpression m) => Fractional (m NodeID) where
   (/) operand1 operand2 = operand1 * (operand2 ^ (-1))
 
