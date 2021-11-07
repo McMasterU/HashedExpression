@@ -75,6 +75,16 @@ isOne mp nId
     True
   | otherwise = False
 
+isVar :: ExpressionMap -> NodeID -> Bool
+isVar mp nId
+  | Var _ <- retrieveOp nId mp = True
+  | otherwise = False
+
+isSum :: ExpressionMap -> NodeID -> Bool
+isSum mp nId
+  | Sum _ <- retrieveOp nId mp = True
+  | otherwise = False
+
 -- |
 isConstant :: ExpressionMap -> NodeID -> Bool
 isConstant mp nId
