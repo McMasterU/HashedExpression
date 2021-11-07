@@ -70,8 +70,8 @@ spec =
       sum [one *. x1, x1, x1, constant 3 *. y1, y1] `shouldSimplifyTo` sum [constant 3 *. x1, constant 4 *. y1]
       sum [constant (-1) *. x1, x1, constant 3 *. y1, y1, z1] `shouldSimplifyTo` sum [constant 4 *. y1, z1]
       x1 - x1 `shouldSimplifyTo` zero1
-      sum [one *. x, x, x, constant 3 *. y, y] `shouldSimplifyTo` sum [constant 3 *. x, constant 4 *. y]
-      sum [constant (-1) *. x, x, constant 3 *. y, y, z] `shouldSimplifyTo` sum [constant 4 *. y, z]
+      -- sum [one *. x, x, x, constant 3 *. y, y] `shouldSimplifyTo` sum [constant 3 *. x, constant 4 *. y] LMD: These are scalars!
+      -- sum [constant (-1) *. x, x, constant 3 *. y, y, z] `shouldSimplifyTo` sum [constant 4 *. y, z]
       x - x `shouldSimplifyTo` zero
     specify "scale rules" $ do
       x *. (y *. v) `shouldSimplifyTo` (x * y) *. v

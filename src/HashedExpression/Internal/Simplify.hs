@@ -23,7 +23,6 @@ import HashedExpression.Internal.Rewrite
 import HashedExpression.Utils
 import Prelude hiding ((**), (^))
 import qualified Prelude
-import Data.GraphViz.Parsing (onlyBool)
 
 simplify :: RawExpr -> RawExpr
 simplify = removeUnreachable . apply
@@ -92,7 +91,6 @@ zeroOneRules :: [Substitution]
 zeroOneRules =
   [ one *. x |.~~> x,
     one * x |.~~> x,
-    one * restOfProduct |.~~> restOfProduct,
     x * one |.~~> x,
     x ^ 0 |.~~> one,
     x ^ 1 |.~~> x,
@@ -261,6 +259,7 @@ combineMulTermsRules :: Modification
 combineMulTermsRules n = withExpressionMap $ \mp ->
   let factorConst nId
         | Mul (c:args) <- retrieveOp nId mp,
+          True <- all ([] ==) $ retrieveShapes args mp,
           Const val <- retrieveOp c mp =
           (args, val)
         | otherwise = ([nId], 1)
@@ -271,7 +270,11 @@ combineMulTermsRules n = withExpressionMap $ \mp ->
         | otherwise = product_ $ map just ns
       build (nId, val)
         | val == 1 = constructMul nId
-        | otherwise = num_ val * constructMul nId
+        | otherwise = do
+            nId' <- constructMul nId
+            case retrieveShape nId' mp of
+              [] -> num_ val * constructMul nId
+              _ -> num_ val *. constructMul nId
   in case retrieveOp n mp of
     Sum ns ->
       sum_ . map (build . combine) . groupOn fst . sortWith fst . map factorConst $ ns
