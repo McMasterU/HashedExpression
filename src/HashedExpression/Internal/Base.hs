@@ -17,10 +17,10 @@ import Prelude hiding ((**), (^))
 newtype NodeID = NodeID
   { unNodeID :: Int
   }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
-instance Show NodeID where
-  show (NodeID nID) = show nID
+-- instance Show NodeID where
+  -- show (NodeID nID) = show nID
 
 -- | Shape of an expression
 -- >  []        => Scalar

@@ -14,7 +14,7 @@ import Data.Maybe (fromMaybe)
 import Control.Functor.HT (mapSnd)
 
 expand :: RawExpr -> RawExpr
-expand = removeUnreachable . apply
+expand = apply -- TODO: Find out why some nodes are unreachable but still exist
   where
     apply = toRecursiveTransformation . chain $ [ distribMulOverPlus ]
 
