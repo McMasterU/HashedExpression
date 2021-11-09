@@ -28,13 +28,11 @@ simplify :: RawExpr -> RawExpr
 simplify = removeUnreachable . apply
   where
     apply =
-      multipleTimes 1000 . toRecursiveTransformation . chain $
+      finalRewrites . multipleTimes 1000 . toRecursiveTransformation . chain $
         [ zeroOneSumProdRules,
           collapseSumProdRules,
           flattenSumProdRules,
           groupConstantsRules,
-          flattenSumProdRules, -- Reapply flattening here to factor out Mul terms
-          combineMulTermsRules,
           combineTermsRules,
           combineTermsRulesProd,
           evaluateIfPossibleRules,
@@ -56,6 +54,11 @@ simplify = removeUnreachable . apply
                   rotateRules
                 ]
             )
+
+    finalRewrites :: Transformation -> Transformation
+    finalRewrites t = toRecursiveTransformation (chain rewrites) . t
+      where rewrites =
+              [ rewriteScalars ]
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -94,7 +97,7 @@ zeroOneRules =
     x * one |.~~> x,
     x ^ 0 |.~~> one,
     x ^ 1 |.~~> x,
-    zero * __ |.~~> zero,
+    zero * x |.~~> zero,
     x * zero |.~~> zero,
     zero *. x |. isReal x ~~> zero,
     zero *. x |. isComplex x ~~> zero +: zero,
@@ -163,8 +166,7 @@ exponentRules =
 -- | Miscellaneous rules
 otherRules :: [Substitution]
 otherRules =
-  [ negate x |. isScalar x ~~> (-1 :: Pattern) * x,
-    negate x |. isNot (isScalar x) ~~> (-1 :: Pattern) *. x,
+  [ negate x |.~~> (-1 :: Pattern) *. x,
     (x ^ alpha) ^ beta |.~~> x ^ (alpha * beta)
   ]
 
@@ -237,12 +239,12 @@ groupConstantsRules n = withExpressionMap $ \mp ->
             length cs > 1,
             let total = const_ shape . sum $ cs ->
             sum_ $ total : (map just . filter (not . isConstant mp) $ ns)
-        Mul ns
-          | Just (_, cs) <- pullConstants mp ns,
-            rest@(x : _) <- filter (not . isConstant mp) ns,
-            True <- all (== []) $ retrieveShapes rest mp,
-            let scalar = num_ . product $ cs ->
-            scalar * product_ (map just rest)
+        -- Mul ns
+        --   | Just (_, cs) <- pullConstants mp ns,
+        --     rest@(x : _) <- filter (not . isConstant mp) ns,
+        --     True <- all (== []) $ retrieveShapes rest mp,
+        --     let scalar = num_ . product $ cs ->
+        --     scalar * product_ (map just rest)
         Mul ns -- TODO: Figure out how to deal with a product list that are not scalars
           | Just (_, cs) <- pullConstants mp ns,
             rest@(x : _) <- filter (not . isConstant mp) ns,
@@ -297,9 +299,9 @@ combineTermsRules n = withExpressionMap $ \mp ->
       build :: (NodeID, Double) -> Rewrite NodeID
       build (nId, val)
         | val == 1 = just nId
-        | otherwise = case pullConstant mp nId of
-            Just ([], _) -> num_ val * just nId
-            _ -> num_ val *. just nId
+        | otherwise = -- case pullConstant mp nId of
+            -- Just ([], _) -> num_ val * just nId
+            {- _ -> -} num_ val *. just nId
    in case retrieveOp n mp of
         Sum ns ->
           sum_ . map (build . combine) . groupOn fst . sortWith fst . map count $ ns
@@ -386,3 +388,19 @@ reorderOperands n = withExpressionMap $ \mp ->
             [s1, s2] /= [o1, o2] ->
             just s1 <.> just s2
         _ -> just n
+
+-- |  Recursively descent into the expression tree and rewrite any instances of scaling
+--    that can be written as a multiplication
+rewriteScalars :: Modification
+rewriteScalars n = withExpressionMap $ \mp ->
+  case retrieveOp n mp of
+    Scale scaler scalee
+      | shape <- retrieveShape scalee mp,
+        elem <- retrieveElementType scalee mp,
+        (elem == R) && (shape == []) ->
+        product_ [just scaler, just scalee]
+    Sum operands
+      -> sum_ $ map rewriteScalars operands
+    Mul operands
+      -> product_ $ map rewriteScalars operands
+    _ -> just n

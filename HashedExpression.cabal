@@ -3,8 +3,6 @@ cabal-version: 1.12
 -- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 9abccfa05569dc92f205c0eb84aa78ae19dca0eac2b99f0f5f20fedbe146650f
 
 name:           HashedExpression
 version:        0.0.9

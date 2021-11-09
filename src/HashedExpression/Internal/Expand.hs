@@ -26,7 +26,7 @@ distribMulOverPlus nID = withExpressionMap $ \mp ->
       | length ns > 1, -- don't distribute if there's only one variable
         let total = pullConstants mp ns |> maybe 1 (sum . snd),
         let sums = map (pullSumOperands mp) . filter (isSum mp) $ ns,
-        let vars = filter (isVar mp) ns,
+        let vars = filter (\x -> not $ isConstant mp x || isSum mp x) ns,
         not (null sums) -> do -- don't distribute if there are no sum terms
           consts <- const_ shape total
           let constNode = [consts | total /= 1]
