@@ -57,8 +57,8 @@ simplify = removeUnreachable . apply
 
     finalRewrites :: Transformation -> Transformation
     finalRewrites t = toRecursiveTransformation (chain rewrites) . t
-      where rewrites =
-              [ rewriteScalars ]
+      where rewrites = map fromSubstitution $ concat [ toMultiply ]
+              
 
 -- | Predefined holes used for pattern matching with 'Pattern'
 [p, q, r, s, t, u, v, w, x, y, z, condition] = map PHole [1 .. 12]
@@ -86,6 +86,10 @@ toMultiplyIfPossible =
     x <.> y |. isReal x &&. isScalar x &&. isScalar y ~~> x * y
   ]
 
+toMultiply :: [Substitution] =
+  [  x *. y |. isReal y &&. isScalar y ~~> x * y
+  ]
+
 -- | Rules with zero and one
 --
 --   This includes basic rules such as identity and zero of multiplication and identity of addition.
@@ -105,7 +109,6 @@ zeroOneRules =
     one *. x |.~~> x,
     x + zero |.~~> x,
     zero + x |.~~> x,
-    zero + restOfSum |.~~> restOfSum,
     x <.> zero |.~~> zero,
     zero <.> x |.~~> zero
   ]

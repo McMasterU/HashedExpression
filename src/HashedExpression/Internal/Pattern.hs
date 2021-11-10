@@ -537,9 +537,8 @@ match (mp, n) outerWH =
       -- pattern match.
       recursiveAndCombine :: [Arg] -> [Pattern] -> Maybe Match
       recursiveAndCombine args whs
-        | let (pats, _wildcarded) = span (\case PWildCard -> False; _ -> True) whs,
-          length args >= length pats,
-          let subMatches = zipWith match (map (mp,) $ take (length pats) args) pats,
+        | length args == length whs,
+          let subMatches = zipWith match (map (mp,) args) whs,
           all isJust subMatches =
           Just . catMatch . catMaybes $ subMatches
         | otherwise = Nothing
