@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0c51ad0b88e7ffff97148aeab8c4a185a8853b1276d4813b43526208ccc019b5
+-- hash: 5d6a23f2cc09cc7440411a848ae7101a84b7f2f38a21acddd374186d9e8d032b
 
 name:           HashedExpression
 version:        0.0.9
@@ -109,6 +109,7 @@ executable HashedExpression-exe
   main-is: Main.hs
   other-modules:
       Examples.Brain
+      Examples.IpoptSimple.IpoptSimple
       Examples.LinearRegression
       Examples.LogisticRegression
       Examples.NeuralNetwork
