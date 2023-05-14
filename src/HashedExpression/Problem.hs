@@ -16,7 +16,7 @@ import Control.Monad.Except (throwError)
 import Control.Monad.State.Strict
 import Data.Function
 import qualified Data.IntMap as IM
-import Data.List (intercalate, partition)
+import Data.List (intercalate, partition,groupBy,sortOn)
 import Data.List.NonEmpty (NonEmpty ((:|)), groupWith)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map (Map)
@@ -182,7 +182,19 @@ constructProblemHelper objective constraints = do
               constraintLowerBound = lb,
               constraintUpperBound = ub
             }
-  generalConstraints <- mapM toGeneralConstraint gs
+      coalesceConstraints gcs = map coalesceConstraint
+                              $ groupBy (\g0 g1 -> constraintValueId g0 == constraintValueId g1)
+                              $ sortOn constraintValueId gcs
+      coalesceConstraint (gc0:gcs) =
+        GeneralConstraint
+          { constraintValueId = constraintValueId gc0,
+            constraintPartialDerivatives = constraintPartialDerivatives gc0,
+            constraintUpperBound = minimum $ map constraintUpperBound (gc0:gcs),
+            constraintLowerBound = maximum $ map constraintLowerBound (gc0:gcs)
+          }
+      coalesceConstraint [] = error "coalesceContraint given empty list"
+  generalConstraints0 <- mapM toGeneralConstraint gs
+  let generalConstraints = coalesceConstraints generalConstraints0
   -------------------------------------------------------------------------------
   let boxConstraints =
         constraints

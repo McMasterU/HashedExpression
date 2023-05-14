@@ -110,6 +110,7 @@ executable HashedExpression-exe
   main-is: Main.hs
   other-modules:
       Examples.Brain
+      Examples.IpoptSimple.IpoptSimple
       Examples.LinearRegression
       Examples.LogisticRegression
       Examples.NeuralNetwork
