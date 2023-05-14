@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0c51ad0b88e7ffff97148aeab8c4a185a8853b1276d4813b43526208ccc019b5
+-- hash: 715483efacfdeabdfd8185368f45f77b77e87c0376729eafd8053d88e00b9fe6
 
 name:           HashedExpression
 version:        0.0.9
@@ -98,6 +98,7 @@ library
     , filepath
     , graphviz
     , mtl
+    , nlopt-haskell
     , process
     , split
     , text
@@ -157,6 +158,7 @@ executable HashedExpression-exe
     , graphviz
     , hspec
     , mtl
+    , nlopt-haskell
     , process
     , split
     , text
@@ -177,6 +179,7 @@ test-suite HashedExpression-test
       SimplifySpec
       SolverSpec
       StructureSpec
+      TestNLOptBindings
       Var
       Paths_HashedExpression
   hs-source-dirs:
@@ -225,6 +228,7 @@ test-suite HashedExpression-test
     , graphviz
     , hspec
     , mtl
+    , nlopt-haskell
     , process
     , split
     , text

@@ -1,0 +1,11 @@
+*
+!*.c
+!*.nix
+!Makefile
+!*.h
+!.gitignore
+!Dockerfile
+!src
+problem.c
+!README.md
+!*.py
