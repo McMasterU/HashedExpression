@@ -1,10 +1,8 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 715483efacfdeabdfd8185368f45f77b77e87c0376729eafd8053d88e00b9fe6
 
 name:           HashedExpression
 version:        0.0.9
@@ -99,11 +97,13 @@ library
     , graphviz
     , mtl
     , nlopt-haskell
+    , primitive
     , process
     , split
     , text
     , time
     , utility-ht
+    , vector
   default-language: Haskell2010
 
 executable HashedExpression-exe
@@ -160,11 +160,13 @@ executable HashedExpression-exe
     , hspec
     , mtl
     , nlopt-haskell
+    , primitive
     , process
     , split
     , text
     , time
     , utility-ht
+    , vector
   default-language: Haskell2010
 
 test-suite HashedExpression-test
@@ -230,9 +232,11 @@ test-suite HashedExpression-test
     , hspec
     , mtl
     , nlopt-haskell
+    , primitive
     , process
     , split
     , text
     , time
     , utility-ht
+    , vector
   default-language: Haskell2010

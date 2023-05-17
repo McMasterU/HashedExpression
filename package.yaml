@@ -32,6 +32,8 @@ dependencies:
   - file-embed
   - graphviz
   - nlopt-haskell
+  - vector
+  - primitive
 
 
 extra-source-files:
