@@ -10,3 +10,6 @@ out/
 *.npz
 *.npy
 problem.c
+docs
+TAGS
+.dir-locals.el
