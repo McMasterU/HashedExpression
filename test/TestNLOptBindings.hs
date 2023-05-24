@@ -1,3 +1,17 @@
+{-|
+Module      : test.TestNLOptBindings
+Copyright   :  (c) Curtis D'Alves 2023
+License     :  GPL (see the LICENSE file)
+Maintainer  :  curtis.dalves@gmail.com
+Stability   :  experimental
+Portability :  portable
+
+Description:
+  Tests for using NLOpt solver with Hashed Expression, see documentation for haskell bindings
+  - https://hackage.haskell.org/package/nlopt-haskell-0.1.3.0/docs/Numeric-Optimization-NLOPT-Bindings.html
+  Bindings very closely follow the corresponding c functions in the official NLOpt documentation
+  - https://nlopt.readthedocs.io/en/latest/
+-}
 module TestNLOptBindings where
 
 import HashedExpression

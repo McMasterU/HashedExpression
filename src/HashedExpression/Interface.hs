@@ -55,6 +55,10 @@ data ConstraintDecl
   | GeneralUpperDecl RawExpr Double
   | GeneralEqualDecl RawExpr Double
 
+infix 4 .<=
+infix 4 .>=
+infix 4 .==
+
 class BoundedBy a b where
   (.<=) :: a -> b -> ConstraintDecl
   (.>=) :: a -> b -> ConstraintDecl
@@ -64,6 +68,11 @@ instance IsScalarReal e => BoundedBy e Double where
   expr .<= b = GeneralUpperDecl (asScalarRealRawExpr expr) b
   expr .>= b = GeneralLowerDecl (asScalarRealRawExpr expr) b
   expr .== b = GeneralEqualDecl (asScalarRealRawExpr expr) b
+
+instance IsScalarReal e => BoundedBy e Integer where
+  expr .<= b = GeneralUpperDecl (asScalarRealRawExpr expr) $ fromIntegral b
+  expr .>= b = GeneralLowerDecl (asScalarRealRawExpr expr) $ fromIntegral b
+  expr .== b = GeneralEqualDecl (asScalarRealRawExpr expr) $ fromIntegral b
 
 instance BoundedBy (TypedExpr d R) (Bound d) where
   expr .<= (Bound b) =

@@ -95,6 +95,7 @@ library
     , file-embed
     , filepath
     , graphviz
+    , hmatrix-glpk
     , mtl
     , nlopt-haskell
     , primitive
@@ -157,6 +158,7 @@ executable HashedExpression-exe
     , file-embed
     , filepath
     , graphviz
+    , hmatrix-glpk
     , hspec
     , mtl
     , nlopt-haskell
@@ -182,6 +184,7 @@ test-suite HashedExpression-test
       SimplifySpec
       SolverSpec
       StructureSpec
+      TestGLPKBindings
       TestNLOptBindings
       Var
       Paths_HashedExpression
@@ -229,6 +232,7 @@ test-suite HashedExpression-test
     , file-embed
     , filepath
     , graphviz
+    , hmatrix-glpk
     , hspec
     , mtl
     , nlopt-haskell

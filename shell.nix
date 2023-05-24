@@ -32,6 +32,8 @@ in nixpkgs.haskell.lib.buildStackProject {
       nixpkgs.mpi
       nixpkgs.openssh
       nixpkgs.nlopt
+      nixpkgs.blas
+      nixpkgs.lapack
 		  ipopt
 		  mumps
 		  glpk
