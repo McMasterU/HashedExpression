@@ -21,6 +21,11 @@ module HashedExpression.Internal.Pattern
     (|.~~>),
     (|.),
 
+    -- * Match
+    Match,
+    match,
+    matchList,
+
     -- * Patterns
     Pattern (..),
     GuardedPattern (..),
@@ -533,6 +538,8 @@ match (mp, n) outerWH =
           Just . catMatch . catMaybes $ subMatches
         | otherwise = Nothing
    in case (retrieveOp n mp, outerWH) of
+        (_,PRef nID)
+          | n == nID -> Just emptyMatch
         (_, PHole capture) ->
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
         (Const c, PConst whc)
