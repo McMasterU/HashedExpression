@@ -25,6 +25,7 @@ module HashedExpression.Internal.Pattern
     Match,
     match,
     matchList,
+    matchAll,
 
     -- * Patterns
     Pattern (..),
@@ -66,6 +67,7 @@ import Control.Monad.State.Strict
 import Data.Map (Map, union)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import HashedExpression.Internal
 import HashedExpression.Internal.Base
 import HashedExpression.Internal.MonadExpression
 import HashedExpression.Internal.Node
@@ -147,6 +149,8 @@ data Pattern
     PSumList PatternList
   | -- | multiply via 'PatternList'
     PMulList PatternList
+  | -- | variable
+    PVar String
   | -- | constant
     PConst Double
   | -- | summation operator
@@ -542,6 +546,8 @@ match (mp, n) outerWH =
           | n == nID -> Just emptyMatch
         (_, PHole capture) ->
           Just $ emptyMatch {capturesMap = Map.fromList [(capture, n)]}
+        (Var s, PVar whs)
+          | s == whs -> Just emptyMatch
         (Const c, PConst whc)
           | c == whc -> Just emptyMatch
         (Sum args, PSum whs) -> recursiveAndCombine args whs
@@ -622,6 +628,15 @@ match (mp, n) outerWH =
                     } ->
             Just $ unionMatch matchInner matchRotateAmount
         _ -> Nothing
+
+-- | Attempt to match an expression with a pattern, at all nodes of the
+-- expression. Returns a list of all matches
+-- NOTE costly on large expressions
+matchAll :: RawExpr -> Pattern -> [Match]
+matchAll (mp,n) outerWH =
+  let
+    nIDs = nodeIDs mp
+  in catMaybes $ map (\n' -> match (mp,n') outerWH) nIDs
 
 -- | Turn a 'Pattern' transformation into a 'Pattern' reference
 turnToPattern :: (Pattern -> Pattern) -> NodeID -> Pattern
