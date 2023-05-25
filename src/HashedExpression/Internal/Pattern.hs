@@ -22,7 +22,7 @@ module HashedExpression.Internal.Pattern
     (|.),
 
     -- * Match
-    Match,
+    Match (..),
     match,
     matchList,
     matchAll,
@@ -37,6 +37,9 @@ module HashedExpression.Internal.Pattern
     SumRestOp (..),
     restOfProduct,
     restOfSum,
+    pvariable,
+    phole,
+    pconstant,
 
     -- * PatternList
     PatternList (..),
@@ -217,6 +220,18 @@ data Pattern
 
 instance Show (Pattern -> Pattern) where
   show p = "(Pattern -> Pattern)"
+
+-- | Auxiliary functions for create pattern holes
+phole :: Capture -> Pattern
+phole c = PHole c
+
+-- | Auxiliary functions for create variable patterns
+pvariable :: String -> Pattern
+pvariable lbl = PVar lbl
+
+-- | Auxiliary functions for create variable patterns
+pconstant :: Double -> Pattern
+pconstant c = PConst c
 
 -- | A 'Pattern' that only matches when it fullfills a 'Condition'
 data GuardedPattern

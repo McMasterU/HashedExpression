@@ -179,7 +179,6 @@ test-suite HashedExpression-test
       Commons
       CSimpleSpec
       InterpSpec
-      PatternSpec
       ProblemSpec
       ReverseDifferentiationSpec
       SimplifySpec
@@ -187,6 +186,7 @@ test-suite HashedExpression-test
       StructureSpec
       TestGLPKBindings
       TestNLOptBindings
+      Tutorial
       Var
       Paths_HashedExpression
   hs-source-dirs:
