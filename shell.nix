@@ -2,7 +2,7 @@
   name = "nixpkgs-unstable-2023-04-28";
   url = "https://github.com/NixOS/nixpkgs/archive/d6b863fd9b7bb962e6f9fdf292419a775e772891.tar.gz";
   sha256 = "02rd1n6d453rdp2978bvnp99nyfa26jxgbsg78yb9mmdxvha3hnr";
-}) { system = "x86_64-darwin" } }:
+}) { system = "x86_64-darwin"; } }:
 
 let
   mumps = nixpkgs.callPackage ./ipopt/mumps.nix {};
