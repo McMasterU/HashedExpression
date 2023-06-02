@@ -10,6 +10,7 @@ out/
 *.npz
 *.npy
 problem.c
+*.cabal
 docs
 TAGS
 .dir-locals.el

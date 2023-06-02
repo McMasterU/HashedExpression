@@ -16,9 +16,15 @@ module TestGLPKBindings where
 import HashedExpression
 import HashedExpression.Modeling.Typed
 import HashedExpression.Prettify
+import HashedExpression.Differentiation.Reverse (partialDerivativesMap)
 
 import Numeric.LinearProgramming
 
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+import Data.Maybe (isJust)
 
 -- | Example GLPK Problem (with Hashed Expression integration)
 --
@@ -45,7 +51,6 @@ exGLPKBounds = [ 2 :>=: 1
 solveGLPKProb :: Solution
 solveGLPKProb = simplex exGLPKProb exGLPKConstraints exGLPKBounds
 
-
 -- | Example Hashed Expression Problem
 -- The same optimization problem above modeled in HashedExpression
 exProblem :: OptimizationProblem
@@ -63,3 +68,58 @@ exProblem =
      , constraints = constraints
      , values = initialVals
      }
+
+-- | Hashed Expression Solver Using GLPK Bindings
+-- Example usage:
+--   TODO
+glpkSolve :: OptimizationProblem -> IO ()
+glpkSolve (OptimizationProblem objective constraints values) =
+  let
+    -- Construct a HashedExpression Problem from an OptimizationProblem, this creates
+    -- a unified expressionMap for the objective,gradient and constraints
+    prob@(Problem variables objectiveId expressionMap boxConstraints generalConstraints)
+      = case constructProblem objective constraints of
+          Left err -> error $ "error constructing problem: " ++ err
+          Right prob -> prob
+
+    varIndexes = zip variables [0..]
+    varScalars = map (\var@(Variable vName nID pID)
+                      -> case exprIsConstant (expressionMap,pID) of
+                         Just d -> d
+                         Nothing -> error $ "objective is non-linear, partial is not constant: "
+                                         ++ show pID
+                     )
+                    variables
+
+    glpkProb = Minimize varScalars
+
+    -- TODO change GeneralConstaints to all be of the form expr <= c
+  in error "TODO"
+
+-- | Computes if a problem is linear by checking if the partial derivatives of
+-- its objective and constraints functions are constant
+problemIsLinear :: Problem -> Bool
+problemIsLinear (Problem variables objectiveId expressionMap boxConstraints generalConstraints) =
+  let
+    -- The objective is linear if all of it's partial derivatives are constant
+    objIsLinear = and
+       $ map (\n -> isJust $ exprIsConstant $ simplify (expressionMap,n)) partials
+    partials = map partialDerivativeId variables
+
+    -- The general constraints also all need to be linear, check their partials are constant too
+    constraintsAreLinear = and
+      $ map (\n -> isJust $ exprIsConstant $ simplify (expressionMap,n)) constraintPartials
+    constraintPartials = concatMap constraintPartialDerivatives generalConstraints
+
+  in objIsLinear && constraintsAreLinear
+
+-- | Checks if an expression is a @Constant@, and if it is returns the
+-- corresponding @Double@, it's recommended to call @simplify@ on the expression
+-- beforehand
+exprIsConstant :: IsExpression e => e -> Maybe Double
+exprIsConstant expr =
+  let
+    (exprMap,nID) = asRawExpr expr
+  in case IntMap.lookup (unNodeID nID) exprMap of
+       Just ([],R,Const d) -> Just d
+       _ -> Nothing
