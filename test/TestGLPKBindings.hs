@@ -70,9 +70,7 @@ exProblem =
      }
 
 -- | Hashed Expression Solver Using GLPK Bindings
--- Example usage:
---   TODO
-glpkSolve :: OptimizationProblem -> IO ()
+glpkSolve :: OptimizationProblem -> IO (Double,[(String,Double)])
 glpkSolve (OptimizationProblem objective constraints values) =
   let
     -- Construct a HashedExpression Problem from an OptimizationProblem, this creates
@@ -82,19 +80,74 @@ glpkSolve (OptimizationProblem objective constraints values) =
           Left err -> error $ "error constructing problem: " ++ err
           Right prob -> prob
 
-    varIndexes = zip variables [0..]
+    -- Create a @ValMap@ from values, GLPK doesn't take initial values so these
+    -- will be ignored, but the map is still needed to lookup Bound values for
+    -- BoxConstraint
+    valMap = mkValMap values
+
+    -- Each variable needs to be given an index for the GLPK problem. When
+    -- constructing the objective and constraints we can safely use the order in
+    -- which varialbes and partialIDs are already in their lists
+    varNameToIndex = zip (map varName variables) [0..]
+
     varScalars = map (\var@(Variable vName nID pID)
                       -> case exprIsConstant (expressionMap,pID) of
-                         Just d -> d
-                         Nothing -> error $ "objective is non-linear, partial is not constant: "
-                                         ++ show pID
+                          Just d -> d
+                          Nothing -> error $ "objective is non-linear, partial is not constant: "
+                                          ++ show pID
                      )
                     variables
+    -- Problem
+    glpkProblem = Minimize varScalars
 
-    glpkProb = Minimize varScalars
+    -- General Constraints
+    glpkConstraints = Dense $ concatMap (\(GeneralConstraint gID pIDs lb ub)
+                                         -> let
+                                            -- NOTE pIDs should be in the same order as variables
+                                            partials = map (partialToConstant gID) pIDs
+                                          in [partials :<=: ub
+                                             ,partials :>=: lb]) generalConstraints
+    partialToConstant gID pID = case exprIsConstant (expressionMap,pID) of
+                                  Just d -> d
+                                  Nothing -> error $ "general constraint is non-linear: "
+                                             ++ show gID
 
-    -- TODO change GeneralConstaints to all be of the form expr <= c
-  in error "TODO"
+    -- Variable Bounds
+    glpkBounds = map boxesToBound boxesByIndex
+
+    boxesByIndex = map (\(vName,vIdx) -> (vIdx, filter (\b -> boxVarName b == vName) boxConstraints))
+                   varNameToIndex
+    boxVarName (BoxUpper vName _) = vName
+    boxVarName (BoxLower vName _) = vName
+
+    boxesToBound (varIndex,bConstraints) = let
+
+      lookupBVal bID = case Map.lookup bID valMap of
+                         Just (VScalar d) -> d
+                         Just (VNum d) -> d
+                         Just _ -> error $ "Bound value is non-scalar: " ++ bID
+                         Nothing -> error $ "Bound ID missing from valMap: " ++ bID
+      in case bConstraints of
+           [] -> Free varIndex
+           [BoxLower _ bID] -> varIndex :>=: lookupBVal bID
+           [BoxUpper _ bID] -> varIndex :<=: lookupBVal bID
+           [BoxLower _ bID0,BoxUpper _ bID1] -> varIndex :&: (lookupBVal bID0,lookupBVal bID1)
+           [BoxUpper _ bID1,BoxLower _ bID0] -> varIndex :&: (lookupBVal bID0,lookupBVal bID1)
+           bs -> error $ "duplicate combinations of box constraints for variable: " ++ show varIndex
+
+    -- Run Simplex method to solve
+    -- NOTE have a choice between simplex and exact methods? (see glp_exact documentation)
+    solution = simplex glpkProblem glpkConstraints glpkBounds
+  in case solution of
+       Optimal (sol,vars) -> return $ (sol,zip (map varName variables) vars)
+       Undefined -> error "GLPK returned Undefined"
+       -- TODO should this be an error? check glpk documentation on feasible
+       Feasible (sol,vars) -> error $ "GLPK returned Feasible"
+                              ++ show (sol,zip (map varName variables) vars)
+       Infeasible (sol,vars) -> error $ "GLPK returned Infeasible"
+                                ++ show (sol,zip (map varName variables) vars)
+       NoFeasible -> error "GLPK returned NoFeasible"
+       Unbounded -> error "GLPK returned Unbounded"
 
 -- | Computes if a problem is linear by checking if the partial derivatives of
 -- its objective and constraints functions are constant
