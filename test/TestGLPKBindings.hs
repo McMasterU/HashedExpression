@@ -70,7 +70,7 @@ exProblem =
      }
 
 -- | Hashed Expression Solver Using GLPK Bindings
-glpkSolve :: OptimizationProblem -> IO (Double,[(String,Double)])
+glpkSolve :: OptimizationProblem -> IO (Double,[((VarName,Int),Double)])
 glpkSolve (OptimizationProblem objective constraints values) =
   let
     -- Construct a HashedExpression Problem from an OptimizationProblem, this creates
@@ -88,9 +88,15 @@ glpkSolve (OptimizationProblem objective constraints values) =
     -- Each variable needs to be given an index for the GLPK problem. When
     -- constructing the objective and constraints we can safely use the order in
     -- which varialbes and partialIDs are already in their lists
-    varNameToIndex = zip (map varName variables) [0..]
+    -- TODO this assumes all scalar variables, need to unpack vector variables
+    varNameToIndex = zip [0..] remappedVars
+    remappedVars = concatMap varNameReMap variables
+    varNameReMap (Variable vName nID pID) =
+      case IntMap.lookup (unNodeID nID) expressionMap of
+        Just (shape,_,_) -> [ (vName,idx) | idx <- [0..sizeOf shape-1] ]
+        Nothing -> error $ "Variable node missing from expressionMap: " ++ show nID
 
-    varScalars = map (\var@(Variable vName nID pID)
+    varScalars = concatMap (\var@(Variable vName nID pID)
                       -> case exprIsConstant (expressionMap,pID) of
                           Just d -> d
                           Nothing -> error $ "objective is non-linear, partial is not constant: "
@@ -104,7 +110,7 @@ glpkSolve (OptimizationProblem objective constraints values) =
     glpkConstraints = Dense $ concatMap (\(GeneralConstraint gID pIDs lb ub)
                                          -> let
                                             -- NOTE pIDs should be in the same order as variables
-                                            partials = map (partialToConstant gID) pIDs
+                                            partials = concatMap (partialToConstant gID) pIDs
                                           in [partials :<=: ub
                                              ,partials :>=: lb]) generalConstraints
     partialToConstant gID pID = case exprIsConstant (expressionMap,pID) of
@@ -115,7 +121,7 @@ glpkSolve (OptimizationProblem objective constraints values) =
     -- Variable Bounds
     glpkBounds = map boxesToBound boxesByIndex
 
-    boxesByIndex = map (\(vName,vIdx) -> (vIdx, filter (\b -> boxVarName b == vName) boxConstraints))
+    boxesByIndex = map (\(vIdx,(vName,idx')) -> (vIdx, filter (\b -> boxVarName b == vName) boxConstraints))
                    varNameToIndex
     boxVarName (BoxUpper vName _) = vName
     boxVarName (BoxLower vName _) = vName
@@ -139,13 +145,13 @@ glpkSolve (OptimizationProblem objective constraints values) =
     -- NOTE have a choice between simplex and exact methods? (see glp_exact documentation)
     solution = simplex glpkProblem glpkConstraints glpkBounds
   in case solution of
-       Optimal (sol,vars) -> return $ (sol,zip (map varName variables) vars)
+       Optimal (sol,vars) -> return $ (sol,zip remappedVars vars)
        Undefined -> error "GLPK returned Undefined"
        -- TODO should this be an error? check glpk documentation on feasible
        Feasible (sol,vars) -> error $ "GLPK returned Feasible"
-                              ++ show (sol,zip (map varName variables) vars)
+                              ++ show (sol,zip remappedVars vars)
        Infeasible (sol,vars) -> error $ "GLPK returned Infeasible"
-                                ++ show (sol,zip (map varName variables) vars)
+                                ++ show (sol,zip remappedVars vars)
        NoFeasible -> error "GLPK returned NoFeasible"
        Unbounded -> error "GLPK returned Unbounded"
 
@@ -169,10 +175,10 @@ problemIsLinear (Problem variables objectiveId expressionMap boxConstraints gene
 -- | Checks if an expression is a @Constant@, and if it is returns the
 -- corresponding @Double@, it's recommended to call @simplify@ on the expression
 -- beforehand
-exprIsConstant :: IsExpression e => e -> Maybe Double
+exprIsConstant :: IsExpression e => e -> Maybe [Double]
 exprIsConstant expr =
   let
     (exprMap,nID) = asRawExpr expr
   in case IntMap.lookup (unNodeID nID) exprMap of
-       Just ([],R,Const d) -> Just d
+       Just (shape,R,Const d) -> Just (replicate (sizeOf shape) d)
        _ -> Nothing

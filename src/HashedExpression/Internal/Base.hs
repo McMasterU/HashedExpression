@@ -28,6 +28,11 @@ instance Show NodeID where
 -- >  [n, m]    => 2D
 type Shape = [Int]
 
+-- | Returns the size of a @Shape@
+sizeOf :: Shape -> Int
+sizeOf [] = 1
+sizeOf (s:ss) = s * sizeOf ss
+
 -- | Represents Real, Complex
 data ElementType = R | C
   deriving (Show, Eq, Ord, Typeable)
