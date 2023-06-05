@@ -25,6 +25,7 @@ import qualified Data.Map as Map
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
+import qualified Data.Array as Array
 
 -- | Example GLPK Problem (with Hashed Expression integration)
 --
@@ -88,7 +89,7 @@ glpkSolve (OptimizationProblem objective constraints values) =
     -- Each variable needs to be given an index for the GLPK problem. When
     -- constructing the objective and constraints we can safely use the order in
     -- which varialbes and partialIDs are already in their lists
-    -- TODO this assumes all scalar variables, need to unpack vector variables
+    -- NOTE vector variables are unpacked/flattened
     varNameToIndex = zip [0..] remappedVars
     remappedVars = concatMap varNameReMap variables
     varNameReMap (Variable vName nID pID) =
@@ -121,16 +122,21 @@ glpkSolve (OptimizationProblem objective constraints values) =
     -- Variable Bounds
     glpkBounds = map boxesToBound boxesByIndex
 
-    boxesByIndex = map (\(vIdx,(vName,idx')) -> (vIdx, filter (\b -> boxVarName b == vName) boxConstraints))
+    boxesByIndex = map (\(vIdx,(vName,idx')) -> ((vIdx,idx'), filter (\b -> boxVarName b == vName) boxConstraints))
                    varNameToIndex
     boxVarName (BoxUpper vName _) = vName
     boxVarName (BoxLower vName _) = vName
 
-    boxesToBound (varIndex,bConstraints) = let
+    boxesToBound ((varIndex,idx'),bConstraints) = let
 
       lookupBVal bID = case Map.lookup bID valMap of
                          Just (VScalar d) -> d
                          Just (VNum d) -> d
+                         Just (V1D arr) -> arr Array.! idx'
+                         -- FIXME V2D and V3D indxing innefficent
+                         -- , check how array indices are packed then index them directly
+                         Just (V2D arr) -> (Array.elems arr) Prelude.!! idx'
+                         Just (V3D arr) -> (Array.elems arr) Prelude.!! idx'
                          Just _ -> error $ "Bound value is non-scalar: " ++ bID
                          Nothing -> error $ "Bound ID missing from valMap: " ++ bID
       in case bConstraints of
