@@ -33,6 +33,9 @@ import HashedExpression.Value
 --------------------------------------------------------------------------------
 newtype Bound (n :: [Nat]) = Bound String
 
+bound :: String -> Bound '[]
+bound = Bound
+
 bound1D :: forall n. (KnownNat n) => String -> Bound '[n]
 bound1D = Bound
 

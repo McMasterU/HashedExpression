@@ -59,11 +59,14 @@ exProblem =
   let
     x1 = variable "x1"
     x2 = variable "x2"
+    lowerBound = bound "lx1"
+
     objective = 8*x1 + 1*x2
     constraints = [ 2*x1 + x2 .<= 60
                   , x1 + x2 .>= 10
+                  , x1 .>= lowerBound
                   ]
-    initialVals = [] -- GLPK doesn't take initial values, so this can be safely ignored
+    initialVals = [ lowerBound :-> VScalar 0.0] -- GLPK doesn't take initial values, so this can be safely ignored
   in OptimizationProblem
      { objective = objective
      , constraints = constraints
