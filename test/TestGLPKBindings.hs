@@ -44,6 +44,7 @@ exGLPKConstraints = Dense [ [2,1] :<=: 60
                           ]
 exGLPKBounds :: [Numeric.LinearProgramming.Bound Int]
 exGLPKBounds = [ 2 :>=: 1
+               , 1 :>=: 1
          -- NOTE by default variables have bounds >= 0, so 1 :>=: 0 is not necessary
          --      if you want to specify a variable has no bounds, use
          -- ,Free 1
@@ -59,14 +60,15 @@ exProblem =
   let
     x1 = variable "x1"
     x2 = variable "x2"
-    lowerBound = bound "lx1"
+    lowerBound = bound "lowerBound"
 
     objective = 8*x1 + 1*x2
     constraints = [ 2*x1 + x2 .<= 60
                   , x1 + x2 .>= 10
+                  , x2 .>= lowerBound
                   , x1 .>= lowerBound
                   ]
-    initialVals = [ lowerBound :-> VScalar 0.0] -- GLPK doesn't take initial values, so this can be safely ignored
+    initialVals = [ lowerBound :-> VScalar 1.0] -- GLPK doesn't take initial values, so this can be safely ignored
   in OptimizationProblem
      { objective = objective
      , constraints = constraints
