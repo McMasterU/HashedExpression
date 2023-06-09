@@ -44,8 +44,8 @@ testNLOPT =
               -- NLOPT.LD_CCSAQ
     size = 2
     -- f(x) = 5*x0 + x1*x1
-    sfunc :: NLOPT.ScalarFunction ()
-    sfunc xs mgrad _ =
+    objFunc :: NLOPT.ScalarFunction ()
+    objFunc xs mgrad _ =
       let
         x0 = xs ! 0
         x1 = xs ! 1
@@ -63,7 +63,7 @@ testNLOPT =
     initV = fromList [-5.0,0.0]
   in do mOpt <- NLOPT.create algorithm $ fromIntegral size
         let opt = fromJust mOpt
-        NLOPT.set_min_objective opt sfunc ()
+        NLOPT.set_min_objective opt objFunc ()
         output <- NLOPT.optimize opt initV
         printOutput output
         NLOPT.destroy opt
@@ -113,7 +113,7 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
 
     -- TODO this assumes all variables are VScalar
     size :: Int
-    size = Prelude.length variables 
+    size = Prelude.length variables
 
     -- TODO all variables are assumed to be VScalar
     -- We need a function that projects any non-scalar variables into scalars
@@ -126,8 +126,8 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
     -- returns the result of evaluting the objective function
     -- if mgrad is not Nothing, fills it in with each of the partial derivatives
     -- (mgrad is a Maybe IOVector, i.e. a Mutable Vector)
-    sfunc :: NLOPT.ScalarFunction ()
-    sfunc xs mgrad _ =
+    objFunc :: NLOPT.ScalarFunction ()
+    objFunc xs mgrad _ =
       let
         -- create a valMap (mapping from variable name to value) by looking up each
         -- variables assigned index in the vector xs
@@ -145,10 +145,42 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
                             -> (idx,evalPD valMap $ partialDerivativeId var)) varsWithIdx
       in do case mgrad of
               -- when Just grad0, write the values of each parital derivative computed in grad
-              -- at the correct index
+              -- at the correct index (grad0 is a mutable IOVector)
               Just grad0 -> sequence_ $ Prelude.map (\(idx,v) -> write grad0 idx v) grad
               Nothing -> return ()
             return obj
+
+    constraintFunc :: (GeneralConstraint,Bool) -> NLOPT.ScalarFunction ()
+    constraintFunc (constraint,upBound) xs mgrad _ =
+      let
+        -- create a valMap (mapping from variable name to value) by looking up each
+        -- variables assigned index in the vector xs
+        valMap = Map.fromList
+                 $ Prelude.map (\(idx,var)
+                                -> (varName var,VScalar $ xs ! idx)) varsWithIdx
+        -- evaluate the constraint function
+        -- NOTE NLOP requires constraints to be of the form c <= 0
+        constraintVal = case evalN valMap $ constraintValueId constraint of
+                          VR c0 -> if upBound
+                                   then c0 - constraintUpperBound constraint
+                                   else constraintLowerBound constraint - c0
+                          interpVal -> error $ "Given constraint function is non-scalar: "
+                                             ++ show interpVal
+        -- NOTE constraintPartialDerivatives should be in corresponding order to the list variables
+        -- so this should yield the same index specified by varsWithIdx
+        partialsWithIdx = zip [0..] $ constraintPartialDerivatives constraint
+        -- evaluate partial derivatives of constraints
+        -- if a lowerbound, we need to negate the result
+        grad = Prelude.map (\(idx,pID) -> (idx,evalPD valMap pID)) partialsWithIdx
+      in do case mgrad of
+              -- when Just grad0, write the values of each parital derivative computed in grad
+              -- at the correct index (grad0 is a mutable IOVector)
+              Just grad0 -> sequence_ $ Prelude.map (\(idx,v) -> write grad0 idx v) grad
+              Nothing -> return ()
+            return constraintVal
+
+    allGenConstraints = Prelude.concatMap
+                        (\g -> [constraintFunc (g,False),constraintFunc (g,True)]) generalConstraints
 
     -- for each variable thats been assigned an index in varsWithIdx, lookup the initial value
     -- provided by values in OptimizationProblem and pack it into a Vector in the correct order
@@ -163,12 +195,19 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
 
   in do putStrLn $ "Constructing NLOPT on algorithm: " ++ show algorithm
         putStrLn $ "Variables" ++ show variables
+        -- Configure optimization problem
         mOpt <- NLOPT.create algorithm $ fromIntegral size
         let opt = case mOpt of
                     Just opt0 -> opt0
                     Nothing -> error $ "failed to create nlopt problem"
+        NLOPT.set_xtol_rel opt (1e-4)
+        -- Set Objective Function
+        NLOPT.set_min_objective opt objFunc ()
+        -- Set General (Inequality) Constraints
+        sequence_ $ Prelude.map (\g -> NLOPT.add_inequality_constraint opt g () (1e-8)) allGenConstraints
+        -- TODO add box constraints (including equality constraints?)
+        -- Perform Optimization
         putStrLn $ "Running NLOPT minimize objective"
-        NLOPT.set_min_objective opt sfunc ()
         output <- NLOPT.optimize opt initVals
         putStrLn $ "Finished with output: "
         -- TODO need to return the output paired with varNames
