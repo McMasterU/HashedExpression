@@ -96,17 +96,21 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
           Left err -> error $ "error constructing problem: " ++ err
           Right prob -> prob
 
+    -- Inital (and box identifier) values
+    initMap :: ValMap
+    initMap = mkValMap values
+
     -- evaluate an expression given by its NodeID by looking up its evaluation in
     -- the expressionMap, returning an InterpValue
     evalN :: ValMap -> NodeID ->  InterpValue
-    evalN valMap nID = eval valMap (expressionMap,nID)
+    evalN evalMap nID = eval evalMap (expressionMap,nID)
 
     -- same as evalN, but explicitely extracts the Double value from InterpValue
     -- assuming the result is VR (i.e, Value Real), and throwing an error specific
     -- to the gradient function being non-scalar otherwise (should only be used to eval
     -- partial derivatives)
     evalPD :: ValMap -> NodeID ->  Double
-    evalPD valMap nID = case eval valMap (expressionMap,nID) of
+    evalPD evalMap nID = case eval evalMap (expressionMap,nID) of
                           VR pd -> pd
                           interpVal -> error $ "Given grad function is non-scalar: "
                                              ++ show (nID,interpVal)
@@ -129,20 +133,20 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
     objFunc :: NLOPT.ScalarFunction ()
     objFunc xs mgrad _ =
       let
-        -- create a valMap (mapping from variable name to value) by looking up each
+        -- create a evalMap (mapping from variable name to value) by looking up each
         -- variables assigned index in the vector xs
-        valMap = Map.fromList
+        evalMap = Map.fromList
                  $ Prelude.map (\(idx,var)
                                 -> (varName var,VScalar $ xs ! idx)) varsWithIdx
         -- evaluate the objective function, must return a scalar / real number (i.e, VR which stands
         -- for value real) or we throw an error
-        obj = case evalN valMap objectiveId of
+        obj = case evalN evalMap objectiveId of
                 VR obj0 -> obj0
                 interpVal -> error $ "Given objective function is non-scalar: " ++ show interpVal
         -- evaluate the parital derivative of each variable corresponding to its assigned index
         -- to create a list of index and corresponding parital derivative evaluation
         grad = Prelude.map (\(idx,var)
-                            -> (idx,evalPD valMap $ partialDerivativeId var)) varsWithIdx
+                            -> (idx,evalPD evalMap $ partialDerivativeId var)) varsWithIdx
       in do case mgrad of
               -- when Just grad0, write the values of each parital derivative computed in grad
               -- at the correct index (grad0 is a mutable IOVector)
@@ -153,14 +157,14 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
     constraintFunc :: (GeneralConstraint,Bool) -> NLOPT.ScalarFunction ()
     constraintFunc (constraint,upBound) xs mgrad _ =
       let
-        -- create a valMap (mapping from variable name to value) by looking up each
+        -- create a evalMap (mapping from variable name to value) by looking up each
         -- variables assigned index in the vector xs
-        valMap = Map.fromList
+        evalMap = Map.fromList
                  $ Prelude.map (\(idx,var)
                                 -> (varName var,VScalar $ xs ! idx)) varsWithIdx
         -- evaluate the constraint function
         -- NOTE NLOP requires constraints to be of the form c <= 0
-        constraintVal = case evalN valMap $ constraintValueId constraint of
+        constraintVal = case evalN evalMap $ constraintValueId constraint of
                           VR c0 -> if upBound
                                    then c0 - constraintUpperBound constraint
                                    else constraintLowerBound constraint - c0
@@ -171,7 +175,7 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
         partialsWithIdx = zip [0..] $ constraintPartialDerivatives constraint
         -- evaluate partial derivatives of constraints
         -- if a lowerbound, we need to negate the result
-        grad = Prelude.map (\(idx,pID) -> (idx,evalPD valMap pID)) partialsWithIdx
+        grad = Prelude.map (\(idx,pID) -> (idx,evalPD evalMap pID)) partialsWithIdx
       in do case mgrad of
               -- when Just grad0, write the values of each parital derivative computed in grad
               -- at the correct index (grad0 is a mutable IOVector)
@@ -182,6 +186,34 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
     allGenConstraints = Prelude.concatMap
                         (\g -> [constraintFunc (g,False),constraintFunc (g,True)]) generalConstraints
 
+    infinity = (1/0)
+    ninfinity = -(1/0)
+    varBoxes v = Prelude.filter (\b -> case b of
+                                    BoxUpper vName _ -> vName == varName v
+                                    BoxLower vName _ -> vName == varName v
+                                ) boxConstraints
+    boundLookup bID = case Map.lookup bID initMap of
+                        Just (VScalar d) -> d
+                        Just _ -> error $ "bounds is non-scalar: " ++ show bID
+                        Nothing -> error $ "bounds not provided in values: " ++ show bID
+    varBounds = Prelude.map
+                (\v -> let
+                    (lBound,uBound) =
+                      case varBoxes v of
+                        [BoxLower _ bID0] -> (boundLookup bID0,infinity)
+                        [BoxUpper _ bID1] -> (ninfinity,boundLookup bID1)
+                        [BoxLower _ bID0,BoxUpper _ bID1] -> (boundLookup bID0,boundLookup bID1)
+                        [BoxUpper _ bID1,BoxLower _ bID0] -> (boundLookup bID0,boundLookup bID1)
+                        boxes -> error $ "Overlapping box constraints" ++ show boxes
+                    in (lBound,uBound)
+                ) variables
+
+    lowBounds :: Vector Double
+    lowBounds = fromList $ Prelude.map fst varBounds
+
+    upBounds :: Vector Double
+    upBounds = fromList $ Prelude.map snd varBounds
+
     -- for each variable thats been assigned an index in varsWithIdx, lookup the initial value
     -- provided by values in OptimizationProblem and pack it into a Vector in the correct order
     initVals :: Vector Double
@@ -191,7 +223,7 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
                                             val -> error $ "initialVals given non-scalar: " ++ show val)
              $ List.sortOn fst
              $ Prelude.map (\(idx,var)
-                            -> (idx,fromJust $ Map.lookup (varName var) (mkValMap values))) varsWithIdx
+                            -> (idx,fromJust $ Map.lookup (varName var) initMap)) varsWithIdx
 
   in do putStrLn $ "Constructing NLOPT on algorithm: " ++ show algorithm
         putStrLn $ "Variables" ++ show variables
@@ -205,7 +237,10 @@ nloptSolve (OptimizationProblem objective constraints values) algorithm =
         NLOPT.set_min_objective opt objFunc ()
         -- Set General (Inequality) Constraints
         sequence_ $ Prelude.map (\g -> NLOPT.add_inequality_constraint opt g () (1e-8)) allGenConstraints
-        -- TODO add box constraints (including equality constraints?)
+        -- Set Bounds
+        NLOPT.set_lower_bounds opt lowBounds
+        NLOPT.set_upper_bounds opt upBounds
+        -- TODO add equality constraints?
         -- Perform Optimization
         putStrLn $ "Running NLOPT minimize objective"
         output <- NLOPT.optimize opt initVals
