@@ -215,4 +215,5 @@ formatOutput varsWithIdx (NLOPT.Output resultCode resultCost resultParams) =
     resultWithVars = zip varNames $ toList resultParams
   in case resultCode of
        NLOPT.SUCCESS -> (resultCost,resultWithVars)
+       NLOPT.STOPVAL_REACHED -> (resultCost,resultWithVars)
        _ -> error $ "NLOPT failed with result code: " ++ show resultCode

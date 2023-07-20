@@ -27,6 +27,8 @@ import Data.Vector.Storable.Mutable hiding ((++))
 import qualified Data.Primitive.Array as Array
 import Data.Vector.Mutable (fromMutableArray)
 
+import Prelude hiding ((^))
+
 import qualified Numeric.Optimization.NLOPT.Bindings as NLOPT
 
 
@@ -63,12 +65,14 @@ testNLOPT =
         NLOPT.destroy opt
 
 -- | Example Hashed Expression Problem
-exProblem :: OptimizationProblem
-exProblem =
+exProblem1 :: OptimizationProblem
+exProblem1 =
   let
     x0 = variable "x0"
     x1 = variable "x1"
     objective = x0*x0 + x1*x1
+    -- objective = (x0-1)*(x0-1) + (x1-1)*(x1-1)
+    -- objective = (x0-1)HashedExpression.^2 + (x1-1)HashedExpression.^2
     initialVals = [x0 :-> VScalar 5.0
                   ,x1 :-> VScalar (-5.0)]
   in OptimizationProblem
@@ -76,3 +80,138 @@ exProblem =
      , constraints = []
      , values = initialVals
      }
+
+testExProblem1 = nloptSolve exProblem1 NLOPT.LD_SLSQP
+
+-- Banana Function (Rosenbrock)
+exProblem2 :: OptimizationProblem
+exProblem2 = 
+  let
+    a :: TypedExpr Scalar R
+    a = 1
+    b :: TypedExpr Scalar R
+    b = 100
+
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = (a-x0)^2 + b*(x1-x0^2)^2
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem2 = nloptSolve exProblem2 NLOPT.LD_SLSQP
+
+-- Banana Function (Rosenbrock)
+exProblem3 :: OptimizationProblem
+exProblem3 = 
+  let
+    a :: TypedExpr Scalar R
+    a = 3
+    b :: TypedExpr Scalar R
+    b = 100
+
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = (a-x0)^2 + b*(x1-x0^2)^2
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem3 = nloptSolve exProblem3 NLOPT.LD_SLSQP
+
+-- Sin x0 + Cos x1
+exProblem4 :: OptimizationProblem
+exProblem4 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = sin x0 + cos x1
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem4 = nloptSolve exProblem4 NLOPT.LD_SLSQP
+
+-- x^2
+exProblem5 :: OptimizationProblem
+exProblem5 = 
+  let
+    x = variable "x"
+    objective = x^2
+    initialVals = [x :-> VScalar 1]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x .>= (-2.0)
+                        , x .<= 2.0]
+     , values = initialVals
+     }
+
+
+testExProblem5 = nloptSolve exProblem5 NLOPT.LD_SLSQP
+
+-- x1^2 - x1 + x0^2 - 3x0
+exProblem6 :: OptimizationProblem
+exProblem6 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = x1^2 - x1 + x0^2 - 3*x0
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem6 = nloptSolve exProblem6 NLOPT.LD_SLSQP
+
+-- x^4 + x^2
+exProblem7 :: OptimizationProblem
+exProblem7 = 
+  let
+    x = variable "x"
+    objective = x^4 + x^2
+    initialVals = [x :-> VScalar 5.0]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem7 = nloptSolve exProblem7 NLOPT.LD_SLSQP
+
+-- x0^2 - x1^2 + 2
+exProblem8 :: OptimizationProblem
+exProblem8 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = x0^2 - x1^2
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem8 = nloptSolve exProblem8 NLOPT.LD_SLSQP
