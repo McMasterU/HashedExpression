@@ -53,6 +53,7 @@ data BoxConstraint
     BoxUpper VarName BoundIdentifier
   | -- | A lower bound
     BoxLower VarName BoundIdentifier
+  deriving Show
 
 -- | A general constraint in an optimization problem
 -- is a constraint in a form: LB <= f(variables) <= UB where LB, f(variables), UB are scalar real values
