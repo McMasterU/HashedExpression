@@ -215,3 +215,66 @@ exProblem8 =
 
 
 testExProblem8 = nloptSolve exProblem8 NLOPT.LD_SLSQP
+
+exProblem9 :: OptimizationProblem
+exProblem9 = 
+  let
+    x = variable "x"
+    objective = x^3
+    initialVals = [x :-> VScalar 1]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x .>= (-2.0)
+                        , x .<= 2.0]
+     , values = initialVals
+     }
+
+
+testExProblem9 = nloptSolve exProblem9 NLOPT.LD_SLSQP
+
+exProblem10 :: OptimizationProblem
+exProblem10 = 
+  let
+    x = variable "x"
+    objective = tan x
+    initialVals = [x :-> VScalar 1]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x .>= (-1.0)
+                        , x .<= 1.0]
+     , values = initialVals
+     }
+
+
+testExProblem10 = nloptSolve exProblem10 NLOPT.LD_SLSQP
+
+exProblem11 :: OptimizationProblem
+exProblem11 = 
+  let
+    x = variable "x"
+    objective = sqrt x
+    initialVals = [x :-> VScalar 1]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+
+testExProblem11 = nloptSolve exProblem11 NLOPT.LD_SLSQP
+
+exProblem12 :: OptimizationProblem
+exProblem12 = 
+  let
+    x = variable "x"
+    objective = 2^x
+    initialVals = [x :-> VScalar 1]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x .>= (-1.0)
+                        , x .<= 1.0]
+     , values = initialVals
+     }
+
+
+testExProblem12 = nloptSolve exProblem12 NLOPT.LD_SLSQP
