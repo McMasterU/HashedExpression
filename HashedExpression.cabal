@@ -51,6 +51,8 @@ library
       HashedExpression.Modeling.Unit.TypeInt
       HashedExpression.Prettify
       HashedExpression.Problem
+      HashedExpression.Solvers.GLPK
+      HashedExpression.Solvers.NLOPT
       HashedExpression.Utils
       HashedExpression.Value
   other-modules:

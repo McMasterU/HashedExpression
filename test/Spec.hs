@@ -13,7 +13,9 @@ import Test.Hspec.Runner
 import Prelude hiding ((^))
 import TestNLOptBindings
 
+import HashedExpression.Solvers.NLOPT
 import qualified Numeric.Optimization.NLOPT.Bindings as NLOPT
+
 -- main :: IO ()
 -- main = do
 --   hspecWith defaultConfig {configQuickCheckMaxSuccess = Just 2000} $ do
