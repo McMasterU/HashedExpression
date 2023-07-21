@@ -27,6 +27,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
 import qualified Data.Array as Array
+import Prelude hiding ((^))
 
 -- | Example GLPK Problem (with Hashed Expression integration)
 --
@@ -75,3 +76,114 @@ exProblem =
      , constraints = constraints
      , values = initialVals
      }
+
+-- unbounded example 
+exProblem1 :: OptimizationProblem
+exProblem1 =
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = 8*x0 + 1*x1
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = []
+     , values = initialVals
+     }
+
+testExProblem1 = glpkSolve exProblem1
+
+-- 4D constant constraints 
+exProblem2 :: OptimizationProblem
+exProblem2 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    x2 = variable "x2"
+    objective = 18*x0 + 4*x1 + 6*x2
+    initialVals = [x0 :-> VScalar 1, x0 :-> VScalar 3, x0 :-> VScalar 2]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x0 .>= (-1.0), x0 .<= 5.0
+                        , x1 .<= 6.0, x1 .>= (-2.0)
+                        , x2 .>= 1.0, x2 .<= 10.0 ]
+     , values = initialVals
+     }
+
+testExProblem2 = glpkSolve exProblem2
+
+-- 4D linear constraints 
+exProblem3 :: OptimizationProblem
+exProblem3 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    x2 = variable "x2"
+    objective = 18*x0 + 4*x1 + 6*x2
+    initialVals = [x0 :-> VScalar 1, x0 :-> VScalar 3, x0 :-> VScalar 2]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x0 .>= (-1.0), x0 .<= 5.0
+                        , x1 .<= 6.0, x1 .>= (-2.0)
+                        , x2 .>= 1.0, x2 .<= 10.0
+                        , x0+x1+x2 .>= 3 ]
+     , values = initialVals
+     }
+
+testExProblem3 = glpkSolve exProblem3
+
+
+-- 4D constant constraints with bounds 
+exProblem4 :: OptimizationProblem
+exProblem4 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    x2 = variable "x2"
+
+    lowerx0Bound = bound "lowerx0Bound"
+    lowerx1Bound = bound "lowerx1Bound"
+    lowerx2Bound = bound "lowerx2Bound"
+
+    objective = 18*x0 + 4*x1 + 6*x2
+    initialVals = [x0 :-> VScalar 1, x0 :-> VScalar 3, x0 :-> VScalar 2, lowerx0Bound :-> VScalar (-1.0), lowerx1Bound :-> VScalar (-2.0), lowerx2Bound :-> VScalar 1.0]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x0 .>= lowerx0Bound, x0 .<= 5.0
+                        , x1 .<= 6.0, x1 .>= lowerx1Bound
+                        , x2 .>= lowerx2Bound, x2 .<= 10.0]
+     , values = initialVals
+     }
+
+testExProblem4 = glpkSolve exProblem4
+
+
+-- 4D linear constraints with bounds 
+exProblem5 :: OptimizationProblem
+exProblem5 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    x2 = variable "x2"
+
+    lowerx0Bound = bound "lowerx0Bound"
+    lowerx1Bound = bound "lowerx1Bound"
+    lowerx2Bound = bound "lowerx2Bound"
+
+    objective = 18*x0 + 4*x1 + 6*x2
+    initialVals = [x0 :-> VScalar 1, x0 :-> VScalar 3, x0 :-> VScalar 2, lowerx0Bound :-> VScalar (-1.0), lowerx1Bound :-> VScalar (-2.0), lowerx2Bound :-> VScalar 1.0]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [    x0 .>= lowerx0Bound, x0 .<= 5.0
+                        , x1 .<= 6.0, x1 .>= lowerx1Bound
+                        , x2 .>= lowerx2Bound, x2 .<= 10.0
+                        , x0+x1+x2 .>= 3 ]
+     , values = initialVals
+     }
+
+testExProblem5 = glpkSolve exProblem5
+
+
+-- Also test something with many more variables
+-- Equality constraints .=

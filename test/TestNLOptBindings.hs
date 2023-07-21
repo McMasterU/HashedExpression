@@ -191,7 +191,7 @@ exProblem7 =
     initialVals = [x :-> VScalar 5.0]
   in OptimizationProblem
      { objective = objective
-     , constraints = []
+     , constraints = [x .>= 4, x .<= 20]
      , values = initialVals
      }
 
@@ -263,18 +263,103 @@ exProblem11 =
 
 testExProblem11 = nloptSolve exProblem11 NLOPT.LD_SLSQP
 
-exProblem12 :: OptimizationProblem
-exProblem12 = 
+-- exProblem12 :: OptimizationProblem
+-- exProblem12 = 
+--   let
+--     x = variable "x"
+--     objective = 2^x
+--     initialVals = [x :-> VScalar 1]
+--   in OptimizationProblem
+--      { objective = objective
+--      , constraints = [    x .>= (-1.0)
+--                         , x .<= 1.0]
+--      , values = initialVals
+--      }
+
+
+-- testExProblem12 = nloptSolve exProblem12 NLOPT.LD_SLSQP
+
+
+
+
+exProblem13 :: OptimizationProblem
+exProblem13 = 
   let
-    x = variable "x"
-    objective = 2^x
-    initialVals = [x :-> VScalar 1]
+    x1 = variable "x1"
+    x2 = variable "x2"
+    lowerBound = bound "lowerBound"
+
+    objective = 8*x1 + 1*x2
+    constraints = [ 2*x1 + x2 .<= 60
+                  , x1 + x2 .>= 10
+                  , x2 .>= lowerBound
+                  , x1 .>= lowerBound
+                  ]
+    initialVals = [ lowerBound :-> VScalar 1.0, x1 :-> VScalar 10, x2 :-> VScalar 5]
   in OptimizationProblem
      { objective = objective
-     , constraints = [    x .>= (-1.0)
-                        , x .<= 1.0]
+     , constraints = constraints
+     , values = initialVals
+     }
+
+testExProblem13 = nloptSolve exProblem13 NLOPT.LD_SLSQP
+
+
+exProblem14 :: OptimizationProblem
+exProblem14 = 
+  let
+    x1 = variable "x1"
+    x2 = variable "x2"
+
+    objective = sin x1 + cos x2
+    constraints = [ x2 .<= 60
+                  --, x1 + x2 .>= 10
+                  ]
+    initialVals = [x1 :-> VScalar 10, x2 :-> VScalar 5]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = constraints
+     , values = initialVals
+     }
+
+testExProblem14 = nloptSolve exProblem14 NLOPT.LD_SLSQP
+
+exProblem15 :: OptimizationProblem
+exProblem15 = 
+  let
+    x1 = variable "x1"
+    x2 = variable "x2"
+    lowerBound = bound "lowerBound"
+
+    objective = sin x1 + cos x2
+    constraints = [ 2*x1 + x2 .<= 60
+                  , x1 + x2 .>= 10
+                  , x2 .>= lowerBound
+                  , x1 .>= lowerBound
+                  ]
+    initialVals = [ lowerBound :-> VScalar 1.0]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = constraints
+     , values = initialVals
+     }
+
+testExProblem15 = nloptSolve exProblem15 NLOPT.LD_SLSQP
+
+-- x0^2 - x1^2 + 2
+exProblem16 :: OptimizationProblem
+exProblem16 = 
+  let
+    x0 = variable "x0"
+    x1 = variable "x1"
+    objective = x0^2 - x1^2
+    initialVals = [x0 :-> VScalar 5.0
+                  ,x1 :-> VScalar (-5.0)]
+  in OptimizationProblem
+     { objective = objective
+     , constraints = [x0 .<= 10, x0 .>= (-10), x1 .<= 30, x1 .>= (-20) {-, x0-x1 .<= 7-}]
      , values = initialVals
      }
 
 
-testExProblem12 = nloptSolve exProblem12 NLOPT.LD_SLSQP
+testExProblem16 = nloptSolve exProblem16 NLOPT.LD_SLSQP

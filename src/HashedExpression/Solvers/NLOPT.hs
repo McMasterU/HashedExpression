@@ -216,4 +216,8 @@ formatOutput varsWithIdx (NLOPT.Output resultCode resultCost resultParams) =
   in case resultCode of
        NLOPT.SUCCESS -> (resultCost,resultWithVars)
        NLOPT.STOPVAL_REACHED -> (resultCost,resultWithVars)
+       NLOPT.FTOL_REACHED -> (resultCost,resultWithVars)
+       NLOPT.XTOL_REACHED -> (resultCost,resultWithVars)
+       NLOPT.MAXEVAL_REACHED -> (resultCost,resultWithVars)
+       NLOPT.MAXTIME_REACHED -> (resultCost,resultWithVars)
        _ -> error $ "NLOPT failed with result code: " ++ show resultCode
