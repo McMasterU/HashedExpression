@@ -1,7 +1,7 @@
 {-|
 Module      : test.TestNLOptBindings
 Copyright   :  (c) Curtis D'Alves 2023
-License     :  GPL (see the LICENSE file)
+License     :  BSD (see the LICENSE file)
 Maintainer  :  curtis.dalves@gmail.com
 Stability   :  experimental
 Portability :  portable

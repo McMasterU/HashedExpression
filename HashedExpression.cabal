@@ -28,6 +28,7 @@ library
       HashedExpression.Codegen
       HashedExpression.Codegen.CSIMD
       HashedExpression.Codegen.CSimple
+      HashedExpression.Codegen.MPS
       HashedExpression.Differentiation.Reverse
       HashedExpression.Differentiation.Reverse.State
       HashedExpression.Embed
@@ -52,6 +53,7 @@ library
       HashedExpression.Prettify
       HashedExpression.Problem
       HashedExpression.Solvers.GLPK
+      HashedExpression.Solvers.HIGHS
       HashedExpression.Solvers.NLOPT
       HashedExpression.Utils
       HashedExpression.Value
@@ -187,6 +189,7 @@ test-suite HashedExpression-test
       SolverSpec
       StructureSpec
       TestGLPKBindings
+      TestMPS
       TestNLOptBindings
       Tutorial
       Var

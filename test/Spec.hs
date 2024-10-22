@@ -15,6 +15,7 @@ import TestNLOptBindings
 
 import HashedExpression.Solvers.NLOPT
 import qualified Numeric.Optimization.NLOPT.Bindings as NLOPT
+import HashedExpression.Solvers.HIGHS
 
 -- main :: IO ()
 -- main = do
@@ -32,4 +33,7 @@ import qualified Numeric.Optimization.NLOPT.Bindings as NLOPT
 --     describe "CSimpleSpec" CSimpleSpec.spec
 
 main = --putStrLn "success"
-  nloptSolve exProblem NLOPT.LD_SLSQP
+  -- nloptSolve exProblem1 NLOPT.LD_SLSQP
+  do output <- readFile "./mps/sol.txt"
+     let highsOutput = parseHiGHsOutput output
+     mapM_ print highsOutput

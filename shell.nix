@@ -8,6 +8,7 @@ let
   mumps = nixpkgs.callPackage ./ipopt/mumps.nix {};
   ipopt = nixpkgs.callPackage ./ipopt/ipopt.nix { mumps = mumps; };
   glpk = nixpkgs.callPackage ./glpk/glpk.nix {};
+  highs = nixpkgs.callPackage ./highs/highs.nix {debug = false;};
 in nixpkgs.haskell.lib.buildStackProject {
   name = "HashedExpression";
   nativeBuildInputs = [ nixpkgs.pkg-config ];
@@ -37,6 +38,7 @@ in nixpkgs.haskell.lib.buildStackProject {
 		  ipopt
 		  mumps
 		  glpk
+      highs
 		];
   STACK_IN_NIX_EXTRA_ARGS
   = " --extra-lib-dirs=${nixpkgs.nlopt}/lib" 
