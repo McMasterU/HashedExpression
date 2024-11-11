@@ -39,7 +39,7 @@ import qualified Data.Text.IO as TIO
 
 -- | Generate MPS code form an @OptimizationProblem@
 -- MPS is a standardized file format for encoding linear optimization problems.
--- Most solvers (including cplex, highs, glpk) support MPS.
+-- Most solvers (including cplex, highs, etc) support MPS.
 -- For documentation on the format standards see
 -- <https://www.ibm.com/docs/en/icos/22.1.1?topic=standard-records-in-mps-format>
 toMPS :: OptimizationProblem -> Code

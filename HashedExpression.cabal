@@ -52,7 +52,6 @@ library
       HashedExpression.Modeling.Unit.TypeInt
       HashedExpression.Prettify
       HashedExpression.Problem
-      HashedExpression.Solvers.GLPK
       HashedExpression.Solvers.HIGHS
       HashedExpression.Solvers.NLOPT
       HashedExpression.Utils
@@ -99,7 +98,6 @@ library
     , file-embed
     , filepath
     , graphviz
-    , hmatrix-glpk
     , mtl
     , nlopt-haskell
     , primitive
@@ -162,7 +160,6 @@ executable HashedExpression-exe
     , file-embed
     , filepath
     , graphviz
-    , hmatrix-glpk
     , hspec
     , mtl
     , nlopt-haskell
@@ -188,7 +185,6 @@ test-suite HashedExpression-test
       SimplifySpec
       SolverSpec
       StructureSpec
-      TestGLPKBindings
       TestMPS
       TestNLOptBindings
       Tutorial
@@ -238,7 +234,6 @@ test-suite HashedExpression-test
     , file-embed
     , filepath
     , graphviz
-    , hmatrix-glpk
     , hspec
     , mtl
     , nlopt-haskell

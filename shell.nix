@@ -7,7 +7,6 @@
 let
   mumps = nixpkgs.callPackage ./ipopt/mumps.nix {};
   ipopt = nixpkgs.callPackage ./ipopt/ipopt.nix { mumps = mumps; };
-  glpk = nixpkgs.callPackage ./glpk/glpk.nix {};
   highs = nixpkgs.callPackage ./highs/highs.nix {debug = false;};
 in nixpkgs.haskell.lib.buildStackProject {
   name = "HashedExpression";
@@ -37,7 +36,6 @@ in nixpkgs.haskell.lib.buildStackProject {
       nixpkgs.lapack
 		  ipopt
 		  mumps
-		  glpk
       highs
 		];
   STACK_IN_NIX_EXTRA_ARGS

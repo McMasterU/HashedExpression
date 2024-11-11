@@ -32,7 +32,6 @@ dependencies:
   - file-embed
   - graphviz
   - nlopt-haskell
-  - hmatrix-glpk
   - vector
   - primitive
 
